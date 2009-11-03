@@ -26,11 +26,11 @@ void Ec::svm_handler()
     mword reason = static_cast<mword>(current->regs.vmcb->exitcode);
 
     switch (reason) {
-        case -1ul:  reason = NUM_VMM - 1; break;    // Invalid state
-        case 0x400: reason = NUM_VMM - 2; break;    // NPT
+        case -1ul:  reason = NUM_VMI - 2; break;    // Invalid state
+        case 0x400: reason = NUM_VMI - 3; break;    // NPT
     }
 
-    Counter::pre[reason + NUM_EXC]++;
+    Counter::vmi[reason]++;
 
     switch (reason) {
         case 0x60:      // EXTINT
@@ -38,7 +38,7 @@ void Ec::svm_handler()
             ret_user_vmrun();
     }
 
-    current->regs.dst_portal = reason + NUM_EXC;
+    current->regs.dst_portal = reason;
 
     send_svm_msg();
 }

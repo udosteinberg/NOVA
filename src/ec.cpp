@@ -41,7 +41,7 @@ Ec *Ec::current, *Ec::fpowner;
 // Constructors
 Ec::Ec (Pd *p, void (*c)()) : Kobject (EC, 0), continuation (c), utcb (0), pd (p), wait (0) {}
 
-Ec::Ec (Pd *p, mword addr, mword w) : Kobject (EC, 1), pd (p), wait (w)
+Ec::Ec (Pd *p, mword addr, mword s, mword w) : Kobject (EC, 1), pd (p), sel (s), wait (w)
 {
     if (addr) {
         regs.cs  = SEL_USER_CODE;
@@ -99,8 +99,16 @@ void Ec::handle_hazard (void (*func)())
     if (current->hazard & Cpu::HZD_RECALL) {
 
         current->hazard &= ~Cpu::HZD_RECALL;
-        current->regs.dst_portal = Cpu::EXC_RC;
-        Counter::pre[Cpu::EXC_RC]++;
+
+        if (func == ret_user_vmresume) {
+            current->regs.dst_portal = NUM_VMI - 1;
+            send_vmx_msg();
+        }
+
+        if (func == ret_user_vmrun) {
+            current->regs.dst_portal = NUM_VMI - 1;
+            send_svm_msg();
+        }
 
         // If the EC wanted to leave via SYSEXIT, redirect it to IRET instead.
         if (func == ret_user_sysexit) {
@@ -112,8 +120,8 @@ void Ec::handle_hazard (void (*func)())
             current->continuation = ret_user_iret;
         }
 
-        func == ret_user_vmresume ? send_vmx_msg() :
-        func == ret_user_vmrun    ? send_svm_msg() : send_exc_msg();
+        current->regs.dst_portal = NUM_EXC - 1;
+        send_exc_msg();
     }
 }
 
@@ -207,7 +215,7 @@ void Ec::root_invoke()
 {
     // Delegate GSI portals
     for (unsigned i = 0; i < NUM_GSI; i++)
-        Pd::current->Space_obj::insert (Capability (Gsi::gsi_table[i].sm, 0), &Gsi::gsi_table[i].sm->node, new Map_node (Pd::current, NUM_PRE + i));
+        Pd::current->Space_obj::insert (Capability (Gsi::gsi_table[i].sm, 0), &Gsi::gsi_table[i].sm->node, new Map_node (Pd::current, NUM_EXC + i));
 
     // Map hypervisor information page
     Pd::current->delegate_mem (reinterpret_cast<Paddr>(&FRAME_H),
@@ -256,7 +264,7 @@ void Ec::task_gate_handler()
 
 void Ec::exc_handler (Exc_regs *r)
 {
-    Counter::pre[r->vec]++;
+    Counter::exc[r->vec]++;
 
     switch (r->vec) {
 

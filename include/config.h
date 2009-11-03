@@ -20,9 +20,8 @@
 #define NUM_CPU         8
 #define NUM_IRQ         16
 #define NUM_EXC         32
-#define NUM_VMM         224
+#define NUM_VMI         256
 #define NUM_GSI         48
 #define NUM_LVT         6
 #define NUM_MSI         1
 #define NUM_IPI         1
-#define NUM_PRE         (NUM_EXC + NUM_VMM)

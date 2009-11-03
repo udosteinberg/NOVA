@@ -59,10 +59,10 @@ class Hip
         uint16  mem_size;               // 0xe
         uint32  api_flg;                // 0x10
         uint32  api_ver;                // 0x14
-        uint32  cfg_cap;                // 0x18
-        uint32  cfg_pre;                // 0x1c
-        uint32  cfg_gsi;                // 0x20
-        uint32  reserved;               // 0x24
+        uint32  sel_num;                // 0x18
+        uint32  sel_exc;                // 0x1c
+        uint32  sel_vmi;                // 0x20
+        uint32  sel_gsi;                // 0x24
         uint32  cfg_page;               // 0x28
         uint32  cfg_utcb;               // 0x2c
         uint32  freq_tsc;               // 0x30

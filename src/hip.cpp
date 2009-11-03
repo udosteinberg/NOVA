@@ -36,9 +36,10 @@ void Hip::build (mword addr)
     h->mem_size   = sizeof (Hip_mem);
     h->api_flg    = FEAT_VMX | FEAT_SVM;
     h->api_ver    = 0x1;
-    h->cfg_cap    = Space_obj::caps;
-    h->cfg_pre    = NUM_PRE;
-    h->cfg_gsi    = NUM_GSI;
+    h->sel_num    = Space_obj::caps;
+    h->sel_gsi    = NUM_GSI;
+    h->sel_exc    = NUM_EXC;
+    h->sel_vmi    = NUM_VMI;
     h->cfg_page   = PAGE_SIZE;
     h->cfg_utcb   = PAGE_SIZE;
 

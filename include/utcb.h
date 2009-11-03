@@ -52,8 +52,7 @@ class Utcb
         mword   pid;
         Mtd     mtr;
         Crd     crd;
-        mword   exc;
-        mword   res;
+        mword   res[2];
         mword   tls;
 
     private:

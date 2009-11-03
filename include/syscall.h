@@ -91,6 +91,9 @@ class Sys_create_ec : public Exc_regs
 
         ALWAYS_INLINE
         inline mword esp() const { return ebx; }
+
+        ALWAYS_INLINE
+        inline mword sel() const { return ebp; }
 };
 
 class Sys_create_sc : public Exc_regs

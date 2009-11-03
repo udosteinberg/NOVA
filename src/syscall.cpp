@@ -55,7 +55,7 @@ void Ec::send_vmx_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (r->dst_portal);
+    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -78,7 +78,7 @@ void Ec::send_svm_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (r->dst_portal);
+    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -101,7 +101,7 @@ void Ec::send_exc_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (r->dst_portal + current->utcb->exc);
+    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -226,12 +226,12 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    Ec *ec = new Ec (pd, r->utcb(), 0);
+    Ec *ec = new Ec (pd, r->utcb());
     Sc *sc = new Sc (ec, r->qpd().prio(), r->qpd().quantum());
     sc->ready_enqueue();
 
-    pd->Space_obj::insert (NUM_PRE + 0, Capability (ec));
-    pd->Space_obj::insert (NUM_PRE + 1, Capability (sc));
+    pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
+    pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
 
     pd->delegate (Crd (Crd::OBJ, 0, Crd::whole), r->crd());
 
@@ -242,14 +242,14 @@ void Ec::sys_create_ec()
 {
     Sys_create_ec *r = static_cast<Sys_create_ec *>(&current->regs);
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx UTCB:%#lx ESP:%#lx", current, r->ec(), r->utcb(), r->esp());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx UTCB:%#lx ESP:%#lx SEL:%#lx", current, r->ec(), r->utcb(), r->esp(), r->sel());
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address", __func__);
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
-    Ec *ec = new Ec (Pd::current, r->utcb(), r->utcb() ? 1 : 0);
+    Ec *ec = new Ec (Pd::current, r->utcb(), r->sel(), r->utcb() ? 1 : 0);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;

@@ -50,7 +50,7 @@ void Ec::vmx_exception()
         switch (Vtlb::miss (&current->regs, addr, intr_error)) {
 
             case Vtlb::GPA_HPA:
-                current->regs.vec = Vmcs::VMX_EPT_VIOLATION + NUM_EXC;
+                current->regs.dst_portal = Vmcs::VMX_EPT_VIOLATION;
                 break;
 
             case Vtlb::GLA_GPA:
@@ -67,7 +67,7 @@ void Ec::vmx_exception()
         ret_user_vmresume();
 
     } else
-        current->regs.vec = Vmcs::VMX_EXCEPTION + NUM_EXC;
+        current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
 
     send_vmx_msg();
 }
@@ -131,7 +131,7 @@ void Ec::vmx_handler()
 
     mword reason = Vmcs::read (Vmcs::EXI_REASON) & 0xff;
 
-    Counter::pre[reason + NUM_EXC]++;
+    Counter::vmi[reason]++;
 
     switch (reason) {
         case Vmcs::VMX_EXCEPTION:   vmx_exception();
@@ -140,7 +140,7 @@ void Ec::vmx_handler()
         case Vmcs::VMX_CR:          vmx_cr();
     }
 
-    current->regs.dst_portal = reason + NUM_EXC;
+    current->regs.dst_portal = reason;
 
     send_vmx_msg();
 }

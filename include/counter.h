@@ -31,7 +31,8 @@ class Counter
         static unsigned ipi[NUM_IPI]    CPULOCAL;
         static unsigned lvt[NUM_LVT]    CPULOCAL;
         static unsigned gsi[NUM_GSI]    CPULOCAL;
-        static unsigned pre[NUM_PRE]    CPULOCAL;
+        static unsigned exc[NUM_EXC]    CPULOCAL;
+        static unsigned vmi[NUM_VMI]    CPULOCAL;
         static unsigned vtlb_gpf        CPULOCAL;
         static unsigned vtlb_hpf        CPULOCAL;
         static unsigned vtlb_fill       CPULOCAL;

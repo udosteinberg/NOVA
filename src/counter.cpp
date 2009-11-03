@@ -23,7 +23,8 @@ unsigned    Counter::row;
 unsigned    Counter::ipi[NUM_IPI];
 unsigned    Counter::lvt[NUM_LVT];
 unsigned    Counter::gsi[NUM_GSI];
-unsigned    Counter::pre[NUM_PRE];
+unsigned    Counter::exc[NUM_EXC];
+unsigned    Counter::vmi[NUM_VMI];
 unsigned    Counter::vtlb_gpf;
 unsigned    Counter::vtlb_hpf;
 unsigned    Counter::vtlb_fill;
@@ -68,9 +69,15 @@ void Counter::dump()
             Counter::gsi[i] = 0;
         }
 
-    for (unsigned i = 0; i < sizeof (Counter::pre) / sizeof (*Counter::pre); i++)
-        if (Counter::pre[i]) {
-            trace (0, "PRE %#4x: %12u", i, Counter::pre[i]);
-            Counter::pre[i] = 0;
+    for (unsigned i = 0; i < sizeof (Counter::exc) / sizeof (*Counter::exc); i++)
+        if (Counter::exc[i]) {
+            trace (0, "EXC %#4x: %12u", i, Counter::exc[i]);
+            Counter::exc[i] = 0;
+        }
+
+    for (unsigned i = 0; i < sizeof (Counter::vmi) / sizeof (*Counter::vmi); i++)
+        if (Counter::vmi[i]) {
+            trace (0, "VMI %#4x: %12u", i, Counter::vmi[i]);
+            Counter::vmi[i] = 0;
         }
 }
