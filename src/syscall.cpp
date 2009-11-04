@@ -55,7 +55,7 @@ void Ec::send_vmx_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
+    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -78,7 +78,7 @@ void Ec::send_svm_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
+    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -101,7 +101,7 @@ void Ec::send_exc_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (current->sel + r->dst_portal);
+    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -242,14 +242,14 @@ void Ec::sys_create_ec()
 {
     Sys_create_ec *r = static_cast<Sys_create_ec *>(&current->regs);
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx UTCB:%#lx ESP:%#lx SEL:%#lx", current, r->ec(), r->utcb(), r->esp(), r->sel());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->utcb(), r->esp(), r->evt());
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address", __func__);
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
-    Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->sel(), r->utcb() ? 1 : 0);
+    Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->evt(), r->utcb() ? 1 : 0);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;

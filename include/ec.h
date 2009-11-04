@@ -48,7 +48,7 @@ class Ec : public Kobject
         Sc *        sc;                             // 0x64
         Fpu *       fpu;
         mword       cpu;
-        mword       sel;
+        mword       evt;
         mword       wait;
         unsigned    hazard;
 

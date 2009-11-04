@@ -41,7 +41,7 @@ Ec *Ec::current, *Ec::fpowner;
 // Constructors
 Ec::Ec (Pd *p, void (*c)()) : Kobject (EC, 0), continuation (c), utcb (0), pd (p), wait (0) {}
 
-Ec::Ec (Pd *p, mword c, mword addr, mword s, mword w) : Kobject (EC, 1), pd (p), cpu (c), sel (s), wait (w)
+Ec::Ec (Pd *p, mword c, mword addr, mword e, mword w) : Kobject (EC, 1), pd (p), cpu (c), evt (e), wait (w)
 {
     if (addr) {
         regs.cs  = SEL_USER_CODE;
