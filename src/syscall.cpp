@@ -226,6 +226,7 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
+    // XXX: Check that CPU is online
     Ec *ec = new Ec (pd, r->cpu(), r->utcb());
     Sc *sc = new Sc (ec, r->qpd().prio(), r->qpd().quantum());
     sc->ready_enqueue();
@@ -249,6 +250,7 @@ void Ec::sys_create_ec()
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
+    // XXX: Check that CPU is online
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->evt(), r->utcb() ? 1 : 0);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
