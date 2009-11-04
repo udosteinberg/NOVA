@@ -47,6 +47,7 @@ class Ec : public Kobject
         Refptr<Pd>  pd;                             // 0x60
         Sc *        sc;                             // 0x64
         Fpu *       fpu;
+        mword       cpu;
         mword       sel;
         mword       wait;
         unsigned    hazard;
@@ -82,8 +83,8 @@ class Ec : public Kobject
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner;
 
-        Ec (Pd *, void (*)());                      // Kernel EC
-        Ec (Pd *, mword, mword = 0, mword = 0);     // Regular EC
+        Ec (Pd *, void (*)());                          // Kernel EC
+        Ec (Pd *, mword, mword, mword = 0, mword = 0);  // Regular EC
 
         ALWAYS_INLINE
         inline void set_sc (Sc *s)
