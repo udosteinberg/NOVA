@@ -71,7 +71,10 @@ class Sys_create_pd : public Exc_regs
         inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
-        inline mword utcb() const { return esi; }
+        inline mword cpu() const { return esi & 0xfff; }
+
+        ALWAYS_INLINE
+        inline mword utcb() const { return esi & ~0xfff; }
 
         ALWAYS_INLINE
         inline Qpd qpd() const { return Qpd (ebx); }
@@ -87,7 +90,10 @@ class Sys_create_ec : public Exc_regs
         inline unsigned long ec() const { return edi; }
 
         ALWAYS_INLINE
-        inline mword utcb() const { return esi; }
+        inline mword cpu() const { return esi & 0xfff; }
+
+        ALWAYS_INLINE
+        inline mword utcb() const { return esi & ~0xfff; }
 
         ALWAYS_INLINE
         inline mword esp() const { return ebx; }
