@@ -215,6 +215,12 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
+    // XXX: Check that CPU is online
+    if (EXPECT_FALSE (r->cpu() >= NUM_CPU)) {
+        trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
+        sys_finish (r, Sys_regs::BAD_CPU);
+    }
+
     bool vm = r->flags() & 1;
 
     if (vm && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
@@ -229,7 +235,6 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    // XXX: Check that CPU is online
     Ec *ec = new Ec (pd, r->cpu(), r->utcb());
     Sc *sc = new Sc (ec, r->qpd().prio(), r->qpd().quantum());
     sc->ready_enqueue();
@@ -254,6 +259,11 @@ void Ec::sys_create_ec()
     }
 
     // XXX: Check that CPU is online
+    if (EXPECT_FALSE (r->cpu() >= NUM_CPU)) {
+        trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
+        sys_finish (r, Sys_regs::BAD_CPU);
+    }
+
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->evt(), r->utcb() ? 1 : 0);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
