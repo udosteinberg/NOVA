@@ -133,6 +133,9 @@ void Ec::sys_ipc_call()
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
+    if (EXPECT_FALSE (current->cpu != ec->cpu))
+        sys_finish (s, Sys_regs::BAD_CPU);
+
     if (EXPECT_FALSE (!Atomic::test_clr_bit<false>(ec->wait, 0))) {
         if (EXPECT_FALSE (s->flags() & Sys_ipc_send::DISABLE_BLOCKING))
             sys_finish (s, Sys_regs::TIMEOUT);

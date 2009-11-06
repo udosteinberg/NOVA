@@ -49,6 +49,7 @@ class Sys_regs
             BAD_CAP,
             BAD_MEM,
             BAD_FTR,
+            BAD_CPU,
         };
 
         enum
