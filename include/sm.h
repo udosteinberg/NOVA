@@ -19,9 +19,11 @@
 
 #include "compiler.h"
 #include "kobject.h"
+#include "lock_guard.h"
 #include "mdb.h"
 #include "queue.h"
 #include "slab.h"
+#include "spinlock.h"
 #include "types.h"
 
 class Pd;
@@ -29,7 +31,8 @@ class Pd;
 class Sm : public Kobject, public Queue
 {
     private:
-        mword counter;
+        Spinlock    lock;
+        mword       counter;
 
         static Slab_cache cache;
 
@@ -41,19 +44,29 @@ class Sm : public Kobject, public Queue
         ALWAYS_INLINE
         inline void dn()
         {
-            // Whole function must be atomic on SMP
-            if (counter)
-                counter--;
-            else
+            {
+                Lock_guard <Spinlock> guard (lock);
+
+                if (counter) {
+                    counter--;
+                    return;
+                }
+
                 block();
+            }
+
+            Sc::schedule (true);
         }
 
         ALWAYS_INLINE
         inline void up()
         {
-            // Whole function must be atomic on SMP
-            if (!release())
-                counter++;
+            {
+                Lock_guard <Spinlock> guard (lock);
+
+                if (!release())
+                    counter++;
+            }
         }
 
         ALWAYS_INLINE

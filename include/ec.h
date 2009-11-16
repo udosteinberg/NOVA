@@ -119,8 +119,9 @@ class Ec : public Kobject
         NOINLINE NORETURN
         void block (void (*c)())
         {
-            current->continuation = c;
             send.block();
+            current->continuation = c;
+            Sc::schedule (true);
         }  
 
         ALWAYS_INLINE

@@ -48,11 +48,10 @@ class Queue
         ALWAYS_INLINE
         inline Queue() : queue (0) {}
 
-        ALWAYS_INLINE NORETURN
+        ALWAYS_INLINE
         inline void block()
         {
             enqueue (Sc::current);
-            Sc::schedule (true);
         }
 
         ALWAYS_INLINE
