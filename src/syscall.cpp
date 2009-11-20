@@ -235,7 +235,7 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    Ec *ec = new Ec (pd, r->cpu(), r->utcb());
+    Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
     Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
     sc->ready_enqueue();
 
@@ -264,14 +264,12 @@ void Ec::sys_create_ec()
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
-    Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->evt(), r->utcb() ? 1 : 0);
+    Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;
         sys_finish (r, Sys_regs::BAD_CAP);
     }
-
-    static_cast<Sys_ipc_recv *>(&ec->regs)->set_sp (r->esp());
 
     sys_finish (r, Sys_regs::SUCCESS);
 }

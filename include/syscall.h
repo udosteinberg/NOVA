@@ -87,6 +87,9 @@ class Sys_create_ec : public Exc_regs
 {
     public:
         ALWAYS_INLINE
+        inline unsigned flags() const { return eax >> 8 & 0xff; }
+
+        ALWAYS_INLINE
         inline unsigned long ec() const { return edi; }
 
         ALWAYS_INLINE

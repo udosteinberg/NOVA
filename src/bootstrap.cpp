@@ -38,7 +38,7 @@ void bootstrap()
     if (Cpu::bsp) {
         Hip::add_check();
         Pd::root = new Pd (true);
-        Ec *root_ec = new Ec (Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE);
+        Ec *root_ec = new Ec (Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE, 0, 0, false);
         Sc *root_sc = new Sc (root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_continuation (Ec::root_invoke);
         root_sc->ready_enqueue();

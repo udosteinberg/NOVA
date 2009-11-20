@@ -50,6 +50,7 @@ class Ec : public Kobject
         mword       cpu;
         mword       evt;
         mword       wait;
+        bool        worker;
         unsigned    hazard;
 
         // EC Cache
@@ -84,7 +85,7 @@ class Ec : public Kobject
         static Ec *fpowner;
 
         Ec (Pd *, void (*)());                          // Kernel EC
-        Ec (Pd *, mword, mword, mword = 0, mword = 0);  // Regular EC
+        Ec (Pd *, mword, mword, mword, mword, bool);    // Regular EC
 
         ALWAYS_INLINE
         inline void set_sc (Sc *s)
