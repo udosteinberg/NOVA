@@ -34,8 +34,6 @@ unsigned long Sc::prio_top;
 Sc::Sc (Ec *e, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC, 0), ec (e), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, e, c, p, q);
-
-    ec->set_sc (this);
 }
 
 void Sc::ready_enqueue()

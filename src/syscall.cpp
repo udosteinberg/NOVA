@@ -237,6 +237,7 @@ void Ec::sys_create_pd()
 
     Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
     Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
+    ec->set_sc (sc);
     sc->ready_enqueue();
 
     pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
@@ -288,10 +289,17 @@ void Ec::sys_create_sc()
 
     Ec *ec = static_cast<Ec *>(obj);
 
-    if (ec->sc)
-        sys_finish (r, Sys_regs::BAD_CAP);
+    if (ec->worker)
+        sys_finish (r, Sys_regs::BAD_CPU);
 
     Sc *sc = new Sc (ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
+
+    if (!ec->set_sc (sc)) {
+        trace (TRACE_ERROR, "%s: Existing SC", __func__);
+        delete sc;
+        sys_finish (r, Sys_regs::BAD_CAP);
+    }
+
     if (!Pd::current->Space_obj::insert (r->sc(), Capability (sc))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
         delete sc;

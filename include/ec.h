@@ -88,10 +88,9 @@ class Ec : public Kobject
         Ec (Pd *, mword, mword, mword, mword, bool);    // Regular EC
 
         ALWAYS_INLINE
-        inline void set_sc (Sc *s)
+        inline bool set_sc (Sc *s)
         {
-            assert (!sc);
-            sc = s;
+            return Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
         }
 
         ALWAYS_INLINE NORETURN
@@ -123,7 +122,7 @@ class Ec : public Kobject
             send.block();
             current->continuation = c;
             Sc::schedule (true);
-        }  
+        }
 
         ALWAYS_INLINE
         inline bool release()
