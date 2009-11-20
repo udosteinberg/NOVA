@@ -29,7 +29,7 @@ void bootstrap()
 
     // Create idle EC
     Ec::current = new Ec (&Pd::kern, Ec::idle);
-    Sc::current = new Sc (Ec::current, 0, 1000000);
+    Sc::current = new Sc (Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
     for (Atomic::sub (Cpu::boot_count, 1); Cpu::boot_count; Cpu::pause()) ;
@@ -39,7 +39,7 @@ void bootstrap()
         Hip::add_check();
         Pd::root = new Pd (true);
         Ec *root_ec = new Ec (Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE);
-        Sc *root_sc = new Sc (root_ec, Sc::default_prio, Sc::default_quantum);
+        Sc *root_sc = new Sc (root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_continuation (Ec::root_invoke);
         root_sc->ready_enqueue();
     }

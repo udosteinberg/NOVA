@@ -236,7 +236,7 @@ void Ec::sys_create_pd()
     }
 
     Ec *ec = new Ec (pd, r->cpu(), r->utcb());
-    Sc *sc = new Sc (ec, r->qpd().prio(), r->qpd().quantum());
+    Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
     sc->ready_enqueue();
 
     pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
@@ -251,7 +251,7 @@ void Ec::sys_create_ec()
 {
     Sys_create_ec *r = static_cast<Sys_create_ec *>(&current->regs);
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->utcb(), r->esp(), r->evt());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address", __func__);
@@ -293,7 +293,7 @@ void Ec::sys_create_sc()
     if (ec->sc)
         sys_finish (r, Sys_regs::BAD_CAP);
 
-    Sc *sc = new Sc (ec, r->qpd().prio(), r->qpd().quantum());
+    Sc *sc = new Sc (ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
     if (!Pd::current->Space_obj::insert (r->sc(), Capability (sc))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
         delete sc;

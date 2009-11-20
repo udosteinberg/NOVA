@@ -32,6 +32,7 @@ class Sc : public Kobject
         Ec *            ec;     // this should be first (offset 0)
         Sc *            prev;
         Sc *            next;
+        unsigned long   cpu;
         unsigned long   prio;
         unsigned long   full;
         unsigned long   left;
@@ -53,7 +54,7 @@ class Sc : public Kobject
         static unsigned long const default_prio = 1;
         static unsigned long const default_quantum = 10000;
 
-        Sc (Ec *, unsigned long, unsigned long);
+        Sc (Ec *, unsigned long, unsigned long, unsigned long);
 
         void ready_enqueue();
         void ready_dequeue();
