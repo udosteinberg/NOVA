@@ -138,10 +138,7 @@ void Lapic::ipi_vector (unsigned vector)
     unsigned ipi = vector - VEC_IPI;
 
     switch (ipi) {
-        case 0: timer_handler(); break;
-        case 3: error_handler(); break;
-        case 4: perfm_handler(); break;
-        case 5: therm_handler(); break;
+        case 0: Sc::remote_enqueue_handler(); break;
     }
 
     eoi();

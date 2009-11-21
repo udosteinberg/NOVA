@@ -18,6 +18,7 @@
 #include "counter.h"
 #include "ec.h"
 #include "lapic.h"
+#include "lock_guard.h"
 #include "sc.h"
 
 // SC Cache
@@ -30,6 +31,9 @@ Sc *Sc::current;
 Sc *Sc::list[Sc::priorities];
 
 unsigned long Sc::prio_top;
+
+// Release Queue
+Sc::Rq Sc::release[NUM_CPU];
 
 Sc::Sc (Ec *e, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC, 0), ec (e), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
@@ -100,4 +104,48 @@ void Sc::schedule (bool suspend)
     current = sc;
     sc->ready_dequeue();
     sc->ec->make_current();
+}
+
+void Sc::remote_enqueue()
+{
+    if (Cpu::id == cpu)
+        ready_enqueue();
+
+    else {
+        Sc::Rq *rq = release + cpu;
+
+        Lock_guard <Spinlock> guard (rq->lock);
+
+        if (!rq->queue)
+            rq->queue = prev = next = this;
+        else {
+            next = rq->queue;
+            prev = rq->queue->prev;
+            next->prev = prev->next = this;
+        }
+
+        Lapic::send_ipi (cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
+    }
+}
+
+void Sc::remote_enqueue_handler()
+{
+    Sc::Rq *rq = release + Cpu::id;
+
+    Lock_guard <Spinlock> guard (rq->lock);
+
+    for (Sc *ptr = rq->queue; ptr; ) {
+
+        ptr->next->prev = ptr->prev;
+        ptr->prev->next = ptr->next;
+
+        Sc *sc = ptr;
+
+        // Update ptr here, because ready_enqueue destroys prev/next
+        ptr = ptr->next == ptr ? 0 : ptr->next;
+
+        sc->ready_enqueue();
+    }
+
+    rq->queue = 0;
 }

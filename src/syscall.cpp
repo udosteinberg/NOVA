@@ -265,6 +265,8 @@ void Ec::sys_create_ec()
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
+    // r->flags == 0 means: this EC can have an SC attached to it
+    // r->flags == 1 means: this EC is a worker
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
@@ -306,8 +308,7 @@ void Ec::sys_create_sc()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    if (!ec->utcb)
-        sc->ready_enqueue();
+    sc->remote_enqueue();
 
     sys_finish (r, Sys_regs::SUCCESS);
 }

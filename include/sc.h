@@ -47,6 +47,12 @@ class Sc : public Kobject
 
         static unsigned long prio_top CPULOCAL;
 
+        // Release Queue
+        static struct Rq {
+            Spinlock    lock;
+            Sc *        queue;
+        } release[NUM_CPU];
+
     public:
         // Current SC
         static Sc *current CPULOCAL_HOT;
@@ -58,6 +64,9 @@ class Sc : public Kobject
 
         void ready_enqueue();
         void ready_dequeue();
+
+        void remote_enqueue();
+        static void remote_enqueue_handler();
 
         NORETURN
         static void schedule (bool = false);
