@@ -58,11 +58,14 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
                                                 Ptab::ATTR_WRITABLE),
                                Buddy::ptr_to_phys (utcb));
 
-        continuation = ret_user_sysexit;
+        regs.dst_portal = NUM_EXC - 2;
 
+        continuation = w ? ret_user_sysexit : send_exc_msg;
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p UTCB:%p)", this, p, utcb);
 
     } else {
+
+        regs.dst_portal = NUM_VMI - 2;
 
         if (Cpu::feature (Cpu::FEAT_VMX)) {
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
@@ -71,15 +74,13 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
-
-            continuation = ret_user_vmresume;
+            continuation = send_vmx_msg;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept_ptab());
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
             regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->cpu_ptab()));
-
-            continuation = ret_user_vmrun;
+            continuation = send_svm_msg;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
     }

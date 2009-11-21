@@ -26,8 +26,8 @@ void Ec::svm_handler()
     mword reason = static_cast<mword>(current->regs.vmcb->exitcode);
 
     switch (reason) {
-        case -1ul:  reason = NUM_VMI - 2; break;    // Invalid state
-        case 0x400: reason = NUM_VMI - 3; break;    // NPT
+        case -1ul:  reason = NUM_VMI - 3; break;    // Invalid state
+        case 0x400: reason = NUM_VMI - 4; break;    // NPT
     }
 
     Counter::vmi[reason]++;
