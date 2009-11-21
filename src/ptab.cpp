@@ -124,32 +124,24 @@ bool Ptab::lookup (mword virt, size_t &size, Paddr &phys)
     }
 }
 
-void Ptab::sync_local()
+bool Ptab::sync_from (Ptab *src, mword hla)
 {
-    unsigned lev = levels;
-    Ptab *pte, *mst;
+    Ptab *dst = this;
 
-    for (pte = this, mst = Pd::kern.cpu_ptab();;
-         pte = static_cast<Ptab *>(Buddy::phys_to_ptr (pte->addr())),
-         mst = static_cast<Ptab *>(Buddy::phys_to_ptr (mst->addr()))) {
+    assert (src);
 
-        unsigned shift = --lev * bpl + 12;
-        unsigned slot = LOCAL_SADDR >> shift & ((1ul << bpl) - 1);
-        size_t size = 1ul << shift;
+    unsigned slot = hla >> ((levels - 1) * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
-        mst += slot;
-        assert (mst->present());
+    src += slot;
+    dst += slot;
 
-        pte += slot;
-        assert (!pte->present());
+    // Both mappings are identical (or not present)
+    if (src->val == dst->val)
+        return false;
 
-        if (size <= LOCAL_EADDR - LOCAL_SADDR) {
-            *pte = *mst;
-            break;
-        }
+    *dst = *src;
 
-        pte->val = Buddy::ptr_to_phys (new Ptab) | ATTR_PTAB;
-    }
+    return true;
 }
 
 size_t Ptab::sync_master (mword virt)

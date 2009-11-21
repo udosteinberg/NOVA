@@ -120,9 +120,11 @@ void Space_obj::page_fault (mword addr, mword error)
     // Should never get a write fault during lookup
     assert (!(error & Paging::ERROR_WRITE));
 
-    // XXX: Check sync with PD master page table before allocating anything
+    // First try to sync with PD master page table
+    if (Pd::current->Space_mem::sync (addr))
+        return;
 
-    // Read fault on non-present page; map 0-page r/o
+    // If that didn't work, back the region with a r/o 0-page
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
                                     Ptab::ATTR_NOEXEC,
                                     reinterpret_cast<Paddr>(&FRAME_0));

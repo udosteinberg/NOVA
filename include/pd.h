@@ -65,7 +65,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
             current = this;
 
-            cpu_ptab()->make_current();
+            cpu_ptab (Cpu::id)->make_current();
         }
 
         ALWAYS_INLINE

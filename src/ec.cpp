@@ -43,6 +43,9 @@ Ec::Ec (Pd *p, void (*c)()) : Kobject (EC, 0), continuation (c), utcb (0), pd (p
 
 Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd (p), cpu (c), evt (e), wait (w), worker (w)
 {
+    // Make sure we have a PTAB for this CPU in the PD
+    pd->Space_mem::init (c);
+
     if (u) {
         regs.cs  = SEL_USER_CODE;
         regs.ds  = SEL_USER_DATA;
@@ -69,7 +72,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
         if (Cpu::feature (Cpu::FEAT_VMX)) {
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
-                                  Buddy::ptr_to_phys (pd->cpu_ptab()),
+                                  Buddy::ptr_to_phys (pd->cpu_ptab (c)),
                                   Buddy::ptr_to_phys (pd->ept_ptab()));
 
             regs.vtlb = new Vtlb;
@@ -79,7 +82,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
-            regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->cpu_ptab()));
+            regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->cpu_ptab (c)));
             continuation = send_svm_msg;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
@@ -352,12 +355,16 @@ bool Ec::tss_handler (Exc_regs *r)
 
 bool Ec::pf_handler (Exc_regs *r)
 {
+    mword addr = r->cr2;
+
     // Fault caused by user
-    if (r->err & Ptab::ERROR_USER)
-        return false;
+    if (r->err & Ptab::ERROR_USER) {
+        bool s = addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
+        trace (0, "#PF EC:%p EIP:%#010lx ADDR:%#010lx E:%#lx (%s)", current, r->eip, addr, r->err, s ? "fixed" : "ipc");
+        return s;
+    }
 
     // Fault caused by kernel
-    mword addr = r->cr2;
 
     // #PF in MEM space
     if (addr >= LINK_ADDR && addr < LOCAL_SADDR) {

@@ -62,6 +62,7 @@ class Ptab : public Paging
         ALWAYS_INLINE
         inline void make_current()
         {
+            assert (this);
             asm volatile ("mov %0, %%cr3" : : "r" (Buddy::ptr_to_phys (this)) : "memory");
         }
 
@@ -70,7 +71,7 @@ class Ptab : public Paging
 
         bool lookup (mword, size_t &, Paddr &);
 
-        void sync_local();
+        bool sync_from (Ptab *, mword);
 
         size_t sync_master (mword virt);
 

@@ -25,15 +25,26 @@ Space_mem::Space_mem (bool vm)
 {
     if (vm)
         ept = new Ept;
+}
 
-    // Create ptab for this CPU
-    master = percpu[Cpu::id] = new Ptab;
+void Space_mem::init (unsigned cpu)
+{
+    if (!percpu[cpu]) {
 
-    // Sync cpu-local range
-    master->sync_local();
+        // Create ptab for this CPU
+        percpu[cpu] = new Ptab;
 
-    // Sync kernel code and data
-    master->sync_master_range (LINK_ADDR, LOCAL_SADDR);
+        // Sync cpu-local range
+        percpu[cpu]->sync_from (Pd::kern.cpu_ptab (cpu), LOCAL_SADDR);
+
+        // Sync kernel code and data
+        percpu[cpu]->sync_master_range (LINK_ADDR, LOCAL_SADDR);
+
+        trace (0, "PD:%p PTAB[%u]:%#lx", static_cast<Pd *>(this), cpu, Buddy::ptr_to_phys (percpu[cpu]));
+    }
+
+    if (!master)
+        master = percpu[cpu];
 }
 
 void Space_mem::page_fault (mword addr, mword /*error*/)
@@ -48,7 +59,7 @@ void Space_mem::page_fault (mword addr, mword /*error*/)
 void Space_mem::insert_root (mword b, size_t s, unsigned t, unsigned a)
 {
     for (long int o; s; s -= 1ul << o, b += 1ul << o) {
- 
+
         o = bit_scan_reverse (s);
         if (b)
             o = min (bit_scan_forward (b), o);

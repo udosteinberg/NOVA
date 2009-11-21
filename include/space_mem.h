@@ -53,9 +53,9 @@ class Space_mem
         }
 
         ALWAYS_INLINE
-        inline Ptab *cpu_ptab() const
+        inline Ptab *cpu_ptab (unsigned cpu) const
         {
-            return percpu[Cpu::id];
+            return percpu[cpu];
         }
 
         ALWAYS_INLINE
@@ -80,6 +80,14 @@ class Space_mem
         void insert_root (mword, size_t, unsigned, unsigned);
 
         bool insert (Vma *, Paddr);
+
+        void init (unsigned);
+
+        ALWAYS_INLINE
+        inline bool sync (mword hla)
+        {
+            return percpu[Cpu::id]->sync_from (master, hla);
+        }
 
         static void page_fault (mword, mword);
 };
