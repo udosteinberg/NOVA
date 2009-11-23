@@ -29,7 +29,7 @@ class Sc : public Kobject
     friend class Queue;
 
     private:
-        Ec *            ec;     // this should be first (offset 0)
+        Ec * const      owner;
         Sc *            prev;
         Sc *            next;
         unsigned long   cpu;

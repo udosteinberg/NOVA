@@ -35,6 +35,20 @@ void Ec::sys_finish (Sys_regs *param, Sys_regs::Status status)
     ret_user_sysexit();
 }
 
+void Ec::activate (Ec *ec)
+{
+    // XXX: Make the loop preemptible
+    while (ec->partner)
+        ec = ec->partner;
+
+#if 0
+    if (ec->blocked())
+        block();
+#endif
+
+    ec->make_current();
+}
+
 void Ec::recv_ipc_msg (mword ip, unsigned flags)
 {
     Sys_ipc_recv *r = static_cast<Sys_ipc_recv *>(&regs);
@@ -45,6 +59,8 @@ void Ec::recv_ipc_msg (mword ip, unsigned flags)
         sc->ready_enqueue();
         ret_user_sysexit();
     }
+
+    current->partner = this;
 
     reply = Capability (current);
 
@@ -182,6 +198,8 @@ void Ec::sys_ipc_reply()
             ec->pd->delegate_items (crd, item, typed);
         }
 
+        ec->partner = 0;
+
         current->reply = Capability();
     }
 
@@ -263,8 +281,6 @@ void Ec::sys_create_ec()
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
-    // r->flags == 0 means: this EC can have an SC attached to it
-    // r->flags == 1 means: this EC is a worker
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());

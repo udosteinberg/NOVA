@@ -35,13 +35,15 @@ unsigned long Sc::prio_top;
 // Release Queue
 Sc::Rq Sc::release[NUM_CPU];
 
-Sc::Sc (Ec *e, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC, 0), ec (e), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Ec *o, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC, 0), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
-    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, e, c, p, q);
+    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, o, c, p, q);
 }
 
 void Sc::ready_enqueue()
 {
+    assert (this != reinterpret_cast<Sc *>(~0ul));
+
     if (prio > prio_top)
         prio_top = prio;
 
@@ -89,7 +91,6 @@ void Sc::schedule (bool suspend)
     assert (!current->prev);
 
     current->left = Lapic::get_timer();
-    current->ec   = Ec::current;
 
     Cpu::hazard &= ~Cpu::HZD_SCHED;
 
@@ -103,7 +104,8 @@ void Sc::schedule (bool suspend)
 
     current = sc;
     sc->ready_dequeue();
-    sc->ec->make_current();
+
+    Ec::activate (sc->owner);
 }
 
 void Sc::remote_enqueue()

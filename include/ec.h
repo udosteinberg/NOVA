@@ -46,11 +46,11 @@ class Ec : public Kobject
         Utcb *      utcb;                           // 0x5c
         Refptr<Pd>  pd;                             // 0x60
         Sc *        sc;                             // 0x64
+        Ec *        partner;
         Fpu *       fpu;
         mword       cpu;
         mword       evt;
         mword       wait;
-        bool        worker;
         unsigned    hazard;
 
         // EC Cache
@@ -90,7 +90,7 @@ class Ec : public Kobject
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)
         {
-            return !worker && Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
+            return Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
         }
 
         ALWAYS_INLINE NORETURN
@@ -145,6 +145,12 @@ class Ec : public Kobject
         ALWAYS_INLINE NORETURN
         static inline void sys_finish (Sys_regs *param, Sys_regs::Status status);
 
+        ALWAYS_INLINE NORETURN
+        inline void recv_ipc_msg (mword, unsigned = 0);
+
+        NORETURN
+        static void activate (Ec *);
+
         NORETURN
         static void send_exc_msg();
 
@@ -153,9 +159,6 @@ class Ec : public Kobject
 
         NORETURN
         static void send_svm_msg();
-
-        ALWAYS_INLINE NORETURN
-        inline void recv_ipc_msg (mword, unsigned = 0);
 
         HOT NORETURN
         static void sys_ipc_call();
