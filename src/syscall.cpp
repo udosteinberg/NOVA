@@ -211,19 +211,19 @@ void Ec::sys_create_pd()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx UTCB:%#lx VM:%u", current, r->pd(), r->utcb(), r->flags() & 1);
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address", __func__);
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
     bool vm = r->flags() & 1;
 
     if (vm && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
-        trace (TRACE_ERROR, "%s: Unsupported feature", __func__);
+        trace (TRACE_ERROR, "%s: VM not supported", __func__);
         sys_finish (r, Sys_regs::BAD_FTR);
     }
 
@@ -254,12 +254,12 @@ void Ec::sys_create_ec()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address", __func__);
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
@@ -314,7 +314,7 @@ void Ec::sys_create_pt()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->pt(), r->ec(), r->eip());
 
     if (EXPECT_FALSE (r->eip() >= LINK_ADDR)) {
-        trace (TRACE_ERROR, "%s: Invalid EIP", __func__);
+        trace (TRACE_ERROR, "%s: Invalid EIP (%#lx)", __func__, r->eip());
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
