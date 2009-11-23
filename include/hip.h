@@ -95,6 +95,11 @@ class Hip
             Atomic::clr_mask<true>(hip()->api_flg, f);
         }
 
+        static bool cpu_online (unsigned cpu)
+        {
+            return cpu < NUM_CPU && hip()->cpu_desc[cpu].flags & 1;
+        }
+
         INIT
         static void build (mword);
 

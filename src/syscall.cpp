@@ -215,8 +215,7 @@ void Ec::sys_create_pd()
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
-    // XXX: Check that CPU is online
-    if (EXPECT_FALSE (r->cpu() >= NUM_CPU)) {
+    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
         sys_finish (r, Sys_regs::BAD_CPU);
     }
@@ -259,8 +258,7 @@ void Ec::sys_create_ec()
         sys_finish (r, Sys_regs::BAD_MEM);
     }
 
-    // XXX: Check that CPU is online
-    if (EXPECT_FALSE (r->cpu() >= NUM_CPU)) {
+    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU", __func__);
         sys_finish (r, Sys_regs::BAD_CPU);
     }
@@ -290,7 +288,6 @@ void Ec::sys_create_sc()
     }
 
     Ec *ec = static_cast<Ec *>(obj);
-
     Sc *sc = new Sc (ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
 
     if (!ec->set_sc (sc)) {
