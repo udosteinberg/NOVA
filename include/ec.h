@@ -90,7 +90,7 @@ class Ec : public Kobject
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)
         {
-            return Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
+            return !worker && Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
         }
 
         ALWAYS_INLINE NORETURN

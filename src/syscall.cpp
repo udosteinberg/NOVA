@@ -291,13 +291,10 @@ void Ec::sys_create_sc()
 
     Ec *ec = static_cast<Ec *>(obj);
 
-    if (ec->worker)
-        sys_finish (r, Sys_regs::BAD_CPU);
-
     Sc *sc = new Sc (ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
 
     if (!ec->set_sc (sc)) {
-        trace (TRACE_ERROR, "%s: Existing SC", __func__);
+        trace (TRACE_ERROR, "%s: Cannot attach SC", __func__);
         delete sc;
         sys_finish (r, Sys_regs::BAD_CAP);
     }
