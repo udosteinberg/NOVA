@@ -75,13 +75,13 @@ void Ec::send_vmx_msg()
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "VMX PT (not found)");
+        current->kill (r, "VMX PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "VMX PT (wrong CPU)");
+        current->kill (r, "VMX PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
         ec->block (send_vmx_msg);
@@ -101,13 +101,13 @@ void Ec::send_svm_msg()
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "SVM PT (not found)");
+        current->kill (r, "SVM PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "SVM PT (wrong CPU)");
+        current->kill (r, "SVM PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
         ec->block (send_svm_msg);
@@ -127,13 +127,13 @@ void Ec::send_exc_msg()
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "EXC PT (not found)");
+        current->kill (r, "EXC PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "EXC PT (wrong CPU)");
+        current->kill (r, "EXC PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
         ec->block (send_exc_msg);

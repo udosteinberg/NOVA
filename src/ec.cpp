@@ -390,10 +390,10 @@ bool Ec::pf_handler (Exc_regs *r)
 void Ec::kill (Exc_regs *r, char const *reason)
 {
     if (utcb || pd == &Pd::kern)
-        trace (0, "EC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx KILLED (%s)",
+        trace (0, "Killed EC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                this, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
     else
-        trace (0, "EC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx KILLED (%s)",
+        trace (0, "Killed EC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
                this, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
 
     Sc::schedule (true);
