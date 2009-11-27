@@ -64,7 +64,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
         regs.dst_portal = NUM_EXC - 2;
 
         continuation = w ? ret_user_sysexit : send_exc_msg;
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p UTCB:%p)", this, p, utcb);
+        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#lx UTCB:%#lx ESP:%lx EVT:%#lx W:%u)", this, p, c, u, s, e, w);
 
     } else {
 
