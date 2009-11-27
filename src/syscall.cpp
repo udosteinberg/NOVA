@@ -264,12 +264,13 @@ void Ec::sys_create_pd()
     Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
     Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
     ec->set_sc (sc);
-    sc->ready_enqueue();
 
     pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
     pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
-
     pd->delegate (Crd (Crd::OBJ, 0, Crd::whole), r->crd());
+
+    // Enqueue SC only after all the caps have been mapped
+    sc->remote_enqueue();
 
     sys_finish (r, Sys_regs::SUCCESS);
 }
