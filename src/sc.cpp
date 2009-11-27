@@ -42,6 +42,7 @@ Sc::Sc (Ec *o, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC,
 
 void Sc::ready_enqueue()
 {
+    assert (cpu == Cpu::id);
     assert (this != reinterpret_cast<Sc *>(~0ul));
 
     if (prio > prio_top)
@@ -68,6 +69,7 @@ void Sc::ready_enqueue()
 
 void Sc::ready_dequeue()
 {
+    assert (cpu == Cpu::id);
     assert (prev && next);
 
     if (list[prio] == this)
