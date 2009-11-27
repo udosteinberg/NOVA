@@ -23,7 +23,6 @@
 #include "mdb.h"
 #include "queue.h"
 #include "slab.h"
-#include "spinlock.h"
 #include "types.h"
 
 class Pd;
@@ -31,7 +30,6 @@ class Pd;
 class Sm : public Kobject, public Queue
 {
     private:
-        Spinlock    lock;
         mword       counter;
 
         static Slab_cache cache;

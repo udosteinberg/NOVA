@@ -19,16 +19,18 @@
 
 #include "atomic.h"
 #include "compiler.h"
+#include "spinlock.h"
 #include "types.h"
 
 class Kobject
 {
     private:
-        uint8   objtype;
-        uint8   misc;
-        uint16  refcount;
+        uint8       objtype;
 
     protected:
+        Spinlock    lock;
+        uint16      refcount;
+
         enum
         {
             NUL,
