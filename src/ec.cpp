@@ -39,7 +39,10 @@ Slab_cache Ec::cache (sizeof (Ec), 8);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *p, void (*c)()) : Kobject (EC, 0), continuation (c), utcb (0), pd (p), wait (0) {}
+Ec::Ec (Pd *p, void (*c)()) : Kobject (EC, 0), continuation (c), utcb (0), pd (p), wait (0)
+{
+    trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
+}
 
 Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e), wait (w)
 {
