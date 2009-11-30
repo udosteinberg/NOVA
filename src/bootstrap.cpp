@@ -19,6 +19,7 @@
 #include "cpu.h"
 #include "ec.h"
 #include "hip.h"
+#include "msr.h"
 #include "pd.h"
 #include "sc.h"
 
@@ -33,6 +34,8 @@ void bootstrap()
 
     // Barrier: wait for all ECs to arrive here
     for (Atomic::sub (Cpu::boot_count, 1); Cpu::boot_count; Cpu::pause()) ;
+
+    Msr::write<uint64>(Msr::IA32_TSC, 0);
 
     // Create root task
     if (Cpu::bsp) {

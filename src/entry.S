@@ -46,10 +46,10 @@ handlers:
                         push    %gs
                         pusha
                         mov     %esp, %ebx
-                        testb   $3, 60(%ebx)
-                        jz      1f
+                        cmp     $KSTCK_ADDR, %esp
+                        jae     1f
                         cld
-                        mov     $(KSTCK_ADDR + PAGE_SIZE), %esp
+                        mov     $KSTCK_ADDR + PAGE_SIZE, %esp
                         mov     $SEL_USER_DATA, %eax
                         mov     %eax, %ds
                         mov     %eax, %es

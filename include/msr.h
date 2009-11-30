@@ -27,6 +27,7 @@ class Msr
         // MSRs starting with IA32_ are architectural
         enum Register
         {
+            IA32_TSC                = 0x10,
             IA32_PLATFORM_ID        = 0x17,
             IA32_APIC_BASE          = 0x1b,
             IA32_FEATURE_CONTROL    = 0x3a,

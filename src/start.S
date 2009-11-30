@@ -63,6 +63,8 @@ __boot_gdt:             .word   0
                         .long   __boot_gdt
                         .quad   0x00cf9b000000ffff      /* Kernel Code */
                         .quad   0x00cf93000000ffff      /* Kernel Data */
+                        .quad   0x00cffb000000ffff      /* User Code */
+                        .quad   0x00cff3000000ffff      /* User Data */
 __boot_gdt__:
 
 /*
@@ -82,6 +84,7 @@ __gdt_desc:             .word   __boot_gdt__ - __boot_gdt - 1
 
 __start_rlp:            mov     $SEL_KERN_DATA, %ecx
                         mov     %ecx, %ss
+                        mov     $SEL_USER_DATA, %ecx
                         mov     %ecx, %ds
                         mov     %ecx, %es
                         mov     %ecx, %fs
@@ -110,6 +113,7 @@ __start_bsp:            xor     %ebp, %ebp
 
 2:                      mov     $SEL_KERN_DATA, %ecx
                         mov     %ecx, %ss
+                        mov     $SEL_USER_DATA, %ecx
                         mov     %ecx, %ds
                         mov     %ecx, %es
                         mov     %ecx, %fs
