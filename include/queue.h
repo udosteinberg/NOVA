@@ -62,7 +62,7 @@ class Queue
             if (EXPECT_TRUE (!sc))
                 return false;
 
-            sc->ready_enqueue();
+            sc->remote_enqueue();
 
             return true;
         }
