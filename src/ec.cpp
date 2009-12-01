@@ -361,11 +361,8 @@ bool Ec::pf_handler (Exc_regs *r)
     mword addr = r->cr2;
 
     // Fault caused by user
-    if (r->err & Ptab::ERROR_USER) {
-        bool s = addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
-        trace (0, "#PF EC:%p EIP:%#010lx ADDR:%#010lx E:%#lx (%s)", current, r->eip, addr, r->err, s ? "fixed" : "ipc");
-        return s;
-    }
+    if (r->err & Ptab::ERROR_USER)
+        return addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
 
     // Fault caused by kernel
 
