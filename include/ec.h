@@ -82,7 +82,7 @@ class Ec : public Kobject
 
     public:
         static Ec *current CPULOCAL_HOT;
-        static Ec *fpowner;
+        static Ec *fpowner CPULOCAL;
 
         Ec (Pd *, void (*)());                          // Kernel EC
         Ec (Pd *, mword, mword, mword, mword, bool);    // Regular EC
