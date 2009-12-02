@@ -51,7 +51,7 @@ class Ec : public Kobject
         mword       cpu;
         mword       evt;
         mword       wait;
-        unsigned    hazard;
+        mword       hazard;
 
         // EC Cache
         static Slab_cache cache;

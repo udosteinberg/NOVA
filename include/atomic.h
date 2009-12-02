@@ -67,9 +67,9 @@ class Atomic
         static inline void set_mask (T &val, unsigned long mask)
         {
             if (L)
-                asm volatile ("lock; or %1, %0" : "+m" (val) : "ir" (mask) : "cc");
+                asm volatile ("lock; or%z0 %1, %0" : "+m" (val) : "ir" (mask) : "cc");
             else
-                asm volatile ("      or %1, %0" : "+m" (val) : "ir" (mask) : "cc");
+                asm volatile ("      or%z0 %1, %0" : "+m" (val) : "ir" (mask) : "cc");
         }
 
         template <bool L, typename T>
@@ -77,9 +77,9 @@ class Atomic
         static inline void clr_mask (T &val, unsigned long mask)
         {
             if (L)
-                asm volatile ("lock; and %1, %0" : "+m" (val) : "ir" (~mask) : "cc");
+                asm volatile ("lock; and%z0 %1, %0" : "+m" (val) : "ir" (~mask) : "cc");
             else
-                asm volatile ("      and %1, %0" : "+m" (val) : "ir" (~mask) : "cc");
+                asm volatile ("      and%z0 %1, %0" : "+m" (val) : "ir" (~mask) : "cc");
         }
 
         template <bool L, typename T>

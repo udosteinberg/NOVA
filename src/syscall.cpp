@@ -19,6 +19,7 @@
 #include "ec.h"
 #include "gsi.h"
 #include "hip.h"
+#include "lapic.h"
 #include "mtd.h"
 #include "pd.h"
 #include "pt.h"
@@ -399,7 +400,17 @@ void Ec::sys_recall()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    static_cast<Ec *>(obj)->hazard |= Cpu::HZD_RECALL;
+    Ec *ec = static_cast<Ec *>(obj);
+
+    if (!(ec->hazard & Cpu::HZD_RECALL)) {
+
+        Atomic::set_mask<true>(ec->hazard, Cpu::HZD_RECALL);
+     
+        // XXX: We only need to send the IPI if we were the first to set the
+        // recall hazard and if the target EC is currently running on its CPU.
+        if (Cpu::id != ec->cpu)
+            Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
+    }
 
     sys_finish (r, Sys_regs::SUCCESS);
 }
