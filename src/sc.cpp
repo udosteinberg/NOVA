@@ -90,7 +90,7 @@ void Sc::schedule (bool suspend)
     Counter::count (Counter::schedule, Console_vga::COLOR_LIGHT_CYAN, 2);
 
     assert (current);
-    assert (!current->prev);
+    assert (suspend || !current->prev);
 
     current->left = Lapic::get_timer();
 
