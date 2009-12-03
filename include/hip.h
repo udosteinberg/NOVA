@@ -72,8 +72,9 @@ class Hip
 
     public:
         enum Feature {
-            FEAT_VMX    = 1u << 0,
-            FEAT_SVM    = 1u << 1,
+            FEAT_GSI    = 1u << 0,
+            FEAT_VMX    = 1u << 1,
+            FEAT_SVM    = 1u << 2,
         };
 
         static mword root_addr;
@@ -90,7 +91,7 @@ class Hip
             return hip()->api_flg;
         }
 
-        static void disfeature (Feature f)
+        static void remove (Feature f)
         {
             Atomic::clr_mask<true>(hip()->api_flg, f);
         }

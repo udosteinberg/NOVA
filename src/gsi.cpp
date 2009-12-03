@@ -21,6 +21,7 @@
 #include "counter.h"
 #include "ec.h"
 #include "gsi.h"
+#include "hip.h"
 #include "ioapic.h"
 #include "keyb.h"
 #include "lapic.h"
@@ -62,6 +63,7 @@ void Gsi::init()
                 gsi_table[gsi].ioapic->set_irt (gsi_table[gsi].pin, gsi_table[gsi].irt);
             }
     } else {
+        Hip::remove (Hip::FEAT_GSI);
         unsigned elcr = 0;
         for (unsigned gsi = 0; gsi < NUM_IRQ; gsi++)
             if (gsi_table[gsi].irt & TRG_LEVEL)

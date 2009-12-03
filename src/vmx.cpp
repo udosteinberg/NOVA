@@ -97,7 +97,7 @@ Vmcs::Vmcs (mword esp, mword cr3, mword eptp) : rev (basic.revision)
 void Vmcs::init()
 {
     if (!Cpu::feature (Cpu::FEAT_VMX)) {
-        Hip::disfeature (Hip::FEAT_VMX);
+        Hip::remove (Hip::FEAT_VMX);
         return;
     }
 

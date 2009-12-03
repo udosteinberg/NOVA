@@ -37,7 +37,7 @@ Vmcb::Vmcb (mword nptp) : asid (++asid_ctr), npt_control (1), npt_cr3 (nptp), ef
 void Vmcb::init()
 {
     if (!Cpu::feature (Cpu::FEAT_SVM) || !Vmcb::feature.np) {
-        Hip::disfeature (Hip::FEAT_SVM);
+        Hip::remove (Hip::FEAT_SVM);
         return;
     }
 
