@@ -29,7 +29,7 @@ void bootstrap()
     Cpu::init();
 
     // Create idle EC
-    Ec::current = new Ec (&Pd::kern, Ec::idle);
+    Ec::current = new Ec (&Pd::kern, Cpu::id, 0, Ec::idle);
     Sc::current = new Sc (Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here

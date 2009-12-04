@@ -30,6 +30,7 @@ unsigned    Counter::vtlb_hpf;
 unsigned    Counter::vtlb_fill;
 unsigned    Counter::vtlb_flush;
 unsigned    Counter::schedule;
+unsigned    Counter::helping;
 uint64      Counter::cycles_idle;
 
 void Counter::init()
@@ -48,8 +49,9 @@ void Counter::dump()
     trace (0, "VFIL: %16u", Counter::vtlb_fill);
     trace (0, "VFLU: %16u", Counter::vtlb_flush);
     trace (0, "SCHD: %16u", Counter::schedule);
+    trace (0, "HELP: %16u", Counter::helping);
 
-    Counter::vtlb_gpf = Counter::vtlb_hpf = Counter::vtlb_fill = Counter::vtlb_flush = Counter::schedule = 0;
+    Counter::vtlb_gpf = Counter::vtlb_hpf = Counter::vtlb_fill = Counter::vtlb_flush = Counter::schedule = Counter::helping = 0;
 
     for (unsigned i = 0; i < sizeof (Counter::ipi) / sizeof (*Counter::ipi); i++)
         if (Counter::ipi[i]) {

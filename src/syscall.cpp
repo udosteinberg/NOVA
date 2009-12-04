@@ -39,31 +39,30 @@ void Ec::sys_finish (Sys_regs *param, Sys_regs::Status status)
 void Ec::activate (Ec *ec)
 {
     // XXX: Make the loop preemptible
-    while (ec->partner)
+    for (Sc::counter = 0; ec->partner; Sc::counter++)
         ec = ec->partner;
 
-#if 0
     if (ec->blocked())
-        block();
-#endif
+        ec->block();
 
+    // Helping
     ec->make_current();
 }
 
-void Ec::recv_ipc_msg (mword ip, unsigned flags)
+void Ec::recv_ipc_msg (mword ip, unsigned /*flags*/)
 {
     Sys_ipc_recv *r = static_cast<Sys_ipc_recv *>(&regs);
 
     r->set_ip (ip);
 
+#if 0
     if (EXPECT_FALSE (flags & Sys_ipc_send::DISABLE_DONATION)) {
         sc->ready_enqueue();
         ret_user_sysexit();
     }
+#endif
 
-    current->partner = this;
-
-    reply = Capability (current);
+    current->set_partner (this);
 
     make_current();
 }
@@ -85,7 +84,7 @@ void Ec::send_vmx_msg()
         current->kill (r, "VMX PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->block (send_vmx_msg);
+        ec->help (send_vmx_msg);
 
     current->continuation = ret_user_vmresume;
 
@@ -111,7 +110,7 @@ void Ec::send_svm_msg()
         current->kill (r, "SVM PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->block (send_svm_msg);
+        ec->help (send_svm_msg);
 
     current->continuation = ret_user_vmrun;
 
@@ -137,7 +136,7 @@ void Ec::send_exc_msg()
         current->kill (r, "EXC PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->block (send_exc_msg);
+        ec->help (send_exc_msg);
 
     current->continuation = ret_user_iret;
 
@@ -149,6 +148,8 @@ void Ec::send_exc_msg()
 void Ec::sys_ipc_call()
 {
     Sys_ipc_send *s = static_cast<Sys_ipc_send *>(&current->regs);
+
+    assert (!s->flags());
 
     Capability cap = Space_obj::lookup (s->pt());
 
@@ -165,7 +166,7 @@ void Ec::sys_ipc_call()
     if (EXPECT_FALSE (!Atomic::test_clr_bit<false>(ec->wait, 0))) {
         if (EXPECT_FALSE (s->flags() & Sys_ipc_send::DISABLE_BLOCKING))
             sys_finish (s, Sys_regs::TIMEOUT);
-        ec->block (sys_ipc_call);
+        ec->help (sys_ipc_call);
     }
 
     mword *item = current->utcb->save (ec->utcb, s->mtd().untyped());
@@ -208,28 +209,19 @@ void Ec::sys_ipc_reply()
             ec->pd->delegate_items (crd, item, typed);
         }
 
-        ec->partner = 0;
+        current->continuation = ret_user_sysexit;
+        current->wait = 1;
 
-        current->reply = Capability();
+        if (ec->clr_partner())
+            ec->make_current();
+
+    } else {
+
+        current->continuation = ret_user_sysexit;
+        current->wait = 1;
     }
 
-    current->continuation = ret_user_sysexit;
-
-    /*
-     * Ready to handle next request. If there is another thread already waiting
-     * to rendezvous with us, then release that thread. If that thread has
-     * a higher priority than us, ready_enqueue will set a schedule hazard
-     * and we will reschedule on our way out of the kernel. We cannot schedule
-     * here; we must return a potentially donated SC first (which happens by
-     * calling make_current below).
-     */
-    current->wait = 1;
-    current->release();
-
-    if (EXPECT_TRUE (ec))
-        ec->make_current();
-
-    Sc::schedule (true);
+    Sc::schedule (!ec);
 }
 
 void Ec::sys_create_pd()

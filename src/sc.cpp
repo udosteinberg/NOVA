@@ -25,7 +25,8 @@
 Slab_cache Sc::cache (sizeof (Sc), 8);
 
 // Current SC
-Sc *Sc::current;
+Sc *        Sc::current;
+unsigned    Sc::counter;
 
 // Ready List
 Sc *Sc::list[Sc::priorities];
@@ -87,7 +88,7 @@ void Sc::ready_dequeue()
 
 void Sc::schedule (bool suspend)
 {
-    Counter::count (Counter::schedule, Console_vga::COLOR_LIGHT_CYAN, 2);
+    Counter::count (Counter::schedule, Console_vga::COLOR_LIGHT_CYAN, 1);
 
     assert (current);
     assert (suspend || !current->prev);

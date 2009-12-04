@@ -18,52 +18,54 @@
 #pragma once
 
 #include "compiler.h"
-#include "sc.h"
 #include "types.h"
 
+template <typename T>
 class Queue
 {
     private:
-        Sc *queue;
-
-        ALWAYS_INLINE
-        inline void enqueue (Sc *s)
-        {
-            s->next = queue;
-            queue = s;
-        }
-
-        ALWAYS_INLINE
-        inline Sc *dequeue()
-        {
-            Sc *s = queue;
-
-            if (EXPECT_TRUE (s))
-                queue = s->next;
-
-            return s;
-        }
+        T *queue;
 
     public:
         ALWAYS_INLINE
         inline Queue() : queue (0) {}
 
         ALWAYS_INLINE
-        inline void block()
+        inline bool empty() const
         {
-            enqueue (Sc::current);
+            return !queue;
         }
 
         ALWAYS_INLINE
-        inline bool release()
+        inline void enqueue (T *t)
         {
-            Sc *sc = dequeue();
+            if (!queue)
+                queue = t->prev = t->next = t;
+            else {
+                t->next = queue;
+                t->prev = queue->prev;
+                t->next->prev = t->prev->next = t;
+            }
+        }
 
-            if (EXPECT_TRUE (!sc))
-                return false;
+        ALWAYS_INLINE
+        inline T *dequeue()
+        {
+            T *t = queue;
 
-            sc->remote_enqueue();
+            if (!t)
+                return 0;
 
-            return true;
+            if (t == t->next)
+                queue = 0;
+            else {
+                queue = t->next;
+                t->next->prev = t->prev;
+                t->prev->next = t->next;
+            }
+
+            t->next = t->prev = 0;
+
+            return t;
         }
 };

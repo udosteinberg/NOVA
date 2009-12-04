@@ -19,37 +19,41 @@
 
 #include "capability.h"
 #include "compiler.h"
+#include "counter.h"
 #include "fpu.h"
 #include "kobject.h"
+#include "lock_guard.h"
 #include "pd.h"
 #include "queue.h"
 #include "refptr.h"
 #include "regs.h"
+#include "sc.h"
 #include "slab.h"
 #include "syscall.h"
 #include "tss.h"
 #include "types.h"
 
 class Pt;
-class Sc;
 class Utcb;
 class Vmcs;
 
-class Ec : public Kobject
+class Ec : public Kobject, public Queue<Sc>
 {
-    private:
-        Exc_regs regs;                              // 0x4, must be first
-        void (*continuation)();                     // 0x50
-        Capability reply;                           // 0x54
-        Queue send;                                 // 0x58
+    template <typename T> friend class Queue;
 
-        Utcb *      utcb;                           // 0x5c
-        Refptr<Pd>  pd;                             // 0x60
-        Sc *        sc;                             // 0x64
+    private:
+        Exc_regs    regs;                       // 0x4, must be first
+        void        (*continuation)();          // 0x50
+        Capability  reply;                      // 0x54
+        Utcb *      utcb;
+        Refptr<Pd>  pd;
+        Sc *        sc;
         Ec *        partner;
+        Ec *        prev;
+        Ec *        next;
         Fpu *       fpu;
-        mword       cpu;
-        mword       evt;
+        mword const cpu;
+        mword const evt;
         mword       wait;
         mword       hazard;
 
@@ -80,11 +84,28 @@ class Ec : public Kobject
         NOINLINE
         static void handle_hazard (void (*)());
 
+        ALWAYS_INLINE
+        inline void set_partner (Ec *p)
+        {
+            partner = p;
+            partner->reply = Capability (this);
+            Sc::counter++;
+        }
+
+        ALWAYS_INLINE
+        inline unsigned clr_partner()
+        {
+            assert (partner == current);
+            partner->reply = Capability();
+            partner = 0;
+            return Sc::counter--;
+        }
+
     public:
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, void (*)());                          // Kernel EC
+        Ec (Pd *, mword, mword, void (*)());            // Kernel EC
         Ec (Pd *, mword, mword, mword, mword, bool);    // Regular EC
 
         ALWAYS_INLINE
@@ -92,6 +113,9 @@ class Ec : public Kobject
         {
             return Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
         }
+
+        ALWAYS_INLINE
+        inline bool blocked() const { return next; }
 
         ALWAYS_INLINE NORETURN
         inline void make_current()
@@ -117,17 +141,43 @@ class Ec : public Kobject
         }
 
         NOINLINE NORETURN
-        void block (void (*c)())
+        void help (void (*c)())
         {
-            send.block();
+            Counter::count (Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 2);
             current->continuation = c;
+            activate (this);
+        }
+
+        NOINLINE
+        void block()
+        {
+            {   Lock_guard <Spinlock> guard (lock);
+
+                if (!blocked())
+                    return;
+
+                // Block SC on EC
+                enqueue (Sc::current);
+            }
+
             Sc::schedule (true);
         }
 
         ALWAYS_INLINE
-        inline bool release()
+        inline void release()
         {
-            return send.release();
+            Sc *s;
+
+            for (;;) {      // This loop will go away
+
+                {   Lock_guard <Spinlock> guard (lock);
+
+                    if (!(s = dequeue()))
+                        return;
+                }
+
+                s->remote_enqueue();
+            }
         }
 
         HOT NORETURN
@@ -204,9 +254,6 @@ class Ec : public Kobject
 
         HOT NORETURN REGPARM (1)
         static void syscall_handler (uint8) asm ("syscall_handler");
-
-        NORETURN
-        static void preemption_handler() asm ("preemption_handler");
 
         NORETURN
         static void task_gate_handler() asm ("task_gate_handler");

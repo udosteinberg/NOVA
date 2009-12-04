@@ -18,6 +18,7 @@
 #pragma once
 
 #include "compiler.h"
+#include "ec.h"
 #include "kobject.h"
 #include "lock_guard.h"
 #include "mdb.h"
@@ -27,10 +28,10 @@
 
 class Pd;
 
-class Sm : public Kobject, public Queue
+class Sm : public Kobject, public Queue<Ec>
 {
     private:
-        mword       counter;
+        mword counter;
 
         static Slab_cache cache;
 
@@ -42,29 +43,38 @@ class Sm : public Kobject, public Queue
         ALWAYS_INLINE
         inline void dn()
         {
-            {
-                Lock_guard <Spinlock> guard (lock);
+            Ec *e = Ec::current;
+
+            {   Lock_guard <Spinlock> guard (lock);
 
                 if (counter) {
                     counter--;
                     return;
                 }
 
-                block();
+                // Block EC on SM
+                enqueue (e);
             }
 
-            Sc::schedule (true);
+            assert (e->empty());
+
+            e->block();
         }
 
         ALWAYS_INLINE
         inline void up()
         {
-            {
-                Lock_guard <Spinlock> guard (lock);
+            Ec *e;
 
-                if (!release())
+            {   Lock_guard <Spinlock> guard (lock);
+
+                if (!(e = dequeue())) {
                     counter++;
+                    return;
+                }
             }
+
+            e->release();
         }
 
         ALWAYS_INLINE

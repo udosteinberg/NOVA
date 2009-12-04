@@ -38,6 +38,7 @@ class Counter
         static unsigned vtlb_fill       CPULOCAL;
         static unsigned vtlb_flush      CPULOCAL;
         static unsigned schedule        CPULOCAL;
+        static unsigned helping         CPULOCAL;
         static uint64   cycles_idle     CPULOCAL;
 
         static void init();
