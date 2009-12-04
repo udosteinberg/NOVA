@@ -184,6 +184,8 @@ void Ec::ret_user_vmresume()
                   "mov %1, %%esp;"
                   : : "m" (current->regs), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
 
+    trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
+
     current->kill (&current->regs, "VMENTRY");
 }
 
