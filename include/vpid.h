@@ -22,10 +22,11 @@
 
 class Invvpid
 {
-    public:
+    private:
         uint64  vpid;
         uint64  addr;
 
+    public:
         ALWAYS_INLINE
         inline Invvpid (unsigned long v, mword a) : vpid (v), addr (a) {}
 };

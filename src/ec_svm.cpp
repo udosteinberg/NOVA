@@ -40,5 +40,5 @@ void Ec::svm_handler()
 
     current->regs.dst_portal = reason;
 
-    send_svm_msg();
+    send_msg<ret_user_vmrun, &Utcb::load_svm>();
 }

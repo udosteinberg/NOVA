@@ -25,18 +25,20 @@ class Ept;
 
 class Eptp
 {
-    public:
+    private:
         uint64 val;
 
+    public:
         ALWAYS_INLINE
         inline Eptp (Ept *ept) : val (Buddy::ptr_to_phys (ept) | 0x1e) {}
 };
 
 class Invept : public Eptp
 {
-    public:
+    private:
         uint64 res;
 
+    public:
         ALWAYS_INLINE
         inline Invept (Ept *ept) : Eptp (ept) {}
 };

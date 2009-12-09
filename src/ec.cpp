@@ -50,12 +50,19 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
     pd->Space_mem::init (c);
 
     if (u) {
-        regs.cs  = SEL_USER_CODE;
-        regs.ds  = SEL_USER_DATA;
-        regs.es  = SEL_USER_DATA;
-        regs.ss  = SEL_USER_DATA;
-        regs.efl = Cpu::EFL_IF;
-        regs.ecx = s;
+
+        if (w) {
+            continuation = ret_user_sysexit;
+            regs.ecx = s;
+        } else {
+            continuation = send_msg<ret_user_iret, &Utcb::load_exc>;
+            regs.cs  = SEL_USER_CODE;
+            regs.ds  = SEL_USER_DATA;
+            regs.es  = SEL_USER_DATA;
+            regs.ss  = SEL_USER_DATA;
+            regs.efl = Cpu::EFL_IF;
+            regs.esp = s;
+        }
 
         utcb = new Utcb;
 
@@ -66,7 +73,6 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
         regs.dst_portal = NUM_EXC - 2;
 
-        continuation = w ? ret_user_sysexit : send_exc_msg;
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#lx UTCB:%#lx ESP:%lx EVT:%#lx W:%u)", this, p, c, u, s, e, w);
 
     } else {
@@ -80,13 +86,13 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
-            continuation = send_vmx_msg;
+            continuation = send_msg<ret_user_vmresume, &Utcb::load_vmx>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept_ptab());
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
             regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->cpu_ptab (c)));
-            continuation = send_svm_msg;
+            continuation = send_msg<ret_user_vmrun, &Utcb::load_svm>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
     }
@@ -110,12 +116,12 @@ void Ec::handle_hazard (void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.dst_portal = NUM_VMI - 1;
-            send_vmx_msg();
+            send_msg<ret_user_vmresume, &Utcb::load_vmx>();
         }
 
         if (func == ret_user_vmrun) {
             current->regs.dst_portal = NUM_VMI - 1;
-            send_svm_msg();
+            send_msg<ret_user_vmrun, &Utcb::load_svm>();
         }
 
         // If the EC wanted to leave via SYSEXIT, redirect it to IRET instead.
@@ -129,7 +135,7 @@ void Ec::handle_hazard (void (*func)())
         }
 
         current->regs.dst_portal = NUM_EXC - 1;
-        send_exc_msg();
+        send_msg<ret_user_iret, &Utcb::load_exc>();
     }
 }
 
@@ -306,7 +312,7 @@ void Ec::exc_handler (Exc_regs *r)
                 current->kill (r, "EXC");
     }
 
-    send_exc_msg();
+    send_msg<ret_user_iret, &Utcb::load_exc>();
 }
 
 void Ec::fpu_handler()

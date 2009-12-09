@@ -201,14 +201,9 @@ class Ec : public Kobject, public Queue<Sc>
         NORETURN
         static void activate (Ec *);
 
+        template <void (*)(), void (Utcb::*)(Exc_regs *, Mtd)>
         NORETURN
-        static void send_exc_msg();
-
-        NORETURN
-        static void send_vmx_msg();
-
-        NORETURN
-        static void send_svm_msg();
+        static void send_msg();
 
         HOT NORETURN
         static void sys_ipc_call();

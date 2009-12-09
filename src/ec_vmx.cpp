@@ -20,6 +20,7 @@
 #include "ec.h"
 #include "gsi.h"
 #include "lapic.h"
+#include "utcb.h"
 #include "vmx.h"
 #include "vtlb.h"
 
@@ -69,7 +70,7 @@ void Ec::vmx_exception()
     } else
         current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
 
-    send_vmx_msg();
+    send_msg<ret_user_vmresume, &Utcb::load_vmx>();
 }
 
 void Ec::vmx_extint()
@@ -142,5 +143,5 @@ void Ec::vmx_handler()
 
     current->regs.dst_portal = reason;
 
-    send_vmx_msg();
+    send_msg<ret_user_vmresume, &Utcb::load_vmx>();
 }

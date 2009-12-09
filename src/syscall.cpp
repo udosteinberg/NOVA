@@ -67,7 +67,8 @@ void Ec::recv_ipc_msg (mword ip, unsigned /*flags*/)
     make_current();
 }
 
-void Ec::send_vmx_msg()
+template <void (*C)(), void (Utcb::*U)(Exc_regs *, Mtd)>
+void Ec::send_msg()
 {
     Exc_regs *r = &current->regs;
 
@@ -75,72 +76,21 @@ void Ec::send_vmx_msg()
 
     Kobject *obj = cap.obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "VMX PT not found");
+        current->kill (r, "PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "VMX PT wrong CPU");
+        current->kill (r, "PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->help (send_vmx_msg);
+        ec->help (send_msg<C,U>);
 
-    current->continuation = ret_user_vmresume;
+    current->continuation = C;
 
-    ec->utcb->load_vmx (r, pt->mtd);
-    ec->utcb->pid = pt->node.base;
-    ec->recv_ipc_msg (pt->ip);
-}
+    (ec->utcb->*U)(r, pt->mtd);
 
-void Ec::send_svm_msg()
-{
-    Exc_regs *r = &current->regs;
-
-    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
-
-    Kobject *obj = cap.obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "SVM PT not found");
-
-    Pt *pt = static_cast<Pt *>(obj);
-    Ec *ec = pt->ec;
-
-    if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "SVM PT wrong CPU");
-
-    if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->help (send_svm_msg);
-
-    current->continuation = ret_user_vmrun;
-
-    ec->utcb->load_svm (r, pt->mtd);
-    ec->utcb->pid = pt->node.base;
-    ec->recv_ipc_msg (pt->ip);
-}
-
-void Ec::send_exc_msg()
-{
-    Exc_regs *r = &current->regs;
-
-    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
-
-    Kobject *obj = cap.obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "EXC PT not found");
-
-    Pt *pt = static_cast<Pt *>(obj);
-    Ec *ec = pt->ec;
-
-    if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "EXC PT wrong CPU");
-
-    if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->help (send_exc_msg);
-
-    current->continuation = ret_user_iret;
-
-    ec->utcb->load_exc (r, pt->mtd);
     ec->utcb->pid = pt->node.base;
     ec->recv_ipc_msg (pt->ip);
 }
@@ -506,3 +456,7 @@ void Ec::syscall_handler (uint8 number)
 
     sys_finish (&current->regs, Sys_regs::BAD_SYS);
 }
+
+template void Ec::send_msg<Ec::ret_user_vmresume,   &Utcb::load_vmx>();
+template void Ec::send_msg<Ec::ret_user_vmrun,      &Utcb::load_svm>();
+template void Ec::send_msg<Ec::ret_user_iret,       &Utcb::load_exc>();
