@@ -82,12 +82,12 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
         if (Cpu::feature (Cpu::FEAT_VMX)) {
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
                                   Buddy::ptr_to_phys (pd->cpu_ptab (c)),
-                                  Buddy::ptr_to_phys (pd->ept_ptab()));
+                                  Buddy::ptr_to_phys (pd->ept()));
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
             continuation = send_msg<ret_user_vmresume, &Utcb::load_vmx>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept_ptab());
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept());
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {

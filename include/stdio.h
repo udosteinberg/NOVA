@@ -59,7 +59,8 @@ enum {
     TRACE_MAP       = 1ul << 19,
     TRACE_PTE       = 1ul << 20,
     TRACE_EPT       = 1ul << 21,
-    TRACE_FPU       = 1ul << 22,
+    TRACE_DPT       = 1ul << 22,
+    TRACE_FPU       = 1ul << 23,
 };
 
 /*
@@ -89,6 +90,7 @@ unsigned const trace_mask =
 //                            TRACE_MAP       |
 //                            TRACE_PTE       |
 //                            TRACE_EPT       |
+//                            TRACE_DPT       |
 //                            TRACE_FPU       |
 #endif
                             0;

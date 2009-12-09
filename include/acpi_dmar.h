@@ -28,18 +28,7 @@ class Acpi_scope
         uint8       type;
         uint8       length;
         uint16      reserved;
-        uint8       id;
-        uint8       bus;
-        uint8       dev;
-        uint8       func;
-
-        enum Type
-        {
-            ENDPOINT        = 1,
-            SUB_HIERARCHY   = 2,
-            IOAPIC          = 3,
-            HPET            = 4
-        };
+        uint8       id, b, d, f;
 };
 
 /*
@@ -68,7 +57,7 @@ class Acpi_dmar : public Acpi_remap
         uint8       flags;
         uint8       reserved;
         uint16      segment;
-        uint64      base;
+        uint64      phys;
         Acpi_scope  scope[];
 
         INIT

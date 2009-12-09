@@ -20,6 +20,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "cpu.h"
+#include "dpt.h"
 #include "ept.h"
 #include "ptab.h"
 #include "types.h"
@@ -31,20 +32,24 @@ class Space_mem
 {
     protected:
         Vma     vma_head;
-        Ept *   ept;
+        Dpt *   d;
+        Ept *   e;
         Ptab *  master;
         Ptab *  percpu[NUM_CPU];
 
     public:
         // Constructor for kernel memory space
         ALWAYS_INLINE INIT
-        inline Space_mem() : master (Ptab::master()) {}
+        inline Space_mem() : d (new Dpt), master (Ptab::master()) {}
 
         // Constructor
         Space_mem (bool);
 
         ALWAYS_INLINE
-        inline Ept *ept_ptab() const { return ept; }
+        inline Dpt *dpt() const { return d; }
+
+        ALWAYS_INLINE
+        inline Ept *ept() const { return e; }
 
         ALWAYS_INLINE
         inline Ptab *mst_ptab() const

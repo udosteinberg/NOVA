@@ -24,7 +24,7 @@
 Space_mem::Space_mem (bool vm)
 {
     if (vm)
-        ept = new Ept;
+        e = new Ept;
 }
 
 void Space_mem::init (unsigned cpu)
@@ -72,8 +72,8 @@ void Space_mem::insert_root (mword b, size_t s, unsigned t, unsigned a)
 
 bool Space_mem::insert (Vma *vma, Paddr phys)
 {
-    if (ept)
-        ept->insert (vma->base, vma->order - PAGE_BITS, vma->type, vma->attr, phys);
+    if (e)
+        e->insert (vma->base, vma->order - PAGE_BITS, vma->type, vma->attr, phys);
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
                       (vma->attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |

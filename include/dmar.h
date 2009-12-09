@@ -21,63 +21,27 @@
 #include "compiler.h"
 #include "slab.h"
 #include "types.h"
+#include "x86.h"
 
-class Ept;
+class Pd;
 
-class Cte
+class Dmar_context
 {
     private:
-        uint64 lo;
-        uint64 hi;
-
-        enum
-        {
-            CTE_P       = 1ul << 0,
-            CTE_FPD     = 1ul << 1,
-            CTE_T       = 1ul << 2,
-            CTE_EH      = 1ul << 4,
-            CTE_ALH     = 1ul << 5,
-            CTE_ADDR    = ~((1ul << 12) - 1)
-        };
+        uint64 lo, hi;
 
     public:
         ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
-        }
-
-        void set (unsigned, unsigned, Ept *);
-};
-
-class Rte
-{
-    private:
-        uint64 lo;
-        uint64 hi;
-
-        enum
-        {
-            RTE_P       = 1ul << 0,
-            RTE_ADDR    = ~((1ul << 12) - 1)
-        };
-
-    public:
-        static Rte *rtp;
+        inline bool present() const { return lo & 1; }
 
         ALWAYS_INLINE
-        inline bool present() const { return lo & RTE_P; }
+        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~((1ul << 12) - 1); }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(lo) & RTE_ADDR; }
+        inline void set (uint64 h, uint64 l) { hi = h; lo = l; clflush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
-        }
-
-        static void set (unsigned, unsigned, unsigned, Ept *);
+        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
 };
 
 class Dmar
@@ -85,13 +49,15 @@ class Dmar
     private:
         mword const reg_base;
         mword       frr_base;
+        mword       tlb_base;
         unsigned    frr_count;
         Dmar *      next;
 
-        static Slab_cache cache;
-        static Dmar *list;
+        static Slab_cache       cache;
+        static Dmar *           list;
+        static Dmar_context *   root;
 
-        enum Register
+        enum Reg
         {
             DMAR_VER        = 0x0,
             DMAR_CAP        = 0x8,
@@ -104,70 +70,64 @@ class Dmar
             DMAR_FECTL      = 0x38,
             DMAR_FEDATA     = 0x3c,
             DMAR_FEADDR     = 0x40,
-            DMAR_FEUADDR    = 0x44,
-            DMAR_AFLOG      = 0x58,
-            DMAR_PMEN       = 0x64,
-            DMAR_PLMBASE    = 0x68,
-            DMAR_PLMLIMIT   = 0x6c,
-            DMAR_PHMBASE    = 0x70,
-            DMAR_PHMLIMIT   = 0x78,
-            DMAR_IQH        = 0x80,
-            DMAR_IQT        = 0x88,
-            DMAR_IQA        = 0x90,
-            DMAR_ICS        = 0x9c,
-            DMAR_IECTL      = 0xa0,
-            DMAR_IEDATA     = 0xa4,
-            DMAR_IEADDR     = 0xa8,
-            DMAR_IEUADDR    = 0xac,
-            DMAR_IRTA       = 0xb8
         };
 
-        enum
+        enum Tlb
         {
-            GCMD_TE         = 1ul << 31,
-            GCMD_SRTP       = 1ul << 30,
-            FSTS_PFO        = 1ul << 0,     // Primary Fault Overflow
-            FSTS_PPF        = 1ul << 1,     // Primary Pending Fault
-            FSTS_AFO        = 1ul << 2,     // Advanced Fault Overflow
-            FSTS_APF        = 1ul << 3,     // Advanced Pending Fault
-            FSTS_IQE        = 1ul << 4,     // Invalidation Queue Error
-            FSTS_ICE        = 1ul << 5,     // Invalidation Completion Error
-            FSTS_ITE        = 1ul << 6,     // Invalidation Timeout Error
-            FECTL_IM        = 1ul << 31,
-            FECTL_IP        = 1ul << 30,
+            DMAR_IVA        = 0x0,
+            DMAR_IOTLB      = 0x8,
         };
 
         template <typename T>
         ALWAYS_INLINE
-        inline T read (Register reg)
+        inline T read (Reg reg)
         {
             return *reinterpret_cast<T volatile *>(reg_base + reg);
         }
 
         template <typename T>
         ALWAYS_INLINE
-        inline void write (Register reg, T val)
+        inline void write (Reg reg, T val)
         {
             *reinterpret_cast<T volatile *>(reg_base + reg) = val;
         }
 
+        template <typename T>
         ALWAYS_INLINE
-        inline void read_frr (unsigned n, uint64 &hi, uint64 &lo)
+        inline T read (Tlb tlb)
         {
-            hi = *reinterpret_cast<uint64 volatile *>(frr_base + n * 16 + 8);
-            lo = *reinterpret_cast<uint64 volatile *>(frr_base + n * 16);
+            return *reinterpret_cast<T volatile *>(tlb_base + tlb);
+        }
+
+        template <typename T>
+        ALWAYS_INLINE
+        inline void write (Tlb tlb, T val)
+        {
+            *reinterpret_cast<T volatile *>(tlb_base + tlb) = val;
         }
 
         ALWAYS_INLINE
-        inline void clear_frr (unsigned n)
+        inline void read (unsigned frr, uint64 &hi, uint64 &lo)
         {
-            *reinterpret_cast<uint64 volatile *>(frr_base + n * 16 + 8) = 1ull << 63;
+            lo = *reinterpret_cast<uint64 volatile *>(frr_base + frr * 16);
+            hi = *reinterpret_cast<uint64 volatile *>(frr_base + frr * 16 + 8);
+            *reinterpret_cast<uint64 volatile *>(frr_base + frr * 16 + 8) = 1ull << 63;
         }
 
-        void handle_faults();
+        void enable();
+        void fault_handler();
 
     public:
         Dmar (Paddr);
+
+        void assign (unsigned, unsigned, unsigned, Pd *);
+
+        ALWAYS_INLINE
+        static inline void enable_all()
+        {
+            for (Dmar *dmar = list; dmar; dmar = dmar->next)
+                dmar->enable();
+        }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

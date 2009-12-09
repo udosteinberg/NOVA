@@ -21,15 +21,13 @@
 #include "pd.h"
 #include "stdio.h"
 
-Slab_cache Dmar::cache (sizeof (Dmar), 8);
+Slab_cache      Dmar::cache (sizeof (Dmar), 8);
+Dmar *          Dmar::list;
+Dmar_context *  Dmar::root = new Dmar_context;
 
-Dmar *Dmar::list;
-
-Rte *Rte::rtp = new Rte;
-
-Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (list)
+Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (0)
 {
-    list = this;
+    Dmar **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
     Pd::kern.Space_mem::insert (hwdev_addr, 0,
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC      |
@@ -39,40 +37,59 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
                                 phys & ~PAGE_MASK);
 
     uint64 cap  = read<uint64>(DMAR_CAP);
-    frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
+    uint64 ecap = read<uint64>(DMAR_ECAP);
+
     frr_count = static_cast<unsigned>(cap >> 40 & 0xff) + 1;
-
-    unsigned dom = static_cast<mword>(cap) & 0x3;
-    unsigned sps = static_cast<mword>(cap >> 34) & 0xf;
-    unsigned gaw = static_cast<mword>(cap >>  8) & 0x1f;
-
-    trace (0, "DMAR:%#lx FRR:%u DOM:%#x SPS:%#x GAW:%#x MSI:%#x",
-           phys,
-           frr_count,
-           dom,
-           sps,
-           gaw,
-           VEC_MSI_DMAR);
-
-    write<uint32>(DMAR_FECTL,  0);
-    write<uint32>(DMAR_FEDATA, VEC_MSI_DMAR);       // VEC
-    write<uint32>(DMAR_FEADDR, 0xfee00000);         // MSI to CPU0
-
-    assert (Rte::rtp);
-    write<uint64>(DMAR_RTADDR, Buddy::ptr_to_phys (Rte::rtp));
-    write<uint32>(DMAR_GCMD, GCMD_TE | GCMD_SRTP);
+    frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
+    tlb_base  = static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base;
 }
 
-void Dmar::handle_faults()
+void Dmar::enable()
+{
+    write<uint32>(DMAR_FECTL,  0);
+    write<uint32>(DMAR_FEDATA, VEC_MSI_DMAR);
+    write<uint32>(DMAR_FEADDR, 0xfee00000);
+    write<uint64>(DMAR_RTADDR, Buddy::ptr_to_phys (root));
+
+    write<uint32>(DMAR_GCMD, 1ul << 30);
+    while (!(read<uint32>(DMAR_GSTS) & (1ul << 30)))
+        Cpu::pause();
+
+    write<uint64>(DMAR_CCMD, 1ull << 63 | 1ull << 61);
+    while (read<uint64>(DMAR_CCMD) & (1ull << 63))
+        Cpu::pause();
+
+    write<uint64>(DMAR_IOTLB, 1ull << 63 | 1ull << 60);
+    while (read<uint64>(DMAR_IOTLB) & (1ull << 63))
+        Cpu::pause();
+
+    write<uint32>(DMAR_GCMD, 1ul << 31);
+}
+
+void Dmar::assign (unsigned b, unsigned d, unsigned f, Pd *p)
+{
+    assert (p->dpt());
+
+    mword lev = bit_scan_reverse (read<mword>(DMAR_CAP) >> 8 & 0x1f);
+    mword did = 1;
+
+    Dmar_context *r = root + b;
+    if (!r->present())
+        r->set (0, Buddy::ptr_to_phys (new Dmar_context) | 1);
+
+    Dmar_context *c = static_cast<Dmar_context *>(Buddy::phys_to_ptr (r->addr())) + d * 8 + f;
+    if (!c->present())
+        c->set (lev | did << 8, Buddy::ptr_to_phys (p->dpt()->level (lev + 1)) | 1);
+}
+
+void Dmar::fault_handler()
 {
     for (uint32 fsts; fsts = read<uint32>(DMAR_FSTS), fsts & 0xff;) {
 
-        if (fsts & FSTS_PPF) {
-
+        if (fsts & 0x2) {
             uint64 hi, lo;
-            for (unsigned frr = fsts >> 8 & 0xff; read_frr (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % frr_count) {
-
-                trace (0, "DMAR:%p FRR:%u FR:%#x SID:%x:%02x:%x FI:%#010llx",
+            for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % frr_count)
+                trace (TRACE_DMAR, "DMAR:%p FRR:%u FR:%#x SID:%x:%02x:%x FI:%#010llx",
                        this,
                        frr,
                        static_cast<uint32>(hi >> 32) & 0xff,
@@ -80,13 +97,9 @@ void Dmar::handle_faults()
                        static_cast<uint32>(hi >> 3) & 0x1f,
                        static_cast<uint32>(hi) & 0x3,
                        lo);
-
-                clear_frr (frr);
-            }
         }
 
-        // Clear all fault indicators
-        write<uint32>(DMAR_FSTS, FSTS_ITE | FSTS_ICE | FSTS_IQE | FSTS_APF | FSTS_AFO | FSTS_PFO);
+        write<uint32>(DMAR_FSTS, 0x7d);
     }
 }
 
@@ -96,25 +109,7 @@ void Dmar::vector (unsigned vector)
 
     if (EXPECT_TRUE (msi == 0))
         for (Dmar *dmar = list; dmar; dmar = dmar->next)
-            dmar->handle_faults();
+            dmar->fault_handler();
 
     Lapic::eoi();
-}
-
-void Rte::set (unsigned b, unsigned d, unsigned f, Ept *e)
-{
-    Rte *rte = rtp + b;
-
-    if (!rte->present())
-        rte->lo = Buddy::ptr_to_phys (new Cte) | RTE_P;
-
-    static_cast<Cte *>(Buddy::phys_to_ptr (rte->addr()))->set (d, f, e);
-}
-
-void Cte::set (unsigned d, unsigned f, Ept *e)
-{
-    Cte *cte = this + d * 8 + f;
-
-    cte->hi = 0;
-    cte->lo = Buddy::ptr_to_phys (e) | CTE_P;
 }
