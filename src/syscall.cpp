@@ -39,8 +39,8 @@ void Ec::sys_finish (Sys_regs *param, Sys_regs::Status status)
 void Ec::activate (Ec *ec)
 {
     // XXX: Make the loop preemptible
-    for (Sc::counter = 0; ec->partner; Sc::counter++)
-        ec = ec->partner;
+    for (Sc::ctr_link = 0; ec->partner; ec = ec->partner)
+        Sc::ctr_link++;
 
     if (ec->blocked())
         ec->block();

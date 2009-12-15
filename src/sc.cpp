@@ -26,7 +26,8 @@ Slab_cache Sc::cache (sizeof (Sc), 8);
 
 // Current SC
 Sc *        Sc::current;
-unsigned    Sc::counter;
+unsigned    Sc::ctr_link;
+unsigned    Sc::ctr_loop;
 
 // Ready List
 Sc *Sc::list[Sc::priorities];
@@ -107,6 +108,8 @@ void Sc::schedule (bool suspend)
 
     current = sc;
     sc->ready_dequeue();
+
+    ctr_loop = 0;
 
     Ec::activate (sc->owner);
 }

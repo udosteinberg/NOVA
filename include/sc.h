@@ -55,8 +55,9 @@ class Sc : public Kobject
 
     public:
         // Current SC
-        static Sc *     current CPULOCAL_HOT;
-        static unsigned counter CPULOCAL_HOT;
+        static Sc *     current     CPULOCAL_HOT;
+        static unsigned ctr_link    CPULOCAL;
+        static unsigned ctr_loop    CPULOCAL;
 
         static unsigned long const default_prio = 1;
         static unsigned long const default_quantum = 10000;

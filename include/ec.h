@@ -89,7 +89,7 @@ class Ec : public Kobject, public Queue<Sc>
         {
             partner = p;
             partner->reply = Capability (this);
-            Sc::counter++;
+            Sc::ctr_link++;
         }
 
         ALWAYS_INLINE
@@ -98,7 +98,7 @@ class Ec : public Kobject, public Queue<Sc>
             assert (partner == current);
             partner->reply = Capability();
             partner = 0;
-            return Sc::counter--;
+            return Sc::ctr_link--;
         }
 
     public:
@@ -145,6 +145,12 @@ class Ec : public Kobject, public Queue<Sc>
         {
             Counter::count (Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 2);
             current->continuation = c;
+
+            if (++Sc::ctr_loop >= 100) {
+                trace (0, "Helping livelock detected on SC:%p", Sc::current);
+                Sc::schedule (true);
+            }
+
             activate (this);
         }
 
