@@ -39,7 +39,7 @@ class Vmcs;
 
 class Ec : public Kobject, public Queue<Sc>
 {
-    template <typename T> friend class Queue;
+    friend class Queue<Ec>;
 
     private:
         Exc_regs    regs;                       // 0x4, must be first

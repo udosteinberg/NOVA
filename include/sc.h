@@ -26,7 +26,7 @@ class Ec;
 
 class Sc : public Kobject
 {
-    template <typename T> friend class Queue;
+    friend class Queue<Sc>;
 
     private:
         Ec * const      owner;
