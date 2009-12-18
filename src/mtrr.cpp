@@ -18,7 +18,7 @@
 #include "bits.h"
 #include "msr.h"
 #include "mtrr.h"
-#include "stdio.h"
+#include "x86.h"
 
 void Mtrr::save (mword base, size_t size)
 {
@@ -31,7 +31,7 @@ void Mtrr::save (mword base, size_t size)
     // XXX: Disable cache
 
     // Flush cache
-    Cpu::flush_cache();
+    wbinvd();
 
     // Determine variable MTRR count
     count = Msr::read<uint32>(Msr::IA32_MTRR_CAP) & 0xff;

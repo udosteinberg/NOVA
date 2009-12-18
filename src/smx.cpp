@@ -40,7 +40,7 @@ void Smx::launch (Multiboot *mbi)
         return;
 
     // Enable SMX
-    Cpu::set_cr4 (Cpu::get_cr4() | Cpu::CR4_SMXE);
+    set_cr4 (get_cr4() | Cpu::CR4_SMXE);
 
     // SMX capability check
     uint32 cap;
@@ -108,8 +108,8 @@ void Smx::launch (Multiboot *mbi)
     // Disable TPM locality 0
     *reinterpret_cast<uint8 *>(0xfed40000) = 1u << 5;
 
-    Cpu::set_cr0 ((Cpu::get_cr0() | Cpu::CR0_NE | Cpu::CR0_PE) &
-                                  ~(Cpu::CR0_CD | Cpu::CR0_NW));
+    set_cr0 ((get_cr0() | Cpu::CR0_NE | Cpu::CR0_PE) &
+                        ~(Cpu::CR0_CD | Cpu::CR0_NW));
 
     senter (txt_sinit_base, txt_sinit_size);
 }

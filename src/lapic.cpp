@@ -17,7 +17,6 @@
 
 #include "acpi.h"
 #include "counter.h"
-#include "cpu.h"
 #include "ec.h"
 #include "lapic.h"
 #include "pd.h"
@@ -81,10 +80,10 @@ void Lapic::init()
 void Lapic::calibrate()
 {
     uint32 v1 = read (LAPIC_TMR_CCR);
-    uint32 t1 = static_cast<uint32>(Cpu::time());
+    uint32 t1 = static_cast<uint32>(rdtsc());
     Acpi::delay (250);
     uint32 v2 = read (LAPIC_TMR_CCR);
-    uint32 t2 = static_cast<uint32>(Cpu::time());
+    uint32 t2 = static_cast<uint32>(rdtsc());
 
     freq_tsc = (t2 - t1) / 250;
     freq_bus = (v1 - v2) / 250;
@@ -95,7 +94,7 @@ void Lapic::calibrate()
 void Lapic::send_ipi (unsigned cpu, Destination_mode dst, Delivery_mode dlv, unsigned vector)
 {
     while (EXPECT_FALSE (read (LAPIC_ICR_LO) & STS_PENDING))
-        Cpu::pause();
+        pause();
 
     write (LAPIC_ICR_HI, cpu << 24);
     write (LAPIC_ICR_LO, dst | dlv | vector);

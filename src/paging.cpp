@@ -17,12 +17,13 @@
 
 #include "cpu.h"
 #include "paging.h"
+#include "x86.h"
 
 void Paging::enable()
 {
     extern char _master_p;
     asm volatile ("mov %0, %%cr3" : : "r" (&_master_p));
 
-    Cpu::set_cr4 (Cpu::CR4_OSXMMEXCPT | Cpu::CR4_OSFXSR | Cpu::CR4_PGE | Cpu::CR4_PSE | Cpu::CR4_DE);
-    Cpu::set_cr0 (Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_NE | Cpu::CR0_TS | Cpu::CR0_MP | Cpu::CR0_PE);
+    set_cr4 (Cpu::CR4_OSXMMEXCPT | Cpu::CR4_OSFXSR | Cpu::CR4_PGE | Cpu::CR4_PSE | Cpu::CR4_DE);
+    set_cr0 (Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_NE | Cpu::CR0_TS | Cpu::CR0_MP | Cpu::CR0_PE);
 }

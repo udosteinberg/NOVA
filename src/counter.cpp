@@ -18,6 +18,7 @@
 #include "cmdline.h"
 #include "counter.h"
 #include "stdio.h"
+#include "x86.h"
 
 unsigned    Counter::row;
 unsigned    Counter::ipi[NUM_IPI];
@@ -42,7 +43,7 @@ void Counter::init()
 
 void Counter::dump()
 {
-    trace (0, "TIME: %16llu", Cpu::time());
+    trace (0, "TIME: %16llu", rdtsc());
     trace (0, "IDLE: %16llu", Counter::cycles_idle);
     trace (0, "VGPF: %16u", Counter::vtlb_gpf);
     trace (0, "VHPF: %16u", Counter::vtlb_hpf);

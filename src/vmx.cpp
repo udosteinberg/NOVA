@@ -26,6 +26,7 @@
 #include "stdio.h"
 #include "tss.h"
 #include "vmx.h"
+#include "x86.h"
 
 Vmcs *              Vmcs::current;
 unsigned            Vmcs::vpid_ctr;
@@ -77,10 +78,10 @@ Vmcs::Vmcs (mword esp, mword cr3, mword eptp) : rev (basic.revision)
     write (HOST_SEL_TR, SEL_TSS_RUN);
 
     write (HOST_CR3, cr3);
-    write (HOST_CR0, Cpu::get_cr0());
-    write (HOST_CR4, Cpu::get_cr4());
+    write (HOST_CR0, get_cr0());
+    write (HOST_CR4, get_cr4());
 
-    assert (Cpu::get_cr0() & Cpu::CR0_TS);
+    assert (get_cr0() & Cpu::CR0_TS);
 
     write (HOST_BASE_TR,   reinterpret_cast<mword>(&Tss::run));
     write (HOST_BASE_GDTR, reinterpret_cast<mword>(Gdt::gdt));
@@ -129,8 +130,8 @@ void Vmcs::init()
     if (Cmdline::novpid || !ept_vpid.invvpid)
         ctrl_cpu[1].clr &= ~CPU_VPID;
 
-    Cpu::set_cr0 ((Cpu::get_cr0() & ~fix_cr0.clr) | fix_cr0.set);
-    Cpu::set_cr4 ((Cpu::get_cr4() & ~fix_cr4.clr) | fix_cr4.set);
+    set_cr0 ((get_cr0() & ~fix_cr0.clr) | fix_cr0.set);
+    set_cr4 ((get_cr4() & ~fix_cr4.clr) | fix_cr4.set);
 
     Vmcs *root = new Vmcs;
 

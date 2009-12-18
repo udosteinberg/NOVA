@@ -22,6 +22,7 @@
 #include "msr.h"
 #include "pd.h"
 #include "sc.h"
+#include "x86.h"
 
 extern "C" NORETURN
 void bootstrap()
@@ -33,7 +34,7 @@ void bootstrap()
     Sc::current = new Sc (Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::sub (Cpu::boot_count, 1); Cpu::boot_count; Cpu::pause()) ;
+    for (Atomic::sub (Cpu::boot_count, 1); Cpu::boot_count; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 

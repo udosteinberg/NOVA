@@ -23,11 +23,11 @@
 #include "acpi_rsdt.h"
 #include "assert.h"
 #include "cmdline.h"
-#include "cpu.h"
 #include "gsi.h"
 #include "io.h"
 #include "ptab.h"
 #include "stdio.h"
+#include "x86.h"
 
 Paddr    Acpi::dmar_addr;
 Paddr    Acpi::fadt_addr;
@@ -83,7 +83,7 @@ void Acpi::enable()
 
     Io::out (smi_cmd, enable_val);
     while ((read (PM1_CNT) & PM1_CNT_SCI_EN) == 0)
-        Cpu::pause();
+        pause();
 }
 
 void Acpi::delay (unsigned ms)
@@ -92,7 +92,7 @@ void Acpi::delay (unsigned ms)
     unsigned val = read (PM_TMR);
 
     while ((read (PM_TMR) - val) % (1ul << 24) < cnt)
-        Cpu::pause();
+        pause();
 }
 
 void Acpi::reset()

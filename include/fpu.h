@@ -18,9 +18,9 @@
 #pragma once
 
 #include "compiler.h"
-#include "cpu.h"
 #include "slab.h"
 #include "types.h"
+#include "x86.h"
 
 class Fpu
 {
@@ -45,7 +45,7 @@ class Fpu
         static inline void enable() { asm volatile ("clts"); enabled = true; }
 
         ALWAYS_INLINE
-        static inline void disable() { Cpu::set_cr0 (Cpu::get_cr0() | Cpu::CR0_TS); enabled = false; }
+        static inline void disable() { set_cr0 (get_cr0() | Cpu::CR0_TS); enabled = false; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

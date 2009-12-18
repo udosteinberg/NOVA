@@ -17,8 +17,8 @@
 
 #include "cmdline.h"
 #include "console_serial.h"
-#include "cpu.h"
 #include "ptab.h"
+#include "x86.h"
 
 void Console_serial::init()
 {
@@ -47,7 +47,7 @@ void Console_serial::putc (int c)
         putc ('\r');
 
     while (EXPECT_FALSE (!(in (LSR) & LSR_TMIT_HOLD_EMPTY)))
-        Cpu::pause();
+        pause();
 
     out (THR, c);
 }

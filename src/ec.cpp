@@ -179,8 +179,8 @@ void Ec::ret_user_vmresume()
 
     current->regs.vmcs->make_current();
 
-    if (EXPECT_FALSE (Cpu::get_cr2() != current->regs.cr2))
-        Cpu::set_cr2 (current->regs.cr2);
+    if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
+        set_cr2 (current->regs.cr2);
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
@@ -216,11 +216,9 @@ void Ec::ret_user_vmrun()
 
 void Ec::idle()
 {
-    uint64 t1 = Cpu::time();
-
+    uint64 t1 = rdtsc();
     asm volatile ("sti; hlt; cli" : : : "memory");
-
-    uint64 t2 = Cpu::time();
+    uint64 t2 = rdtsc();
 
     Counter::cycles_idle += t2 - t1;
 

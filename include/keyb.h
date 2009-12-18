@@ -20,6 +20,7 @@
 #include "compiler.h"
 #include "io.h"
 #include "types.h"
+#include "x86.h"
 
 class Keyb
 {
@@ -86,14 +87,14 @@ class Keyb
         static inline void wait_recv()
         {
             while ((status() & STS_OUTB) == 0)
-                Cpu::pause();
+                pause();
         }
 
         ALWAYS_INLINE
         static inline void wait_send()
         {
             while ((status() & STS_INPB) != 0)
-                Cpu::pause();
+                pause();
         }
 
         ALWAYS_INLINE

@@ -53,15 +53,15 @@ void Dmar::enable()
 
     write<uint32>(REG_GCMD, 1ul << 30);
     while (!(read<uint32>(REG_GSTS) & (1ul << 30)))
-        Cpu::pause();
+        pause();
 
     write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
     while (read<uint64>(REG_CCMD) & (1ull << 63))
-        Cpu::pause();
+        pause();
 
     write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
     while (read<uint64>(REG_IOTLB) & (1ull << 63))
-        Cpu::pause();
+        pause();
 
     write<uint32>(REG_GCMD, 1ul << 31);
 }
