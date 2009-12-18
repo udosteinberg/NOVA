@@ -35,7 +35,7 @@ class Dmar_context
         inline bool present() const { return lo & 1; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~((1ul << 12) - 1); }
+        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~0xfff; }
 
         ALWAYS_INLINE
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; clflush (this); }
@@ -59,23 +59,23 @@ class Dmar
 
         enum Reg
         {
-            DMAR_VER        = 0x0,
-            DMAR_CAP        = 0x8,
-            DMAR_ECAP       = 0x10,
-            DMAR_GCMD       = 0x18,
-            DMAR_GSTS       = 0x1c,
-            DMAR_RTADDR     = 0x20,
-            DMAR_CCMD       = 0x28,
-            DMAR_FSTS       = 0x34,
-            DMAR_FECTL      = 0x38,
-            DMAR_FEDATA     = 0x3c,
-            DMAR_FEADDR     = 0x40,
+            REG_VER     = 0x0,
+            REG_CAP     = 0x8,
+            REG_ECAP    = 0x10,
+            REG_GCMD    = 0x18,
+            REG_GSTS    = 0x1c,
+            REG_RTADDR  = 0x20,
+            REG_CCMD    = 0x28,
+            REG_FSTS    = 0x34,
+            REG_FECTL   = 0x38,
+            REG_FEDATA  = 0x3c,
+            REG_FEADDR  = 0x40,
         };
 
         enum Tlb
         {
-            DMAR_IVA        = 0x0,
-            DMAR_IOTLB      = 0x8,
+            REG_IVA     = 0x0,
+            REG_IOTLB   = 0x8,
         };
 
         template <typename T>

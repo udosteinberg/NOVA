@@ -30,8 +30,7 @@ Ptab *Ptab::walk (mword hla, unsigned long l, bool alloc)
 
     for (Ptab *p = this;; p = static_cast<Ptab *>(Buddy::phys_to_ptr (p->addr()))) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        p += hla >> shift & ((1ul << bpl) - 1);
+        p += hla >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         if (lev == l)
             return p;

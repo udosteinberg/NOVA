@@ -1,7 +1,7 @@
 /*
  * Standard I/O
  *
- * Copyright (C) 2006-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -39,22 +39,16 @@ do {                                                        \
 enum {
     TRACE_CPU       = 1ul << 0,
     TRACE_VMX       = 1ul << 1,
-    TRACE_SMX       = 1ul << 2,
     TRACE_APIC      = 1ul << 3,
-    TRACE_MEMORY    = 1ul << 4,
-    TRACE_DESTROY   = 1ul << 5,
-    TRACE_TIMER     = 1ul << 6,
+    TRACE_DMAR      = 1ul << 4,
     TRACE_INTERRUPT = 1ul << 7,
     TRACE_ACPI      = 1ul << 8,
     TRACE_KEYB      = 1ul << 9,
     TRACE_ERROR     = 1ul << 10,
-    TRACE_MSG       = 1ul << 11,
     TRACE_SYSCALL   = 1ul << 12,
-    TRACE_DMAR      = 1ul << 13,
+    TRACE_MEMORY    = 1ul << 13,
     TRACE_PCI       = 1ul << 14,
-    TRACE_CONTEXT   = 1ul << 15,
     TRACE_SCHEDULE  = 1ul << 16,
-    TRACE_UTCB      = 1ul << 17,
     TRACE_VTLB      = 1ul << 18,
     TRACE_MAP       = 1ul << 19,
     TRACE_PTE       = 1ul << 20,
@@ -70,22 +64,16 @@ unsigned const trace_mask =
                             TRACE_CPU       |
 #ifndef NDEBUG
 //                            TRACE_VMX       |
-//                            TRACE_SMX       |
 //                            TRACE_APIC      |
-//                            TRACE_MEMORY    |
-//                            TRACE_DESTROY   |
-//                            TRACE_TIMER     |
+                            TRACE_DMAR      |
 //                            TRACE_INTERRUPT |
 //                            TRACE_ACPI      |
 //                            TRACE_KEYB      |
-//                            TRACE_ERROR     |
-//                            TRACE_MSG       |
+                            TRACE_ERROR     |
 //                            TRACE_SYSCALL   |
-//                            TRACE_DMAR      |
+//                            TRACE_MEMORY    |
 //                            TRACE_PCI       |
-//                            TRACE_CONTEXT   |
 //                            TRACE_SCHEDULE  |
-//                            TRACE_UTCB      |
 //                            TRACE_VTLB      |
 //                            TRACE_MAP       |
 //                            TRACE_PTE       |

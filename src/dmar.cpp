@@ -36,8 +36,8 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
                                                  Ptab::ATTR_WRITABLE),
                                 phys & ~PAGE_MASK);
 
-    uint64 cap  = read<uint64>(DMAR_CAP);
-    uint64 ecap = read<uint64>(DMAR_ECAP);
+    uint64 cap  = read<uint64>(REG_CAP);
+    uint64 ecap = read<uint64>(REG_ECAP);
 
     frr_count = static_cast<unsigned>(cap >> 40 & 0xff) + 1;
     frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
@@ -46,31 +46,31 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
 
 void Dmar::enable()
 {
-    write<uint32>(DMAR_FECTL,  0);
-    write<uint32>(DMAR_FEDATA, VEC_MSI_DMAR);
-    write<uint32>(DMAR_FEADDR, 0xfee00000);
-    write<uint64>(DMAR_RTADDR, Buddy::ptr_to_phys (root));
+    write<uint32>(REG_FECTL,  0);
+    write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
+    write<uint32>(REG_FEADDR, 0xfee00000);
+    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (root));
 
-    write<uint32>(DMAR_GCMD, 1ul << 30);
-    while (!(read<uint32>(DMAR_GSTS) & (1ul << 30)))
+    write<uint32>(REG_GCMD, 1ul << 30);
+    while (!(read<uint32>(REG_GSTS) & (1ul << 30)))
         Cpu::pause();
 
-    write<uint64>(DMAR_CCMD, 1ull << 63 | 1ull << 61);
-    while (read<uint64>(DMAR_CCMD) & (1ull << 63))
+    write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
+    while (read<uint64>(REG_CCMD) & (1ull << 63))
         Cpu::pause();
 
-    write<uint64>(DMAR_IOTLB, 1ull << 63 | 1ull << 60);
-    while (read<uint64>(DMAR_IOTLB) & (1ull << 63))
+    write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
+    while (read<uint64>(REG_IOTLB) & (1ull << 63))
         Cpu::pause();
 
-    write<uint32>(DMAR_GCMD, 1ul << 31);
+    write<uint32>(REG_GCMD, 1ul << 31);
 }
 
 void Dmar::assign (unsigned b, unsigned d, unsigned f, Pd *p)
 {
     assert (p->dpt());
 
-    mword lev = bit_scan_reverse (read<mword>(DMAR_CAP) >> 8 & 0x1f);
+    mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
     mword did = 1;
 
     Dmar_context *r = root + b;
@@ -84,12 +84,12 @@ void Dmar::assign (unsigned b, unsigned d, unsigned f, Pd *p)
 
 void Dmar::fault_handler()
 {
-    for (uint32 fsts; fsts = read<uint32>(DMAR_FSTS), fsts & 0xff;) {
+    for (uint32 fsts; fsts = read<uint32>(REG_FSTS), fsts & 0xff;) {
 
         if (fsts & 0x2) {
             uint64 hi, lo;
             for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % frr_count)
-                trace (TRACE_DMAR, "DMAR:%p FRR:%u FR:%#x SID:%x:%02x:%x FI:%#010llx",
+                trace (TRACE_DMAR, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
                        this,
                        frr,
                        static_cast<uint32>(hi >> 32) & 0xff,
@@ -99,7 +99,7 @@ void Dmar::fault_handler()
                        lo);
         }
 
-        write<uint32>(DMAR_FSTS, 0x7d);
+        write<uint32>(REG_FSTS, 0x7d);
     }
 }
 

@@ -48,7 +48,7 @@ class Ept
     private:
         uint64 val;
 
-        static unsigned const levels = 4;
+        static unsigned const max = 4;
         static unsigned const bpl = 9;
 
         ALWAYS_INLINE
@@ -69,7 +69,7 @@ class Ept
             asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1ul) : "cc");
         }
 
-        Ept *walk (uint64, unsigned long, bool);
+        Ept *walk (uint64, unsigned long, mword = 0);
 
     public:
         enum

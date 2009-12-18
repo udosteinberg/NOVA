@@ -20,24 +20,23 @@
 #include "stdio.h"
 #include "x86.h"
 
-Dpt *Dpt::walk (uint64 dpa, unsigned long l, bool alloc)
+Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
 {
-    unsigned lev = levels;
+    unsigned lev = max;
 
     for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        e += dpa >> shift & ((1ul << bpl) - 1);
+        e += dpa >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         if (lev == l)
             return e;
 
         if (!e->present()) {
 
-            if (!alloc)
+            if (!p)
                 return 0;
 
-            e->set (Buddy::ptr_to_phys (new Dpt) | DPT_R | DPT_W);
+            e->set (Buddy::ptr_to_phys (new Dpt) | p);
         }
 
         else
@@ -52,7 +51,7 @@ void Dpt::insert (uint64 dpa, mword o, mword a, uint64 hpa)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Dpt *e = walk (dpa, l, true);
+    Dpt *e = walk (dpa, l, DPT_R | DPT_W);
     uint64 v = hpa | a | (l ? DPT_SP : DPT_0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
@@ -77,7 +76,7 @@ void Dpt::remove (uint64 dpa, mword o)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Dpt *e = walk (dpa, l, false);
+    Dpt *e = walk (dpa, l);
     if (!e)
         return;
 

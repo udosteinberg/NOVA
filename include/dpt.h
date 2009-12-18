@@ -27,7 +27,7 @@ class Dpt
     private:
         uint64 val;
 
-        static unsigned const levels = 4;
+        static unsigned const max = 4;
         static unsigned const bpl = 9;
 
         ALWAYS_INLINE
@@ -45,7 +45,7 @@ class Dpt
         ALWAYS_INLINE
         inline void set (uint64 v) { val = v; clflush (this); }
 
-        Dpt *walk (uint64, unsigned long, bool);
+        Dpt *walk (uint64, unsigned long, mword = 0);
 
     public:
         enum
@@ -63,7 +63,7 @@ class Dpt
         void remove (uint64, mword);
 
         ALWAYS_INLINE
-        inline Dpt *level (unsigned l) { return walk (0, l, true); }
+        inline Dpt *level (unsigned l) { return walk (0, l, DPT_R | DPT_W); }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

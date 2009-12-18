@@ -27,44 +27,30 @@ void Acpi_dmar::parse() const
 {
     Dmar *dmar = new Dmar (static_cast<Paddr>(phys));
 
-    if (flags & 1) {
-        trace (TRACE_DMAR, "DHRD:   All other devices");
+    if (flags & 1)
         Pci::claim_all (dmar);
-    }
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
-
-        trace (TRACE_DMAR, "DHRD:   Type:%#x Len:%#x ID:%#x BDF %x:%x:%x",
-               s->type, s->length, s->id, s->b, s->d, s->f);
 
         switch (s->type) {
             case 1:
                 Pci::claim_dev (dmar, Bdf (s->b, s->d, s->f));
                 break;
-            default:
-                trace (TRACE_DMAR, "DRHD: Unhandled scope type %#x", s->type);
         }
     }
 }
 
 void Acpi_rmrr::parse() const
 {
-    trace (TRACE_DMAR, "RMRR: Segment:%#x %#llx-%#llx", segment, base, limit);
-
     for (uint64 hpa = base; hpa < limit; hpa += PAGE_SIZE)
         Pd::kern.dpt()->insert (hpa, 0, Dpt::DPT_R | Dpt::DPT_W, hpa);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 
-        trace (TRACE_DMAR, "RMRR:   Type:%#x Len:%#x ID:%#x BDF %x:%x:%x",
-               s->type, s->length, s->id, s->b, s->d, s->f);
-
         switch (s->type) {
             case 1:
                 Pci::assign_dev (&Pd::kern, Bdf (s->b, s->d, s->f));
                 break;
-            default:
-                trace (TRACE_DMAR, "RMRR: Unhandled scope type %#x", s->type);
         }
     }
 }

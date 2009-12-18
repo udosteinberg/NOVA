@@ -19,24 +19,23 @@
 #include "ept.h"
 #include "stdio.h"
 
-Ept *Ept::walk (uint64 gpa, unsigned long l, bool alloc)
+Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
 {
-    unsigned lev = levels;
+    unsigned lev = max;
 
     for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        e += gpa >> shift & ((1ul << bpl) - 1);
+        e += gpa >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         if (lev == l)
             return e;
 
         if (!e->present()) {
 
-            if (!alloc)
+            if (!p)
                 return 0;
 
-            e->val = Buddy::ptr_to_phys (new Ept) | EPT_R | EPT_W | EPT_X;
+            e->val = Buddy::ptr_to_phys (new Ept) | p;
         }
 
         else
@@ -51,7 +50,7 @@ void Ept::insert (uint64 gpa, mword o, mword t, mword a, uint64 hpa)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Ept *e = walk (gpa, l, true);
+    Ept *e = walk (gpa, l, EPT_R | EPT_W | EPT_X);
     uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : EPT_0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
@@ -76,7 +75,7 @@ void Ept::remove (uint64 gpa, mword o)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Ept *e = walk (gpa, l, false);
+    Ept *e = walk (gpa, l);
     if (!e)
         return;
 
