@@ -27,13 +27,13 @@ class Cmdline
         static char *get_arg (char **line);
 
     public:
+        static bool dmar;
+        static bool keyb;
+        static bool serial;
         static bool noacpi;
         static bool noapic;
-        static bool nodmar;
         static bool noept;
-        static bool nokeyb;
         static bool nomp;
-        static bool noserial;
         static bool nosmx;
         static bool nospinner;
         static bool novga;

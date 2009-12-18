@@ -22,7 +22,7 @@
 
 void Console_serial::init()
 {
-    if (Cmdline::noserial)
+    if (!Cmdline::serial)
         return;
 
     char *mem = static_cast<char *>(Ptab::master()->remap (0));

@@ -22,17 +22,15 @@
 #include "keyb.h"
 #include "stdio.h"
 
-unsigned Keyb::gsi;
+unsigned Keyb::gsi = ~0u;
 
 /*
  * Keyboard Initialization
  */
 void Keyb::init()
 {
-    if (Cmdline::nokeyb) {
-        gsi = ~0u;
+    if (!Cmdline::keyb)
         return;
-    }
 
     // Disable scan code translation
     send_ctrl (CMD_RD_CCB);

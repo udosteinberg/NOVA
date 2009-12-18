@@ -18,13 +18,13 @@
 #include "cmdline.h"
 #include "string.h"
 
+bool Cmdline::dmar;
+bool Cmdline::keyb;
+bool Cmdline::serial;
 bool Cmdline::noacpi;
 bool Cmdline::noapic;
-bool Cmdline::nodmar;
 bool Cmdline::noept;
-bool Cmdline::nokeyb;
 bool Cmdline::nomp;
-bool Cmdline::noserial;
 bool Cmdline::nosmx;
 bool Cmdline::nospinner;
 bool Cmdline::novga;
@@ -36,13 +36,13 @@ struct param
     bool *param;
 } params[] INITDATA =
 {
+    { "dmar",       &Cmdline::dmar      },
+    { "keyb",       &Cmdline::keyb      },
+    { "serial",     &Cmdline::serial    },
     { "noacpi",     &Cmdline::noacpi    },
     { "noapic",     &Cmdline::noapic    },
-    { "nodmar",     &Cmdline::nodmar    },
     { "noept",      &Cmdline::noept     },
-    { "nokeyb",     &Cmdline::nokeyb    },
     { "nomp",       &Cmdline::nomp      },
-    { "noserial",   &Cmdline::noserial  },
     { "nosmx",      &Cmdline::nosmx     },
     { "nospinner",  &Cmdline::nospinner },
     { "novga",      &Cmdline::novga     },
