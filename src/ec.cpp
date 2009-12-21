@@ -257,10 +257,8 @@ void Ec::root_invoke()
                         !!(ph->flags & Elf_ph::PF_W) << 1 |
                         !!(ph->flags & Elf_ph::PF_X) << 2;
 
-        // XXX: Current limitation: fsize == msize so that roottask can be
-        //      mapped without having to allocate BSS pages
-        assert (ph->f_size == ph->m_size);
-        assert (ph->v_addr % PAGE_SIZE == ph->f_offs % PAGE_SIZE);
+        if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
+            current->kill (&current->regs, "Bad ELF");
 
         for (size_t s = 0; s < ph->f_size; s += PAGE_SIZE)
             Pd::current->delegate_mem (s + align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE),

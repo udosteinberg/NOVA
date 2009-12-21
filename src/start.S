@@ -1,7 +1,7 @@
 /*
  * Startup Code
  *
- * Copyright (C) 2005-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2005-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,8 +23,6 @@
  */
 .section .init
 
-.globl                  __mle_header
-.globl                  __mle_join
 .globl                  __start_ap
 .globl                  __start_rlp
 .globl                  __start_bsp
@@ -35,24 +33,6 @@
 __boot_header:          .long   0x1badb002
                         .long   0x0
                         .long  -0x1badb002
-
-/*
- * MLE Header
- */
-__mle_header:           .quad   0x74a7476f9082ac5a
-                        .quad   0x42b651cba2555c0f
-                        .long   0x20
-                        .long   0x10001
-                        .long   0
-                        .long   0
-
-/*
- * MLE RLP Join Structure
- */
-__mle_join:             .long   __boot_gdt__ - __boot_gdt - 1
-                        .long   __boot_gdt
-                        .long   SEL_KERN_CODE
-                        .long   __start_rlp
 
 /*
  * Global Descriptor Table (GDT)
@@ -120,14 +100,7 @@ __start_bsp:            xor     %ebp, %ebp
                         mov     %ecx, %gs
                         mov     $STACK, %esp
 
-                        test    %ebp, %ebp
-                        jnz     3f
-
                         mov     %ebx, %eax
-                        call    secure_launch
-
-3:                      mov     %ebx, %eax
-                        mov     %ebp, %edx
                         call    init_ilp
 
 /*

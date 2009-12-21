@@ -182,7 +182,6 @@ class Cpu
         static unsigned boot_lock           asm ("boot_lock");
         static unsigned boot_count;
         static unsigned booted;
-        static unsigned secure;
 
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;

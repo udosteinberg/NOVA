@@ -73,7 +73,7 @@ unsigned Console_vga::init_spinner (Spinlock *lock)
     }
 
     if (lock) {
-        put (_num_row, 0, Cpu::secure ? COLOR_LIGHT_GREEN : COLOR_LIGHT_RED, (Cpu::id & 0xf)["0123456789ABCDEF"]);
+        put (_num_row, 0, COLOR_LIGHT_RED, (Cpu::id & 0xf)["0123456789ABCDEF"]);
 
         for (unsigned i = 0; i < 75; i++)
             put (_num_row, i + 5, COLOR_LIGHT_BLACK, (i & 0xf)["0123456789ABCDEF"]);

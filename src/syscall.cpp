@@ -400,28 +400,6 @@ void Ec::exp_debug()
     sys_finish (s, Sys_regs::SUCCESS);
 }
 
-void Ec::exp_lookup()
-{
-    Exp_lookup *s = static_cast<Exp_lookup *>(&current->regs);
-
-    trace (TRACE_SYSCALL, "EC:%p EXP_LOOKUP PT:%#lx", current, s->pt());
-
-    Kobject *obj = Space_obj::lookup (s->pt()).obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::PT)) {
-        trace (TRACE_ERROR, "%s: Non-PT CAP (%#lx)", __func__, s->pt());
-        sys_finish (s, Sys_regs::BAD_CAP);
-    }
-
-    Pt *pt = static_cast<Pt *>(obj);
-
-    if (EXPECT_FALSE (Pd::current != pt->node.pd))
-        sys_finish (s, Sys_regs::BAD_CAP);
-
-    s->set_id (pt->node.base);
-
-    sys_finish (s, Sys_regs::SUCCESS);
-}
-
 void Ec::syscall_handler (uint8 number)
 {
     // This is actually faster than a switch
@@ -451,8 +429,6 @@ void Ec::syscall_handler (uint8 number)
     // Experimental functionality
     if (EXPECT_TRUE (number == Sys_regs::DEBUG))
         exp_debug();
-    if (EXPECT_TRUE (number == Sys_regs::LOOKUP))
-        exp_lookup();
 
     sys_finish (&current->regs, Sys_regs::BAD_SYS);
 }

@@ -1,7 +1,7 @@
 /*
  * Memory Type Range Registers (MTRR)
  *
- * Copyright (C) 2007-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -31,20 +31,6 @@ class Mtrr
             WP = 5,
             WB = 6
         };
-
-        uint32 count;
-        uint32 dtype;
-
-        struct {
-            uint64  base;
-            uint64  mask;
-        } mtrr[8];
-
-        INIT
-        void save (mword base, size_t size);
-
-        INIT
-        void load();
 
         INIT
         static Type memtype (mword);

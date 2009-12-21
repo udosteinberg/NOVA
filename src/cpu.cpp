@@ -45,7 +45,6 @@ char const * const Cpu::vendor_string[] =
 unsigned    Cpu::boot_lock;
 unsigned    Cpu::boot_count;
 unsigned    Cpu::booted;
-unsigned    Cpu::secure;
 
 // Order of these matters
 unsigned    Cpu::id;
@@ -213,7 +212,7 @@ void Cpu::init()
 
     Hip::add_cpu();
 
-    if (bsp && !secure)
+    if (bsp)
         wakeup_ap();
 
     boot_lock++;

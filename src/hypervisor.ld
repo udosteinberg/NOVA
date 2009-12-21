@@ -23,31 +23,21 @@ ENTRY(__start_bsp)
 
 PHDRS
 {
-    smxe    PT_LOAD;
     init    PT_LOAD;
     kern    PT_LOAD;
 }
 
 SECTIONS
 {
-    .smxe LOAD_ADDR :
-    {
-        PROVIDE (PDP = .); . += 4K;
-        PROVIDE (PDE = .); . += 4K;
-        PROVIDE (PTE = .); . += 4K;
-        . += 4K; PROVIDE (STACK = .);
-    } : smxe
-
-    .init INIT_ADDR :
+    .init LOAD_ADDR :
     {
         *(.init)
         *(.initdata)
     } : init
 
-    . = ALIGN(4K);
-    PROVIDE (LOAD_SIZE = . - LOAD_ADDR);
-    PROVIDE (INIT_SIZE = . - INIT_ADDR);
+    . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
 
+    PROVIDE (LOAD_SIZE = . - LOAD_ADDR);
     OFFSET = LINK_ADDR - ALIGN (4M);
     PROVIDE (LINK_PHYS = LINK_ADDR - OFFSET);
 
@@ -74,8 +64,6 @@ SECTIONS
     {
         *(.data .data.* .gnu.linkonce.d.*)
     } : kern
-
-    PROVIDE (HASH_SIZE = ALIGN(4K) - LINK_ADDR);
 
     .bss : AT (ADDR (.bss) - OFFSET)
     {

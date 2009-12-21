@@ -34,7 +34,6 @@ class Cmdline
         static bool noapic;
         static bool noept;
         static bool nomp;
-        static bool nosmx;
         static bool nospinner;
         static bool novga;
         static bool novpid;

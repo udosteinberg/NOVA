@@ -183,13 +183,3 @@ class Exp_debug : public Exc_regs
         ALWAYS_INLINE
         inline unsigned long func() const { return edi; }
 };
-
-class Exp_lookup : public Exc_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline unsigned long pt() const { return edi; }
-
-        ALWAYS_INLINE
-        inline void set_id (unsigned long id) { edi = id; }
-};

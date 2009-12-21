@@ -25,7 +25,6 @@ bool Cmdline::noacpi;
 bool Cmdline::noapic;
 bool Cmdline::noept;
 bool Cmdline::nomp;
-bool Cmdline::nosmx;
 bool Cmdline::nospinner;
 bool Cmdline::novga;
 bool Cmdline::novpid;
@@ -43,7 +42,6 @@ struct param
     { "noapic",     &Cmdline::noapic    },
     { "noept",      &Cmdline::noept     },
     { "nomp",       &Cmdline::nomp      },
-    { "nosmx",      &Cmdline::nosmx     },
     { "nospinner",  &Cmdline::nospinner },
     { "novga",      &Cmdline::novga     },
     { "novpid",     &Cmdline::novpid    },

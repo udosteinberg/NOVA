@@ -102,7 +102,7 @@ void Vmcs::init()
         return;
     }
 
-    unsigned bits = Cpu::secure ? 0x3 : 0x5;
+    unsigned bits = 0x5;
     if ((Msr::read<uint32>(Msr::IA32_FEATURE_CONTROL) & bits) != bits)
         return;
 

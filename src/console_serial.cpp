@@ -30,13 +30,13 @@ void Console_serial::init()
         !(base = *reinterpret_cast<uint16 *>(mem + 0x402)))
         return;
 
-    out (LCR, LCR_DLAB);
-    out (DLR_LOW,  1);
-    out (DLR_HIGH, 0);
-    out (LCR, LCR_DATA_BITS_8 | LCR_STOP_BITS_1);
+    out (LCR, 0x80);
+    out (DLR_LO, 1);
+    out (DLR_HI, 0);
+    out (LCR, 3);
     out (IER, 0);
-    out (FCR, FCR_FIFO_ENABLE | FCR_RECV_FIFO_RESET | FCR_TMIT_FIFO_RESET);
-    out (MCR, MCR_DTR | MCR_RTS);
+    out (FCR, 7);
+    out (MCR, 3);
 
     initialized = true;
 }
@@ -46,7 +46,7 @@ void Console_serial::putc (int c)
     if (c == '\n')
         putc ('\r');
 
-    while (EXPECT_FALSE (!(in (LSR) & LSR_TMIT_HOLD_EMPTY)))
+    while (EXPECT_FALSE (!(in (LSR) & 0x20)))
         pause();
 
     out (THR, c);

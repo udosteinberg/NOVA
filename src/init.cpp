@@ -25,12 +25,12 @@
 #include "idt.h"
 #include "keyb.h"
 #include "memory.h"
+#include "multiboot.h"
 #include "pci.h"
 #include "pd.h"
 #include "pic.h"
 #include "ptab.h"
 #include "ptab_boot.h"
-#include "smx.h"
 #include "stdio.h"
 #include "types.h"
 
@@ -61,17 +61,20 @@ mword kern_ptab_setup()
     return Buddy::ptr_to_phys (ptab);
 }
 
-extern "C" INIT REGPARM (2)
-void init_ilp (mword mbi, unsigned secure)
+extern "C" INIT REGPARM (1)
+void init_ilp (mword mbi)
 {
+    Multiboot *mb = reinterpret_cast<Multiboot *>(mbi);
+
+    // Parse command line
+    if (mb && mb->flags & Multiboot::CMDLINE)
+        Cmdline::init (reinterpret_cast<char *>(mb->cmdline));
+
     // Initialize boot page table
     Ptab_boot::init();
 
     // Enable paging
     Paging::enable();
-
-    // Set launch indicator
-    Cpu::secure = secure;
 
     // Call static constructors
     for (void (**func)() = &CTORS_E; func != &CTORS_S; (*--func)()) ;
