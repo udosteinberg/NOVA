@@ -23,7 +23,8 @@
 
 Vmcb *              Vmcb::root;
 unsigned            Vmcb::asid_ctr;
-Vmcb::svm_feature   Vmcb::feature;
+uint32              Vmcb::svm_version;
+uint32              Vmcb::svm_feature;
 
 Vmcb::Vmcb (mword nptp) : asid (++asid_ctr), npt_control (1), npt_cr3 (nptp), efer (Cpu::EFER_SVME), g_pat (0x7040600070406ull)
 {
@@ -36,11 +37,13 @@ Vmcb::Vmcb (mword nptp) : asid (++asid_ctr), npt_control (1), npt_cr3 (nptp), ef
 
 void Vmcb::init()
 {
-    if (!Cpu::feature (Cpu::FEAT_SVM) || !Vmcb::feature.np) {
+    if (!Cpu::feature (Cpu::FEAT_SVM) || !(Vmcb::svm_feature & 1)) {
         Hip::remove (Hip::FEAT_SVM);
         return;
     }
 
     Msr::write (Msr::IA32_EFER, Msr::read<uint32>(Msr::IA32_EFER) | Cpu::EFER_SVME);
     Msr::write (Msr::AMD_SVM_HSAVE_PA, Buddy::ptr_to_phys (new Vmcb));
+
+    trace (TRACE_SVM, "VMCB:%#010lx REV:%#x FEAT:%#x", Buddy::ptr_to_phys (root), svm_version, svm_feature);
 }

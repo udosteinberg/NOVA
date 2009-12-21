@@ -135,9 +135,5 @@ void Vmcs::init()
 
     Vmcs *root = new Vmcs;
 
-    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x CPU:%#x/%#x VPID:%u EPT:%u",
-           Buddy::ptr_to_phys (root),
-           basic.revision,
-           ctrl_cpu[0].clr, ctrl_cpu[1].clr,
-           has_vpid(), has_ept());
+    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x VPID:%u EPT:%u", Buddy::ptr_to_phys (root), basic.revision, has_vpid(), has_ept());
 }

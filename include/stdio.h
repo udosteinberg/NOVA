@@ -41,6 +41,7 @@ enum {
     TRACE_VMX       = 1ul << 1,
     TRACE_APIC      = 1ul << 3,
     TRACE_DMAR      = 1ul << 4,
+    TRACE_SVM       = 1ul << 5,
     TRACE_INTERRUPT = 1ul << 7,
     TRACE_ACPI      = 1ul << 8,
     TRACE_KEYB      = 1ul << 9,
@@ -63,9 +64,10 @@ enum {
 unsigned const trace_mask =
                             TRACE_CPU       |
 #ifndef NDEBUG
-//                            TRACE_VMX       |
+                            TRACE_VMX       |
 //                            TRACE_APIC      |
                             TRACE_DMAR      |
+                            TRACE_SVM       |
 //                            TRACE_INTERRUPT |
 //                            TRACE_ACPI      |
 //                            TRACE_KEYB      |

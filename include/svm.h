@@ -67,16 +67,8 @@ class Vmcb
 
         static Vmcb *       root        CPULOCAL;
         static unsigned     asid_ctr    CPULOCAL;
-
-        static union svm_feature {
-            uint32      val;
-            struct {
-                uint32  np      : 1,
-                        lbr     : 1,
-                        lock    : 1,
-                        nrips   : 1;
-            };
-        } feature CPULOCAL;
+        static uint32       svm_version CPULOCAL;
+        static uint32       svm_feature CPULOCAL;
 
         enum Ctrl0
         {
