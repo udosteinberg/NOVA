@@ -1,7 +1,7 @@
 /*
  * Bootstrap Code
  *
- * Copyright (C) 2005-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2005-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *

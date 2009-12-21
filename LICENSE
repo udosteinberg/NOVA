@@ -1,3 +1,13 @@
+                                 ! NOTE !
+
+This copyright does *not* cover user programs or virtual machines that use
+the hypercall API to invoke microhypervisor operations or services provided
+in other protection domains - this is merely considered normal use of the
+API, and does *not* fall under the heading of "derived work".
+
+============================================================================
+
+
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991
 

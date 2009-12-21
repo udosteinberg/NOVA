@@ -1,7 +1,7 @@
 /*
  * IA32 Paging Support
  *
- * Copyright (C) 2007-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *

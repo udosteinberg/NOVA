@@ -1,7 +1,7 @@
 /*
  * Initialization Code
  *
- * Copyright (C) 2005-2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2005-2009, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -34,7 +34,7 @@
 #include "stdio.h"
 #include "types.h"
 
-char const *version = "NOVA 0.0.1";
+char const *version = "NOVA 0.1 (Xmas Alpha)";
 
 extern "C" INIT
 mword kern_ptab_setup()

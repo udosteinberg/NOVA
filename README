@@ -1,0 +1,97 @@
+#
+# README
+#
+# Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+#
+# This file is part of the NOVA microhypervisor.
+#
+# NOVA is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# NOVA is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License version 2 for more details.
+#
+
+About this code
+===============
+
+This is a prerelease of the NOVA microhypervisor. This code is experimental
+and not feature complete. If it breaks, you get to keep both pieces.
+
+Building from source code
+=========================
+
+You will need the following tools to build the source code.
+
+* make 3.81
+  available from http://www.gnu.org/software/make/
+
+* gcc 3.4 or higher 
+  available from http://gcc.gnu.org/
+
+* binutils 2.18.50.0.7 or higher
+  available from http://www.kernel.org/pub/linux/devel/binutils/
+
+You can then build the binary by doing:
+
+$ cd build; make
+
+Booting
+=======
+
+The NOVA microhypervisor can be started from a multiboot-compliant
+bootloader, such as GRUB or PXEGRUB as follows:
+
+# Boot from harddisk 0, partition 0
+title       NOVA
+kernel      (hd0,0)/boot/tftp/nova/hypervisor
+module      (hd0,0)/...
+...
+
+# Boot from TFTP server aa.bb.cc.dd
+title	    NOVA
+tftpserver  aa.bb.cc.dd
+kernel	    (nd)/tftp/nova/hypervisor
+module      (nd)/...
+...
+
+Supported platforms
+===================
+
+NOVA runs on 32-bit Intel and AMD machines that support ACPI.
+
+The virtualization features are available on:
+
+* Intel CPUs with VMX
+  regardless of whether the CPU supports nested paging (EPT) or not.
+
+* AMD CPUs with SVM
+  only when the CPU supports nested paging (NPT).
+
+Issues
+======
+
+The following is a list of issues you may encounter.
+
+* The code fails to compile.
+  Make sure your gcc and binutils meet the minimum requirements listed
+  above. If the problem persists, let us know.
+
+* Virtualization does not work when running under QEMU.
+  QEMU supports SVM, but does not support NPT. Therefore, it does not meet
+  the platform requirements.
+
+* My roottask fails to start and prints a "bad elf" message.
+  Make sure your roottask is linked such that it does not use a BSS.
+  When running "objdump -p" on your binary, filesz must be equal to memsz
+  for all loadable sections.
+
+* The revoke hypercall is currently disabled.
+
+Feedback
+========
+
+Feedback should be sent to <udo@hypervisor.org>.
