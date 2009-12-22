@@ -24,7 +24,7 @@ and not feature complete. If it breaks, you get to keep both pieces.
 Building from source code
 =========================
 
-You will need the following tools to build the source code.
+You need the following tools to compile the source code.
 
 * make 3.81
   available from http://www.gnu.org/software/make/
@@ -35,7 +35,7 @@ You will need the following tools to build the source code.
 * binutils 2.18.50.0.7 or higher
   available from http://www.kernel.org/pub/linux/devel/binutils/
 
-You can then build the binary by doing:
+You can build the binary as follows:
 
 $ cd build; make
 
@@ -43,7 +43,7 @@ Booting
 =======
 
 The NOVA microhypervisor can be started from a multiboot-compliant
-bootloader, such as GRUB or PXEGRUB as follows:
+bootloader, such as GRUB or PXEGRUB. Here are some examples:
 
 # Boot from harddisk 0, partition 0
 title       NOVA
@@ -78,18 +78,18 @@ The following is a list of issues you may encounter.
 
 * The code fails to compile.
   Make sure your gcc and binutils meet the minimum requirements listed
-  above. If the problem persists, let us know.
+  above. If the problem persists, then let us know.
 
-* Virtualization does not work when running under QEMU.
-  QEMU supports SVM, but does not support NPT. Therefore, it does not meet
+* Virtualization is not supported when running under QEMU.
+  QEMU implements SVM, but does not support NPT. Therefore, it does not meet
   the platform requirements.
 
-* My roottask fails to start and prints a "bad elf" message.
-  Make sure your roottask is linked such that it does not use a BSS.
-  When running "objdump -p" on your binary, filesz must be equal to memsz
+* The roottask fails to start and prints a "bad elf" message.
+  Ensure the roottask is linked such that it does not use a BSS. When
+  running "objdump -p" on the roottask binary, filesz must be equal to memsz
   for all loadable sections.
 
-* The revoke hypercall is currently disabled.
+* The revoke hypercall is currently unavailable.
 
 Feedback
 ========
