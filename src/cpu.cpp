@@ -81,7 +81,8 @@ void Cpu::wakeup_ap()
             Lapic::send_ipi (i, Lapic::DST_PHYSICAL, Lapic::DLV_SIPI, 1);
         }
 
-        boot_count++;
+        if (++boot_count == NUM_CPU)
+            break;
     }
 }
 
