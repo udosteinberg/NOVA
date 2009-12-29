@@ -64,8 +64,6 @@ class Sys_regs
             REVOKE,
             RECALL,
             SEMCTL,
-            DEBUG  = 254,
-            LOOKUP = 255
         };
 
         ALWAYS_INLINE

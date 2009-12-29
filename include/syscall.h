@@ -176,10 +176,3 @@ class Sys_semctl : public Exc_regs
         ALWAYS_INLINE
         inline unsigned long sm() const { return edi; }
 };
-
-class Exp_debug : public Exc_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline unsigned long func() const { return edi; }
-};

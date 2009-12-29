@@ -385,21 +385,6 @@ void Ec::sys_semctl()
     sys_finish (r, Sys_regs::SUCCESS);
 }
 
-void Ec::exp_debug()
-{
-    Exp_debug *s = static_cast<Exp_debug *>(&current->regs);
-
-    switch (s->func()) {
-        case 0:
-            Counter::dump();
-            break;
-        default:
-            sys_finish (s, Sys_regs::BAD_CAP);
-    }
-
-    sys_finish (s, Sys_regs::SUCCESS);
-}
-
 void Ec::syscall_handler (uint8 number)
 {
     // This is actually faster than a switch
@@ -425,10 +410,6 @@ void Ec::syscall_handler (uint8 number)
         sys_recall();
     if (EXPECT_TRUE (number == Sys_regs::SEMCTL))
         sys_semctl();
-
-    // Experimental functionality
-    if (EXPECT_TRUE (number == Sys_regs::DEBUG))
-        exp_debug();
 
     sys_finish (&current->regs, Sys_regs::BAD_SYS);
 }
