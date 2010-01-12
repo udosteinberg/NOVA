@@ -35,18 +35,18 @@ void Mtrr::init()
 unsigned Mtrr::memtype (Paddr phys)
 {
     if (phys < 0x80000)
-        return Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>
-                                (phys >> 13 & 0x38) & 0xff;
+        return static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>
+                                    (phys >> 13 & 0x38)) & 0xff;
     if (phys < 0xc0000)
-        return Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
-                                (phys >> 11 & 0x38) & 0xff;
+        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
+                                    (phys >> 11 & 0x38)) & 0xff;
     if (phys < 0x100000)
-        return Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
-                                (phys >>  9 & 0x38) & 0xff;
+        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
+                                    (phys >>  9 & 0x38)) & 0xff;
 
     for (unsigned i = 0; i < mtrr.count; i++)
         if ((mtrr.var[i].mask & 0x800) && ((phys ^ mtrr.var[i].base) & mtrr.var[i].mask) >> 12 == 0)
-            return mtrr.var[i].base & 0xff;
+            return static_cast<unsigned>(mtrr.var[i].base) & 0xff;
 
     return mtrr.dtype;
 }

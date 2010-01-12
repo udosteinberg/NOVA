@@ -38,11 +38,11 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     uint64 cap  = read<uint64>(REG_CAP);
     uint64 ecap = read<uint64>(REG_ECAP);
 
-    frr_count = static_cast<unsigned>(cap >> 40 & 0xff) + 1;
+    frr_count = static_cast<mword>(cap >> 40 & 0xff) + 1;
     frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
     tlb_base  = static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base;
 
-    Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (cap >> 34 & 0xf) + 2) * Dpt::bpl - 1);
+    Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
 }
 
 void Dmar::enable()

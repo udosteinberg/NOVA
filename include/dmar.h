@@ -48,9 +48,9 @@ class Dmar
 {
     private:
         mword const reg_base;
+        mword       frr_count;
         mword       frr_base;
         mword       tlb_base;
-        unsigned    frr_count;
         Dmar *      next;
 
         static Slab_cache       cache;
