@@ -26,7 +26,6 @@
 #include "keyb.h"
 #include "memory.h"
 #include "multiboot.h"
-#include "pci.h"
 #include "pd.h"
 #include "pic.h"
 #include "ptab.h"
@@ -95,8 +94,6 @@ void init_ilp (mword mbi)
     // Initialize 8259A interrupt controllers
     Pic::master.init (VEC_GSI);
     Pic::slave.init  (VEC_GSI + 8);
-
-    Pci::init();
 
     Idt::build();
     Gsi::setup();

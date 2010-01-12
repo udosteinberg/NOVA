@@ -1,7 +1,7 @@
 /*
  * Extended Page Table (EPT)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -58,44 +58,35 @@ class Ept
         inline bool super() const { return val & EPT_S; }
 
         ALWAYS_INLINE
-        inline mword attr() const { return static_cast<mword>(val) & EPT_ATTR; }
+        inline mword attr() const { return static_cast<mword>(val) & 0xfff; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & EPT_ADDR; }
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
 
         ALWAYS_INLINE
-        inline void flush()
-        {
-            asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1ul) : "cc");
-        }
+        inline void set (uint64 v) { val = v; }
+
+        ALWAYS_INLINE
+        inline void flush() { asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1ul) : "cc"); }
 
         Ept *walk (uint64, unsigned long, mword = 0);
 
     public:
         enum
         {
-            EPT_0               = 0,
             EPT_R               = 1ul << 0,
             EPT_W               = 1ul << 1,
             EPT_X               = 1ul << 2,
             EPT_I               = 1ul << 6,
             EPT_S               = 1ul << 7,
-            EPT_ATTR            =  ((1ul << 12) - 1),
-            EPT_ADDR            = ~((1ul << 12) - 1)
         };
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
-        }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr)
-        {
-            Buddy::allocator.free (reinterpret_cast<mword>(ptr));
-        }
 
         void insert (uint64, mword, mword, mword, uint64);
         void remove (uint64, mword);
+
+        ALWAYS_INLINE
+        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
 };

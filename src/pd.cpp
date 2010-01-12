@@ -1,7 +1,7 @@
 /*
  * Protection Domain
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -40,37 +40,28 @@ Pd *Pd::root;
 Pd::Pd() : Kobject (PD, 0)
 {
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
-    mword base, size;
 
-    // 0-1MB
-    for (base = 0; base < 0x100000; base += size) {
+    Mtrr::init();
 
-        Mtrr::Type mt = Mtrr::memtype (base);
+    Space_mem::insert_root (0, 0x100000);
+    Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000);
 
-        size = 0;
-        do size += PAGE_SIZE; while (Mtrr::memtype (base + size) == mt);
-
-        Space_mem::insert_root (base, size, mt, 7);
-    }
-
-    Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000, Mtrr::WB, 7);
-
-    base = LOAD_ADDR + reinterpret_cast<mword>(&LOAD_SIZE),
-    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_PHYS) - base, Mtrr::WB, 7);
+    mword base = LOAD_ADDR + reinterpret_cast<mword>(&LOAD_SIZE);
+    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_PHYS) - base);
 
     base = reinterpret_cast<mword>(&LINK_PHYS) + reinterpret_cast<mword>(&LINK_SIZE);
-    Space_mem::insert_root (base, 0 - base, Mtrr::WB, 7);
+    Space_mem::insert_root (base, 0 - base);
 
     // HIP
-    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), PAGE_SIZE, Mtrr::WB, 1);
+    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), PAGE_SIZE, 6, 1);
 
     // I/O Ports
     Space_io::insert_root (0, 16);
 }
 
-Pd::Pd (bool vm) : Kobject (PD, 1), Space_mem (vm)
+Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags)
 {
-    trace (TRACE_SYSCALL, "PD:%p created (VM=%u)", this, vm);
+    trace (TRACE_SYSCALL, "PD:%p created (F=%#x)", this, flags);
 }
 
 void Pd::delegate_mem (mword const snd_base, mword const rcv_base, mword const ord, mword const attr)

@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2005-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2005-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,6 +19,7 @@
 #include "acpi_dmar.h"
 #include "acpi_fadt.h"
 #include "acpi_madt.h"
+#include "acpi_mcfg.h"
 #include "acpi_rsdp.h"
 #include "acpi_rsdt.h"
 #include "assert.h"
@@ -29,11 +30,7 @@
 #include "stdio.h"
 #include "x86.h"
 
-Paddr    Acpi::dmar_addr;
-Paddr    Acpi::fadt_addr;
-Paddr    Acpi::madt_addr;
-Paddr    Acpi::rsdt_addr;
-Paddr    Acpi::xsdt_addr;
+Paddr Acpi::dmar, Acpi::fadt, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
 
 Acpi_gas Acpi::pm1a_sts;
 Acpi_gas Acpi::pm1b_sts;
@@ -105,17 +102,19 @@ void Acpi::setup()
 {
     Acpi_rsdp::parse();
 
-    if (xsdt_addr)
-        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (xsdt_addr))->parse (xsdt_addr, sizeof (uint64));
-    else if (rsdt_addr)
-        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (rsdt_addr))->parse (rsdt_addr, sizeof (uint32));
+    if (xsdt)
+        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (xsdt))->parse (xsdt, sizeof (uint64));
+    else if (rsdt)
+        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (rsdt))->parse (rsdt, sizeof (uint32));
 
-    if (fadt_addr)
-        static_cast<Acpi_table_fadt *>(Ptab::master()->remap (fadt_addr))->parse();
-    if (madt_addr)
-        static_cast<Acpi_table_madt *>(Ptab::master()->remap (madt_addr))->parse();
-    if (dmar_addr)
-        static_cast<Acpi_table_dmar *>(Ptab::master()->remap (dmar_addr))->parse();
+    if (fadt)
+        static_cast<Acpi_table_fadt *>(Ptab::master()->remap (fadt))->parse();
+    if (madt)
+        static_cast<Acpi_table_madt *>(Ptab::master()->remap (madt))->parse();
+    if (mcfg)
+        static_cast<Acpi_table_mcfg *>(Ptab::master()->remap (mcfg))->parse();
+    if (dmar)
+        static_cast<Acpi_table_dmar *>(Ptab::master()->remap (dmar))->parse();
 
     setup_sci();
 

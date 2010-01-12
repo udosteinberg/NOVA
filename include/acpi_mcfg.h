@@ -1,7 +1,7 @@
 /*
- * Memory Type Range Registers (MTRR)
+ * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,25 +17,24 @@
 
 #pragma once
 
-#include "compiler.h"
-#include "types.h"
+#include "acpi_table.h"
 
-class Mtrr
+class Acpi_mcfg
 {
     public:
-        uint32 count;
-        uint32 dtype;
+        uint64      addr;
+        uint16      seg;
+        uint8       bus_s;
+        uint8       bus_e;
+        uint32      reserved;
+};
 
-        struct {
-            uint64  base;
-            uint64  mask;
-        } var[8];
-
-        static Mtrr mtrr;
+class Acpi_table_mcfg : public Acpi_table
+{
+    public:
+        uint64      reserved;
+        Acpi_mcfg   mcfg[];
 
         INIT
-        static void init();
-
-        INIT
-        static unsigned memtype (Paddr);
+        void parse() const;
 };

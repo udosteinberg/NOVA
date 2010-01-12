@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -40,8 +40,8 @@ void Acpi_rsdp::parse()
         !(rsdp = Acpi_rsdp::find (map + 0xe0000, 0x20000)))
         return;
 
-    Acpi::rsdt_addr = rsdp->rsdt_addr;
+    Acpi::rsdt = rsdp->rsdt_addr;
 
     if (rsdp->revision > 1 && rsdp->good_checksum (rsdp->length))
-        Acpi::xsdt_addr = static_cast<Paddr>(rsdp->xsdt_addr);
+        Acpi::xsdt = static_cast<Paddr>(rsdp->xsdt_addr);
 }

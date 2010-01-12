@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2005-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2005-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -28,11 +28,7 @@ class Acpi
     friend class Acpi_rsdp;
 
     private:
-        static Paddr    dmar_addr;
-        static Paddr    fadt_addr;
-        static Paddr    madt_addr;
-        static Paddr    rsdt_addr;
-        static Paddr    xsdt_addr;
+        static Paddr dmar, fadt, madt, mcfg, rsdt, xsdt;
 
         static Acpi_gas pm1a_sts;
         static Acpi_gas pm1b_sts;

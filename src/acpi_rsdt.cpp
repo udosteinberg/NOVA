@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -37,10 +37,12 @@ void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
         if (!acpi->good_checksum (table[i]))
             continue;
         else if (acpi->signature == SIG ('A','P','I','C'))
-            Acpi::madt_addr = table[i];
+            Acpi::madt = table[i];
         else if (acpi->signature == SIG ('D','M','A','R'))
-            Acpi::dmar_addr = table[i];
+            Acpi::dmar = table[i];
         else if (acpi->signature == SIG ('F','A','C','P'))
-            Acpi::fadt_addr = table[i];
+            Acpi::fadt = table[i];
+        else if (acpi->signature == SIG ('M','C','F','G'))
+            Acpi::mcfg = table[i];
     }
 }

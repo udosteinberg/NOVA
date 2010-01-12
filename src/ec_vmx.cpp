@@ -91,9 +91,7 @@ void Ec::vmx_extint()
 
 void Ec::vmx_invlpg()
 {
-    unsigned long vpid = Vmcs::has_vpid() ? Vmcs::read (Vmcs::VPID) : 0;
-
-    current->regs.vtlb->flush_addr (Vmcs::read (Vmcs::EXI_QUALIFICATION), vpid);
+    current->regs.vtlb->flush_addr (Vmcs::read (Vmcs::EXI_QUALIFICATION), Vmcs::vpid());
 
     Vmcs::adjust_rip();
     ret_user_vmresume();

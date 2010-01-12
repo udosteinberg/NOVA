@@ -1,7 +1,7 @@
 /*
  * PCI Configuration Space
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,15 +16,23 @@
  */
 
 #include "pci.h"
+#include "pd.h"
 #include "stdio.h"
 
 Slab_cache Pci::cache (sizeof (Pci), 8);
-
+Paddr Pci::cfg_base;
 Pci *Pci::list;
 
-Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : Bdf (b, d, f), next (0), level (l)
+Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(b << 8 | d << 3 | f)), level (static_cast<uint16>(l)), next (0)
 {
     Pci **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
+
+    Pd::kern.Space_mem::insert (hwdev_addr, 0,
+                                Ptab::Attribute (Ptab::ATTR_NOEXEC      |
+                                                 Ptab::ATTR_GLOBAL      |
+                                                 Ptab::ATTR_UNCACHEABLE |
+                                                 Ptab::ATTR_WRITABLE),
+                                cfg_base + (rid << PAGE_BITS));
 }
 
 void Pci::init (unsigned b, unsigned l)

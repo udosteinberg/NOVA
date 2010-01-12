@@ -1,7 +1,7 @@
 /*
  * Extended Page Table (EPT)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -35,7 +35,7 @@ Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
             if (!p)
                 return 0;
 
-            e->val = Buddy::ptr_to_phys (new Ept) | p;
+            e->set (Buddy::ptr_to_phys (new Ept) | p);
         }
 
         else
@@ -51,13 +51,13 @@ void Ept::insert (uint64 gpa, mword o, mword t, mword a, uint64 hpa)
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
     Ept *e = walk (gpa, l, EPT_R | EPT_W | EPT_X);
-    uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : EPT_0);
+    uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : 0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
 
         assert (!e->present());
 
-        e->val = v;
+        e->set (v);
 
         trace (TRACE_EPT, "L:%lu EPT:%#010lx HPA:%010lx A:%#05lx S:%#lx",
                l,
@@ -90,7 +90,7 @@ void Ept::remove (uint64 gpa, mword o)
                e->attr(),
                s);
 
-        e->val = 0;
+        e->set (0);
     }
 
     flush();

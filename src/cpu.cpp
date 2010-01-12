@@ -67,7 +67,7 @@ bool        Cpu::bsp;
 
 void Cpu::wakeup_ap()
 {
-    for (unsigned i = 0; i < 256; i++) {
+    for (unsigned i = 0; i < NUM_CPU; i++) {
 
         if (Lapic::id() != i) {
 
@@ -81,8 +81,7 @@ void Cpu::wakeup_ap()
             Lapic::send_ipi (i, Lapic::DST_PHYSICAL, Lapic::DLV_SIPI, 1);
         }
 
-        if (++boot_count == NUM_CPU)
-            break;
+        boot_count++;
     }
 }
 

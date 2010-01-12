@@ -50,6 +50,7 @@ class Sys_regs
             BAD_MEM,
             BAD_FTR,
             BAD_CPU,
+            BAD_DEV,
         };
 
         enum
@@ -64,6 +65,7 @@ class Sys_regs
             REVOKE,
             RECALL,
             SEMCTL,
+            ASSIGN_PCI,
         };
 
         ALWAYS_INLINE

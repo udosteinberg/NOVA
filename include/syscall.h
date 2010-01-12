@@ -1,7 +1,7 @@
 /*
  * System-Call Interface
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -175,4 +175,17 @@ class Sys_semctl : public Exc_regs
 
         ALWAYS_INLINE
         inline unsigned long sm() const { return edi; }
+};
+
+class Sys_assign_pci : public Exc_regs
+{
+    public:
+        ALWAYS_INLINE
+        inline unsigned long pd() const { return edi; }
+
+        ALWAYS_INLINE
+        inline unsigned long pf() const { return esi; }
+
+        ALWAYS_INLINE
+        inline unsigned long vf() const { return ebx; }
 };

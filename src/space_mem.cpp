@@ -1,7 +1,7 @@
 /*
  * Memory Space
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,16 +16,13 @@
  */
 
 #include "memory.h"
+#include "mtrr.h"
 #include "pd.h"
 #include "regs.h"
 #include "space_mem.h"
 #include "vma.h"
 
-Space_mem::Space_mem (bool vm)
-{
-    if (vm)
-        e = new Ept;
-}
+unsigned Space_mem::did_ctr;
 
 void Space_mem::init (unsigned cpu)
 {
@@ -56,6 +53,20 @@ void Space_mem::page_fault (mword addr, mword /*error*/)
         Ptab::current()->sync_master (addr);
 }
 
+void Space_mem::insert_root (mword base, size_t size)
+{
+    for (size_t frag; size; size -= frag, base += frag) {
+
+        unsigned type = Mtrr::memtype (base);
+
+        for (frag = 0; frag < size; frag += PAGE_SIZE)
+            if (Mtrr::memtype (base + frag) != type)
+                break;
+
+        insert_root (base, frag, type, 7);
+    }
+}
+
 void Space_mem::insert_root (mword b, size_t s, unsigned t, unsigned a)
 {
     for (long int o; s; s -= 1ul << o, b += 1ul << o) {
@@ -64,23 +75,30 @@ void Space_mem::insert_root (mword b, size_t s, unsigned t, unsigned a)
         if (b)
             o = min (bit_scan_forward (b), o);
 
-        trace (TRACE_MAP, "MEM B:%#010lx O:%02lu T:%#x A:%#x", b, o, t, a);
-
         vma_head.create_child (&vma_head, 0, b, o, t, a);
     }
 }
 
 bool Space_mem::insert (Vma *vma, Paddr phys)
 {
-    if (e)
-        e->insert (vma->base, vma->order - PAGE_BITS, vma->type, vma->attr, phys);
+    unsigned o = vma->order - PAGE_BITS;
+
+    if (dpt) {
+        unsigned ord = min (o, Dpt::ord);
+        trace (TRACE_DPT, "%s: B:%#lx O:%#x->%#x I:%u", __func__, vma->base, o, ord, 1u << (o - ord));
+        for (unsigned i = 0; i < 1u << (o - ord); i++)
+            dpt->insert (vma->base + i * (1ul << (Dpt::ord + PAGE_BITS)), ord, vma->attr, phys + i * (1ul << (Dpt::ord + PAGE_BITS)));
+    }
+
+    if (ept)
+        ept->insert (vma->base, o, vma->type, vma->attr, phys);
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
                       (vma->attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |
                       (vma->attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
 
     // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    master->insert (vma->base, vma->order - PAGE_BITS, a, phys);
+    master->insert (vma->base, o, a, phys);
 
     return true;
 }

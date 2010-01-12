@@ -1,7 +1,7 @@
 /*
  * DMA Page Table (DPT)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,20 +27,17 @@ class Dpt
     private:
         uint64 val;
 
-        static unsigned const max = 4;
-        static unsigned const bpl = 9;
-
         ALWAYS_INLINE
         inline bool present() const { return val & (DPT_R | DPT_W); }
 
         ALWAYS_INLINE
-        inline bool super() const { return val & DPT_SP; }
+        inline bool super() const { return val & DPT_S; }
 
         ALWAYS_INLINE
-        inline mword attr() const { return static_cast<mword>(val) & DPT_ATTR; }
+        inline mword attr() const { return static_cast<mword>(val) & 0xfff; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & DPT_ADDR; }
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
 
         ALWAYS_INLINE
         inline void set (uint64 v) { val = v; clflush (this); }
@@ -48,16 +45,23 @@ class Dpt
         Dpt *walk (uint64, unsigned long, mword = 0);
 
     public:
+        static unsigned const bpl = 9;
+        static unsigned const max = 4;
+        static unsigned ord;
+
         enum
         {
-            DPT_0               = 0,
             DPT_R               = 1ul << 0,
             DPT_W               = 1ul << 1,
-            DPT_SP              = 1ul << 7,
-            DPT_SNP             = 1ul << 11,
-            DPT_ATTR            =  ((1ul << 12) - 1),
-            DPT_ADDR            = ~((1ul << 12) - 1)
+            DPT_S               = 1ul << 7,
         };
+
+        ALWAYS_INLINE
+        inline Dpt()
+        {
+            for (unsigned i = 0; i < 1ul << bpl; i++)
+                clflush (this + i);
+        }
 
         void insert (uint64, mword, mword, uint64);
         void remove (uint64, mword);

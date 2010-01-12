@@ -72,12 +72,13 @@ class Ioapic : public Apic
         }
 
     public:
+        INIT
         Ioapic (Paddr);
 
-        ALWAYS_INLINE
+        ALWAYS_INLINE INIT
         static inline void *operator new (size_t) { return cache.alloc(); }
 
-        ALWAYS_INLINE
+        ALWAYS_INLINE INIT
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
         ALWAYS_INLINE

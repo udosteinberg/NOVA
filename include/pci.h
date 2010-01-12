@@ -1,7 +1,7 @@
 /*
  * PCI Configuration Space
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,10 +19,10 @@
 
 #include "assert.h"
 #include "compiler.h"
-#include "dmar.h"
 #include "io.h"
 #include "slab.h"
 
+class Dmar;
 class Pd;
 
 class Bdf
@@ -69,47 +69,59 @@ class Bdf
         inline Bdf (unsigned b, unsigned d, unsigned f) : bdf (1ul << 31 | b << 16 | d << 11 | f << 8) {}
 };
 
-class Pci : public Bdf
+class Pci
 {
+    friend class Acpi_table_mcfg;
+
     private:
-        Pci *       next;
-        unsigned    level;
-        Dmar *      dmar;
-        Pd *        pd;
+        mword  const    reg_base;
+        uint16 const    rid;
+        uint16 const    level;
+        Pci *           next;
+        Dmar *          dmar;
 
         static Slab_cache cache;
+        static Paddr cfg_base;
         static Pci *list;
 
+        template <typename T>
+        ALWAYS_INLINE
+        inline unsigned read (unsigned reg)
+        {
+            return *reinterpret_cast<T volatile *>(reg_base + reg);
+        }
+
+        template <typename T>
+        ALWAYS_INLINE
+        inline void write (unsigned reg, T val)
+        {
+            *reinterpret_cast<T volatile *>(reg_base + reg) = val;
+        }
+
     public:
+        INIT
         Pci (unsigned, unsigned, unsigned, unsigned);
 
-        ALWAYS_INLINE
+        ALWAYS_INLINE INIT
+        static inline void *operator new (size_t) { return cache.alloc(); }
+
+        ALWAYS_INLINE INIT
+        static inline void operator delete (void *ptr) { cache.free (ptr); }
+
+        ALWAYS_INLINE INIT
         static inline void claim_all (Dmar *d)
         {
             for (Pci *pci = list; pci; pci = pci->next)
-                if (pci->dmar == 0)
+                if (!pci->dmar)
                     pci->dmar = d;
         }
 
-        ALWAYS_INLINE
-        static inline bool claim_dev (Dmar *d, Bdf bdf)
+        ALWAYS_INLINE INIT
+        static inline bool claim_dev (Dmar *d, unsigned r)
         {
             for (Pci *pci = list; pci; pci = pci->next)
-                if (pci->dmar == 0 && *pci == bdf) {
+                if (!pci->dmar && pci->rid == r) {
                     pci->dmar = d;
-                    return true;
-                }
-
-            return false;
-        }
-
-        ALWAYS_INLINE
-        static inline bool assign_dev (Pd *p, Bdf bdf)
-        {
-            for (Pci *pci = list; pci; pci = pci->next)
-                if (pci->pd == 0 && *pci == bdf && pci->dmar) {
-                    pci->pd = p;
-                    pci->dmar->assign (bdf.bus(), bdf.dev(), bdf.fun(), p);
                     return true;
                 }
 
@@ -120,8 +132,12 @@ class Pci : public Bdf
         static void init (unsigned = 0, unsigned = 0);
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        static inline Dmar *find_dmar (unsigned r)
+        {
+            for (Pci *pci = list; pci; pci = pci->next)
+                if (pci->rid == r)
+                    return pci->dmar;
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+            return 0;
+        }
 };

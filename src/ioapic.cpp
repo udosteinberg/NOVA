@@ -15,7 +15,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.h"
 #include "ioapic.h"
 #include "pd.h"
 #include "stdio.h"

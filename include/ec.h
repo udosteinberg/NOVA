@@ -242,6 +242,9 @@ class Ec : public Kobject, public Queue<Sc>
         static void sys_semctl();
 
         NORETURN
+        static void sys_assign_pci();
+
+        NORETURN
         static void idle();
 
         NORETURN

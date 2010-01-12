@@ -1,7 +1,7 @@
 /*
- * Memory Type Range Registers (MTRR)
+ * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,27 +15,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_mcfg.h"
+#include "pci.h"
 
-#include "compiler.h"
-#include "types.h"
-
-class Mtrr
+void Acpi_table_mcfg::parse() const
 {
-    public:
-        uint32 count;
-        uint32 dtype;
+    for (Acpi_mcfg const *x = mcfg; x < reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
+        if (!x->seg)
+            Pci::cfg_base = static_cast<Paddr>(x->addr);
 
-        struct {
-            uint64  base;
-            uint64  mask;
-        } var[8];
-
-        static Mtrr mtrr;
-
-        INIT
-        static void init();
-
-        INIT
-        static unsigned memtype (Paddr);
-};
+    Pci::init();
+}

@@ -1,7 +1,7 @@
 /*
  * Protection Domain
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -52,7 +52,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         INIT
         Pd();
 
-        Pd (bool);
+        Pd (unsigned);
 
         ALWAYS_INLINE
         inline bool privileged() const { return this == root && current == root; }

@@ -1,7 +1,7 @@
 /*
  * System-Call Interface
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,11 +16,13 @@
  */
 
 #include "counter.h"
+#include "dmar.h"
 #include "ec.h"
 #include "gsi.h"
 #include "hip.h"
 #include "lapic.h"
 #include "mtd.h"
+#include "pci.h"
 #include "pd.h"
 #include "pt.h"
 #include "sc.h"
@@ -180,24 +182,22 @@ void Ec::sys_create_pd()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx UTCB:%#lx VM:%u", current, r->pd(), r->utcb(), r->flags() & 1);
 
-    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish (r, Sys_regs::BAD_MEM);
-    }
-
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
         sys_finish (r, Sys_regs::BAD_CPU);
     }
 
-    bool vm = r->flags() & 1;
+    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
+        sys_finish (r, Sys_regs::BAD_MEM);
+    }
 
-    if (vm && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
+    if ((r->flags() & 0x1) && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
         trace (TRACE_ERROR, "%s: VM not supported", __func__);
         sys_finish (r, Sys_regs::BAD_FTR);
     }
 
-    Pd *pd = new Pd (vm);
+    Pd *pd = new Pd (r->flags());
     if (!Pd::current->Space_obj::insert (r->pd(), Capability (pd))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
         delete pd;
@@ -206,11 +206,12 @@ void Ec::sys_create_pd()
 
     Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
     Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
-    ec->set_sc (sc);
 
+    ec->set_sc (sc);
     pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
     pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
     pd->delegate (Crd (Crd::OBJ, 0, Crd::whole), r->crd());
+    pd->insert_utcb (r->utcb());
 
     // Enqueue SC only after all the caps have been mapped
     sc->remote_enqueue();
@@ -224,14 +225,14 @@ void Ec::sys_create_ec()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
-    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish (r, Sys_regs::BAD_MEM);
-    }
-
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
         sys_finish (r, Sys_regs::BAD_CPU);
+    }
+
+    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
+        sys_finish (r, Sys_regs::BAD_MEM);
     }
 
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
@@ -347,7 +348,7 @@ void Ec::sys_recall()
     if (!(ec->hazard & Cpu::HZD_RECALL)) {
 
         Atomic::set_mask<true>(ec->hazard, Cpu::HZD_RECALL);
-     
+
         // XXX: We only need to send the IPI if we were the first to set the
         // recall hazard and if the target EC is currently running on its CPU.
         if (Cpu::id != ec->cpu)
@@ -385,6 +386,34 @@ void Ec::sys_semctl()
     sys_finish (r, Sys_regs::SUCCESS);
 }
 
+void Ec::sys_assign_pci()
+{
+    Sys_assign_pci *r = static_cast<Sys_assign_pci *>(&current->regs);
+
+    Kobject *obj = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (obj->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish (r, Sys_regs::BAD_CAP);
+    }
+
+    Pd *pd = static_cast<Pd *>(obj);
+
+    if (!pd->dpt) {
+        trace (TRACE_ERROR, "%s: DMA not supported", __func__);
+        sys_finish (r, Sys_regs::BAD_CAP);
+    }
+
+    Dmar *dmar = Pci::find_dmar (r->pf());
+    if (EXPECT_FALSE (!dmar)) {
+        trace (TRACE_ERROR, "%s: PF not found (%#lx)", __func__, r->pf());
+        sys_finish (r, Sys_regs::BAD_DEV);
+    }
+
+    dmar->assign (r->vf() ? r->vf() : r->pf(), pd);
+
+    sys_finish (r, Sys_regs::SUCCESS);
+}
+
 void Ec::syscall_handler (uint8 number)
 {
     // This is actually faster than a switch
@@ -410,6 +439,8 @@ void Ec::syscall_handler (uint8 number)
         sys_recall();
     if (EXPECT_TRUE (number == Sys_regs::SEMCTL))
         sys_semctl();
+    if (EXPECT_TRUE (number == Sys_regs::ASSIGN_PCI))
+        sys_assign_pci();
 
     sys_finish (&current->regs, Sys_regs::BAD_SYS);
 }

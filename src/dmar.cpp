@@ -1,7 +1,7 @@
 /*
  * DMA Remapping Unit (DMAR)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,14 +16,13 @@
  */
 
 #include "dmar.h"
-#include "extern.h"
 #include "lapic.h"
 #include "pd.h"
 #include "stdio.h"
 
-Slab_cache      Dmar::cache (sizeof (Dmar), 8);
-Dmar *          Dmar::list;
-Dmar_context *  Dmar::root = new Dmar_context;
+Slab_cache  Dmar::cache (sizeof (Dmar), 8);
+Dmar *      Dmar::list;
+Dmar_ctx *  Dmar::root = new Dmar_ctx;
 
 Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (0)
 {
@@ -42,6 +41,8 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     frr_count = static_cast<unsigned>(cap >> 40 & 0xff) + 1;
     frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
     tlb_base  = static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base;
+
+    Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (cap >> 34 & 0xf) + 2) * Dpt::bpl - 1);
 }
 
 void Dmar::enable()
@@ -51,35 +52,28 @@ void Dmar::enable()
     write<uint32>(REG_FEADDR, 0xfee00000);
     write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (root));
 
-    write<uint32>(REG_GCMD, 1ul << 30);
-    while (!(read<uint32>(REG_GSTS) & (1ul << 30)))
-        pause();
-
-    write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
-    while (read<uint64>(REG_CCMD) & (1ull << 63))
-        pause();
-
-    write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
-    while (read<uint64>(REG_IOTLB) & (1ull << 63))
-        pause();
-
-    write<uint32>(REG_GCMD, 1ul << 31);
+    command (1ul << 30);
+    flush_ctx();
+    command (1ul << 31);
 }
 
-void Dmar::assign (unsigned b, unsigned d, unsigned f, Pd *p)
+void Dmar::assign (unsigned rid, Pd *p)
 {
-    assert (p->dpt());
+    assert (p->did && p->dpt);
 
     mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
-    mword did = 1;
 
-    Dmar_context *r = root + b;
+    Dmar_ctx *r = root + (rid >> 8);
     if (!r->present())
-        r->set (0, Buddy::ptr_to_phys (new Dmar_context) | 1);
+        r->set (0, Buddy::ptr_to_phys (new Dmar_ctx) | 1);
 
-    Dmar_context *c = static_cast<Dmar_context *>(Buddy::phys_to_ptr (r->addr())) + d * 8 + f;
-    if (!c->present())
-        c->set (lev | did << 8, Buddy::ptr_to_phys (p->dpt()->level (lev + 1)) | 1);
+    Dmar_ctx *c = static_cast<Dmar_ctx *>(Buddy::phys_to_ptr (r->addr())) + (rid & 0xff);
+    if (c->present())
+        c->set (0, 0);
+
+    flush_ctx();
+
+    c->set (lev | p->did << 8, Buddy::ptr_to_phys (p->dpt->level (lev + 1)) | 1);
 }
 
 void Dmar::fault_handler()

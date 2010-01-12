@@ -1,7 +1,7 @@
 /*
  * DMA Page Table (DPT)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,6 +19,8 @@
 #include "dpt.h"
 #include "stdio.h"
 #include "x86.h"
+
+unsigned Dpt::ord = 8 * sizeof (mword);
 
 Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
 {
@@ -52,7 +54,7 @@ void Dpt::insert (uint64 dpa, mword o, mword a, uint64 hpa)
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
     Dpt *e = walk (dpa, l, DPT_R | DPT_W);
-    uint64 v = hpa | a | (l ? DPT_SP : DPT_0);
+    uint64 v = hpa | a | (l ? DPT_S : 0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
 
@@ -71,7 +73,7 @@ void Dpt::insert (uint64 dpa, mword o, mword a, uint64 hpa)
 
 void Dpt::remove (uint64 dpa, mword o)
 {
-    trace (TRACE_EPT, "REM DPT:%#010lx DPA:%#010llx O:%lu", Buddy::ptr_to_phys (this), dpa, o);
+    trace (TRACE_DPT, "REM DPT:%#010lx DPA:%#010llx O:%lu", Buddy::ptr_to_phys (this), dpa, o);
 
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);

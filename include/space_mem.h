@@ -1,7 +1,7 @@
 /*
  * Memory Space
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -30,36 +30,30 @@ class Vma;
 
 class Space_mem
 {
+    private:
+        static unsigned did_ctr;
+
     protected:
-        Vma     vma_head;
-        Dpt *   d;
-        Ept *   e;
-        Ptab *  master;
-        Ptab *  percpu[NUM_CPU];
+        Vma         vma_head;
+        Ptab *      master;
+        Ptab *      percpu[NUM_CPU];
 
     public:
+        mword const did;
+        Dpt * const dpt;
+        Ept * const ept;
+
         // Constructor for kernel memory space
         ALWAYS_INLINE INIT
-        inline Space_mem() : d (new Dpt), master (Ptab::master()) {}
-
-        // Constructor
-        Space_mem (bool);
+        inline Space_mem() : master (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
 
         ALWAYS_INLINE
-        inline Dpt *dpt() const { return d; }
-
-        ALWAYS_INLINE
-        inline Ept *ept() const { return e; }
-
-        ALWAYS_INLINE
-        inline Ptab *mst_ptab() const
-        {
-            return master;
-        }
+        inline Space_mem (unsigned flags) : did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
 
         ALWAYS_INLINE
         inline Ptab *cpu_ptab (unsigned cpu) const
         {
+            assert (cpu < NUM_CPU);
             return percpu[cpu];
         }
 
@@ -82,7 +76,16 @@ class Space_mem
         }
 
         INIT
+        void insert_root (mword, size_t);
+
+        INIT
         void insert_root (mword, size_t, unsigned, unsigned);
+
+        ALWAYS_INLINE
+        inline bool insert_utcb (mword b)
+        {
+            return !b || vma_head.create_child (&vma_head, 0, b, 0, 0, 0);
+        }
 
         bool insert (Vma *, Paddr);
 

@@ -1,7 +1,7 @@
 /*
  * DMA Remapping Unit (DMAR)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,7 +25,7 @@
 
 class Pd;
 
-class Dmar_context
+class Dmar_ctx
 {
     private:
         uint64 lo, hi;
@@ -55,7 +55,7 @@ class Dmar
 
         static Slab_cache       cache;
         static Dmar *           list;
-        static Dmar_context *   root;
+        static Dmar_ctx *       root;
 
         enum Reg
         {
@@ -114,26 +114,53 @@ class Dmar
             *reinterpret_cast<uint64 volatile *>(frr_base + frr * 16 + 8) = 1ull << 63;
         }
 
+        ALWAYS_INLINE
+        inline void command (uint32 val)
+        {
+            write<uint32>(REG_GCMD, val);
+            while (!(read<uint32>(REG_GSTS) & val))
+                pause();
+        }
+
+        ALWAYS_INLINE
+        inline void flush_tlb()
+        {
+            write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
+            while (read<uint64>(REG_IOTLB) & (1ull << 63))
+                pause();
+        }
+
+        ALWAYS_INLINE
+        inline void flush_ctx()
+        {
+            write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
+            while (read<uint64>(REG_CCMD) & (1ull << 63))
+                pause();
+
+            flush_tlb();
+        }
+
         void enable();
         void fault_handler();
 
     public:
+        INIT
         Dmar (Paddr);
 
-        void assign (unsigned, unsigned, unsigned, Pd *);
+        ALWAYS_INLINE INIT
+        static inline void *operator new (size_t) { return cache.alloc(); }
 
-        ALWAYS_INLINE
+        ALWAYS_INLINE INIT
+        static inline void operator delete (void *ptr) { cache.free (ptr); }
+
+        ALWAYS_INLINE INIT
         static inline void enable_all()
         {
             for (Dmar *dmar = list; dmar; dmar = dmar->next)
                 dmar->enable();
         }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        void assign (unsigned, Pd *);
 
         REGPARM (1)
         static void vector (unsigned) asm ("msi_vector");

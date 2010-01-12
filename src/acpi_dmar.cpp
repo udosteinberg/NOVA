@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -34,7 +34,7 @@ void Acpi_dmar::parse() const
 
         switch (s->type) {
             case 1:
-                Pci::claim_dev (dmar, Bdf (s->b, s->d, s->f));
+                Pci::claim_dev (dmar, s->b << 8 | s->d << 3 | s->f);
                 break;
         }
     }
@@ -43,13 +43,16 @@ void Acpi_dmar::parse() const
 void Acpi_rmrr::parse() const
 {
     for (uint64 hpa = base; hpa < limit; hpa += PAGE_SIZE)
-        Pd::kern.dpt()->insert (hpa, 0, Dpt::DPT_R | Dpt::DPT_W, hpa);
+        Pd::kern.dpt->insert (hpa, 0, Dpt::DPT_R | Dpt::DPT_W, hpa);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 
         switch (s->type) {
             case 1:
-                Pci::assign_dev (&Pd::kern, Bdf (s->b, s->d, s->f));
+                unsigned rid = s->b << 8 | s->d << 3 | s->f;
+                Dmar *dmar = Pci::find_dmar (rid);
+                if (dmar)
+                    dmar->assign (rid, &Pd::kern);
                 break;
         }
     }
