@@ -416,6 +416,9 @@ void Ec::sys_assign_pci()
 
 void Ec::syscall_handler (uint8 number)
 {
+    if (EXPECT_TRUE (number < NUM_SYS))
+        Counter::sys[number]++;
+
     // This is actually faster than a switch
     if (EXPECT_TRUE (number == Sys_regs::MSG_CALL))
         sys_ipc_call();

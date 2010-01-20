@@ -25,3 +25,4 @@
 #define NUM_LVT         6
 #define NUM_MSI         1
 #define NUM_IPI         1
+#define NUM_SYS         16

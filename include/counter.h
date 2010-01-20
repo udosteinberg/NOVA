@@ -33,6 +33,7 @@ class Counter
         static unsigned gsi[NUM_GSI]    CPULOCAL;
         static unsigned exc[NUM_EXC]    CPULOCAL;
         static unsigned vmi[NUM_VMI]    CPULOCAL;
+        static unsigned sys[NUM_SYS]    CPULOCAL;
         static unsigned vtlb_gpf        CPULOCAL;
         static unsigned vtlb_hpf        CPULOCAL;
         static unsigned vtlb_fill       CPULOCAL;

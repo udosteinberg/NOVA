@@ -26,6 +26,7 @@ unsigned    Counter::lvt[NUM_LVT];
 unsigned    Counter::gsi[NUM_GSI];
 unsigned    Counter::exc[NUM_EXC];
 unsigned    Counter::vmi[NUM_VMI];
+unsigned    Counter::sys[NUM_SYS];
 unsigned    Counter::vtlb_gpf;
 unsigned    Counter::vtlb_hpf;
 unsigned    Counter::vtlb_fill;
@@ -82,5 +83,11 @@ void Counter::dump()
         if (Counter::vmi[i]) {
             trace (0, "VMI %#4x: %12u", i, Counter::vmi[i]);
             Counter::vmi[i] = 0;
+        }
+
+    for (unsigned i = 0; i < sizeof (Counter::sys) / sizeof (*Counter::sys); i++)
+        if (Counter::sys[i]) {
+            trace (0, "SYS %#4x: %12u", i, Counter::sys[i]);
+            Counter::sys[i] = 0;
         }
 }
