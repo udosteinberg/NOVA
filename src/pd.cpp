@@ -37,7 +37,7 @@ Pd Pd::kern;
 // Root PD
 Pd *Pd::root;
 
-Pd::Pd() : Kobject (PD, 0)
+Pd::Pd() : Kobject (PD, 0), Space_io (0)
 {
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
 
@@ -59,7 +59,7 @@ Pd::Pd() : Kobject (PD, 0)
     Space_io::insert_root (0, 16);
 }
 
-Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags)
+Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags), Space_io (flags)
 {
     trace (TRACE_SYSCALL, "PD:%p created (F=%#x)", this, flags);
 }

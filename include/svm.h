@@ -1,7 +1,7 @@
 /*
  * Secure Virtual Machine (SVM)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -108,10 +108,10 @@ class Vmcb
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            return Buddy::allocator.alloc (2, Buddy::NOFILL);
+            return Buddy::allocator.alloc (0, Buddy::NOFILL);
         }
 
-        Vmcb (mword);
+        Vmcb (mword, mword);
 
         ALWAYS_INLINE
         inline Vmcb()

@@ -1,7 +1,7 @@
 /*
  * I/O Space
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -45,6 +45,10 @@ class Space_io
         inline Space_mem *space_mem();
 
     public:
+        void * const bmp;
+
+        Space_io (unsigned);
+
         ALWAYS_INLINE
         static inline bool lookup (unsigned idx)
         {

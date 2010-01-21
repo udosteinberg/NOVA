@@ -46,7 +46,7 @@ Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
     }
 }
 
-void Dpt::insert (uint64 dpa, mword o, mword a, uint64 hpa)
+void Dpt::insert (uint64 dpa, mword o, uint64 hpa, mword a)
 {
     trace (TRACE_DPT, "INS DPT:%#010lx DPA:%#010llx O:%lu HPA:%#010llx A:%#05lx", Buddy::ptr_to_phys (this), dpa, o, hpa, a);
 

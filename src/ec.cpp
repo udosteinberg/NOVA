@@ -1,7 +1,7 @@
 /*
  * Execution Context
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -81,6 +81,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
         if (Cpu::feature (Cpu::FEAT_VMX)) {
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
+                                  Buddy::ptr_to_phys (pd->bmp),
                                   Buddy::ptr_to_phys (pd->cpu_ptab (c)),
                                   Buddy::ptr_to_phys (pd->ept));
 
@@ -91,7 +92,8 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
-            regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->cpu_ptab (c)));
+            regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->bmp),
+                                  Buddy::ptr_to_phys (pd->cpu_ptab (c)));
             continuation = send_msg<ret_user_vmrun, &Utcb::load_svm>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
@@ -368,11 +370,13 @@ bool Ec::pf_handler (Exc_regs *r)
 {
     mword addr = r->cr2;
 
-    // Fault caused by user
+    // User fault
     if (r->err & Ptab::ERROR_USER)
         return addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
 
-    // Fault caused by kernel
+    // Kernel fault in user region (vTLB)
+    if (addr < LINK_ADDR && Pd::current->Space_mem::sync (addr))
+        return true;
 
     // #PF in MEM space
     if (addr >= LINK_ADDR && addr < LOCAL_SADDR) {

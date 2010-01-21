@@ -63,7 +63,7 @@ class Dpt
                 clflush (this + i);
         }
 
-        void insert (uint64, mword, mword, uint64);
+        void insert (uint64, mword, uint64, mword);
         void remove (uint64, mword);
 
         ALWAYS_INLINE

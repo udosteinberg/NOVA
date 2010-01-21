@@ -1,7 +1,7 @@
 /*
  * Secure Virtual Machine (SVM)
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -26,13 +26,9 @@ unsigned            Vmcb::asid_ctr;
 uint32              Vmcb::svm_version;
 uint32              Vmcb::svm_feature;
 
-Vmcb::Vmcb (mword nptp) : asid (++asid_ctr), npt_control (1), npt_cr3 (nptp), efer (Cpu::EFER_SVME), g_pat (0x7040600070406ull)
+Vmcb::Vmcb (mword bmp, mword nptp) : base_io (bmp), asid (++asid_ctr), int_control (1ul << 24), npt_control (1), npt_cr3 (nptp), efer (Cpu::EFER_SVME), g_pat (0x7040600070406ull)
 {
-    char *bitmap = reinterpret_cast<char *>(this) + PAGE_SIZE;
-
-    memset (bitmap, ~0u, 3 * PAGE_SIZE);
-    base_io = base_msr = Buddy::ptr_to_phys (bitmap);
-    int_control = (1ul << 24);
+    base_msr = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1));
 }
 
 void Vmcb::init()

@@ -48,9 +48,6 @@ class Ept
     private:
         uint64 val;
 
-        static unsigned const max = 4;
-        static unsigned const bpl = 9;
-
         ALWAYS_INLINE
         inline bool present() const { return val & (EPT_R | EPT_W | EPT_X); }
 
@@ -72,6 +69,10 @@ class Ept
         Ept *walk (uint64, unsigned long, mword = 0);
 
     public:
+        static unsigned const bpl = 9;
+        static unsigned const max = 4;
+        static unsigned ord;
+
         enum
         {
             EPT_R               = 1ul << 0,
@@ -81,7 +82,7 @@ class Ept
             EPT_S               = 1ul << 7,
         };
 
-        void insert (uint64, mword, mword, mword, uint64);
+        void insert (uint64, mword, uint64, mword, mword);
         void remove (uint64, mword);
 
         ALWAYS_INLINE

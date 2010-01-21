@@ -1,7 +1,7 @@
 /*
  * Virtual Machine Extensions (VMX)
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,9 +15,11 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "bits.h"
 #include "cmdline.h"
 #include "counter.h"
 #include "cpu.h"
+#include "ept.h"
 #include "extern.h"
 #include "gdt.h"
 #include "hip.h"
@@ -25,6 +27,7 @@
 #include "msr.h"
 #include "stdio.h"
 #include "tss.h"
+#include "util.h"
 #include "vmx.h"
 #include "x86.h"
 
@@ -39,7 +42,7 @@ Vmcs::vmx_ctrl_ent  Vmcs::ctrl_ent;
 Vmcs::vmx_fix_cr0   Vmcs::fix_cr0;
 Vmcs::vmx_fix_cr4   Vmcs::fix_cr4;
 
-Vmcs::Vmcs (mword esp, mword cr3, mword eptp) : rev (basic.revision)
+Vmcs::Vmcs (mword esp, mword bmp, mword cr3, mword eptp) : rev (basic.revision)
 {
     clear();
 
@@ -70,6 +73,8 @@ Vmcs::Vmcs (mword esp, mword cr3, mword eptp) : rev (basic.revision)
     write (VPID, ++vpid_ctr);
     write (EPTP, eptp | 0x1e);
     write (EPTP_HI, 0);
+    write (IO_BITMAP_A, bmp);
+    write (IO_BITMAP_B, bmp + PAGE_SIZE);
 
     write (HOST_SEL_CS, SEL_KERN_CODE);
     write (HOST_SEL_SS, SEL_KERN_DATA);
@@ -121,6 +126,8 @@ void Vmcs::init()
         ctrl_cpu[1].val = Msr::read<uint64>(Msr::IA32_VMX_CTRL_CPU1);
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
+
+    Ept::ord = min (Ept::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
 
     ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_SECONDARY;
     ctrl_cpu[1].set |= CPU_VPID;

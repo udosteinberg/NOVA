@@ -1,7 +1,7 @@
 /*
  * I/O Space
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,6 +24,14 @@
 Space_mem *Space_io::space_mem()
 {
     return static_cast<Pd *>(this);
+}
+
+Space_io::Space_io (unsigned flags) : bmp (flags & 0x1 ? Buddy::allocator.alloc (1, Buddy::FILL_1) : 0)
+{
+    if (bmp)
+        space_mem()->insert (IOBMP_SADDR, 1,
+                             Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE),
+                             Buddy::ptr_to_phys (bmp));
 }
 
 bool Space_io::insert (mword idx)

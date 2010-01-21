@@ -39,9 +39,6 @@ void Space_mem::init (unsigned cpu)
 
         trace (TRACE_MEMORY, "PD:%p PTAB[%u]:%#lx", static_cast<Pd *>(this), cpu, Buddy::ptr_to_phys (percpu[cpu]));
     }
-
-    if (!master)
-        master = percpu[cpu];
 }
 
 void Space_mem::page_fault (mword addr, mword /*error*/)
@@ -85,13 +82,15 @@ bool Space_mem::insert (Vma *vma, Paddr phys)
 
     if (dpt) {
         unsigned ord = min (o, Dpt::ord);
-        trace (TRACE_DPT, "%s: B:%#lx O:%#x->%#x I:%u", __func__, vma->base, o, ord, 1u << (o - ord));
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            dpt->insert (vma->base + i * (1ul << (Dpt::ord + PAGE_BITS)), ord, vma->attr, phys + i * (1ul << (Dpt::ord + PAGE_BITS)));
+            dpt->insert (vma->base + i * (1ul << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1ul << (Dpt::ord + PAGE_BITS)), vma->attr);
     }
 
-    if (ept)
-        ept->insert (vma->base, o, vma->type, vma->attr, phys);
+    if (ept) {
+        unsigned ord = min (o, Ept::ord);
+        for (unsigned i = 0; i < 1u << (o - ord); i++)
+            ept->insert (vma->base + i * (1ul << (Ept::ord + PAGE_BITS)), ord, phys + i * (1ul << (Ept::ord + PAGE_BITS)), vma->attr, vma->type);
+    }
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
                       (vma->attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |

@@ -34,9 +34,9 @@ class Space_mem
         static unsigned did_ctr;
 
     protected:
-        Vma         vma_head;
-        Ptab *      master;
-        Ptab *      percpu[NUM_CPU];
+        Vma             vma_head;
+        Ptab * const    master;
+        Ptab *          percpu[NUM_CPU];
 
     public:
         mword const did;
@@ -48,7 +48,7 @@ class Space_mem
         inline Space_mem() : master (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
 
         ALWAYS_INLINE
-        inline Space_mem (unsigned flags) : did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
+        inline Space_mem (unsigned flags) : master (new Ptab), did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
 
         ALWAYS_INLINE
         inline Ptab *cpu_ptab (unsigned cpu) const

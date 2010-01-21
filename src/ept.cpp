@@ -19,6 +19,8 @@
 #include "ept.h"
 #include "stdio.h"
 
+unsigned Ept::ord = 8 * sizeof (mword);
+
 Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
 {
     unsigned lev = max;
@@ -43,7 +45,7 @@ Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
     }
 }
 
-void Ept::insert (uint64 gpa, mword o, mword t, mword a, uint64 hpa)
+void Ept::insert (uint64 gpa, mword o, uint64 hpa, mword a, mword t)
 {
     trace (TRACE_EPT, "INS EPT:%#010lx GPA:%#010llx O:%lu HPA:%#010llx A:%#05lx", Buddy::ptr_to_phys (this), gpa, o, hpa, a);
 

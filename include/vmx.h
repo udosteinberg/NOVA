@@ -1,7 +1,7 @@
 /*
  * Virtual Machine Extensions (VMX)
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -49,7 +49,9 @@ class Vmcs
         static union vmx_ept_vpid {
             uint64      val;
             struct {
-                uint32              : 20,
+                uint32              : 16,
+                        super       :  2,
+                                    :  2,
                         invept      :  1,
                                     : 11;
                 uint32  invvpid     :  1;
@@ -342,7 +344,7 @@ class Vmcs
             return Buddy::allocator.alloc (0, Buddy::NOFILL);
         }
 
-        Vmcs (mword, mword, mword);
+        Vmcs (mword, mword, mword, mword);
 
         ALWAYS_INLINE
         inline Vmcs() : rev (basic.revision)
