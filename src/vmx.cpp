@@ -129,7 +129,7 @@ void Vmcs::init()
 
     Ept::ord = min (Ept::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
 
-    ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_SECONDARY;
+    ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_IO_BITMAP | CPU_SECONDARY;
     ctrl_cpu[1].set |= CPU_VPID;
 
     if (Cmdline::noept || !ept_vpid.invept)

@@ -274,6 +274,7 @@ class Vmcs
             CPU_CR3_LOAD            = 1ul << 15,
             CPU_CR3_STORE           = 1ul << 16,
             CPU_IO                  = 1ul << 24,
+            CPU_IO_BITMAP           = 1ul << 25,
             CPU_SECONDARY           = 1ul << 31,
         };
 
