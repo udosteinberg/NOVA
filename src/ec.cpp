@@ -93,7 +93,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
             regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->bmp),
-                                  Buddy::ptr_to_phys (pd->cpu_ptab (c)));
+                                  Buddy::ptr_to_phys (pd->mst));
             continuation = send_msg<ret_user_vmrun, &Utcb::load_svm>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }

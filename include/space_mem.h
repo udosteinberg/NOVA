@@ -34,21 +34,21 @@ class Space_mem
         static unsigned did_ctr;
 
     protected:
-        Vma             vma_head;
-        Ptab * const    master;
-        Ptab *          percpu[NUM_CPU];
+        Vma     vma_head;
+        Ptab *  percpu[NUM_CPU];
 
     public:
+        Ptab *const mst;
         mword const did;
         Dpt * const dpt;
         Ept * const ept;
 
         // Constructor for kernel memory space
         ALWAYS_INLINE INIT
-        inline Space_mem() : master (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
+        inline Space_mem() : mst (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
 
         ALWAYS_INLINE
-        inline Space_mem (unsigned flags) : master (new Ptab), did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
+        inline Space_mem (unsigned flags) : mst (new Ptab), did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
 
         ALWAYS_INLINE
         inline Ptab *cpu_ptab (unsigned cpu) const
@@ -66,13 +66,13 @@ class Space_mem
         ALWAYS_INLINE
         inline bool lookup (mword virt, size_t &size, Paddr &phys)
         {
-            return master->lookup (virt, size, phys);
+            return mst->lookup (virt, size, phys);
         }
 
         ALWAYS_INLINE
         inline void insert (mword virt, unsigned o, Paging::Attribute attr, Paddr phys)
         {
-            master->insert (virt, o, attr, phys);
+            mst->insert (virt, o, attr, phys);
         }
 
         INIT
@@ -94,8 +94,6 @@ class Space_mem
         ALWAYS_INLINE
         inline bool sync (mword hla)
         {
-            return percpu[Cpu::id]->sync_from (master, hla);
+            return percpu[Cpu::id]->sync_from (mst, hla);
         }
-
-        static void page_fault (mword, mword);
 };

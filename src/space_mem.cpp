@@ -41,15 +41,6 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::page_fault (mword addr, mword /*error*/)
-{
-    trace (TRACE_MEMORY, "#PF (MEM) PD:%p ADDR:%#lx", Pd::current, addr);
-
-    size_t size; Paddr phys;
-    if (Ptab::master()->lookup (addr, size, phys))
-        Ptab::current()->sync_master (addr);
-}
-
 void Space_mem::insert_root (mword base, size_t size)
 {
     for (size_t frag; size; size -= frag, base += frag) {
@@ -97,7 +88,7 @@ bool Space_mem::insert (Vma *vma, Paddr phys)
                       (vma->attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
 
     // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    master->insert (vma->base, o, a, phys);
+    mst->insert (vma->base, o, a, phys);
 
     return true;
 }
