@@ -378,12 +378,6 @@ bool Ec::pf_handler (Exc_regs *r)
     if (addr < LINK_ADDR && Pd::current->Space_mem::sync (addr))
         return true;
 
-    // #PF in MEM space
-    if (addr >= LINK_ADDR && addr < LOCAL_SADDR) {
-        Space_mem::page_fault (r->cr2, r->err);
-        return true;
-    }
-
     // #PF in I/O space (including delimiter byte)
     if (addr >= IOBMP_SADDR && addr <= IOBMP_EADDR) {
         Space_io::page_fault (r->cr2, r->err);
