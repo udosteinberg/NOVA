@@ -31,8 +31,8 @@ Map_node *Space_obj::lookup_node (mword idx)
 {
     mword virt = idx_to_virt (idx);
 
-    size_t size; Paddr phys;
-    if (!space_mem()->lookup (virt, size, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0))
+    Paddr phys;
+    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0))
         return 0;
 
     Map_node *node = *shadow (Buddy::phys_to_ptr (phys));
@@ -48,8 +48,8 @@ void *Space_obj::metadata (unsigned long idx)
 {
     mword virt = idx_to_virt (idx);
 
-    size_t size; Paddr phys;
-    if (!space_mem()->lookup (virt, size, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
+    Paddr phys;
+    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
         phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_0));
         space_mem()->insert (virt & ~PAGE_MASK, 0,
                              Ptab::Attribute (Ptab::ATTR_NOEXEC |
@@ -104,8 +104,8 @@ bool Space_obj::remove (unsigned idx, Capability cap)
 {
     mword virt = idx_to_virt (idx);
 
-    size_t size; Paddr phys;
-    if (!space_mem()->lookup (virt, size, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0))
+    Paddr phys;
+    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0))
         return false;
 
     // cmpxchg entry from cap slot (see if expected old entry was still there)

@@ -64,9 +64,9 @@ class Space_mem
         }
 
         ALWAYS_INLINE
-        inline bool lookup (mword virt, size_t &size, Paddr &phys)
+        inline size_t lookup (mword virt, Paddr &phys)
         {
-            return mst->lookup (virt, size, phys);
+            return mst->lookup (virt, phys);
         }
 
         ALWAYS_INLINE

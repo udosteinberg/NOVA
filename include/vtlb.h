@@ -1,7 +1,7 @@
 /*
  * Virtual Translation Lookaside Buffer (VTLB)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,10 +27,7 @@ class Vtlb : public Paging
 {
     private:
         ALWAYS_INLINE
-        static inline size_t virt_to_phys (Exc_regs *, mword, mword, mword &, mword &);
-
-        ALWAYS_INLINE
-        static inline size_t phys_to_host (mword, Paddr &);
+        static inline size_t walk (Exc_regs *, mword, mword, mword &, mword &);
 
         void flush_ptab (unsigned);
 

@@ -101,7 +101,7 @@ void Ptab::remove (mword hla, mword o)
     flush();
 }
 
-bool Ptab::lookup (mword virt, size_t &size, Paddr &phys)
+size_t Ptab::lookup (mword virt, Paddr &phys)
 {
     unsigned lev = levels;
 
@@ -109,17 +109,17 @@ bool Ptab::lookup (mword virt, size_t &size, Paddr &phys)
 
         unsigned shift = --lev * bpl + 12;
         pte += virt >> shift & ((1ul << bpl) - 1);
-        size = 1ul << shift;
+        size_t size = 1ul << shift;
 
         if (EXPECT_FALSE (!pte->present()))
-            return false;
+            return 0;
 
         if (EXPECT_FALSE (lev && !pte->super()))
             continue;
 
         phys = pte->addr() | (virt & (size - 1));
 
-        return true;
+        return size;
     }
 }
 

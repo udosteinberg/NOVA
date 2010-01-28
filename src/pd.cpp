@@ -87,9 +87,8 @@ void Pd::delegate_mem (mword const snd_base, mword const rcv_base, mword const o
             if (privileged())
                 phys = base;
             else {
-                size_t size; bool ok;
-                ok = current->Space_mem::lookup (base, size, phys);
-                assert (ok);
+                size_t size = current->Space_mem::lookup (base, phys);
+                assert (size);
             }
 
             // Adjust rcv_base by the clamping offset

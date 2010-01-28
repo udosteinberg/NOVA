@@ -38,8 +38,8 @@ bool Space_io::insert (mword idx)
 {
     mword virt = idx_to_virt (idx);
 
-    size_t size; Paddr phys;
-    if (!space_mem()->lookup (virt, size, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1)) {
+    Paddr phys;
+    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1)) {
         phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_1));
         space_mem()->insert (virt & ~PAGE_MASK, 0,
                              Ptab::Attribute (Ptab::ATTR_NOEXEC |
@@ -57,8 +57,8 @@ bool Space_io::remove (mword idx)
 {
     mword virt = idx_to_virt (idx);
 
-    size_t size; Paddr phys;
-    if (!space_mem()->lookup (virt, size, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1))
+    Paddr phys;
+    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1))
         return false;
 
     // Set the bit, prohibiting access

@@ -69,7 +69,7 @@ class Ptab : public Paging
         void insert (mword, mword, mword, Paddr);
         void remove (mword, mword);
 
-        bool lookup (mword, size_t &, Paddr &);
+        size_t lookup (mword, Paddr &);
 
         bool sync_from (Ptab *, mword);
 

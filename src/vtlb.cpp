@@ -1,7 +1,7 @@
 /*
  * Virtual Translation Lookaside Buffer (VTLB)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,19 +25,7 @@
 #include "vpid.h"
 #include "vtlb.h"
 
-size_t Vtlb::phys_to_host (mword phys, Paddr &host)
-{
-    if (EXPECT_FALSE (phys >= LINK_ADDR))
-        return 0;
-
-    size_t size;
-    if (Pd::current->Space_mem::lookup (phys, size, host))
-        return size;
-
-    return 0;
-}
-
-size_t Vtlb::virt_to_phys (Exc_regs *regs, mword virt, mword error, mword &phys, mword &attr)
+size_t Vtlb::walk (Exc_regs *regs, mword virt, mword error, mword &phys, mword &attr)
 {
     if (EXPECT_FALSE (!(regs->cr0_shadow & Cpu::CR0_PG))) {
         phys = virt;
@@ -94,14 +82,14 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
 
-    size_t gsize = virt_to_phys (regs, virt, error, phys, attr);
+    size_t gsize = walk (regs, virt, error, phys, attr);
     if (EXPECT_FALSE (!gsize)) {
         regs->cr2 = virt;
         Counter::vtlb_gpf++;
         return GLA_GPA;
     }
 
-    size_t hsize = phys_to_host (phys, host);
+    size_t hsize = Pd::current->Space_mem::lookup (phys, host);
     if (EXPECT_FALSE (!hsize)) {
         regs->ept_fault = phys;
         Counter::vtlb_hpf++;
@@ -109,6 +97,9 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
     }
 
     size_t size = min (gsize, hsize);
+
+    if (gsize > hsize)
+        attr |= ATTR_SPLINTER;
 
     Counter::count (Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, 3);
 
@@ -132,6 +123,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
                 }
 
                 tlb->val &= attr | ~ATTR_GLOBAL;
+                tlb->val |= attr & ATTR_SPLINTER;
 
                 continue;
             }
@@ -167,16 +159,28 @@ void Vtlb::flush_ptab (unsigned full)
 
 void Vtlb::flush_addr (mword virt, unsigned long vpid)
 {
-    unsigned shift = (levels - 1) * bpl + PAGE_BITS;
-    Vtlb *tlb = this + (virt >> shift & ((1ul << bpl) - 1));
+    unsigned lev = levels;
 
-    if (tlb->present()) {
-        tlb->val |=  ATTR_GLOBAL;
-        tlb->val &= ~ATTR_PRESENT;
+    for (Vtlb *tlb = this;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
+
+        unsigned shift = --lev * bpl + PAGE_BITS;
+        tlb += virt >> shift & ((1ul << bpl) - 1);
+
+        if (!tlb->present())
+            return;
+
+        if (!lev || tlb->splinter()) {
+            tlb->val |=  ATTR_GLOBAL;
+            tlb->val &= ~ATTR_PRESENT;
+
+            if (vpid)
+                Vpid::flush (Vpid::ADDRESS, vpid, virt);
+
+            Counter::count (Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 4);
+
+            return;
+        }
     }
-
-    if (vpid)
-        Vpid::flush (Vpid::ADDRESS, vpid, virt);
 }
 
 void Vtlb::flush (unsigned full, unsigned long vpid)

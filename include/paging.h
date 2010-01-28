@@ -44,6 +44,7 @@ class Paging
             ATTR_DIRTY              = 1ull << 6,    // 0x40
             ATTR_SUPERPAGE          = 1ull << 7,    // 0x80
             ATTR_GLOBAL             = 1ull << 8,    // 0x100
+            ATTR_SPLINTER           = 1ull << 9,    // 0x200
             ATTR_NOEXEC             = 0,
 
             ATTR_PTAB               = ATTR_ACCESSED |
@@ -89,4 +90,7 @@ class Paging
 
         ALWAYS_INLINE
         inline bool global() const { return val & ATTR_GLOBAL; }
+
+        ALWAYS_INLINE
+        inline bool splinter() const { return val & ATTR_SPLINTER; }
 };
