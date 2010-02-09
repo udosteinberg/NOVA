@@ -122,11 +122,10 @@ void Gsi::unmask (unsigned long gsi)
 
 void Gsi::eoi (unsigned gsi)
 {
-    if (Acpi::mode == Acpi::APIC) {
-        assert (gsi < NUM_GSI);
-        assert (gsi_table[gsi].ioapic);
+    if (Acpi::mode == Acpi::APIC)
         Lapic::eoi();
-    } else {
+
+    else {
         assert (gsi < NUM_IRQ);
         if (gsi & 8)
             Pic::slave.eoi();
