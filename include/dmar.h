@@ -25,6 +25,33 @@
 
 class Pd;
 
+class Dmar_qi
+{
+    private:
+        uint64 lo, hi;
+
+    public:
+        Dmar_qi (uint64 l = 0, uint64 h = 0) : lo (l), hi (h) {}
+};
+
+class Dmar_qi_ctx : public Dmar_qi
+{
+    public:
+        Dmar_qi_ctx() : Dmar_qi (0x1 | 1ul << 4) {}
+};
+
+class Dmar_qi_tlb : public Dmar_qi
+{
+    public:
+        Dmar_qi_tlb() : Dmar_qi (0x2 | 1ul << 4) {}
+};
+
+class Dmar_qi_iec : public Dmar_qi
+{
+    public:
+        Dmar_qi_iec() : Dmar_qi (0x4 | 1ul << 4) {}
+};
+
 class Dmar_ctx
 {
     private:
@@ -52,10 +79,15 @@ class Dmar
         mword       frr_base;
         mword       tlb_base;
         Dmar *      next;
+        Dmar_qi *   invq;
+        unsigned    invq_idx;
 
         static Slab_cache       cache;
         static Dmar *           list;
         static Dmar_ctx *       root;
+
+        static unsigned const ord = 0;
+        static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Dmar_qi);
 
         enum Reg
         {
@@ -70,6 +102,10 @@ class Dmar
             REG_FECTL   = 0x38,
             REG_FEDATA  = 0x3c,
             REG_FEADDR  = 0x40,
+            REG_IQH     = 0x80,
+            REG_IQT     = 0x88,
+            REG_IQA     = 0x90,
+            REG_IRTA    = 0xb8,
         };
 
         enum Tlb
@@ -118,26 +154,49 @@ class Dmar
         inline void command (uint32 val)
         {
             write<uint32>(REG_GCMD, val);
-            while (!(read<uint32>(REG_GSTS) & val))
+            while ((read<uint32>(REG_GSTS) & val) != val)
                 pause();
+        }
+
+        ALWAYS_INLINE
+        inline void qi_submit (Dmar_qi const &qi)
+        {
+            invq[invq_idx] = qi;
+            invq_idx = (invq_idx + 1) % cnt;
+            write<uint64>(REG_IQT, invq_idx << 4);
+        };
+
+        ALWAYS_INLINE
+        inline void qi_wait()
+        {
+            for (uint64 v = read<uint64>(REG_IQT); v != read<uint64>(REG_IQH); pause()) ;
         }
 
         ALWAYS_INLINE
         inline void flush_tlb()
         {
+#if 1
+            qi_submit (Dmar_qi_tlb());
+#else
             write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
             while (read<uint64>(REG_IOTLB) & (1ull << 63))
                 pause();
+#endif
         }
 
         ALWAYS_INLINE
         inline void flush_ctx()
         {
+#if 1
+            qi_submit (Dmar_qi_ctx());
+#else
             write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
             while (read<uint64>(REG_CCMD) & (1ull << 63))
                 pause();
-
+#endif
             flush_tlb();
+
+            qi_wait();
         }
 
         void enable();

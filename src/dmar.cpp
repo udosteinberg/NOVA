@@ -24,7 +24,7 @@ Slab_cache  Dmar::cache (sizeof (Dmar), 8);
 Dmar *      Dmar::list;
 Dmar_ctx *  Dmar::root = new Dmar_ctx;
 
-Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (0)
+Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (0), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
 {
     Dmar **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
@@ -43,18 +43,32 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     tlb_base  = static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base;
 
     Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
+
+    write<uint32>(REG_FECTL,  0);
+    write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
+    write<uint32>(REG_FEADDR, 0xfee00000);
+
+    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (root));
+    command (1ul << 30);
+
+#if 0
+    write<uint64>(REG_IRTA,   Buddy::ptr_to_phys (irta) | 7);
+    command (1ul << 24);
+#endif
+
+    write<uint64>(REG_IQT, 0);
+    write<uint64>(REG_IQA, Buddy::ptr_to_phys (invq));
+    command (1ul << 26);
 }
 
 void Dmar::enable()
 {
-    write<uint32>(REG_FECTL,  0);
-    write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
-    write<uint32>(REG_FEADDR, 0xfee00000);
-    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (root));
+    qi_submit (Dmar_qi_ctx());
+    qi_submit (Dmar_qi_tlb());
+    qi_submit (Dmar_qi_iec());
+    qi_wait();
 
-    command (1ul << 30);
-    flush_ctx();
-    command (1ul << 31);
+    command (1ul << 31 | 1ul << 26);
 }
 
 void Dmar::assign (unsigned rid, Pd *p)
