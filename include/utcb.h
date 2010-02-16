@@ -98,26 +98,31 @@ class Utcb
             Buddy::allocator.free (reinterpret_cast<mword>(ptr));
         }
 
-        ALWAYS_INLINE NONNULL
-        inline mword *save (Utcb *dst, unsigned long untyped)
+        ALWAYS_INLINE
+        inline mword *ptr (unsigned n)
         {
-            dst->mtr = Mtd (untyped);
-#if 0
-            mword *d = dst->mr, *s = mr;
-            asm volatile ("rep; movsl" : "+D" (d), "+S" (s), "+c" (untyped) : : "memory");
-#else
-            for (unsigned long i = 0; i < untyped; i++)
-                dst->mr[i] = mr[i];
-#endif
-            return mr + untyped;
+            return mr + n;
         }
 
-        void    load_exc (Exc_regs *, Mtd);
-        mword * save_exc (Exc_regs *, Mtd);
+        ALWAYS_INLINE NONNULL
+        inline void save (Utcb *dst, Mtd mtd)
+        {
+            dst->mtr = mtd;
+#if 0
+            mword *d = dst->mr, *s = mr, u = mtd.ui();
+            asm volatile ("rep; movsl" : "+D" (d), "+S" (s), "+c" (u) : : "memory");
+#else
+            for (unsigned long i = 0; i < mtd.ui(); i++)
+                dst->mr[i] = mr[i];
+#endif
+        }
 
-        void    load_vmx (Exc_regs *, Mtd);
-        mword * save_vmx (Exc_regs *, Mtd);
+        void            load_exc (Exc_regs *, Mtd);
+        unsigned long   save_exc (Exc_regs *, Mtd);
 
-        void    load_svm (Exc_regs *, Mtd);
-        mword * save_svm (Exc_regs *, Mtd);
+        void            load_vmx (Exc_regs *, Mtd);
+        unsigned long   save_vmx (Exc_regs *, Mtd);
+
+        void            load_svm (Exc_regs *, Mtd);
+        unsigned long   save_svm (Exc_regs *, Mtd);
 };

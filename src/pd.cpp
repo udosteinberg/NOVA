@@ -73,7 +73,7 @@ void Pd::delegate_mem (mword const snd_base, mword const rcv_base, mword const o
         mword base = snd_base;
 
         // If snd_base/ord intersects with VMA then clamp to base/order
-        if (unsigned order = clamp (base, vma->base, ord, vma->order)) {
+        if (unsigned order = clamp (vma->base, base, vma->order, ord)) {
 
             trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
 
@@ -110,7 +110,7 @@ void Pd::delegate_io (mword const snd_base, mword const ord)
         mword base = snd_base;
 
         // If snd_base/ord intersects with VMA then clamp to base/order
-        if (unsigned order = clamp (base, vma->base, ord, vma->order)) {
+        if (unsigned order = clamp (vma->base, base, vma->order, ord)) {
 
             trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
 
@@ -305,20 +305,23 @@ void Pd::revoke_pt (Capability /*cap*/, mword /*cd*/, bool /*self*/)
 #endif
 }
 
-mword Pd::clamp (mword &snd_base, mword rcv_base, mword snd_ord, mword rcv_ord)
+mword Pd::clamp (mword snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord)
 {
     if ((snd_base ^ rcv_base) >> max (snd_ord, rcv_ord))
         return 0;
 
-    snd_base |= rcv_base;
+    rcv_base |= snd_base;
 
     return min (snd_ord, rcv_ord);
 }
 
 mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord, mword h)
 {
-    mword s = snd_ord < sizeof (mword) * 8 ? (1ul << snd_ord) - 1 : ~0ul;
-    mword r = rcv_ord < sizeof (mword) * 8 ? (1ul << rcv_ord) - 1 : ~0ul;
+    assert (snd_ord < sizeof (mword) * 8);
+    assert (rcv_ord < sizeof (mword) * 8);
+
+    mword s = (1ul << snd_ord) - 1;
+    mword r = (1ul << rcv_ord) - 1;
 
     snd_base &= ~s;
     rcv_base &= ~r;
@@ -332,50 +335,47 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
     }
 }
 
-void Pd::delegate (Crd rcv, Crd snd, mword hot)
+void Pd::delegate (Crd rcv, Crd &snd, mword hot)
 {
-    if (rcv.type() != snd.type()) {
-        trace (TRACE_MAP, "CRD mismatch SB:%#010lx O:%u T:%u -> RB:%#010lx O:%u T:%u",
-               snd.base(), snd.order(), snd.type(),
-               rcv.base(), rcv.order(), rcv.type());
+    Crd::Type st = snd.type(), rt = rcv.type();
+
+    if (rt != st) {
+        snd = Crd (0);
         return;
     }
 
-    mword snd_base = snd.base();
-    mword rcv_base = rcv.base();
+    mword sb = snd.base(), rb = rcv.base(), so = snd.order(), ro = rcv.order(), a = snd.attr(), o = 0;
 
-    mword ord;
-
-    switch (snd.type()) {
+    switch (rt) {
 
         case Crd::MEM:
-            snd_base <<= PAGE_BITS;
-            rcv_base <<= PAGE_BITS;
-            ord = clamp (snd_base, rcv_base, snd.order() + PAGE_BITS, rcv.order() + PAGE_BITS, hot);
-            trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#x", current, this, snd_base, rcv_base, ord, snd.attr());
-            delegate_mem (snd_base, rcv_base, ord, snd.attr());
+            o = clamp (sb, rb, so, ro, hot >> PAGE_BITS);
+            trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
+            delegate_mem (sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
             break;
 
         case Crd::IO:
-            ord = clamp (snd_base, rcv_base, snd.order(), rcv.order());
-            trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu", current, this, snd_base, ord);
-            delegate_io (snd_base, ord);
+            o = clamp (sb, rb, so, ro);
+            trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu", current, this, sb, o);
+            delegate_io (rb, o);
             break;
 
         case Crd::OBJ:
-            ord = clamp (snd_base, rcv_base, snd.order(), rcv.order(), hot);
-            trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu", current, this, snd_base, rcv_base, ord);
-            delegate_obj (snd_base, rcv_base, ord);
+            o = clamp (sb, rb, so, ro, hot);
+            trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu", current, this, sb, rb, o);
+            delegate_obj (sb, rb, o);
             break;
     }
+
+    snd = Crd (rt, rb, o, a);
 }
 
-void Pd::revoke (Crd rev, bool self)
+void Pd::revoke (Crd r, bool self)
 {
-    mword base = rev.base();
-    mword size = 1ul << rev.order();
+    mword base = r.base();
+    mword size = 1ul << r.order();
 
-    switch (rev.type()) {
+    switch (r.type()) {
 
         case Crd::MEM:
             base <<= PAGE_BITS;
@@ -395,13 +395,16 @@ void Pd::revoke (Crd rev, bool self)
     }
 }
 
-void Pd::delegate_items (Crd rcv, mword *ptr, unsigned long items)
+void Pd::delegate_items (Crd rcv, mword *src, mword *dst, unsigned long ti)
 {
-    while (items--) {
+    while (ti--) {
 
-        mword hot = *ptr++;
-        Crd snd = Crd (*ptr++);
+        mword hot = *src++;
+        Crd snd = Crd (*src++);
 
         delegate (rcv, snd, hot);
+
+        if (dst)
+            *dst++ = snd.raw();
     }
 }

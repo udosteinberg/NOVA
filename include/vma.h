@@ -38,11 +38,11 @@ class Vma
         Vma *       tree_next;
         unsigned    depth;
 
-        Pd *        pd;
-        mword       base;
-        mword       order;
-        mword       type;
-        mword       attr;
+        Pd *  const pd;
+        mword const base;
+        mword const order;
+        mword const type;
+        mword const attr;
 
     public:
         ALWAYS_INLINE
@@ -58,7 +58,7 @@ class Vma
         }
 
         // Sentinel
-        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1u) {}
+        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1u), pd (0), base (0), order (0), type (0), attr (0) {}
 
         explicit Vma (Vma *, Vma *, unsigned, Pd *, mword, mword, mword, mword);
 

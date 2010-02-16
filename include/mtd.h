@@ -64,13 +64,13 @@ class Mtd
         }
 
         ALWAYS_INLINE
-        inline unsigned long untyped() const
+        inline unsigned long ui() const
         {
             return val & 0x3ff;
         }
 
         ALWAYS_INLINE
-        inline unsigned long typed() const
+        inline unsigned long ti() const
         {
             return val >> 23;
         }

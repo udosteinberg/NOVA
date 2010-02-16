@@ -53,7 +53,7 @@ void Utcb::load_exc (Exc_regs *regs, Mtd mtd)
     }
 }
 
-mword *Utcb::save_exc (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_exc (Exc_regs *regs, Mtd mtd)
 {
     if (mtd.xfer (Mtd::GPR_ACDB)) {
         regs->eax = rax;
@@ -77,7 +77,7 @@ mword *Utcb::save_exc (Exc_regs *regs, Mtd mtd)
     if (mtd.xfer (Mtd::RFLAGS))
         regs->efl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
 
-    return item;
+    return item - mr;
 }
 
 void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
@@ -174,7 +174,7 @@ void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
     }
 }
 
-mword *Utcb::save_vmx (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_vmx (Exc_regs *regs, Mtd mtd)
 {
     if (mtd.xfer (Mtd::GPR_ACDB)) {
         regs->eax = rax;
@@ -300,7 +300,7 @@ mword *Utcb::save_vmx (Exc_regs *regs, Mtd mtd)
         Vmcs::write (Vmcs::TSC_OFFSET_HI, tsc_hi);
     }
 
-    return item;
+    return item - mr;
 }
 
 void Utcb::load_svm (Exc_regs *regs, Mtd mtd)
@@ -391,7 +391,7 @@ void Utcb::load_svm (Exc_regs *regs, Mtd mtd)
         tsc = vmcb->tsc_offset;
 }
 
-mword *Utcb::save_svm (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_svm (Exc_regs *regs, Mtd mtd)
 {
     Vmcb * const vmcb = regs->vmcb;
 
@@ -484,5 +484,5 @@ mword *Utcb::save_svm (Exc_regs *regs, Mtd mtd)
     if (mtd.xfer (Mtd::TSC))
         vmcb->tsc_offset = tsc;
 
-    return item;
+    return item - mr;
 }

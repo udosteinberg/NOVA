@@ -36,7 +36,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         static void revoke_obj  (mword, size_t, bool);
         static void revoke_pt   (Capability, mword, bool);
 
-        mword clamp (mword &, mword, mword, mword);
+        mword clamp (mword,   mword &, mword, mword);
         mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
@@ -74,11 +74,11 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
             kern.percpu[Cpu::id] = ptab;
         }
 
-        void delegate_items (Crd, mword *, unsigned long);
+        void delegate_items (Crd, mword *, mword *, unsigned long);
         void delegate_mem   (mword, mword, mword, mword);
         void delegate_io    (mword, mword);
         void delegate_obj   (mword, mword, mword);
-        void delegate       (Crd, Crd, mword = 0);
+        void delegate       (Crd, Crd &, mword = 0);
 
         static void revoke (Crd, bool);
 

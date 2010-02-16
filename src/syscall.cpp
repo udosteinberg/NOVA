@@ -121,15 +121,19 @@ void Ec::sys_ipc_call()
         ec->help (sys_ipc_call);
     }
 
-    mword *item = current->utcb->save (ec->utcb, s->mtd().untyped());
+    Utcb *src = current->utcb, *dst = ec->utcb;
 
-    unsigned long typed = s->mtd().typed();
-    if (EXPECT_FALSE (typed))
-        ec->pd->delegate_items (ec->utcb->crd, item, typed);
+    src->save (dst, s->mtd());
+
+    unsigned long ui = s->mtd().ui();
+    unsigned long ti = s->mtd().ti();
+
+    if (EXPECT_FALSE (ti))
+        ec->pd->delegate_items (dst->crd, src->ptr (ui), dst->ptr (ui), ti);
 
     current->continuation = ret_user_sysexit;
 
-    ec->utcb->pid = pt->node.base;
+    dst->pid = pt->node.base;
     ec->recv_ipc_msg (pt->ip, s->flags());
 }
 
@@ -141,24 +145,25 @@ void Ec::sys_ipc_reply()
 
     if (EXPECT_TRUE (ec)) {
 
-        Utcb *utcb = current->utcb;
+        Utcb *src = current->utcb, *dst = ec->utcb;
 
-        mword *item;
+        unsigned long ui = s->mtd().ui();
+
         if (EXPECT_TRUE (ec->continuation == ret_user_sysexit))
-            item = utcb->save (ec->utcb, s->mtd().untyped());
+            src->save (dst, s->mtd());
         else if (ec->continuation == ret_user_iret)
-            item = utcb->save_exc (&ec->regs, s->mtd());
+            ui = src->save_exc (&ec->regs, s->mtd());
         else if (ec->continuation == ret_user_vmresume)
-            item = utcb->save_vmx (&ec->regs, s->mtd());
+            ui = src->save_vmx (&ec->regs, s->mtd());
         else if (ec->continuation == ret_user_vmrun)
-            item = utcb->save_svm (&ec->regs, s->mtd());
-        else
-            UNREACHED;
+            ui = src->save_svm (&ec->regs, s->mtd());
 
-        unsigned long typed = s->mtd().typed();
-        if (EXPECT_FALSE (typed)) {
-            Crd crd = ec->continuation == ret_user_sysexit ? ec->utcb->crd : Crd (Crd::MEM, 0, Crd::whole);
-            ec->pd->delegate_items (crd, item, typed);
+        unsigned long ti = s->mtd().ti();
+        if (EXPECT_FALSE (ti)) {
+            if (ec->continuation == ret_user_sysexit)
+                ec->pd->delegate_items (dst->crd, src->ptr (ui), dst->ptr (ui), ti);
+            else
+                ec->pd->delegate_items (Crd (Crd::MEM, 0, Crd::whole, 0), src->ptr (ui), 0, ti);
         }
 
         current->continuation = ret_user_sysexit;
@@ -210,7 +215,9 @@ void Ec::sys_create_pd()
     ec->set_sc (sc);
     pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
     pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
-    pd->delegate (Crd (Crd::OBJ, 0, Crd::whole), r->crd());
+
+    Crd crd = r->crd();
+    pd->delegate (Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
     pd->insert_utcb (r->utcb());
 
     // Enqueue SC only after all the caps have been mapped
