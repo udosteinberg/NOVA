@@ -27,10 +27,8 @@ void Acpi_table_madt::parse() const
     if (!Cmdline::nomp)
         parse_entry (Acpi_apic::LAPIC, &Acpi_table_madt::parse_lapic);
 
-    if (!Cmdline::noapic) {
-        parse_entry (Acpi_apic::IOAPIC, &Acpi_table_madt::parse_ioapic);
-        parse_entry (Acpi_apic::INTR_OVERRIDE, &Acpi_table_madt::parse_intr_override);
-    }
+    parse_entry (Acpi_apic::IOAPIC, &Acpi_table_madt::parse_ioapic);
+    parse_entry (Acpi_apic::INTR_OVERRIDE, &Acpi_table_madt::parse_intr_override);
 }
 
 void Acpi_table_madt::parse_entry (Acpi_apic::Type type, void (*handler)(Acpi_apic const *)) const
@@ -75,17 +73,8 @@ void Acpi_table_madt::parse_intr_override (Acpi_apic const *acpi_apic)
 
     Gsi::irq_table[irq] = gsi;
 
-    if (intr->flags.pol == Acpi_inti::POL_LOW ||
-       (intr->flags.pol == Acpi_inti::POL_CONFORMING && irq == Acpi::irq))
-        Gsi::gsi_table[gsi].pol = 1;
-    else
-        Gsi::gsi_table[gsi].pol = 0;
-
-    if (intr->flags.trg == Acpi_inti::TRG_LEVEL ||
-       (intr->flags.trg == Acpi_inti::TRG_CONFORMING && irq == Acpi::irq))
-        Gsi::gsi_table[gsi].trg = 1;
-    else
-        Gsi::gsi_table[gsi].trg = 0;
+    Gsi::gsi_table[gsi].pol = intr->flags.pol == Acpi_inti::POL_LOW   || (intr->flags.pol == Acpi_inti::POL_CONFORMING && irq == Acpi::irq);
+    Gsi::gsi_table[gsi].trg = intr->flags.trg == Acpi_inti::TRG_LEVEL || (intr->flags.trg == Acpi_inti::TRG_CONFORMING && irq == Acpi::irq);
 
     if (irq == Acpi::irq)
         sci_overridden = true;

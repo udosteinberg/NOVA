@@ -31,7 +31,6 @@ class Cmdline
         static bool keyb;
         static bool serial;
         static bool noacpi;
-        static bool noapic;
         static bool noept;
         static bool nomp;
         static bool nospinner;

@@ -22,7 +22,6 @@ bool Cmdline::dmar;
 bool Cmdline::keyb;
 bool Cmdline::serial;
 bool Cmdline::noacpi;
-bool Cmdline::noapic;
 bool Cmdline::noept;
 bool Cmdline::nomp;
 bool Cmdline::nospinner;
@@ -39,7 +38,6 @@ struct param
     { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
     { "noacpi",     &Cmdline::noacpi    },
-    { "noapic",     &Cmdline::noapic    },
     { "noept",      &Cmdline::noept     },
     { "nomp",       &Cmdline::nomp      },
     { "nospinner",  &Cmdline::nospinner },
