@@ -61,8 +61,6 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
         command (GCMD_QIE);
         gcmd |= GCMD_QIE;
     }
-
-    trace (0, "DMAR:%#lx QI:%u IR:%u", phys, qi(), ir());
 }
 
 void Dmar::assign (unsigned rid, Pd *p)
