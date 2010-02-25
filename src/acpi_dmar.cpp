@@ -19,6 +19,7 @@
 #include "cmdline.h"
 #include "dmar.h"
 #include "dpt.h"
+#include "ioapic.h"
 #include "pci.h"
 #include "pd.h"
 #include "stdio.h"
@@ -36,13 +37,16 @@ void Acpi_dmar::parse() const
             case 1:
                 Pci::claim_dev (dmar, s->b << 8 | s->d << 3 | s->f);
                 break;
+            case 3:
+                Ioapic::claim_dev (dmar, s->b << 8 | s->d << 3 | s->f, s->id);
+                break;
         }
     }
 }
 
 void Acpi_rmrr::parse() const
 {
-    for (uint64 hpa = base; hpa < limit; hpa += PAGE_SIZE)
+    for (uint64 hpa = base & ~PAGE_MASK; hpa < limit; hpa += PAGE_SIZE)
         Pd::kern.dpt->insert (hpa, 0, hpa, Dpt::DPT_R | Dpt::DPT_W);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
@@ -74,5 +78,5 @@ void Acpi_table_dmar::parse() const
         }
     }
 
-    Dmar::enable_all();
+    Dmar::enable();
 }

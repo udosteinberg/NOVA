@@ -1,7 +1,7 @@
 /*
  * Global System Interrupts (GSI)
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,13 +19,13 @@
 #include "assert.h"
 #include "cmdline.h"
 #include "counter.h"
+#include "dmar.h"
 #include "ec.h"
 #include "gsi.h"
 #include "hip.h"
 #include "ioapic.h"
 #include "keyb.h"
 #include "lapic.h"
-#include "pic.h"
 #include "regs.h"
 #include "sm.h"
 #include "stdio.h"
@@ -37,14 +37,18 @@ unsigned    Gsi::row;
 void Gsi::setup()
 {
     for (unsigned i = 0; i < NUM_IRQ; i++) {
-        gsi_table[i].cpu = 0;
-        gsi_table[i].irt |= MASKED | TRG_EDGE | POL_HIGH | (VEC_GSI + i);
+        gsi_table[i].msk = 1;
+        gsi_table[i].trg = 0;  // edge
+        gsi_table[i].pol = 0;  // high
+        gsi_table[i].vec = static_cast<uint8>(VEC_GSI + i);
         irq_table[i] = i;
     }
 
     for (unsigned i = NUM_IRQ; i < NUM_GSI; i++) {
-        gsi_table[i].cpu = 0;
-        gsi_table[i].irt |= MASKED | TRG_LEVEL | POL_LOW | (VEC_GSI + i);
+        gsi_table[i].msk = 1;
+        gsi_table[i].trg = 1;  // level
+        gsi_table[i].pol = 1;  // low
+        gsi_table[i].vec = static_cast<uint8>(VEC_GSI + i);
     }
 }
 
@@ -53,84 +57,57 @@ void Gsi::init()
     if (!Cmdline::nospinner)
         row = screen.init_spinner (0);
 
-    for (unsigned i = 0; i < NUM_GSI; i++)
-        Gsi::gsi_table[i].sm = new Sm (&Pd::kern, i, 0);
-
-    if (Acpi::mode == Acpi::APIC) {
-        for (unsigned gsi = 0; gsi < NUM_GSI; gsi++)
-            if (gsi_table[gsi].ioapic) {
-                gsi_table[gsi].ioapic->set_cpu (gsi_table[gsi].pin, gsi_table[gsi].cpu);
-                gsi_table[gsi].ioapic->set_irt (gsi_table[gsi].pin, gsi_table[gsi].irt);
-            }
-    } else {
-        Hip::remove (Hip::FEAT_GSI);
-        unsigned elcr = 0;
-        for (unsigned gsi = 0; gsi < NUM_IRQ; gsi++)
-            if (gsi_table[gsi].irt & TRG_LEVEL)
-                elcr |= 1u << gsi;
-        trace (TRACE_INTERRUPT, "ELCR: %#x", elcr);
-        Io::out (ELCR_SLV, static_cast<uint8>(elcr >> 8));
-        Io::out (ELCR_MST, static_cast<uint8>(elcr));
+    for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
+        Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, gsi, 0);
+        mask (gsi);
     }
+}
+
+uint64 Gsi::set (unsigned long gsi, unsigned long cpu, unsigned rid)
+{
+    assert (gsi < NUM_GSI);
+
+    gsi_table[gsi].msk = 0;
+    gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
+
+    uint32 msi_addr = 0, msi_data = 0;
+
+    Ioapic *ioapic = gsi_table[gsi].ioapic;
+
+    if (ioapic) {
+        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : cpu);
+        ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
+        rid = ioapic->get_rid();
+    } else {
+        msi_addr = 0xfee00000 | (Dmar::ire() ? 3ul << 3 : cpu << 12);
+        msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
+    }
+
+    Dmar::set_irt (gsi, rid, cpu, VEC_GSI + gsi, gsi_table[gsi].trg);
+
+    return static_cast<uint64>(msi_addr) << 32 | msi_data;
 }
 
 void Gsi::mask (unsigned long gsi)
 {
-    switch (Acpi::mode) {
-
-        case Acpi::APIC:
-            if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
-                gsi_table[gsi].irt |= MASKED;
-                gsi_table[gsi].ioapic->set_irt (gsi_table[gsi].pin, gsi_table[gsi].irt);
-            }
-            break;
-
-        case Acpi::PIC:
-            if (EXPECT_TRUE (gsi < NUM_IRQ))
-                (gsi & 8 ? Pic::slave : Pic::master).pin_mask (gsi & 7);
-            break;
+    if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
+        gsi_table[gsi].msk = 1;
+        gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
     }
 
     if (EXPECT_FALSE (row))
         screen.put (row, 5 + gsi, Console_vga::COLOR_WHITE, 'M');
-
-    trace (TRACE_INTERRUPT, "GSI: %#lx masked", gsi);
 }
 
 void Gsi::unmask (unsigned long gsi)
 {
-    switch (Acpi::mode) {
-
-        case Acpi::APIC:
-            if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
-                gsi_table[gsi].irt &= ~MASKED;
-                gsi_table[gsi].ioapic->set_irt (gsi_table[gsi].pin, gsi_table[gsi].irt);
-            }
-            break;
-
-        case Acpi::PIC:
-            if (EXPECT_TRUE (gsi < NUM_IRQ))
-                (gsi & 8 ? Pic::slave : Pic::master).pin_unmask (gsi & 7);
-            break;
+    if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
+        gsi_table[gsi].msk = 0;
+        gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
     }
 
     if (EXPECT_FALSE (row))
         screen.put (row, 5 + gsi, Console_vga::COLOR_WHITE, 'U');
-
-    trace (TRACE_INTERRUPT, "GSI: %#lx unmasked", gsi);
-}
-
-void Gsi::eoi (unsigned gsi)
-{
-    if (Acpi::mode == Acpi::APIC)
-        Lapic::eoi();
-
-    else {
-        assert (gsi < NUM_IRQ);
-        if (gsi & 8)
-            Pic::slave.eoi();
-        Pic::master.eoi();
-    }
 }
 
 void Gsi::vector (unsigned vector)
@@ -143,10 +120,10 @@ void Gsi::vector (unsigned vector)
     else if (gsi == Acpi::gsi)
         Acpi::interrupt();
 
-    else if (gsi_table[gsi].irt & TRG_LEVEL)
+    else if (gsi_table[gsi].trg)
         mask (gsi);
 
-    eoi (gsi);
+    Lapic::eoi();
 
     gsi_table[gsi].sm->up();
 

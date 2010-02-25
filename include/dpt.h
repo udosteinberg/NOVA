@@ -59,7 +59,7 @@ class Dpt
         ALWAYS_INLINE
         inline Dpt()
         {
-            for (unsigned i = 0; i < 1ul << bpl; i++)
+            for (unsigned i = 0; i < PAGE_SIZE / sizeof (*this); i++)
                 clflush (this + i);
         }
 

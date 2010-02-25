@@ -1,7 +1,7 @@
 /*
  * Execution Context
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -243,6 +243,9 @@ class Ec : public Kobject, public Queue<Sc>
 
         NORETURN
         static void sys_assign_pci();
+
+        NORETURN
+        static void sys_assign_gsi();
 
         NORETURN
         static void idle();

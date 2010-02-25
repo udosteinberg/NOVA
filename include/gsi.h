@@ -1,7 +1,7 @@
 /*
  * Global System Interrupts (GSI)
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,35 +17,25 @@
 
 #pragma once
 
-#include "apic.h"
 #include "assert.h"
 #include "compiler.h"
 #include "types.h"
-#include "vectors.h"
 
 class Ioapic;
 class Sm;
 
-class Gsi : public Apic
+class Gsi
 {
     private:
         static unsigned row;
 
-        enum
-        {
-            ELCR_MST = 0x4d0,
-            ELCR_SLV = 0x4d1
-        };
-
-        ALWAYS_INLINE
-        static inline void eoi (unsigned gsi);
-
     public:
-        Sm *            sm;
         Ioapic *        ioapic;
-        unsigned        irt;
-        unsigned short  pin;
-        unsigned short  cpu;
+        Sm *            sm;
+        uint8           vec;
+        uint8           msk : 1,
+                        trg : 1,
+                        pol : 1;
 
         static Gsi      gsi_table[NUM_GSI];
         static unsigned irq_table[NUM_IRQ];
@@ -56,8 +46,9 @@ class Gsi : public Apic
         INIT
         static void init();
 
-        static void mask (unsigned long);
+        static uint64 set (unsigned long, unsigned long = 0, unsigned = 0);
 
+        static void mask (unsigned long);
         static void unmask (unsigned long);
 
         ALWAYS_INLINE

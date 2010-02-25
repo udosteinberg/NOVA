@@ -27,7 +27,6 @@
 #include "memory.h"
 #include "multiboot.h"
 #include "pd.h"
-#include "pic.h"
 #include "ptab.h"
 #include "ptab_boot.h"
 #include "stdio.h"
@@ -90,10 +89,6 @@ void init_ilp (mword mbi)
     printf ("\f%s: %s %s [%s]\n\n", version, __DATE__, __TIME__, COMPILER);
 
     Hip::build (mbi);
-
-    // Initialize 8259A interrupt controllers
-    Pic::master.init (VEC_GSI);
-    Pic::slave.init  (VEC_GSI + 8);
 
     Idt::build();
     Gsi::setup();

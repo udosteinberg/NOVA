@@ -22,7 +22,9 @@
 
 Slab_cache  Dmar::cache (sizeof (Dmar), 8);
 Dmar *      Dmar::list;
-Dmar_ctx *  Dmar::root = new Dmar_ctx;
+Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
+Dmar_irt *  Dmar::irt = new Dmar_irt;
+uint32      Dmar::gcmd = GCMD_TE;
 
 Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (0), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
 {
@@ -35,12 +37,8 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
                                                  Ptab::ATTR_WRITABLE),
                                 phys & ~PAGE_MASK);
 
-    uint64 cap  = read<uint64>(REG_CAP);
-    uint64 ecap = read<uint64>(REG_ECAP);
-
-    frr_count = static_cast<mword>(cap >> 40 & 0xff) + 1;
-    frr_base  = static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base;
-    tlb_base  = static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base;
+    cap  = read<uint64>(REG_CAP);
+    ecap = read<uint64>(REG_ECAP);
 
     Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
 
@@ -48,27 +46,23 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
     write<uint32>(REG_FEADDR, 0xfee00000);
 
-    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (root));
-    command (1ul << 30);
+    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (ctx));
+    command (GCMD_SRTP);
 
-#if 0
-    write<uint64>(REG_IRTA,   Buddy::ptr_to_phys (irta) | 7);
-    command (1ul << 24);
-#endif
+    if (ir()) {
+        write<uint64>(REG_IRTA, Buddy::ptr_to_phys (irt) | 7);
+        command (GCMD_SIRTP);
+        gcmd |= GCMD_IRE;
+    }
 
-    write<uint64>(REG_IQT, 0);
-    write<uint64>(REG_IQA, Buddy::ptr_to_phys (invq));
-    command (1ul << 26);
-}
+    if (qi()) {
+        write<uint64>(REG_IQT, 0);
+        write<uint64>(REG_IQA, Buddy::ptr_to_phys (invq));
+        command (GCMD_QIE);
+        gcmd |= GCMD_QIE;
+    }
 
-void Dmar::enable()
-{
-    qi_submit (Dmar_qi_ctx());
-    qi_submit (Dmar_qi_tlb());
-    qi_submit (Dmar_qi_iec());
-    qi_wait();
-
-    command (1ul << 31 | 1ul << 26);
+    trace (0, "DMAR:%#lx QI:%u IR:%u", phys, qi(), ir());
 }
 
 void Dmar::assign (unsigned rid, Pd *p)
@@ -77,7 +71,7 @@ void Dmar::assign (unsigned rid, Pd *p)
 
     mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
 
-    Dmar_ctx *r = root + (rid >> 8);
+    Dmar_ctx *r = ctx + (rid >> 8);
     if (!r->present())
         r->set (0, Buddy::ptr_to_phys (new Dmar_ctx) | 1);
 
@@ -96,7 +90,7 @@ void Dmar::fault_handler()
 
         if (fsts & 0x2) {
             uint64 hi, lo;
-            for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % frr_count)
+            for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % nfr())
                 trace (TRACE_DMAR, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
                        this,
                        frr,

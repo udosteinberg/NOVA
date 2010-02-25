@@ -24,13 +24,21 @@
 #include "spinlock.h"
 #include "types.h"
 
+class Dmar;
+
 class Ioapic : public Apic
 {
     private:
-        Spinlock    lock;
         mword const reg_base;
+        mword const gsi_base;
+        mword const id;
+        uint16      rid;
+        Ioapic *    next;
+        Dmar *      dmar;
+        Spinlock    lock;
 
         static Slab_cache cache;
+        static Ioapic *list;
 
         enum
         {
@@ -73,7 +81,7 @@ class Ioapic : public Apic
 
     public:
         INIT
-        Ioapic (Paddr);
+        Ioapic (Paddr, unsigned, unsigned);
 
         ALWAYS_INLINE INIT
         static inline void *operator new (size_t) { return cache.alloc(); }
@@ -81,11 +89,24 @@ class Ioapic : public Apic
         ALWAYS_INLINE INIT
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
-        ALWAYS_INLINE
-        inline unsigned id()
+        ALWAYS_INLINE INIT
+        static inline bool claim_dev (Dmar *d, unsigned r, unsigned i)
         {
-            return read (IOAPIC_ID) >> 24 & 0xf;
+            for (Ioapic *ioapic = list; ioapic; ioapic = ioapic->next)
+                if (ioapic->id == i) {
+                    ioapic->rid  = static_cast<uint16>(r);
+                    ioapic->dmar = d;
+                    return true;
+                }
+
+            return false;
         }
+
+        ALWAYS_INLINE
+        inline uint16 get_rid() const { return rid; }
+
+        ALWAYS_INLINE
+        inline unsigned get_gsi() const { return gsi_base; }
 
         ALWAYS_INLINE
         inline unsigned version()
@@ -106,14 +127,16 @@ class Ioapic : public Apic
         }
 
         ALWAYS_INLINE
-        inline void set_irt (unsigned pin, unsigned val)
+        inline void set_irt (unsigned gsi, unsigned val)
         {
+            unsigned pin = gsi - gsi_base;
             write (Register (IOAPIC_IRT + 2 * pin), val);
         }
 
         ALWAYS_INLINE
-        inline void set_cpu (unsigned pin, unsigned cpu)
+        inline void set_cpu (unsigned gsi, unsigned cpu)
         {
-            write (Register (IOAPIC_IRT + 2 * pin + 1), cpu << 24);
+            unsigned pin = gsi - gsi_base;
+            write (Register (IOAPIC_IRT + 2 * pin + 1), cpu << 24 | gsi << 17 | 1ul << 16);
         }
 };

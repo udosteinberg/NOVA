@@ -56,12 +56,12 @@ void Lapic::init()
         case 2:
             set_lvt (LAPIC_LVT_LINT1, 0, DLV_NMI);
         case 1:
-            set_lvt (LAPIC_LVT_LINT0, 0, DLV_EXTINT, Cpu::bsp && Acpi::mode == Acpi::PIC ? UNMASKED : MASKED);
+            set_lvt (LAPIC_LVT_LINT0, 0, DLV_EXTINT, MASKED);
         case 0:
             set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED, UNMASKED, ONESHOT);
     }
 
-    write (LAPIC_TPR, 0);
+    write (LAPIC_TPR, 0x10);
     write (LAPIC_TMR_DCR, DIVIDE_BY_1);
     write (LAPIC_TMR_ICR, ~0u);
 

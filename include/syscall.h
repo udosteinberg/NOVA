@@ -189,3 +189,23 @@ class Sys_assign_pci : public Exc_regs
         ALWAYS_INLINE
         inline unsigned long vf() const { return ebx; }
 };
+
+class Sys_assign_gsi : public Exc_regs
+{
+    public:
+        ALWAYS_INLINE
+        inline unsigned long sm() const { return edi; }
+
+        ALWAYS_INLINE
+        inline unsigned long cpu() const { return esi; }
+
+        ALWAYS_INLINE
+        inline unsigned long rid() const { return ebx; }
+
+        ALWAYS_INLINE
+        inline void set_msi (uint64 val)
+        {
+            edi = static_cast<mword>(val >> 32);
+            esi = static_cast<mword>(val);
+        }
+};

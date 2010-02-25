@@ -54,17 +54,13 @@ void Acpi_table_madt::parse_ioapic (Acpi_apic const *acpi_apic)
 {
     Acpi_ioapic const *acpi_ioapic = static_cast<Acpi_ioapic const *>(acpi_apic);
 
-    Ioapic *ioapic = new Ioapic (acpi_ioapic->phys);
+    Ioapic *ioapic = new Ioapic (acpi_ioapic->phys, acpi_ioapic->gsi, acpi_ioapic->id);
 
     unsigned gsi = acpi_ioapic->gsi;
     unsigned max = ioapic->irt_max();
 
-    for (unsigned short i = 0; i <= max && gsi < NUM_GSI; i++, gsi++) {
+    for (unsigned short i = 0; i <= max && gsi < NUM_GSI; i++, gsi++)
         Gsi::gsi_table[gsi].ioapic = ioapic;
-        Gsi::gsi_table[gsi].pin    = i;
-    }
-
-    Acpi::mode = Acpi::APIC;
 }
 
 void Acpi_table_madt::parse_intr_override (Acpi_apic const *acpi_apic)
@@ -81,15 +77,15 @@ void Acpi_table_madt::parse_intr_override (Acpi_apic const *acpi_apic)
 
     if (intr->flags.pol == Acpi_inti::POL_LOW ||
        (intr->flags.pol == Acpi_inti::POL_CONFORMING && irq == Acpi::irq))
-        Gsi::gsi_table[gsi].irt |=  Gsi::POL_LOW;
+        Gsi::gsi_table[gsi].pol = 1;
     else
-        Gsi::gsi_table[gsi].irt &= ~Gsi::POL_LOW;
+        Gsi::gsi_table[gsi].pol = 0;
 
     if (intr->flags.trg == Acpi_inti::TRG_LEVEL ||
        (intr->flags.trg == Acpi_inti::TRG_CONFORMING && irq == Acpi::irq))
-        Gsi::gsi_table[gsi].irt |=  Gsi::TRG_LEVEL;
+        Gsi::gsi_table[gsi].trg = 1;
     else
-        Gsi::gsi_table[gsi].irt &= ~Gsi::TRG_LEVEL;
+        Gsi::gsi_table[gsi].trg = 0;
 
     if (irq == Acpi::irq)
         sci_overridden = true;

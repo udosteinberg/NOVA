@@ -66,6 +66,7 @@ class Sys_regs
             RECALL,
             SEMCTL,
             ASSIGN_PCI,
+            ASSIGN_GSI,
         };
 
         ALWAYS_INLINE

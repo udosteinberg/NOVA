@@ -72,7 +72,6 @@ class Hip
 
     public:
         enum Feature {
-            FEAT_GSI    = 1u << 0,
             FEAT_VMX    = 1u << 1,
             FEAT_SVM    = 1u << 2,
         };

@@ -20,9 +20,12 @@
 #include "stdio.h"
 
 Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
+Ioapic *Ioapic::list;
 
-Ioapic::Ioapic (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK))
+Ioapic::Ioapic (Paddr phys, unsigned gsi, unsigned i) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), gsi_base (gsi), id (i), next (0)
 {
+    Ioapic **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
+
     Pd::kern.Space_mem::insert (hwdev_addr, 0,
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC      |
                                                  Ptab::ATTR_GLOBAL      |
@@ -30,6 +33,6 @@ Ioapic::Ioapic (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE
                                                  Ptab::ATTR_WRITABLE),
                                 phys & ~PAGE_MASK);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u",
-           phys, id(), version(), irt_max(), prq());
+    trace (TRACE_APIC, "APIC:%#lx ID:%#x GSI:%lu VER:%#x IRT:%#x PRQ:%u",
+           phys, i, gsi_base, version(), irt_max(), prq());
 }

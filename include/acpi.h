@@ -56,12 +56,6 @@ class Acpi
         static void enable();
 
     public:
-        enum Mode
-        {
-            PIC,
-            APIC
-        };
-
         enum Register
         {
             PM1_STS,
@@ -103,7 +97,6 @@ class Acpi
             PM1_CNT_SLP_EN      = 1u << 13      // 0x2000
         };
 
-        static Mode mode;
         static unsigned irq;
         static unsigned gsi;
 

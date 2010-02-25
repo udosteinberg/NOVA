@@ -1,7 +1,7 @@
 /*
  * Keyboard
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2006-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -52,7 +52,8 @@ void Keyb::init()
 
     gsi = Gsi::irq_to_gsi (irq);
     trace (TRACE_KEYB, "KEYB: GSI:%#x CCB:%#x ID:%#x", gsi, ccb, id);
-    Gsi::unmask (gsi);
+
+    Gsi::set (gsi);
 }
 
 void Keyb::interrupt()

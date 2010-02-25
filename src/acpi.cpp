@@ -42,7 +42,6 @@ Acpi_gas Acpi::pm2_cnt;
 Acpi_gas Acpi::pm_tmr;
 Acpi_gas Acpi::reset_reg;
 
-Acpi::Mode  Acpi::mode = PIC;
 uint32      Acpi::feature;
 uint32      Acpi::smi_cmd;
 unsigned    Acpi::gsi;
@@ -69,11 +68,11 @@ void Acpi::setup_sci()
 
 void Acpi::enable()
 {
-    trace (TRACE_ACPI, "ACPI: GSI:%#x %s", gsi, "APIC" + (mode == PIC));
+    trace (TRACE_ACPI, "ACPI: GSI:%#x", gsi);
 
     write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL);
 
-    Gsi::unmask (gsi);
+    Gsi::set (gsi);
 
     if (Cmdline::noacpi || !smi_cmd || !enable_val)
         return;

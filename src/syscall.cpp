@@ -403,6 +403,12 @@ void Ec::sys_assign_pci()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
+    Dmar *dmar = Pci::find_dmar (r->pf());
+    if (EXPECT_FALSE (!dmar)) {
+        trace (TRACE_ERROR, "%s: RID not found (%#lx)", __func__, r->pf());
+        sys_finish (r, Sys_regs::BAD_DEV);
+    }
+
     Pd *pd = static_cast<Pd *>(obj);
 
     if (!pd->dpt) {
@@ -410,13 +416,34 @@ void Ec::sys_assign_pci()
         sys_finish (r, Sys_regs::BAD_CAP);
     }
 
-    Dmar *dmar = Pci::find_dmar (r->pf());
-    if (EXPECT_FALSE (!dmar)) {
-        trace (TRACE_ERROR, "%s: PF not found (%#lx)", __func__, r->pf());
-        sys_finish (r, Sys_regs::BAD_DEV);
+    dmar->assign (r->vf() ? r->vf() : r->pf(), pd);
+
+    sys_finish (r, Sys_regs::SUCCESS);
+}
+
+void Ec::sys_assign_gsi()
+{
+    Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(&current->regs);
+
+    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
+        sys_finish (r, Sys_regs::BAD_CPU);
     }
 
-    dmar->assign (r->vf() ? r->vf() : r->pf(), pd);
+    Kobject *obj = Space_obj::lookup (r->sm()).obj();
+    if (EXPECT_FALSE (obj->type() != Kobject::SM)) {
+        trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
+        sys_finish (r, Sys_regs::BAD_CAP);
+    }
+
+    Sm *sm = static_cast<Sm *>(obj);
+
+    if (EXPECT_FALSE (sm->node.pd != &Pd::kern)) {
+        trace (TRACE_ERROR, "%s: Non-VEC SM (%#lx)", __func__, r->sm());
+        sys_finish (r, Sys_regs::BAD_CAP);
+    }
+
+    r->set_msi (Gsi::set (sm->node.base, r->cpu(), r->rid()));
 
     sys_finish (r, Sys_regs::SUCCESS);
 }
@@ -448,6 +475,8 @@ void Ec::syscall_handler (uint8 number)
         sys_semctl();
     if (EXPECT_TRUE (number == Sys_regs::ASSIGN_PCI))
         sys_assign_pci();
+    if (EXPECT_TRUE (number == Sys_regs::ASSIGN_GSI))
+        sys_assign_gsi();
 
     sys_finish (&current->regs, Sys_regs::BAD_SYS);
 }
