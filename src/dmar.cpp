@@ -95,7 +95,7 @@ void Dmar::fault_handler()
                        static_cast<uint32>(hi >> 32) & 0xff,
                        static_cast<uint32>(hi >> 8) & 0xff,
                        static_cast<uint32>(hi >> 3) & 0x1f,
-                       static_cast<uint32>(hi) & 0x3,
+                       static_cast<uint32>(hi) & 0x7,
                        lo);
         }
 
