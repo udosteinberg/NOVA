@@ -202,8 +202,6 @@ class Cpu
         static bool bsp                     CPULOCAL;
 
         static void init();
-        static void wakeup_ap();
-        static void delay (unsigned us);
 
         ALWAYS_INLINE
         static inline bool feature (Feature feat)

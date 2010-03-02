@@ -16,11 +16,12 @@
  */
 
 #include "extern.h"
+#include "gsi.h"
 #include "lock_guard.h"
-#include "mdb.h"
 #include "mtrr.h"
 #include "pd.h"
 #include "pt.h"
+#include "sm.h"
 #include "stdio.h"
 #include "util.h"
 #include "vma.h"
@@ -43,20 +44,24 @@ Pd::Pd() : Kobject (PD, 0), Space_io (0)
 
     Mtrr::init();
 
-    Space_mem::insert_root (0, 0x100000);
-    Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000);
+    Space_mem::insert_root (0, 0x100000, 7);
+    Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000, 7);
 
     mword base = LOAD_ADDR + reinterpret_cast<mword>(&LOAD_SIZE);
-    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_PHYS) - base);
+    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_PHYS) - base, 7);
 
     base = reinterpret_cast<mword>(&LINK_PHYS) + reinterpret_cast<mword>(&LINK_SIZE);
-    Space_mem::insert_root (base, 0 - base);
+    Space_mem::insert_root (base, 0 - base, 7);
 
     // HIP
-    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), PAGE_SIZE, 6, 1);
+    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), PAGE_SIZE, 1);
 
     // I/O Ports
     Space_io::insert_root (0, 16);
+
+    // GSI semaphores
+    for (unsigned i = 0; i < NUM_GSI; i++)
+        Space_obj::insert_root (i);
 }
 
 Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags), Space_io (flags)
@@ -64,16 +69,18 @@ Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags), Space_io (flags)
     trace (TRACE_SYSCALL, "PD:%p created (F=%#x)", this, flags);
 }
 
-void Pd::delegate_mem (mword const snd_base, mword const rcv_base, mword const ord, mword const attr)
+void Pd::delegate_mem (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord, mword const attr)
 {
-    Vma *head = &(privileged() ? &kern : current)->Space_mem::vma_head;
+    Vma *head = &snd->Space_mem::vma_head;
 
     for (Vma *vma = head->list_next; vma != head; vma = vma->list_next) {
 
         mword base = snd_base;
 
+        unsigned order = clamp (vma->base, base, vma->order, ord);
+
         // If snd_base/ord intersects with VMA then clamp to base/order
-        if (unsigned order = clamp (vma->base, base, vma->order, ord)) {
+        if (order != ~0UL) {
 
             trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
 
@@ -81,98 +88,87 @@ void Pd::delegate_mem (mword const snd_base, mword const rcv_base, mword const o
             Lock_guard <Spinlock> guard (vma->lock);
 
             // Look up sender mapping to determine physical address
-            // if we put phys into each VMA node then we do not need to
-            // do a PT lookup here.
             Paddr phys;
-            if (privileged())
+            if (snd == &kern)
                 phys = base;
             else {
-                size_t size = current->Space_mem::lookup (base, phys);
+                size_t size = snd->Space_mem::lookup (base, phys);
                 assert (size);
             }
 
             // Adjust rcv_base by the clamping offset
-            Vma *v = vma->create_child (&(Space_mem::vma_head), this, base - snd_base + rcv_base, order, vma->type, attr & vma->attr);
-            if (v)
-                Space_mem::insert (v, phys);
+            Vma *v = new Vma (this, base - snd_base + rcv_base, order, vma->type, attr & vma->attr);
+            if (!Space_mem::insert (v, phys))
+                delete v;
 
         } else if (vma->base > snd_base)
             break;
     }
 }
 
-void Pd::delegate_io (mword const snd_base, mword const ord)
+void Pd::delegate_obj (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord)
 {
-    Vma *head = &(privileged() ? &kern : current)->Space_io::vma_head;
+    Vma *head = &snd->Space_obj::vma_head;
 
     for (Vma *vma = head->list_next; vma != head; vma = vma->list_next) {
 
         mword base = snd_base;
 
+        unsigned order = clamp (vma->base, base, vma->order, ord);
+
         // If snd_base/ord intersects with VMA then clamp to base/order
-        if (unsigned order = clamp (vma->base, base, vma->order, ord)) {
+        if (order != ~0UL) {
 
             trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
 
             // Lock the VMA
             Lock_guard <Spinlock> guard (vma->lock);
 
-            Vma *v = vma->create_child (&(Space_io::vma_head), this, base, order, 0, 0);
-            if (v)
-                Space_io::insert (v);
+            // Look up sender mapping to determine Capability
+            Capability cap;
+            if (snd == &kern) {
+                assert (base < NUM_GSI);
+                cap = Capability (Gsi::gsi_table[base].sm);
+            } else {
+                size_t size = snd->Space_obj::lookup (base, cap);
+                assert (size);
+            }
+
+            Vma *v = new Vma (this, base - snd_base + rcv_base, order);
+            if (!Space_obj::insert (v, cap))
+                delete v;
 
         } else if (vma->base > snd_base)
             break;
     }
 }
 
-void Pd::delegate_obj (mword const snd_base, mword const rcv_base, mword const ord)
+void Pd::delegate_io (Pd *snd, mword const snd_base, mword const ord)
 {
-    size_t size = 1ul << ord;
+    Vma *head = &snd->Space_io::vma_head;
 
-    for (size_t i = 0; i < size; i++) {
+    for (Vma *vma = head->list_next; vma != head; vma = vma->list_next) {
 
-        // Try to find the mapnode corresponding to the send base in the
-        // parent address space. RCU protects all pointers until preemption.
-        Map_node *parent = current->Space_obj::lookup_node (snd_base + i);
-        if (!parent)
-            continue;
+        mword base = snd_base;
 
-        Map_node *child = new Map_node (this, rcv_base + i);
+        unsigned order = clamp (vma->base, base, vma->order, ord);
 
-        if (!Space_obj::insert (Space_obj::lookup (snd_base + i), parent, child))
-            delete child;
-        else
-            trace (TRACE_MAP, "MAP OBJ B:%#lx -> B:%#lx", parent->base, child->base);
+        // If snd_base/ord intersects with VMA then clamp to base/order
+        if (order != ~0UL) {
+
+            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
+
+            // Lock the VMA
+            Lock_guard <Spinlock> guard (vma->lock);
+
+            Vma *v = new Vma (this, base, order);
+            if (!Space_io::insert (v))
+                delete v;
+
+        } else if (vma->base > snd_base)
+            break;
     }
 }
-
-#if 0
-void Pd::delegate_obj (mword const snd_base, mword const rcv_base, unsigned const ord)
-{
-    size_t size = 1ul << ord;
-
-    assert (snd_base % size == 0);
-    assert (rcv_base % size == 0);
-
-    for (size_t i = 0; i < size; i++) {
-
-        Capability cap = Space_obj::lookup (snd_base + i);
-        if (cap.type() != Capability::PT)
-            continue;
-
-        Pt *pt = cap.obj<Pt>();
-        Lock_guard <Spinlock> guard (pt->lock);
-
-        Mn *node = pt->node.lookup (current, snd_base + i);
-        if (!node)
-            continue;
-
-        if (Space_obj::insert (rcv_base + i, cap))
-            node->create_child (this, rcv_base + i, 0);
-    }
-}
-#endif
 
 void Pd::revoke_mem (mword /*base*/, size_t /*size*/, bool /*self*/)
 {
@@ -308,7 +304,7 @@ void Pd::revoke_pt (Capability /*cap*/, mword /*cd*/, bool /*self*/)
 mword Pd::clamp (mword snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord)
 {
     if ((snd_base ^ rcv_base) >> max (snd_ord, rcv_ord))
-        return 0;
+        return ~0UL;
 
     rcv_base |= snd_base;
 
@@ -335,7 +331,7 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
     }
 }
 
-void Pd::delegate (Crd rcv, Crd &snd, mword hot)
+void Pd::delegate (Pd *pd, Crd rcv, Crd &snd, mword hot)
 {
     Crd::Type st = snd.type(), rt = rcv.type();
 
@@ -351,19 +347,19 @@ void Pd::delegate (Crd rcv, Crd &snd, mword hot)
         case Crd::MEM:
             o = clamp (sb, rb, so, ro, hot >> PAGE_BITS);
             trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
-            delegate_mem (sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
+            delegate_mem (pd, sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
             break;
 
         case Crd::IO:
-            o = clamp (sb, rb, so, ro);
+            o = clamp (sb, rb, so, ro);     // XXX: o can be ~0UL
             trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu", current, this, sb, o);
-            delegate_io (rb, o);
+            delegate_io (pd, rb, o);
             break;
 
         case Crd::OBJ:
             o = clamp (sb, rb, so, ro, hot);
             trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu", current, this, sb, rb, o);
-            delegate_obj (sb, rb, o);
+            delegate_obj (pd, sb, rb, o);
             break;
     }
 
@@ -395,14 +391,17 @@ void Pd::revoke (Crd r, bool self)
     }
 }
 
-void Pd::delegate_items (Crd rcv, mword *src, mword *dst, unsigned long ti)
+void Pd::delegate_items (Pd *pd, Crd rcv, mword *src, mword *dst, unsigned long ti)
 {
+    if (this == root && pd == root)
+        pd = &kern;
+
     while (ti--) {
 
         mword hot = *src++;
         Crd snd = Crd (*src++);
 
-        delegate (rcv, snd, hot);
+        delegate (pd, rcv, snd, hot);
 
         if (dst)
             *dst++ = snd.raw();

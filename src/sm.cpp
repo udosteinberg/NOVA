@@ -1,7 +1,7 @@
 /*
  * Semaphore
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,7 +20,7 @@
 
 Slab_cache Sm::cache (sizeof (Sm), 16);
 
-Sm::Sm (Pd *pd, mword cd, mword cnt) : Kobject (SM, 0), counter (cnt), node (pd, cd)
+Sm::Sm (mword cnt, Pd *p, mword s) : Kobject (SM, 0), counter (cnt), vma (p, s)
 {
-    trace (TRACE_SYSCALL, "SM:%p created (PD:%p CD:%#lx CNT:%lu)", this, pd, cd, cnt);
+    trace (TRACE_SYSCALL, "SM:%p created (CNT:%lu)", this, cnt);
 }

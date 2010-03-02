@@ -24,16 +24,6 @@
 #include "regs.h"
 #include "types.h"
 
-class Sys_ipc_recv : public Exc_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline void set_sp (mword sp) { ecx = sp; }
-
-        ALWAYS_INLINE
-        inline void set_ip (mword ip) { edx = ip; }
-};
-
 class Sys_ipc_send : public Exc_regs
 {
     public:

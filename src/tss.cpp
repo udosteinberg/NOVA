@@ -26,10 +26,10 @@ void Tss::build()
 {
     // #NMI and #DF currently use CPU PT and CPU stack. If we use boot PT
     // and boot stack instead we don't have the faulting TSS state mapped.
-    extern char task_gate_handler;
+    extern char tss_handler;
 
     dbf.cr3     = Buddy::ptr_to_phys (Ptab::current());
-    dbf.eip     = reinterpret_cast<mword>(&task_gate_handler);
+    dbf.eip     = reinterpret_cast<mword>(&tss_handler);
     dbf.esp     = KSTCK_ADDR + PAGE_SIZE;
     dbf.eflags  = 2;
     dbf.cs      = SEL_KERN_CODE;

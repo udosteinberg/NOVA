@@ -55,14 +55,26 @@ bool Space_io::insert (mword idx)
 
 bool Space_io::remove (mword idx)
 {
-    mword virt = idx_to_virt (idx);
-
     Paddr phys;
-    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1))
+    if (!space_mem()->lookup (idx_to_virt (idx), phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1))
         return false;
 
     // Set the bit, prohibiting access
     return !Atomic::test_set_bit<true>(*static_cast<mword *>(Buddy::phys_to_ptr (phys)), idx_to_bit (idx));
+}
+
+bool Space_io::insert (Vma *vma)
+{
+    if (!vma->insert (&vma_head, &vma_head))
+        return false;
+
+    assert (this != &Pd::kern);
+
+    // Whoever owns a VMA struct in the VMA list owns the respective PT slots
+    for (unsigned long i = 0; i < (1ul << vma->order); i++)
+        insert (vma->base + i);
+
+    return true;
 }
 
 void Space_io::page_fault (mword addr, mword error)
@@ -80,18 +92,7 @@ void Space_io::page_fault (mword addr, mword error)
                                     reinterpret_cast<Paddr>(&FRAME_1));
 }
 
-bool Space_io::insert_root (mword b, unsigned o)
+void Space_io::insert_root (mword b, unsigned o)
 {
-    trace (TRACE_MAP, "I/O B:%#010lx O:%02u", b, o);
-
-    return vma_head.create_child (&vma_head, 0, b, o, 0, 0);
-}
-
-bool Space_io::insert (Vma *vma)
-{
-    // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    for (unsigned long i = 0; i < (1ul << vma->order); i++)
-        insert (vma->base + i);
-
-    return true;
+    (new Vma (&Pd::kern, b, o))->insert (&vma_head, &vma_head);
 }

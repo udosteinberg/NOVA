@@ -15,12 +15,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
 #include "dmar.h"
 #include "ec.h"
 #include "gsi.h"
 #include "lapic.h"
-#include "utcb.h"
 #include "vmx.h"
 #include "vtlb.h"
 
@@ -64,13 +62,13 @@ void Ec::vmx_exception()
 
     } else if (EXPECT_TRUE ((intr_info & 0x7ff) == 0x307)) {
 
-        fpu_handler();
+        handle_exc_nm();
         ret_user_vmresume();
 
     } else
         current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
 
-    send_msg<ret_user_vmresume, &Utcb::load_vmx>();
+    send_msg<ret_user_vmresume>();
 }
 
 void Ec::vmx_extint()
@@ -124,7 +122,7 @@ void Ec::vmx_cr()
     ret_user_vmresume();
 }
 
-void Ec::vmx_handler()
+void Ec::handle_vmx()
 {
     Cpu::hazard |= Cpu::HZD_DS_ES | Cpu::HZD_TR;
 
@@ -141,5 +139,5 @@ void Ec::vmx_handler()
 
     current->regs.dst_portal = reason;
 
-    send_msg<ret_user_vmresume, &Utcb::load_vmx>();
+    send_msg<ret_user_vmresume>();
 }

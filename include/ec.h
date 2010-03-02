@@ -33,9 +33,7 @@
 #include "tss.h"
 #include "types.h"
 
-class Pt;
 class Utcb;
-class Vmcs;
 
 class Ec : public Kobject, public Queue<Sc>
 {
@@ -45,6 +43,7 @@ class Ec : public Kobject, public Queue<Sc>
         Exc_regs    regs;                       // 0x4, must be first
         void        (*continuation)();          // 0x50
         Capability  reply;                      // 0x54
+        Mtd         mtr;
         Utcb *      utcb;
         Refptr<Pd>  pd;
         Sc *        sc;
@@ -60,14 +59,25 @@ class Ec : public Kobject, public Queue<Sc>
         // EC Cache
         static Slab_cache cache;
 
+        HOT NORETURN REGPARM (1)
+        static void handle_sys (uint8) asm ("sys_handler");
+
         REGPARM (1)
-        static void exc_handler (Exc_regs *) asm ("exc_handler");
+        static void handle_exc (Exc_regs *) asm ("exc_handler");
 
         NORETURN
-        static void vmx_handler() asm ("vmx_handler");
+        static void handle_vmx() asm ("vmx_handler");
 
         NORETURN
-        static void svm_handler() asm ("svm_handler");
+        static void handle_svm() asm ("svm_handler");
+
+        NORETURN
+        static void handle_tss() asm ("tss_handler");
+
+        static void handle_exc_nm();
+        static bool handle_exc_ts (Exc_regs *);
+        static bool handle_exc_gp (Exc_regs *);
+        static bool handle_exc_pf (Exc_regs *);
 
         NORETURN
         static inline void vmx_exception();
@@ -198,18 +208,19 @@ class Ec : public Kobject, public Queue<Sc>
         NORETURN
         static void ret_user_vmrun();
 
-        ALWAYS_INLINE NORETURN
-        static inline void sys_finish (Sys_regs *param, Sys_regs::Status status);
-
-        ALWAYS_INLINE NORETURN
-        inline void recv_ipc_msg (mword, unsigned = 0);
+        template <Sys_regs::Status T>
+        NOINLINE NORETURN
+        static void sys_finish();
 
         NORETURN
         static void activate (Ec *);
 
-        template <void (*)(), void (Utcb::*)(Exc_regs *, Mtd)>
+        template <void (*)()>
         NORETURN
         static void send_msg();
+
+        HOT NORETURN
+        static void recv_msg();
 
         HOT NORETURN
         static void sys_ipc_call();
@@ -253,18 +264,8 @@ class Ec : public Kobject, public Queue<Sc>
         NORETURN
         static void root_invoke();
 
-        HOT NORETURN REGPARM (1)
-        static void syscall_handler (uint8) asm ("syscall_handler");
-
         NORETURN
-        static void task_gate_handler() asm ("task_gate_handler");
-
-        static void fpu_handler();
-        static bool tss_handler (Exc_regs *);
-        static bool pf_handler (Exc_regs *);
-
-        NORETURN
-        void kill (Exc_regs *, char const *);
+        static void die (char const *, Exc_regs * = &current->regs);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

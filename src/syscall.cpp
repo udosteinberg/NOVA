@@ -31,10 +31,10 @@
 #include "utcb.h"
 #include "vmx.h"
 
-void Ec::sys_finish (Sys_regs *param, Sys_regs::Status status)
+template <Sys_regs::Status T>
+void Ec::sys_finish()
 {
-    param->set_status (status);
-
+    current->regs.set_status (T);
     ret_user_sysexit();
 }
 
@@ -51,90 +51,95 @@ void Ec::activate (Ec *ec)
     ec->make_current();
 }
 
-void Ec::recv_ipc_msg (mword ip, unsigned /*flags*/)
-{
-    Sys_ipc_recv *r = static_cast<Sys_ipc_recv *>(&regs);
-
-    r->set_ip (ip);
-
-#if 0
-    if (EXPECT_FALSE (flags & Sys_ipc_send::DISABLE_DONATION)) {
-        sc->ready_enqueue();
-        ret_user_sysexit();
-    }
-#endif
-
-    current->set_partner (this);
-
-    make_current();
-}
-
-template <void (*C)(), void (Utcb::*U)(Exc_regs *, Mtd)>
+template <void (*C)()>
 void Ec::send_msg()
 {
     Exc_regs *r = &current->regs;
 
-    Capability cap = Space_obj::lookup (current->evt + r->dst_portal);
-
-    Kobject *obj = cap.obj();
+    Kobject *obj = Space_obj::lookup (current->evt + r->dst_portal).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        current->kill (r, "PT not found");
+        die ("PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        current->kill (r, "PT wrong CPU");
+        die ("PT wrong CPU");
 
     if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->help (send_msg<C,U>);
+        ec->help (send_msg<C>);
 
     current->continuation = C;
+    current->set_partner (ec);
 
-    (ec->utcb->*U)(r, pt->mtd);
+    ec->mtr = pt->mtd;
+    ec->utcb->pid = pt->vma.base;
+    ec->regs.set_ip (pt->ip);
 
-    ec->utcb->pid = pt->node.base;
-    ec->recv_ipc_msg (pt->ip);
+    assert (ec->continuation == recv_msg);
+    ec->make_current();
 }
 
 void Ec::sys_ipc_call()
 {
     Sys_ipc_send *s = static_cast<Sys_ipc_send *>(&current->regs);
 
-    assert (!s->flags());
-
-    Capability cap = Space_obj::lookup (s->pt());
-
-    Kobject *obj = cap.obj();
+    Kobject *obj = Space_obj::lookup (s->pt()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
-        sys_finish (s, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
     if (EXPECT_FALSE (current->cpu != ec->cpu))
-        sys_finish (s, Sys_regs::BAD_CPU);
+        sys_finish<Sys_regs::BAD_CPU>();
 
     if (EXPECT_FALSE (!Atomic::test_clr_bit<false>(ec->wait, 0))) {
         if (EXPECT_FALSE (s->flags() & Sys_ipc_send::DISABLE_BLOCKING))
-            sys_finish (s, Sys_regs::TIMEOUT);
+            sys_finish<Sys_regs::TIMEOUT>();
         ec->help (sys_ipc_call);
     }
 
-    Utcb *src = current->utcb, *dst = ec->utcb;
-
-    src->save (dst, s->mtd());
-
-    unsigned long ui = s->mtd().ui();
-    unsigned long ti = s->mtd().ti();
-
-    if (EXPECT_FALSE (ti))
-        ec->pd->delegate_items (dst->crd, src->ptr (ui), dst->ptr (ui), ti);
-
     current->continuation = ret_user_sysexit;
+    current->set_partner (ec);
 
-    dst->pid = pt->node.base;
-    ec->recv_ipc_msg (pt->ip, s->flags());
+    ec->mtr = s->mtd();
+    ec->utcb->pid = pt->vma.base;       // Set dst portal
+    ec->regs.set_ip (pt->ip);           // Set entry EIP
+
+    assert (ec->continuation == recv_msg);
+    ec->make_current();
+}
+
+void Ec::recv_msg()
+{
+    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    assert (ec);
+
+    Mtd mtd = current->mtr;
+    Exc_regs *r = &ec->regs;
+
+    Utcb *src = ec->utcb;
+    Utcb *dst = current->utcb;
+
+    if (EXPECT_TRUE (ec->continuation == ret_user_sysexit)) {
+        src->save (dst, mtd);
+
+        unsigned long ui = mtd.ui();
+        unsigned long ti = mtd.ti();
+
+        if (EXPECT_FALSE (ti))
+            current->pd->delegate_items (ec->pd, dst->crd, src->ptr (ui), dst->ptr (ui), ti);
+    }
+
+    else if (ec->continuation == ret_user_iret)
+        dst->load_exc (r, mtd);
+    else if (ec->continuation == ret_user_vmresume)
+        dst->load_vmx (r, mtd);
+    else if (ec->continuation == ret_user_vmrun)
+        dst->load_svm (r, mtd);
+
+    ret_user_sysexit();
 }
 
 void Ec::sys_ipc_reply()
@@ -161,12 +166,12 @@ void Ec::sys_ipc_reply()
         unsigned long ti = s->mtd().ti();
         if (EXPECT_FALSE (ti)) {
             if (ec->continuation == ret_user_sysexit)
-                ec->pd->delegate_items (dst->crd, src->ptr (ui), dst->ptr (ui), ti);
+                ec->pd->delegate_items (current->pd, dst->crd, src->ptr (ui), dst->ptr (ui), ti);
             else
-                ec->pd->delegate_items (Crd (Crd::MEM, 0, Crd::whole, 0), src->ptr (ui), 0, ti);
+                ec->pd->delegate_items (current->pd, Crd (Crd::MEM, 0, Crd::whole, 0), src->ptr (ui), 0, ti);
         }
 
-        current->continuation = ret_user_sysexit;
+        current->continuation = recv_msg;
         current->wait = 1;
 
         if (ec->clr_partner())
@@ -174,7 +179,7 @@ void Ec::sys_ipc_reply()
 
     } else {
 
-        current->continuation = ret_user_sysexit;
+        current->continuation = recv_msg;
         current->wait = 1;
     }
 
@@ -189,24 +194,24 @@ void Ec::sys_create_pd()
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
-        sys_finish (r, Sys_regs::BAD_CPU);
+        sys_finish<Sys_regs::BAD_CPU>();
     }
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish (r, Sys_regs::BAD_MEM);
+        sys_finish<Sys_regs::BAD_MEM>();
     }
 
     if ((r->flags() & 0x1) && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
         trace (TRACE_ERROR, "%s: VM not supported", __func__);
-        sys_finish (r, Sys_regs::BAD_FTR);
+        sys_finish<Sys_regs::BAD_FTR>();
     }
 
     Pd *pd = new Pd (r->flags());
     if (!Pd::current->Space_obj::insert (r->pd(), Capability (pd))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
         delete pd;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
@@ -217,13 +222,13 @@ void Ec::sys_create_pd()
     pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
 
     Crd crd = r->crd();
-    pd->delegate (Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
+    pd->delegate (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
     pd->insert_utcb (r->utcb());
 
     // Enqueue SC only after all the caps have been mapped
     sc->remote_enqueue();
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_create_ec()
@@ -234,22 +239,22 @@ void Ec::sys_create_ec()
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
-        sys_finish (r, Sys_regs::BAD_CPU);
+        sys_finish<Sys_regs::BAD_CPU>();
     }
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish (r, Sys_regs::BAD_MEM);
+        sys_finish<Sys_regs::BAD_MEM>();
     }
 
     Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
     if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_create_sc()
@@ -261,7 +266,7 @@ void Ec::sys_create_sc()
     Kobject *obj = Space_obj::lookup (r->ec()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Ec *ec = static_cast<Ec *>(obj);
@@ -270,18 +275,18 @@ void Ec::sys_create_sc()
     if (!ec->set_sc (sc)) {
         trace (TRACE_ERROR, "%s: Cannot attach SC", __func__);
         delete sc;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     if (!Pd::current->Space_obj::insert (r->sc(), Capability (sc))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
         delete sc;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     sc->remote_enqueue();
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_create_pt()
@@ -292,25 +297,26 @@ void Ec::sys_create_pt()
 
     if (EXPECT_FALSE (r->eip() >= LINK_ADDR)) {
         trace (TRACE_ERROR, "%s: Invalid EIP (%#lx)", __func__, r->eip());
-        sys_finish (r, Sys_regs::BAD_MEM);
+        sys_finish<Sys_regs::BAD_MEM>();
     }
 
     Kobject *obj = Space_obj::lookup (r->ec()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Ec *ec = static_cast<Ec *>(obj);
 
-    Pt *pt = new Pt (Pd::current, r->pt(), ec, r->mtd(), r->eip());
-    if (!Pd::current->Space_obj::insert (Capability (pt), 0, &pt->node)) {
+    Pt *pt = new Pt (ec, r->mtd(), r->eip(), Pd::current, r->pt());
+
+    if (!Pd::current->Space_obj::insert (&pt->vma, Capability (pt))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pt());
         delete pt;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_create_sm()
@@ -319,14 +325,15 @@ void Ec::sys_create_sm()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sm(), r->cnt());
 
-    Sm *sm = new Sm (Pd::current, r->sm(), r->cnt());
-    if (!Pd::current->Space_obj::insert (Capability (sm), 0, &sm->node)) {
+    Sm *sm = new Sm (r->cnt(), Pd::current, r->sm());
+
+    if (!Pd::current->Space_obj::insert (&sm->vma, Capability (sm))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sm());
         delete sm;
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_revoke()
@@ -337,7 +344,7 @@ void Ec::sys_revoke()
 
     Pd::revoke (r->crd(), r->flags());
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_recall()
@@ -347,7 +354,7 @@ void Ec::sys_recall()
     Kobject *obj = Space_obj::lookup (r->ec()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Ec *ec = static_cast<Ec *>(obj);
@@ -362,7 +369,7 @@ void Ec::sys_recall()
             Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
     }
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_semctl()
@@ -372,15 +379,15 @@ void Ec::sys_semctl()
     Kobject *obj = Space_obj::lookup (r->sm()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::SM)) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Sm *sm = static_cast<Sm *>(obj);
 
     switch (r->flags() & 1) {
         case Sys_semctl::DN:
-            if (sm->node.pd == &Pd::kern)
-                Gsi::unmask (sm->node.base);
+            if (sm->vma.pd == &Pd::kern)
+                Gsi::unmask (sm->vma.base);
             r->set_status (Sys_regs::SUCCESS);
             current->continuation = ret_user_sysexit;
             sm->dn();
@@ -390,7 +397,7 @@ void Ec::sys_semctl()
             break;
     }
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_assign_pci()
@@ -400,25 +407,25 @@ void Ec::sys_assign_pci()
     Kobject *obj = Space_obj::lookup (r->pd()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PD)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Dmar *dmar = Pci::find_dmar (r->pf());
     if (EXPECT_FALSE (!dmar)) {
         trace (TRACE_ERROR, "%s: RID not found (%#lx)", __func__, r->pf());
-        sys_finish (r, Sys_regs::BAD_DEV);
+        sys_finish<Sys_regs::BAD_DEV>();
     }
 
     Pd *pd = static_cast<Pd *>(obj);
 
     if (!pd->dpt) {
         trace (TRACE_ERROR, "%s: DMA not supported", __func__);
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     dmar->assign (r->vf() ? r->vf() : r->pf(), pd);
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
 void Ec::sys_assign_gsi()
@@ -427,28 +434,28 @@ void Ec::sys_assign_gsi()
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
-        sys_finish (r, Sys_regs::BAD_CPU);
+        sys_finish<Sys_regs::BAD_CPU>();
     }
 
     Kobject *obj = Space_obj::lookup (r->sm()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::SM)) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Sm *sm = static_cast<Sm *>(obj);
 
-    if (EXPECT_FALSE (sm->node.pd != &Pd::kern)) {
+    if (EXPECT_FALSE (sm->vma.pd != &Pd::kern)) {
         trace (TRACE_ERROR, "%s: Non-VEC SM (%#lx)", __func__, r->sm());
-        sys_finish (r, Sys_regs::BAD_CAP);
+        sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_msi (Gsi::set (sm->node.base, r->cpu(), r->rid()));
+    r->set_msi (Gsi::set (sm->vma.base, r->cpu(), r->rid()));
 
-    sys_finish (r, Sys_regs::SUCCESS);
+    sys_finish<Sys_regs::SUCCESS>();
 }
 
-void Ec::syscall_handler (uint8 number)
+void Ec::handle_sys (uint8 number)
 {
     // This is actually faster than a switch
     if (EXPECT_TRUE (number == Sys_regs::MSG_CALL))
@@ -478,9 +485,9 @@ void Ec::syscall_handler (uint8 number)
     if (EXPECT_TRUE (number == Sys_regs::ASSIGN_GSI))
         sys_assign_gsi();
 
-    sys_finish (&current->regs, Sys_regs::BAD_SYS);
+    sys_finish<Sys_regs::BAD_SYS>();
 }
 
-template void Ec::send_msg<Ec::ret_user_vmresume,   &Utcb::load_vmx>();
-template void Ec::send_msg<Ec::ret_user_vmrun,      &Utcb::load_svm>();
-template void Ec::send_msg<Ec::ret_user_iret,       &Utcb::load_exc>();
+template void Ec::send_msg<Ec::ret_user_vmresume>();
+template void Ec::send_msg<Ec::ret_user_vmrun>();
+template void Ec::send_msg<Ec::ret_user_iret>();

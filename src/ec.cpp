@@ -24,6 +24,7 @@
 #include "hip.h"
 #include "memory.h"
 #include "ptab.h"
+#include "rcu.h"
 #include "sc.h"
 #include "selectors.h"
 #include "sm.h"
@@ -52,10 +53,10 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
     if (u) {
 
         if (w) {
-            continuation = ret_user_sysexit;
+            continuation = recv_msg;
             regs.ecx = s;
         } else {
-            continuation = send_msg<ret_user_iret, &Utcb::load_exc>;
+            continuation = send_msg<ret_user_iret>;
             regs.cs  = SEL_USER_CODE;
             regs.ds  = SEL_USER_DATA;
             regs.es  = SEL_USER_DATA;
@@ -87,14 +88,14 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
-            continuation = send_msg<ret_user_vmresume, &Utcb::load_vmx>;
+            continuation = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept);
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
             regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->bmp),
                                   Buddy::ptr_to_phys (pd->mst));
-            continuation = send_msg<ret_user_vmrun, &Utcb::load_svm>;
+            continuation = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
     }
@@ -118,12 +119,12 @@ void Ec::handle_hazard (void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.dst_portal = NUM_VMI - 1;
-            send_msg<ret_user_vmresume, &Utcb::load_vmx>();
+            send_msg<ret_user_vmresume>();
         }
 
         if (func == ret_user_vmrun) {
             current->regs.dst_portal = NUM_VMI - 1;
-            send_msg<ret_user_vmrun, &Utcb::load_svm>();
+            send_msg<ret_user_vmrun>();
         }
 
         // If the EC wanted to leave via SYSEXIT, redirect it to IRET instead.
@@ -137,7 +138,7 @@ void Ec::handle_hazard (void (*func)())
         }
 
         current->regs.dst_portal = NUM_EXC - 1;
-        send_msg<ret_user_iret, &Utcb::load_exc>();
+        send_msg<ret_user_iret>();
     }
 }
 
@@ -160,6 +161,8 @@ void Ec::ret_user_iret()
     // No need to check HZD_DS_ES because IRET will reload both anyway
     if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
         handle_hazard (ret_user_iret);
+
+    Rcu::qstate();
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
@@ -194,7 +197,7 @@ void Ec::ret_user_vmresume()
 
     trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
 
-    current->kill (&current->regs, "VMENTRY");
+    die ("VMENTRY");
 }
 
 void Ec::ret_user_vmrun()
@@ -229,25 +232,12 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    // Delegate GSI portals
-    for (unsigned i = 0; i < NUM_GSI; i++)
-        Pd::current->Space_obj::insert (Capability (Gsi::gsi_table[i].sm, 0), &Gsi::gsi_table[i].sm->node, new Map_node (Pd::current, NUM_EXC + i));
-
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 0, Capability (Pd::current));
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 1, Capability (Ec::current));
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 2, Capability (Sc::current));
-
-    // Map hypervisor information page
-    Pd::current->delegate_mem (reinterpret_cast<Paddr>(&FRAME_H),
-                               LINK_ADDR - PAGE_SIZE,
-                               PAGE_BITS, 1);
-
     // Map root task image
     mword addr = reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr));
 
     Elf_eh *eh = reinterpret_cast<Elf_eh *>(addr);
     if (!Hip::root_addr || *eh->ident != Elf_eh::EH_MAGIC)
-        current->kill (&current->regs, "No ELF");
+        die ("No ELF");
 
     current->regs.eip = eh->entry;
     current->regs.esp = LINK_ADDR - PAGE_SIZE;
@@ -264,143 +254,45 @@ void Ec::root_invoke()
                         !!(ph->flags & Elf_ph::PF_X) << 2;
 
         if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
-            current->kill (&current->regs, "Bad ELF");
+            die ("Bad ELF");
 
         for (size_t s = 0; s < ph->f_size; s += PAGE_SIZE)
-            Pd::current->delegate_mem (s + align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE),
+            Pd::current->delegate_mem (&Pd::kern,
+                                       s + align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE),
                                        s + align_dn (ph->v_addr, PAGE_SIZE),
                                        PAGE_BITS, attr);
     }
 
+    // Map hypervisor information page
+    Pd::current->delegate_mem (&Pd::kern,
+                               reinterpret_cast<Paddr>(&FRAME_H),
+                               LINK_ADDR - PAGE_SIZE,
+                               PAGE_BITS, 1);
+
+    // Delegate GSI portals
+    for (unsigned i = 0; i < NUM_GSI; i++)
+        Pd::current->delegate_obj (&Pd::kern, i, NUM_EXC + i, 0);
+
+    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 0, Capability (Pd::current));
+    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 1, Capability (Ec::current));
+    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 2, Capability (Sc::current));
+
     ret_user_iret();
 }
 
-void Ec::task_gate_handler()
+void Ec::handle_tss()
 {
     panic ("Task gate invoked\n");
 }
 
-void Ec::exc_handler (Exc_regs *r)
+void Ec::die (char const *reason, Exc_regs *r)
 {
-    Counter::exc[r->vec]++;
-
-    switch (r->vec) {
-
-        case Cpu::EXC_NM:
-            fpu_handler();
-            return;
-
-        case Cpu::EXC_TS:
-            if (tss_handler (r))
-                return;
-            break;
-
-        case Cpu::EXC_GP:
-            if (Cpu::hazard & Cpu::HZD_TR) {
-                Cpu::hazard &= ~Cpu::HZD_TR;
-                Gdt::unbusy_tss();
-                asm volatile ("ltr %w0" : : "r" (SEL_TSS_RUN));
-                return;
-            }
-            break;
-
-        case Cpu::EXC_PF:
-            if (pf_handler (r))
-                return;
-            break;
-
-        default:
-            if (!r->user())
-                current->kill (r, "EXC");
-    }
-
-    send_msg<ret_user_iret, &Utcb::load_exc>();
-}
-
-void Ec::fpu_handler()
-{
-    trace (TRACE_FPU, "Switch FPU EC:%p (%c) -> EC:%p (%c)",
-           fpowner, fpowner && fpowner->utcb ? 'T' : 'V',
-           current,            current->utcb ? 'T' : 'V');
-
-    assert (!Fpu::enabled);
-
-    Fpu::enable();
-
-    if (current == fpowner) {
-        assert (fpowner->utcb);     // Should never happen for a vCPU
-        return;
-    }
-
-    if (fpowner) {
-
-        // For a vCPU, enable CR0.TS and #NM intercepts
-        if (fpowner->utcb == 0)
-            fpowner->regs.fpu_ctrl (false);
-
-        fpowner->fpu->save();
-    }
-
-    // For a vCPU, disable CR0.TS and #NM intercepts
-    if (current->utcb == 0)
-        current->regs.fpu_ctrl (true);
-
-    if (current->fpu)
-        current->fpu->load();
-    else {
-        current->fpu = new Fpu;
-        Fpu::init();
-    }
-
-    fpowner = current;
-}
-
-bool Ec::tss_handler (Exc_regs *r)
-{
-    if (r->user())
-        return false;
-
-    // Some stupid user did SYSENTER with EFLAGS.NT=1 and IRET faulted
-    r->efl &= ~Cpu::EFL_NT;
-
-    return true;
-}
-
-bool Ec::pf_handler (Exc_regs *r)
-{
-    mword addr = r->cr2;
-
-    // User fault
-    if (r->err & Ptab::ERROR_USER)
-        return addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
-
-    // Kernel fault in user region (vTLB)
-    if (addr < LINK_ADDR && Pd::current->Space_mem::sync (addr))
-        return true;
-
-    // #PF in I/O space (including delimiter byte)
-    if (addr >= IOBMP_SADDR && addr <= IOBMP_EADDR) {
-        Space_io::page_fault (r->cr2, r->err);
-        return true;
-    }
-
-    // #PF in OBJ space
-    if (addr >= OBJSP_SADDR) {
-        Space_obj::page_fault (r->cr2, r->err);
-        return true;
-    }
-
-    current->kill (r, "#PF (kernel)");
-}
-
-void Ec::kill (Exc_regs *r, char const *reason)
-{
-    if (utcb || pd == &Pd::kern)
+    if (current->utcb || current->pd == &Pd::kern)
         trace (0, "Killed EC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               this, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
+               current, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
     else
         trace (0, "Killed EC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
-               this, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
+               current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
 
     Sc::schedule (true);
 }

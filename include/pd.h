@@ -54,9 +54,6 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
         Pd (unsigned);
 
-        ALWAYS_INLINE
-        inline bool privileged() const { return this == root && current == root; }
-
         ALWAYS_INLINE HOT
         inline void make_current()
         {
@@ -74,11 +71,12 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
             kern.percpu[Cpu::id] = ptab;
         }
 
-        void delegate_items (Crd, mword *, mword *, unsigned long);
-        void delegate_mem   (mword, mword, mword, mword);
-        void delegate_io    (mword, mword);
-        void delegate_obj   (mword, mword, mword);
-        void delegate       (Crd, Crd &, mword = 0);
+        void delegate_items (Pd *, Crd, mword *, mword *, unsigned long);
+        void delegate       (Pd *, Crd, Crd &, mword = 0);
+
+        void delegate_mem   (Pd *, mword, mword, mword, mword);
+        void delegate_io    (Pd *, mword, mword);
+        void delegate_obj   (Pd *, mword, mword, mword);
 
         static void revoke (Crd, bool);
 

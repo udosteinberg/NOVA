@@ -26,8 +26,6 @@
 class Lapic : public Apic
 {
     private:
-        static uint32   present[8];
-
         enum Register
         {
             LAPIC_IDR       = 0x2,
@@ -119,18 +117,7 @@ class Lapic : public Apic
     public:
         static unsigned freq_tsc;
         static unsigned freq_bus;
-
-        ALWAYS_INLINE
-        static inline void set_present (unsigned id)
-        {
-            present[id / 32] |= 1u << id % 32;
-        }
-
-        ALWAYS_INLINE
-        static inline bool chk_present (unsigned id)
-        {
-            return present[id / 32] & 1u << id % 32;
-        }
+        static unsigned mask_cpu;
 
         ALWAYS_INLINE
         static inline unsigned id()
@@ -169,8 +156,8 @@ class Lapic : public Apic
         }
 
         static void init();
-
         static void calibrate();
+        static void wake_ap();
 
         static void send_ipi (unsigned cpu, Destination_mode dst, Delivery_mode dlv, unsigned vector);
 

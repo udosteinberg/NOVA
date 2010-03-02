@@ -41,46 +41,25 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::insert_root (mword base, size_t size)
-{
-    for (size_t frag; size; size -= frag, base += frag) {
-
-        unsigned type = Mtrr::memtype (base);
-
-        for (frag = 0; frag < size; frag += PAGE_SIZE)
-            if (Mtrr::memtype (base + frag) != type)
-                break;
-
-        insert_root (base, frag, type, 7);
-    }
-}
-
-void Space_mem::insert_root (mword b, size_t s, unsigned t, unsigned a)
-{
-    for (long int o; s; s -= 1ul << o, b += 1ul << o) {
-
-        o = bit_scan_reverse (s);
-        if (b)
-            o = min (bit_scan_forward (b), o);
-
-        vma_head.create_child (&vma_head, 0, b, o, t, a);
-    }
-}
-
 bool Space_mem::insert (Vma *vma, Paddr phys)
 {
+    if (!vma->insert (&vma_head, &vma_head))
+        return false;
+
+    assert (this != &Pd::kern);
+
     unsigned o = vma->order - PAGE_BITS;
 
     if (dpt) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            dpt->insert (vma->base + i * (1ul << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1ul << (Dpt::ord + PAGE_BITS)), vma->attr);
+            dpt->insert (vma->base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), vma->attr);
     }
 
     if (ept) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            ept->insert (vma->base + i * (1ul << (Ept::ord + PAGE_BITS)), ord, phys + i * (1ul << (Ept::ord + PAGE_BITS)), vma->attr, vma->type);
+            ept->insert (vma->base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), vma->attr, vma->type);
     }
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
@@ -91,4 +70,42 @@ bool Space_mem::insert (Vma *vma, Paddr phys)
     mst->insert (vma->base, o, a, phys);
 
     return true;
+}
+
+void Space_mem::insert_root (mword base, size_t size, mword attr)
+{
+    for (size_t frag; size; size -= frag) {
+
+        unsigned type = Mtrr::memtype (base);
+
+        for (frag = 0; frag < size; frag += PAGE_SIZE)
+            if (Mtrr::memtype (base + frag) != type)
+                break;
+
+        size_t s = frag;
+
+        for (long int o; s; s -= 1UL << o, base += 1UL << o) {
+
+            o = bit_scan_reverse (s);
+            if (base)
+                o = min (bit_scan_forward (base), o);
+
+            (new Vma (&Pd::kern, base, o, type, attr))->insert (&vma_head, &vma_head);
+        }
+    }
+}
+
+bool Space_mem::insert_utcb (mword b)
+{
+    if (!b)
+        return true;
+
+    Vma *vma = new Vma (&Pd::kern, b);
+
+    if (vma->insert (&vma_head, &vma_head))
+        return true;
+    
+    delete vma;
+
+    return false;
 }

@@ -76,16 +76,9 @@ class Space_mem
         }
 
         INIT
-        void insert_root (mword, size_t);
+        void insert_root (mword, size_t, mword);
 
-        INIT
-        void insert_root (mword, size_t, unsigned, unsigned);
-
-        ALWAYS_INLINE
-        inline bool insert_utcb (mword b)
-        {
-            return !b || vma_head.create_child (&vma_head, 0, b, 0, 0, 0);
-        }
+        bool insert_utcb (mword);
 
         bool insert (Vma *, Paddr);
 

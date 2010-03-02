@@ -1,7 +1,7 @@
 /*
  * Portal
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,7 +21,7 @@
 // Portal Cache
 Slab_cache Pt::cache (sizeof (Pt), 16);
 
-Pt::Pt (Pd *pd, mword cd, Ec *e, Mtd m, mword addr) : Kobject (PT, 0), ec (e), mtd (m), ip (addr), node (pd, cd)
+Pt::Pt (Ec *e, Mtd m, mword addr, Pd *p, mword s) : Kobject (PT, 0), ec (e), mtd (m), ip (addr), vma (p, s)
 {
-    trace (TRACE_SYSCALL, "PT:%p created (PD:%p CD:%#lx EC:%p IP:%#lx)", this, pd, cd, e, ip);
+    trace (TRACE_SYSCALL, "PT:%p created (EC:%p IP:%#lx)", this, e, ip);
 }

@@ -21,6 +21,7 @@
 #include "hip.h"
 #include "msr.h"
 #include "pd.h"
+#include "rcu.h"
 #include "sc.h"
 #include "x86.h"
 
@@ -28,6 +29,7 @@ extern "C" NORETURN
 void bootstrap()
 {
     Cpu::init();
+    Rcu::init();
 
     // Create idle EC
     Ec::current = new Ec (&Pd::kern, Cpu::id, 0, Ec::idle);

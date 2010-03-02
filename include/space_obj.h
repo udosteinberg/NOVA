@@ -1,7 +1,7 @@
 /*
  * Object Space
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,23 +20,20 @@
 #include "capability.h"
 #include "compiler.h"
 #include "types.h"
+#include "vma.h"
 
-class Map_node;
 class Space_mem;
 
 class Space_obj
 {
+    protected:
+        Vma vma_head;
+
     private:
         ALWAYS_INLINE
         static inline mword idx_to_virt (unsigned long idx)
         {
             return OBJSP_SADDR + (idx % caps) * sizeof (Capability);
-        }
-
-        ALWAYS_INLINE
-        static inline Map_node ** shadow (void *ptr)
-        {
-            return static_cast<Map_node **>(ptr) + PAGE_SIZE / sizeof (Map_node **);
         }
 
         ALWAYS_INLINE
@@ -51,14 +48,14 @@ class Space_obj
             return *reinterpret_cast<Capability *>(idx_to_virt (idx));
         }
 
-        void *metadata (unsigned long);
+        bool    insert (mword, Capability);
+        bool    remove (mword, Capability);
+        size_t  lookup (mword, Capability &);
 
-        bool insert (unsigned long, Capability);
-        bool insert (Capability, Map_node *, Map_node *);
-
-        Map_node * lookup_node (mword);
-
-        bool remove (unsigned, Capability);
+        bool insert (Vma *, Capability);
 
         static void page_fault (mword, mword);
+
+        INIT
+        void insert_root (mword);
 };

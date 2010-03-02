@@ -71,6 +71,9 @@ class Sys_regs
 
         ALWAYS_INLINE
         inline void set_status (Status status) { eax = status; }
+
+        ALWAYS_INLINE
+        inline void set_ip (mword ip) { edx = ip; }
 };
 
 class Exc_regs : public Sys_regs

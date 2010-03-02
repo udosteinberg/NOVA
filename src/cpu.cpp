@@ -65,26 +65,6 @@ uint32      Cpu::name[12];
 uint32      Cpu::features[4];
 bool        Cpu::bsp;
 
-void Cpu::wakeup_ap()
-{
-    for (unsigned i = 0; i < NUM_CPU; i++) {
-
-        if (Lapic::id() != i) {
-
-            if (!Lapic::chk_present (i))
-                continue;
-
-            Lapic::send_ipi (i, Lapic::DST_PHYSICAL, Lapic::DLV_INIT, 0);
-            Acpi::delay (10);
-            Lapic::send_ipi (i, Lapic::DST_PHYSICAL, Lapic::DLV_SIPI, 1);
-            Acpi::delay (1);
-            Lapic::send_ipi (i, Lapic::DST_PHYSICAL, Lapic::DLV_SIPI, 1);
-        }
-
-        boot_count++;
-    }
-}
-
 void Cpu::check_features()
 {
     unsigned tpp = 1, cpp = 1;
@@ -210,7 +190,7 @@ void Cpu::init()
     Hip::add_cpu();
 
     if (bsp)
-        wakeup_ap();
+        Lapic::wake_ap();
 
     boot_lock++;
 }

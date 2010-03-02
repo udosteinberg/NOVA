@@ -49,19 +49,13 @@ class Space_io
 
         Space_io (unsigned);
 
-        ALWAYS_INLINE
-        static inline bool lookup (unsigned idx)
-        {
-            return !(idx_to_virt (idx) & 1ul << idx_to_bit (idx));
-        }
-
-        INIT
-        bool insert_root (mword, unsigned);
-
         bool insert (mword);
         bool remove (mword);
 
         bool insert (Vma *);
 
         static void page_fault (mword, mword);
+
+        INIT
+        void insert_root (mword, unsigned);
 };

@@ -20,12 +20,13 @@
 #include "ec.h"
 #include "lapic.h"
 #include "pd.h"
+#include "rcu.h"
 #include "stdio.h"
 #include "vectors.h"
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;
-uint32      Lapic::present[8];
+unsigned    Lapic::mask_cpu;
 
 void Lapic::init()
 {
@@ -100,6 +101,26 @@ void Lapic::send_ipi (unsigned cpu, Destination_mode dst, Delivery_mode dlv, uns
     write (LAPIC_ICR_LO, dst | dlv | vector);
 }
 
+void Lapic::wake_ap()
+{
+    for (unsigned i = 0; i < NUM_CPU; i++) {
+
+        if (id() != i) {
+
+            if (!(mask_cpu & 1UL << i))
+                continue;
+
+            send_ipi (i, DST_PHYSICAL, DLV_INIT, 0);
+            Acpi::delay (10);
+            send_ipi (i, DST_PHYSICAL, DLV_SIPI, 1);
+            Acpi::delay (1);
+            send_ipi (i, DST_PHYSICAL, DLV_SIPI, 1);
+        }
+
+        Cpu::boot_count++;
+    }
+}
+
 void Lapic::therm_handler() {}
 
 void Lapic::perfm_handler() {}
@@ -113,6 +134,9 @@ void Lapic::error_handler()
 void Lapic::timer_handler()
 {
     if (!read (LAPIC_TMR_CCR))
+        Cpu::hazard |= Cpu::HZD_SCHED;
+
+    if (Rcu::pending() && Rcu::process_callbacks())
         Cpu::hazard |= Cpu::HZD_SCHED;
 }
 

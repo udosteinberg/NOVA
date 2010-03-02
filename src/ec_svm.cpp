@@ -15,11 +15,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
 #include "ec.h"
 #include "svm.h"
 
-void Ec::svm_handler()
+void Ec::handle_svm()
 {
     asm volatile ("vmload" : : "a" (Buddy::ptr_to_phys (Vmcb::root)));
 
@@ -40,5 +39,5 @@ void Ec::svm_handler()
 
     current->regs.dst_portal = reason;
 
-    send_msg<ret_user_vmrun, &Utcb::load_svm>();
+    send_msg<ret_user_vmrun>();
 }

@@ -1,7 +1,7 @@
 /*
  * Portal
  *
- * Copyright (C) 2007-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2007-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,14 +19,13 @@
 
 #include "compiler.h"
 #include "kobject.h"
-#include "mdb.h"
 #include "mtd.h"
 #include "refptr.h"
 #include "slab.h"
 #include "types.h"
+#include "vma.h"
 
 class Ec;
-class Pd;
 
 class Pt : public Kobject
 {
@@ -37,9 +36,9 @@ class Pt : public Kobject
         Refptr<Ec>  ec;
         Mtd         mtd;
         mword       ip;
-        Map_node    node;
+        Vma         vma;
 
-        Pt (Pd *, mword, Ec *, Mtd, mword);
+        Pt (Ec *, Mtd, mword, Pd *, mword);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

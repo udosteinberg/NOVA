@@ -193,7 +193,7 @@ entry_sysenter:         cld
                         mov     %ebx, %ds
                         mov     %ebx, %es
 #endif
-                        jmp     syscall_handler
+                        jmp     sys_handler
 
 /*
  * VMX Entry

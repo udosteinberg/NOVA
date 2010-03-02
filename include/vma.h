@@ -1,7 +1,7 @@
 /*
  * Virtual Memory Area
  *
- * Copyright (C) 2008, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -46,21 +46,15 @@ class Vma
 
     public:
         ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return cache.alloc();
-        }
+        static inline void *operator new (size_t) { return cache.alloc(); }
 
         ALWAYS_INLINE
-        static inline void operator delete (void *ptr)
-        {
-            cache.free (ptr);
-        }
+        static inline void operator delete (void *ptr) { cache.free (ptr); }
 
         // Sentinel
-        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1u), pd (0), base (0), order (0), type (0), attr (0) {}
+        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1U), pd (0), base (0), order (0), type (0), attr (0) {}
 
-        explicit Vma (Vma *, Vma *, unsigned, Pd *, mword, mword, mword, mword);
+        explicit Vma (Pd *, mword, mword = 0, mword = 0, mword = 0);
 
         ALWAYS_INLINE
         inline static bool collide (mword b1, mword b2, mword o1, mword o2)
@@ -68,7 +62,7 @@ class Vma
             return (b1 ^ b2) >> max (o1, o2) == 0;
         }
 
-        Vma *create_child (Vma *, Pd *, mword, mword, mword, mword);
+        bool insert (Vma *, Vma *);
 
         void dump();
 };

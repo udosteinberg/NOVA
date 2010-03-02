@@ -1,7 +1,7 @@
 /*
  * Semaphore
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,12 +21,10 @@
 #include "ec.h"
 #include "kobject.h"
 #include "lock_guard.h"
-#include "mdb.h"
 #include "queue.h"
 #include "slab.h"
 #include "types.h"
-
-class Pd;
+#include "vma.h"
 
 class Sm : public Kobject, public Queue<Ec>
 {
@@ -36,9 +34,9 @@ class Sm : public Kobject, public Queue<Ec>
         static Slab_cache cache;
 
     public:
-        Map_node node;
+        Vma vma;
 
-        Sm (Pd *, mword, mword);
+        Sm (mword, Pd *, mword);
 
         ALWAYS_INLINE
         inline void dn()
