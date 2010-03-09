@@ -37,7 +37,7 @@ class Ec : public Kobject, public Queue<Sc>
 
     private:
         Exc_regs    regs;                       // 0x4, must be first
-        void        (*continuation)();          // 0x50
+        void        (*cont)();                  // 0x50
         Capability  reply;                      // 0x54
         Mtd         mtr;
         Utcb *      utcb;
@@ -49,7 +49,6 @@ class Ec : public Kobject, public Queue<Sc>
         Fpu *       fpu;
         mword const cpu;
         mword const evt;
-        mword       wait;
         mword       hazard;
 
         // EC Cache
@@ -137,20 +136,20 @@ class Ec : public Kobject, public Queue<Sc>
 
             asm volatile ("mov %0, %%esp;"
                           "jmp *%1"
-                          : : "g" (KSTCK_ADDR + PAGE_SIZE), "g" (continuation) : "memory"); UNREACHED;
+                          : : "g" (KSTCK_ADDR + PAGE_SIZE), "g" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE
-        inline void set_continuation (void (*c)())
+        inline void set_cont (void (*c)())
         {
-            continuation = c;
+            cont = c;
         }
 
         NOINLINE NORETURN
         void help (void (*c)())
         {
             Counter::count (Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 2);
-            current->continuation = c;
+            current->cont = c;
 
             if (++Sc::ctr_loop >= 100) {
                 trace (0, "Helping livelock detected on SC:%p", Sc::current);
@@ -219,10 +218,13 @@ class Ec : public Kobject, public Queue<Sc>
         static void recv_msg();
 
         HOT NORETURN
-        static void sys_ipc_call();
+        static void wait_msg();
 
         HOT NORETURN
-        static void sys_ipc_reply();
+        static void sys_call();
+
+        HOT NORETURN
+        static void sys_reply();
 
         NORETURN
         static void sys_create_pd();
@@ -259,6 +261,10 @@ class Ec : public Kobject, public Queue<Sc>
 
         NORETURN
         static void root_invoke();
+
+        template <bool, void (*)()>
+        NORETURN
+        static void delegate();
 
         NORETURN
         static void die (char const *, Exc_regs * = &current->regs);

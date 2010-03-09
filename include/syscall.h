@@ -20,7 +20,7 @@
 #include "compiler.h"
 #include "qpd.h"
 
-class Sys_ipc_send : public Exc_regs
+class Sys_call : public Exc_regs
 {
     public:
         enum
@@ -40,7 +40,7 @@ class Sys_ipc_send : public Exc_regs
         inline Mtd mtd() const { return Mtd (esi); }
 };
 
-class Sys_ipc_repl : public Exc_regs
+class Sys_reply : public Exc_regs
 {
     public:
         ALWAYS_INLINE

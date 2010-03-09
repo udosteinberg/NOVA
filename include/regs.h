@@ -55,8 +55,8 @@ class Sys_regs
 
         enum
         {
-            MSG_CALL,
-            MSG_REPLY,
+            CALL,
+            REPLY,
             CREATE_PD,
             CREATE_EC,
             CREATE_SC,
@@ -71,6 +71,9 @@ class Sys_regs
 
         ALWAYS_INLINE
         inline void set_status (Status status) { eax = status; }
+
+        ALWAYS_INLINE
+        inline void set_pt (mword pt) { eax = pt; }
 
         ALWAYS_INLINE
         inline void set_ip (mword ip) { edx = ip; }

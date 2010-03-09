@@ -41,8 +41,30 @@ void Ec::activate (Ec *ec)
     if (ec->blocked())
         ec->block();
 
-    // Helping
     ec->make_current();
+}
+
+template <bool C, void (*F)()>
+void Ec::delegate()
+{
+    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    assert (ec);
+
+    Ec *src = C ? ec : current;
+    Ec *dst = C ? current : ec;
+
+    unsigned long ui = current->mtr.ui();
+    unsigned long ti = current->mtr.ti();
+
+    bool user = C || dst->cont == ret_user_sysexit;
+
+    dst->pd->delegate_items (src->pd,
+                             user ? dst->utcb->crd : Crd (Crd::MEM, 0, Crd::whole, 0),
+                             src->utcb->ptr (ui),
+                             user ? dst->utcb->ptr (ui) : 0,
+                             ti);
+
+    F();
 }
 
 template <void (*C)()>
@@ -60,23 +82,22 @@ void Ec::send_msg()
     if (EXPECT_FALSE (current->cpu != ec->cpu))
         die ("PT wrong CPU");
 
-    if (!Atomic::test_clr_bit<false>(ec->wait, 0))
-        ec->help (send_msg<C>);
+    if (EXPECT_TRUE (!ec->cont)) {
+        current->cont = C;
+        current->set_partner (ec);
+        ec->mtr  = pt->mtd;
+        ec->cont = recv_msg;
+        ec->regs.set_pt (pt->vma.base);
+        ec->regs.set_ip (pt->ip);
+        ec->make_current();
+    }
 
-    current->continuation = C;
-    current->set_partner (ec);
-
-    ec->mtr = pt->mtd;
-    ec->utcb->pid = pt->vma.base;
-    ec->regs.set_ip (pt->ip);
-
-    assert (ec->continuation == recv_msg);
-    ec->make_current();
+    ec->help (send_msg<C>);
 }
 
-void Ec::sys_ipc_call()
+void Ec::sys_call()
 {
-    Sys_ipc_send *s = static_cast<Sys_ipc_send *>(&current->regs);
+    Sys_call *s = static_cast<Sys_call *>(&current->regs);
 
     Kobject *obj = Space_obj::lookup (s->pt()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -88,96 +109,84 @@ void Ec::sys_ipc_call()
     if (EXPECT_FALSE (current->cpu != ec->cpu))
         sys_finish<Sys_regs::BAD_CPU>();
 
-    if (EXPECT_FALSE (!Atomic::test_clr_bit<false>(ec->wait, 0))) {
-        if (EXPECT_FALSE (s->flags() & Sys_ipc_send::DISABLE_BLOCKING))
-            sys_finish<Sys_regs::TIMEOUT>();
-        ec->help (sys_ipc_call);
+    if (EXPECT_TRUE (!ec->cont)) {
+        current->cont = ret_user_sysexit;
+        current->set_partner (ec);
+        ec->mtr  = s->mtd();
+        ec->cont = recv_msg;
+        ec->regs.set_ip (pt->ip);
+        ec->regs.set_pt (pt->vma.base);
+        ec->make_current();
     }
 
-    current->continuation = ret_user_sysexit;
-    current->set_partner (ec);
+    if (EXPECT_FALSE (s->flags() & Sys_call::DISABLE_BLOCKING))
+        sys_finish<Sys_regs::TIMEOUT>();
 
-    ec->mtr = s->mtd();
-    ec->utcb->pid = pt->vma.base;       // Set dst portal
-    ec->regs.set_ip (pt->ip);           // Set entry EIP
-
-    assert (ec->continuation == recv_msg);
-    ec->make_current();
+    ec->help (sys_call);
 }
 
 void Ec::recv_msg()
 {
     Ec *ec = static_cast<Ec *>(current->reply.obj());
-    assert (ec);
 
-    Mtd mtd = current->mtr;
-    Exc_regs *r = &ec->regs;
-
-    Utcb *src = ec->utcb;
-    Utcb *dst = current->utcb;
-
-    if (EXPECT_TRUE (ec->continuation == ret_user_sysexit)) {
-        src->save (dst, mtd);
-
-        unsigned long ui = mtd.ui();
-        unsigned long ti = mtd.ti();
-
-        if (EXPECT_FALSE (ti))
-            current->pd->delegate_items (ec->pd, dst->crd, src->ptr (ui), dst->ptr (ui), ti);
+    if (EXPECT_TRUE (ec->cont == ret_user_sysexit)) {
+        ec->utcb->save (current->utcb, current->mtr);
+        if (EXPECT_FALSE (current->mtr.ti()))
+            delegate<true, ret_user_sysexit>();
     }
 
-    else if (ec->continuation == ret_user_iret)
-        dst->load_exc (r, mtd);
-    else if (ec->continuation == ret_user_vmresume)
-        dst->load_vmx (r, mtd);
-    else if (ec->continuation == ret_user_vmrun)
-        dst->load_svm (r, mtd);
+    else if (ec->cont == ret_user_iret)
+        current->utcb->load_exc (&ec->regs, current->mtr);
+    else if (ec->cont == ret_user_vmresume)
+        current->utcb->load_vmx (&ec->regs, current->mtr);
+    else if (ec->cont == ret_user_vmrun)
+        current->utcb->load_svm (&ec->regs, current->mtr);
 
     ret_user_sysexit();
 }
 
-void Ec::sys_ipc_reply()
+void Ec::wait_msg()
 {
-    Sys_ipc_repl *s = static_cast<Sys_ipc_repl *>(&current->regs);
+    Ec *ec = static_cast<Ec *>(current->reply.obj());
+
+    current->cont = static_cast<void (*)()>(0);
+
+    if (EXPECT_TRUE (ec->clr_partner()))
+        ec->make_current();
+
+    Sc::schedule();
+}
+
+void Ec::sys_reply()
+{
+    Sys_reply *s = static_cast<Sys_reply *>(&current->regs);
 
     Ec *ec = static_cast<Ec *>(current->reply.obj());
 
-    if (EXPECT_TRUE (ec)) {
-
-        Utcb *src = current->utcb, *dst = ec->utcb;
-
-        unsigned long ui = s->mtd().ui();
-
-        if (EXPECT_TRUE (ec->continuation == ret_user_sysexit))
-            src->save (dst, s->mtd());
-        else if (ec->continuation == ret_user_iret)
-            ui = src->save_exc (&ec->regs, s->mtd());
-        else if (ec->continuation == ret_user_vmresume)
-            ui = src->save_vmx (&ec->regs, s->mtd());
-        else if (ec->continuation == ret_user_vmrun)
-            ui = src->save_svm (&ec->regs, s->mtd());
-
-        unsigned long ti = s->mtd().ti();
-        if (EXPECT_FALSE (ti)) {
-            if (ec->continuation == ret_user_sysexit)
-                ec->pd->delegate_items (current->pd, dst->crd, src->ptr (ui), dst->ptr (ui), ti);
-            else
-                ec->pd->delegate_items (current->pd, Crd (Crd::MEM, 0, Crd::whole, 0), src->ptr (ui), 0, ti);
-        }
-
-        current->continuation = recv_msg;
-        current->wait = 1;
-
-        if (ec->clr_partner())
-            ec->make_current();
-
-    } else {
-
-        current->continuation = recv_msg;
-        current->wait = 1;
+    if (EXPECT_FALSE (!ec)) {
+        current->cont = static_cast<void (*)()>(0);
+        Sc::schedule (true);
     }
 
-    Sc::schedule (!ec);
+    Utcb *src = current->utcb;
+
+    unsigned long ui = s->mtd().ui();
+
+    if (EXPECT_TRUE (ec->cont == ret_user_sysexit))
+        src->save (ec->utcb, s->mtd());
+    else if (ec->cont == ret_user_iret)
+        ui = src->save_exc (&ec->regs, s->mtd());
+    else if (ec->cont == ret_user_vmresume)
+        ui = src->save_vmx (&ec->regs, s->mtd());
+    else if (ec->cont == ret_user_vmrun)
+        ui = src->save_svm (&ec->regs, s->mtd());
+
+    unsigned long ti = s->mtd().ti();
+    if (EXPECT_TRUE (!ti))
+        wait_msg();
+
+    current->mtr = Mtd (ti, ui);
+    delegate<false, wait_msg>();
 }
 
 void Ec::sys_create_pd()
@@ -383,7 +392,7 @@ void Ec::sys_semctl()
             if (sm->vma.pd == &Pd::kern)
                 Gsi::unmask (sm->vma.base);
             r->set_status (Sys_regs::SUCCESS);
-            current->continuation = ret_user_sysexit;
+            current->cont = ret_user_sysexit;
             sm->dn();
             break;
         case Sys_semctl::UP:
@@ -452,10 +461,10 @@ void Ec::sys_assign_gsi()
 void Ec::handle_sys (uint8 number)
 {
     // This is actually faster than a switch
-    if (EXPECT_TRUE (number == Sys_regs::MSG_CALL))
-        sys_ipc_call();
-    if (EXPECT_TRUE (number == Sys_regs::MSG_REPLY))
-        sys_ipc_reply();
+    if (EXPECT_TRUE (number == Sys_regs::CALL))
+        sys_call();
+    if (EXPECT_TRUE (number == Sys_regs::REPLY))
+        sys_reply();
     if (EXPECT_TRUE (number == Sys_regs::CREATE_PD))
         sys_create_pd();
     if (EXPECT_TRUE (number == Sys_regs::CREATE_EC))

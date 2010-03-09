@@ -48,10 +48,10 @@ class Utcb_segment
 class Utcb
 {
     public:
-        mword   pid;
+        mword   res1;
         Mtd     mtr;
         Crd     crd;
-        mword   res[2];
+        mword   res2[2];
         mword   tls;
 
     private:

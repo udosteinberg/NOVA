@@ -58,6 +58,9 @@ class Mtd
         inline explicit Mtd (mword v) : val (v) {}
 
         ALWAYS_INLINE
+        inline explicit Mtd (mword t, mword u) : val (t << 23 | u) {}
+
+        ALWAYS_INLINE
         inline bool xfer (Item item) const
         {
             return val & item;

@@ -30,12 +30,12 @@ Slab_cache Ec::cache (sizeof (Ec), 8);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *p, mword c, mword e, void (*f)()) : Kobject (EC, 0), continuation (f), utcb (0), pd (p), cpu (c), evt (e), wait (0)
+Ec::Ec (Pd *p, mword c, mword e, void (*f)()) : Kobject (EC, 0), cont (f), utcb (0), pd (p), cpu (c), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
 }
 
-Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e), wait (w)
+Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -43,10 +43,10 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
     if (u) {
 
         if (w) {
-            continuation = recv_msg;
+            cont = static_cast<void (*)()>(0);
             regs.ecx = s;
         } else {
-            continuation = send_msg<ret_user_iret>;
+            cont = send_msg<ret_user_iret>;
             regs.cs  = SEL_USER_CODE;
             regs.ds  = SEL_USER_DATA;
             regs.es  = SEL_USER_DATA;
@@ -78,14 +78,14 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
-            continuation = send_msg<ret_user_vmresume>;
+            cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept);
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
             regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->bmp),
                                   Buddy::ptr_to_phys (pd->mst));
-            continuation = send_msg<ret_user_vmrun>;
+            cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
     }
@@ -94,7 +94,7 @@ Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd
 void Ec::handle_hazard (void (*func)())
 {
     if (Cpu::hazard & Cpu::HZD_SCHED) {
-        current->continuation = func;
+        current->cont = func;
         Sc::schedule();
     }
 
@@ -122,9 +122,9 @@ void Ec::handle_hazard (void (*func)())
             assert (current->regs.cs == SEL_USER_CODE);
             assert (current->regs.ss == SEL_USER_DATA);
             assert (current->regs.efl & Cpu::EFL_IF);
-            current->regs.esp     = current->regs.ecx;
-            current->regs.eip     = current->regs.edx;
-            current->continuation = ret_user_iret;
+            current->regs.esp = current->regs.ecx;
+            current->regs.eip = current->regs.edx;
+            current->cont     = ret_user_iret;
         }
 
         current->regs.dst_portal = NUM_EXC - 1;
