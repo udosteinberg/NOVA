@@ -16,21 +16,14 @@
  */
 
 #include "acpi.h"
-#include "buddy.h"
-#include "cmdline.h"
 #include "compiler.h"
-#include "extern.h"
+#include "cmdline.h"
 #include "gsi.h"
 #include "hip.h"
 #include "idt.h"
 #include "keyb.h"
-#include "memory.h"
 #include "multiboot.h"
-#include "pd.h"
-#include "ptab.h"
 #include "ptab_boot.h"
-#include "stdio.h"
-#include "types.h"
 
 char const *version = "NOVA 0.1 (Xmas Alpha)";
 

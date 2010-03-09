@@ -20,7 +20,6 @@
 #include "assert.h"
 #include "buddy.h"
 #include "compiler.h"
-#include "types.h"
 
 class Vmcs
 {

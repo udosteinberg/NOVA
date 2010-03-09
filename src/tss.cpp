@@ -15,7 +15,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "memory.h"
 #include "ptab.h"
 #include "tss.h"
 

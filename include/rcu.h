@@ -19,7 +19,6 @@
 
 #include "compiler.h"
 #include "spinlock.h"
-#include "types.h"
 
 class Rcu_elem
 {

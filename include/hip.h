@@ -21,7 +21,6 @@
 #include "compiler.h"
 #include "config.h"
 #include "extern.h"
-#include "types.h"
 
 class Hip_cpu
 {

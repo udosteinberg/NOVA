@@ -16,9 +16,9 @@
  */
 
 #include "assert.h"
+#include "bits.h"
 #include "lock_guard.h"
 #include "slab.h"
-#include "stdio.h"
 
 Slab::Slab (Slab_cache *slab_cache)
     : avail (slab_cache->elem),

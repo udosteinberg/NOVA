@@ -15,12 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
-#include "buddy.h"
-#include "memory.h"
-#include "pd.h"
 #include "ptab.h"
-#include "stdio.h"
 
 Paddr Ptab::remap_addr = static_cast<Paddr>(~0ull);
 

@@ -19,7 +19,6 @@
 
 #include "buddy.h"
 #include "compiler.h"
-#include "types.h"
 #include "x86.h"
 
 class Dpt

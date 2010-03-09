@@ -18,7 +18,6 @@
 #pragma once
 
 #include "compiler.h"
-#include "types.h"
 
 class Qpd
 {          

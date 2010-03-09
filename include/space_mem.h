@@ -18,15 +18,9 @@
 #pragma once
 
 #include "compiler.h"
-#include "config.h"
-#include "cpu.h"
 #include "dpt.h"
 #include "ept.h"
 #include "ptab.h"
-#include "types.h"
-#include "vma.h"
-
-class Vma;
 
 class Space_mem
 {

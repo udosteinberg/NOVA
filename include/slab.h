@@ -17,11 +17,8 @@
 
 #pragma once
 
-#include "bits.h"
 #include "buddy.h"
 #include "compiler.h"
-#include "spinlock.h"
-#include "types.h"
 
 class Slab;
 

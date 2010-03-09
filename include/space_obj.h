@@ -19,7 +19,6 @@
 
 #include "capability.h"
 #include "compiler.h"
-#include "types.h"
 #include "vma.h"
 
 class Space_mem;

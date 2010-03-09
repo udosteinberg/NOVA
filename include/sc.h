@@ -18,9 +18,6 @@
 #pragma once
 
 #include "compiler.h"
-#include "kobject.h"
-#include "slab.h"
-#include "types.h"
 
 class Ec;
 

@@ -15,7 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "util.h"
+#include "stdio.h"
 #include "vma.h"
 
 Slab_cache Vma::cache (sizeof (Vma), 16);

@@ -18,11 +18,7 @@
 #pragma once
 
 #include "compiler.h"
-#include "crd.h"
-#include "mtd.h"
 #include "qpd.h"
-#include "regs.h"
-#include "types.h"
 
 class Sys_ipc_send : public Exc_regs
 {

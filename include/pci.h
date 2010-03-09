@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include "assert.h"
 #include "compiler.h"
 #include "io.h"
 #include "slab.h"

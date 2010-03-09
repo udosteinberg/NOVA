@@ -19,7 +19,6 @@
 
 #include "compiler.h"
 #include "selectors.h"
-#include "types.h"
 
 class Tss
 {

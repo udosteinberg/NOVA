@@ -17,10 +17,8 @@
 
 #pragma once
 
-#include "buddy.h"
 #include "compiler.h"
 #include "utcb.h"
-#include "types.h"
 
 class Vmcb
 {

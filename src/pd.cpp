@@ -15,16 +15,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.h"
 #include "gsi.h"
-#include "lock_guard.h"
 #include "mtrr.h"
-#include "pd.h"
-#include "pt.h"
 #include "sm.h"
-#include "stdio.h"
-#include "util.h"
-#include "vma.h"
 
 // PD Cache
 Slab_cache Pd::cache (sizeof (Pd), 8);

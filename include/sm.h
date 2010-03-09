@@ -19,12 +19,6 @@
 
 #include "compiler.h"
 #include "ec.h"
-#include "kobject.h"
-#include "lock_guard.h"
-#include "queue.h"
-#include "slab.h"
-#include "types.h"
-#include "vma.h"
 
 class Sm : public Kobject, public Queue<Ec>
 {

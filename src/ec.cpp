@@ -15,22 +15,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
+#include "bits.h"
 #include "ec.h"
 #include "elf.h"
-#include "extern.h"
-#include "gdt.h"
-#include "gsi.h"
 #include "hip.h"
-#include "memory.h"
-#include "ptab.h"
 #include "rcu.h"
-#include "sc.h"
-#include "selectors.h"
-#include "sm.h"
-#include "stdio.h"
 #include "svm.h"
-#include "utcb.h"
 #include "vmx.h"
 #include "vtlb.h"
 

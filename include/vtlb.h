@@ -19,7 +19,6 @@
 
 #include "compiler.h"
 #include "paging.h"
-#include "types.h"
 
 class Exc_regs;
 

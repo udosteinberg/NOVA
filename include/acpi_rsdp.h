@@ -18,7 +18,6 @@
 #pragma once
 
 #include "compiler.h"
-#include "types.h"
 
 #define SIG(A,B,C,D) (A + (B << 8) + (C << 16) + (D << 24))
 

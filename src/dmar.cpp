@@ -15,10 +15,10 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "bits.h"
 #include "dmar.h"
 #include "lapic.h"
 #include "pd.h"
-#include "stdio.h"
 
 Slab_cache  Dmar::cache (sizeof (Dmar), 8);
 Dmar *      Dmar::list;

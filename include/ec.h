@@ -17,21 +17,17 @@
 
 #pragma once
 
-#include "capability.h"
 #include "compiler.h"
 #include "counter.h"
 #include "fpu.h"
-#include "kobject.h"
 #include "lock_guard.h"
+#include "mtd.h"
 #include "pd.h"
 #include "queue.h"
 #include "refptr.h"
 #include "regs.h"
 #include "sc.h"
-#include "slab.h"
-#include "syscall.h"
 #include "tss.h"
-#include "types.h"
 
 class Utcb;
 

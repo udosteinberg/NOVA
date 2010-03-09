@@ -21,8 +21,6 @@
 #include "compiler.h"
 #include "lock_guard.h"
 #include "slab.h"
-#include "spinlock.h"
-#include "types.h"
 
 class Dmar;
 

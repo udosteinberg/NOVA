@@ -18,8 +18,6 @@
 #pragma once
 
 #include "compiler.h"
-#include "io.h"
-#include "types.h"
 #include "x86.h"
 
 class Keyb

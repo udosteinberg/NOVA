@@ -15,11 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
 #include "ec.h"
 #include "lapic.h"
-#include "lock_guard.h"
-#include "sc.h"
 
 // SC Cache
 Slab_cache Sc::cache (sizeof (Sc), 8);

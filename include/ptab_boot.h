@@ -20,7 +20,6 @@
 #include "compiler.h"
 #include "paging.h"
 #include "ptab.h"
-#include "types.h"
 
 class Ptab_boot : public Paging
 {

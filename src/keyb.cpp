@@ -20,7 +20,6 @@
 #include "cmdline.h"
 #include "gsi.h"
 #include "keyb.h"
-#include "stdio.h"
 
 unsigned Keyb::gsi = ~0u;
 

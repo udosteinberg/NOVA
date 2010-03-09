@@ -17,7 +17,6 @@
 
 #include "gdt.h"
 #include "memory.h"
-#include "selectors.h"
 #include "tss.h"
 
 // 2 kernel + 2 user segment descriptors should be within same cache line

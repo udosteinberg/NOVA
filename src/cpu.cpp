@@ -15,22 +15,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
 #include "bits.h"
-#include "cmdline.h"
 #include "counter.h"
-#include "cpu.h"
-#include "extern.h"
 #include "gdt.h"
 #include "hip.h"
 #include "idt.h"
 #include "lapic.h"
-#include "memory.h"
 #include "msr.h"
 #include "pd.h"
-#include "ptab.h"
-#include "selectors.h"
-#include "stdio.h"
 #include "svm.h"
 #include "tss.h"
 #include "vmx.h"

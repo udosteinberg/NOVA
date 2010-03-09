@@ -21,8 +21,6 @@
 #include "console_serial.h"
 #include "console_vga.h"
 #include "cpu.h"
-#include "memory.h"
-#include "stdarg.h"
 
 #define trace(T,format,...)                                 \
 do {                                                        \

@@ -20,8 +20,6 @@
 #include "apic.h"
 #include "compiler.h"
 #include "memory.h"
-#include "msr.h"
-#include "types.h"
 
 class Lapic : public Apic
 {

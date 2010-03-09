@@ -17,7 +17,6 @@
 
 #include "pci.h"
 #include "pd.h"
-#include "stdio.h"
 
 Slab_cache Pci::cache (sizeof (Pci), 8);
 Paddr Pci::cfg_base;

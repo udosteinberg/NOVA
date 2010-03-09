@@ -15,12 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.h"
 #include "extern.h"
-#include "memory.h"
-#include "msr.h"
 #include "ptab_boot.h"
-#include "string.h"
 
 void Ptab_boot::init()
 {

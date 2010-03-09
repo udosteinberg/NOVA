@@ -17,7 +17,6 @@
 
 #include "ioapic.h"
 #include "pd.h"
-#include "stdio.h"
 
 Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
 Ioapic *Ioapic::list;

@@ -15,21 +15,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
 #include "dmar.h"
-#include "ec.h"
 #include "gsi.h"
 #include "hip.h"
 #include "lapic.h"
-#include "mtd.h"
 #include "pci.h"
-#include "pd.h"
 #include "pt.h"
-#include "sc.h"
 #include "sm.h"
-#include "stdio.h"
+#include "syscall.h"
 #include "utcb.h"
-#include "vmx.h"
 
 template <Sys_regs::Status T>
 void Ec::sys_finish()

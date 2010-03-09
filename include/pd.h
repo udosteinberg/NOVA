@@ -20,11 +20,9 @@
 #include "compiler.h"
 #include "crd.h"
 #include "kobject.h"
-#include "slab.h"
 #include "space_io.h"
 #include "space_mem.h"
 #include "space_obj.h"
-#include "types.h"
 
 class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 {

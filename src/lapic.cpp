@@ -16,13 +16,10 @@
  */
 
 #include "acpi.h"
-#include "counter.h"
 #include "ec.h"
 #include "lapic.h"
-#include "pd.h"
+#include "msr.h"
 #include "rcu.h"
-#include "stdio.h"
-#include "vectors.h"
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;

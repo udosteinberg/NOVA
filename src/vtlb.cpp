@@ -15,13 +15,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.h"
 #include "counter.h"
-#include "cpu.h"
 #include "pd.h"
 #include "regs.h"
-#include "stdio.h"
-#include "util.h"
 #include "vpid.h"
 #include "vtlb.h"
 

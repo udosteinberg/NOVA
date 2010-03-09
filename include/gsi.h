@@ -19,7 +19,6 @@
 
 #include "assert.h"
 #include "compiler.h"
-#include "types.h"
 
 class Ioapic;
 class Sm;

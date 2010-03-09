@@ -15,7 +15,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "pd.h"
 #include "sm.h"
 
 Slab_cache Sm::cache (sizeof (Sm), 16);

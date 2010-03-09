@@ -19,7 +19,6 @@
 
 #include "acpi_gas.h"
 #include "compiler.h"
-#include "types.h"
 
 class Acpi
 {

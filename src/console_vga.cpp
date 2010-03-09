@@ -17,10 +17,7 @@
 
 #include "cmdline.h"
 #include "console_vga.h"
-#include "cpu.h"
-#include "memory.h"
 #include "pd.h"
-#include "spinlock.h"
 
 void Console_vga::init()
 {

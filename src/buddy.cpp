@@ -20,8 +20,6 @@
 #include "buddy.h"
 #include "initprio.h"
 #include "lock_guard.h"
-#include "spinlock.h"
-#include "stdio.h"
 
 extern char _mempool_p, _mempool_l, _mempool_f, _mempool_e;
 

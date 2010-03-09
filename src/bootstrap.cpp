@@ -16,14 +16,10 @@
  */
 
 #include "compiler.h"
-#include "cpu.h"
 #include "ec.h"
 #include "hip.h"
 #include "msr.h"
-#include "pd.h"
 #include "rcu.h"
-#include "sc.h"
-#include "x86.h"
 
 extern "C" NORETURN
 void bootstrap()

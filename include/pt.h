@@ -21,8 +21,6 @@
 #include "kobject.h"
 #include "mtd.h"
 #include "refptr.h"
-#include "slab.h"
-#include "types.h"
 #include "vma.h"
 
 class Ec;

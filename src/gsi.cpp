@@ -16,19 +16,13 @@
  */
 
 #include "acpi.h"
-#include "assert.h"
 #include "cmdline.h"
-#include "counter.h"
 #include "dmar.h"
-#include "ec.h"
 #include "gsi.h"
-#include "hip.h"
 #include "ioapic.h"
 #include "keyb.h"
 #include "lapic.h"
-#include "regs.h"
 #include "sm.h"
-#include "stdio.h"
 
 Gsi         Gsi::gsi_table[NUM_GSI];
 unsigned    Gsi::irq_table[NUM_IRQ];

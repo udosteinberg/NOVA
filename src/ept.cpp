@@ -17,7 +17,6 @@
 
 #include "assert.h"
 #include "ept.h"
-#include "stdio.h"
 
 unsigned Ept::ord = 8 * sizeof (mword);
 

@@ -17,10 +17,8 @@
 
 #pragma once
 
-#include "buddy.h"
 #include "compiler.h"
 #include "slab.h"
-#include "types.h"
 #include "x86.h"
 
 class Pd;

@@ -20,7 +20,6 @@
 #include "compiler.h"
 #include "console.h"
 #include "io.h"
-#include "types.h"
 
 class Console_serial : public Console
 {

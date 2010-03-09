@@ -19,8 +19,6 @@
 
 #include "compiler.h"
 #include "slab.h"
-#include "spinlock.h"
-#include "types.h"
 #include "util.h"
 
 class Pd;

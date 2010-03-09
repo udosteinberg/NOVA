@@ -17,8 +17,6 @@
 
 #include "assert.h"
 #include "dpt.h"
-#include "stdio.h"
-#include "x86.h"
 
 unsigned Dpt::ord = 8 * sizeof (mword);
 

@@ -19,8 +19,6 @@
 
 #include "compiler.h"
 #include "stdio.h"
-#include "types.h"
-#include "vectors.h"
 
 class Counter
 {

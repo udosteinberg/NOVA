@@ -15,10 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "mtd.h"
 #include "regs.h"
 #include "svm.h"
-#include "utcb.h"
 #include "vmx.h"
 
 void Utcb::load_exc (Exc_regs *regs, Mtd mtd)

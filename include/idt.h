@@ -19,7 +19,6 @@
 
 #include "compiler.h"
 #include "descriptor.h"
-#include "types.h"
 #include "vectors.h"
 
 class Idt : public Descriptor

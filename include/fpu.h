@@ -18,8 +18,8 @@
 #pragma once
 
 #include "compiler.h"
+#include "cpu.h"
 #include "slab.h"
-#include "types.h"
 #include "x86.h"
 
 class Fpu

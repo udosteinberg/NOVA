@@ -15,11 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.h"
-#include "extern.h"
 #include "pd.h"
-#include "regs.h"
-#include "space_io.h"
 
 Space_mem *Space_io::space_mem()
 {

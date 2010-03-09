@@ -21,7 +21,6 @@
 #include "buddy.h"
 #include "compiler.h"
 #include "paging.h"
-#include "types.h"
 
 class Ptab : public Paging
 {

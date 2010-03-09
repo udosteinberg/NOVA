@@ -17,7 +17,6 @@
 
 #include "cmdline.h"
 #include "counter.h"
-#include "stdio.h"
 #include "x86.h"
 
 unsigned    Counter::row;

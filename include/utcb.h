@@ -21,7 +21,6 @@
 #include "compiler.h"
 #include "crd.h"
 #include "mtd.h"
-#include "types.h"
 
 class Exc_regs;
 

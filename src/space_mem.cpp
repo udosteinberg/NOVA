@@ -15,12 +15,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "memory.h"
+#include "bits.h"
 #include "mtrr.h"
 #include "pd.h"
-#include "regs.h"
-#include "space_mem.h"
-#include "vma.h"
 
 unsigned Space_mem::did_ctr;
 

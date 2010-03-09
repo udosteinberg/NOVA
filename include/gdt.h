@@ -20,7 +20,6 @@
 #include "compiler.h"
 #include "descriptor.h"
 #include "selectors.h"
-#include "types.h"
 
 class Gdt : public Descriptor
 {
