@@ -18,7 +18,6 @@
 #pragma once
 
 #include "compiler.h"
-#include "vma.h"
 
 class Space_mem;
 

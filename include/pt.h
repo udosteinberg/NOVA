@@ -21,7 +21,6 @@
 #include "kobject.h"
 #include "mtd.h"
 #include "refptr.h"
-#include "vma.h"
 
 class Ec;
 
@@ -31,10 +30,9 @@ class Pt : public Kobject
         static Slab_cache cache;
 
     public:
-        Refptr<Ec>  ec;
-        Mtd         mtd;
-        mword       ip;
-        Vma         vma;
+        Refptr<Ec> const ec;
+        Mtd        const mtd;
+        mword      const ip;
 
         Pt (Ec *, Mtd, mword, Pd *, mword);
 

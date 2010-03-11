@@ -87,7 +87,7 @@ void Ec::send_msg()
         current->set_partner (ec);
         ec->mtr  = pt->mtd;
         ec->cont = recv_msg;
-        ec->regs.set_pt (pt->vma.base);
+        ec->regs.set_pt (pt->node_base);
         ec->regs.set_ip (pt->ip);
         ec->make_current();
     }
@@ -115,7 +115,7 @@ void Ec::sys_call()
         ec->mtr  = s->mtd();
         ec->cont = recv_msg;
         ec->regs.set_ip (pt->ip);
-        ec->regs.set_pt (pt->vma.base);
+        ec->regs.set_pt (pt->node_base);
         ec->make_current();
     }
 
@@ -313,7 +313,7 @@ void Ec::sys_create_pt()
 
     Pt *pt = new Pt (ec, r->mtd(), r->eip(), Pd::current, r->pt());
 
-    if (!Pd::current->Space_obj::insert (&pt->vma, Capability (pt))) {
+    if (!Pd::current->Space_obj::insert (pt, Capability (pt))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pt());
         delete pt;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -330,7 +330,7 @@ void Ec::sys_create_sm()
 
     Sm *sm = new Sm (r->cnt(), Pd::current, r->sm());
 
-    if (!Pd::current->Space_obj::insert (&sm->vma, Capability (sm))) {
+    if (!Pd::current->Space_obj::insert (sm, Capability (sm))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sm());
         delete sm;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -389,8 +389,8 @@ void Ec::sys_semctl()
 
     switch (r->flags() & 1) {
         case Sys_semctl::DN:
-            if (sm->vma.pd == &Pd::kern)
-                Gsi::unmask (sm->vma.base);
+            if (sm->node_pd == &Pd::kern)
+                Gsi::unmask (sm->node_base);
             r->set_status (Sys_regs::SUCCESS);
             current->cont = ret_user_sysexit;
             sm->dn();
@@ -448,12 +448,12 @@ void Ec::sys_assign_gsi()
 
     Sm *sm = static_cast<Sm *>(obj);
 
-    if (EXPECT_FALSE (sm->vma.pd != &Pd::kern)) {
+    if (EXPECT_FALSE (sm->node_pd != &Pd::kern)) {
         trace (TRACE_ERROR, "%s: Non-VEC SM (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_msi (Gsi::set (sm->vma.base, r->cpu(), r->rid()));
+    r->set_msi (Gsi::set (sm->node_base, r->cpu(), r->rid()));
 
     sys_finish<Sys_regs::SUCCESS>();
 }

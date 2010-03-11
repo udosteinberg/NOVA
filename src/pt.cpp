@@ -21,7 +21,7 @@
 // Portal Cache
 Slab_cache Pt::cache (sizeof (Pt), 16);
 
-Pt::Pt (Ec *e, Mtd m, mword addr, Pd *p, mword s) : Kobject (PT, 0), ec (e), mtd (m), ip (addr), vma (p, s)
+Pt::Pt (Ec *e, Mtd m, mword addr, Pd *p, mword s) : Kobject (PT, 0, p, s), ec (e), mtd (m), ip (addr)
 {
     trace (TRACE_SYSCALL, "PT:%p created (EC:%p IP:%#lx)", this, e, ip);
 }

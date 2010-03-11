@@ -45,26 +45,26 @@ bool Space_mem::insert (Vma *vma, Paddr phys)
 
     assert (this != &Pd::kern);
 
-    unsigned o = vma->order - PAGE_BITS;
+    unsigned o = vma->node_order - PAGE_BITS;
 
     if (dpt) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            dpt->insert (vma->base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), vma->attr);
+            dpt->insert (vma->node_base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), vma->node_attr);
     }
 
     if (ept) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            ept->insert (vma->base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), vma->attr, vma->type);
+            ept->insert (vma->node_base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), vma->node_attr, vma->node_type);
     }
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
-                      (vma->attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |
-                      (vma->attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
+                 (vma->node_attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |
+                 (vma->node_attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
 
     // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    mst->insert (vma->base, o, a, phys);
+    mst->insert (vma->node_base, o, a, phys);
 
     return true;
 }

@@ -36,11 +36,11 @@ class Vma
         Vma *       tree_next;
         unsigned    depth;
 
-        Pd *  const pd;
-        mword const base;
-        mword const order;
-        mword const type;
-        mword const attr;
+        Pd *  const node_pd;
+        mword const node_base;
+        mword const node_order;
+        mword const node_type;
+        mword const node_attr;
 
     public:
         ALWAYS_INLINE
@@ -50,7 +50,7 @@ class Vma
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
         // Sentinel
-        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1U), pd (0), base (0), order (0), type (0), attr (0) {}
+        explicit Vma() : list_prev (this), list_next (this), tree_prev (this), tree_next (this), depth (-1U), node_pd (0), node_base (0), node_order (0), node_type (0), node_attr (0) {}
 
         explicit Vma (Pd *, mword, mword = 0, mword = 0, mword = 0);
 

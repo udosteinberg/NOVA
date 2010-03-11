@@ -22,7 +22,7 @@ Slab_cache Vma::cache (sizeof (Vma), 16);
 
 // XXX: MP access to the VMA list of a PD should be protected by spinlock
 
-Vma::Vma (Pd *p, mword b, mword o, mword t, mword a) : pd (p), base (b), order (o), type (t), attr (a)
+Vma::Vma (Pd *p, mword b, mword o, mword t, mword a) : node_pd (p), node_base (b), node_order (o), node_type (t), node_attr (a)
 {
     trace (TRACE_MAP, "--> VMA: PD:%p B:%#010lx O:%lu T:%#lx A:%#lx ", p, b, o, t, a);
 }
@@ -36,10 +36,10 @@ bool Vma::insert (Vma *list, Vma *tree)
     Vma *l;
     for (l = list->list_next; l != list; l = l->list_next) {
 
-        if (collide (base, l->base, order, l->order))
+        if (collide (node_base, l->node_base, node_order, l->node_order))
             return false;
 
-        if (l->base > base)
+        if (l->node_base > node_base)
             break;
     }
 
@@ -60,5 +60,5 @@ void Vma::dump()
 {
     for (Vma *vma = tree_next; vma->depth != depth; vma = vma->tree_next)
         trace (0, "D:%u B:%#010lx O:%lu A:%#lx PD:%p",
-               vma->depth, vma->base, vma->order, vma->attr, vma->pd);
+               vma->depth, vma->node_base, vma->node_order, vma->node_attr, vma->node_pd);
 }

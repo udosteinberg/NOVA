@@ -1,7 +1,7 @@
 /*
  * Kernel Object
  *
- * Copyright (C) 2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,8 +20,9 @@
 #include "atomic.h"
 #include "compiler.h"
 #include "spinlock.h"
+#include "vma.h"
 
-class Kobject
+class Kobject : public Vma
 {
     private:
         uint8       objtype;
@@ -32,7 +33,7 @@ class Kobject
 
         enum
         {
-            NUL,
+            INVALID,
             PT,
             EC,
             SC,
@@ -40,7 +41,8 @@ class Kobject
             SM
         };
 
-        Kobject (uint8 t, uint16 r) : objtype (t), refcount (r) {}
+        explicit Kobject (uint8 otype, uint16 r, Pd *p, mword b, mword o = 0, mword t = 0, mword a = 0) : Vma (p, b, o, t, a), objtype (otype), refcount (r) {}
+        explicit Kobject (uint8 otype, uint16 r) : Vma (0, 0, 0, 0, 0), objtype (otype), refcount (r) {}
 
     public:
         unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }

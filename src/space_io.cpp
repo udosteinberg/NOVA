@@ -67,8 +67,8 @@ bool Space_io::insert (Vma *vma)
     assert (this != &Pd::kern);
 
     // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    for (unsigned long i = 0; i < (1ul << vma->order); i++)
-        insert (vma->base + i);
+    for (unsigned long i = 0; i < (1ul << vma->node_order); i++)
+        insert (vma->node_base + i);
 
     return true;
 }

@@ -70,12 +70,12 @@ void Pd::delegate_mem (Pd *snd, mword const snd_base, mword const rcv_base, mwor
 
         mword base = snd_base;
 
-        unsigned order = clamp (vma->base, base, vma->order, ord);
+        unsigned order = clamp (vma->node_base, base, vma->node_order, ord);
 
         // If snd_base/ord intersects with VMA then clamp to base/order
         if (order != ~0UL) {
 
-            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
+            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->node_base, vma->node_order);
 
             // Lock the VMA
             Lock_guard <Spinlock> guard (vma->lock);
@@ -90,11 +90,11 @@ void Pd::delegate_mem (Pd *snd, mword const snd_base, mword const rcv_base, mwor
             }
 
             // Adjust rcv_base by the clamping offset
-            Vma *v = new Vma (this, base - snd_base + rcv_base, order, vma->type, attr & vma->attr);
+            Vma *v = new Vma (this, base - snd_base + rcv_base, order, vma->node_type, vma->node_attr & attr);
             if (!Space_mem::insert (v, phys))
                 delete v;
 
-        } else if (vma->base > snd_base)
+        } else if (vma->node_base > snd_base)
             break;
     }
 }
@@ -107,12 +107,12 @@ void Pd::delegate_obj (Pd *snd, mword const snd_base, mword const rcv_base, mwor
 
         mword base = snd_base;
 
-        unsigned order = clamp (vma->base, base, vma->order, ord);
+        unsigned order = clamp (vma->node_base, base, vma->node_order, ord);
 
         // If snd_base/ord intersects with VMA then clamp to base/order
         if (order != ~0UL) {
 
-            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
+            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->node_base, vma->node_order);
 
             // Lock the VMA
             Lock_guard <Spinlock> guard (vma->lock);
@@ -131,7 +131,7 @@ void Pd::delegate_obj (Pd *snd, mword const snd_base, mword const rcv_base, mwor
             if (!Space_obj::insert (v, cap))
                 delete v;
 
-        } else if (vma->base > snd_base)
+        } else if (vma->node_base > snd_base)
             break;
     }
 }
@@ -144,12 +144,12 @@ void Pd::delegate_io (Pd *snd, mword const snd_base, mword const ord)
 
         mword base = snd_base;
 
-        unsigned order = clamp (vma->base, base, vma->order, ord);
+        unsigned order = clamp (vma->node_base, base, vma->node_order, ord);
 
         // If snd_base/ord intersects with VMA then clamp to base/order
         if (order != ~0UL) {
 
-            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->base, vma->order);
+            trace (TRACE_MAP, "Using VMA B:%#lx O:%lu", vma->node_base, vma->node_order);
 
             // Lock the VMA
             Lock_guard <Spinlock> guard (vma->lock);
@@ -158,7 +158,7 @@ void Pd::delegate_io (Pd *snd, mword const snd_base, mword const ord)
             if (!Space_io::insert (v))
                 delete v;
 
-        } else if (vma->base > snd_base)
+        } else if (vma->node_base > snd_base)
             break;
     }
 }

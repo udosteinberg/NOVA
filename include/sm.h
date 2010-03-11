@@ -28,8 +28,6 @@ class Sm : public Kobject, public Queue<Ec>
         static Slab_cache cache;
 
     public:
-        Vma vma;
-
         Sm (mword, Pd *, mword);
 
         ALWAYS_INLINE

@@ -69,7 +69,7 @@ bool Space_obj::insert (Vma *vma, Capability cap)
 
     assert (this != &Pd::kern);
 
-    return insert (vma->base, cap);
+    return insert (vma->node_base, cap);
 }
 
 void Space_obj::page_fault (mword addr, mword error)

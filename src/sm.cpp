@@ -19,7 +19,7 @@
 
 Slab_cache Sm::cache (sizeof (Sm), 16);
 
-Sm::Sm (mword cnt, Pd *p, mword s) : Kobject (SM, 0), counter (cnt), vma (p, s)
+Sm::Sm (mword cnt, Pd *p, mword s) : Kobject (SM, 0, p, s), counter (cnt)
 {
     trace (TRACE_SYSCALL, "SM:%p created (CNT:%lu)", this, cnt);
 }
