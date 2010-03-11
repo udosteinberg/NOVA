@@ -110,8 +110,8 @@ class Ec : public Kobject, public Queue<Sc>
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, mword, mword, void (*)());            // Kernel EC
-        Ec (Pd *, mword, mword, mword, mword, bool);    // Regular EC
+        Ec (Pd *, mword, Pd *, mword, mword, void (*)());            // Kernel EC
+        Ec (Pd *, mword, Pd *, mword, mword, mword, mword, bool);    // Regular EC
 
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)

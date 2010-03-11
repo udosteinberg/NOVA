@@ -59,7 +59,7 @@ class Sc : public Kobject
         static unsigned long const default_prio = 1;
         static unsigned long const default_quantum = 10000;
 
-        Sc (Ec *, unsigned long, unsigned long, unsigned long);
+        Sc (Pd *, mword, Ec *, mword, mword, mword);
 
         void ready_enqueue();
         void ready_dequeue();

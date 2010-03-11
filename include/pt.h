@@ -34,7 +34,7 @@ class Pt : public Kobject
         Mtd        const mtd;
         mword      const ip;
 
-        Pt (Ec *, Mtd, mword, Pd *, mword);
+        Pt (Pd *, mword, Ec *, Mtd, mword);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

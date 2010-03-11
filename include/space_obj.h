@@ -38,6 +38,9 @@ class Space_obj
         ALWAYS_INLINE
         inline Space_mem *space_mem();
 
+        bool insert (mword, Capability);
+        bool remove (mword, Capability);
+
     public:
         static unsigned const caps = (OBJSP_EADDR - OBJSP_SADDR) / sizeof (Capability);
 
@@ -47,14 +50,11 @@ class Space_obj
             return *reinterpret_cast<Capability *>(idx_to_virt (idx));
         }
 
-        bool    insert (mword, Capability);
-        bool    remove (mword, Capability);
-        size_t  lookup (mword, Capability &);
+        size_t lookup (mword, Capability &);
 
-        bool insert (Vma *, Capability);
-
+        static bool insert (Vma *, Capability);
         static void page_fault (mword, mword);
 
         INIT
-        void insert_root (mword);
+        static void insert_root (Vma *vma);
 };

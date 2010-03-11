@@ -210,19 +210,19 @@ void Ec::sys_create_pd()
         sys_finish<Sys_regs::BAD_FTR>();
     }
 
-    Pd *pd = new Pd (r->flags());
-    if (!Pd::current->Space_obj::insert (r->pd(), Capability (pd))) {
+    Pd *pd = new Pd (Pd::current, r->pd(), r->flags());
+    if (!Space_obj::insert (pd, Capability (pd))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
         delete pd;
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Ec *ec = new Ec (pd, r->cpu(), r->utcb(), 0, 0, false);
-    Sc *sc = new Sc (ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
+    Ec *ec = new Ec (pd, NUM_EXC + 0, pd, r->cpu(), r->utcb(), 0, 0, false);
+    Sc *sc = new Sc (pd, NUM_EXC + 1, ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
 
     ec->set_sc (sc);
-    pd->Space_obj::insert (NUM_EXC + 0, Capability (ec));
-    pd->Space_obj::insert (NUM_EXC + 1, Capability (sc));
+    Space_obj::insert (ec, Capability (ec));
+    Space_obj::insert (sc, Capability (sc));
 
     Crd crd = r->crd();
     pd->delegate (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
@@ -250,8 +250,8 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    Ec *ec = new Ec (Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
-    if (!Pd::current->Space_obj::insert (r->ec(), Capability (ec))) {
+    Ec *ec = new Ec (Pd::current, r->ec(), Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
+    if (!Space_obj::insert (ec, Capability (ec))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -273,7 +273,7 @@ void Ec::sys_create_sc()
     }
 
     Ec *ec = static_cast<Ec *>(obj);
-    Sc *sc = new Sc (ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
+    Sc *sc = new Sc (Pd::current, r->sc(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
 
     if (!ec->set_sc (sc)) {
         trace (TRACE_ERROR, "%s: Cannot attach SC", __func__);
@@ -281,7 +281,7 @@ void Ec::sys_create_sc()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    if (!Pd::current->Space_obj::insert (r->sc(), Capability (sc))) {
+    if (!Space_obj::insert (sc, Capability (sc))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
         delete sc;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -311,9 +311,8 @@ void Ec::sys_create_pt()
 
     Ec *ec = static_cast<Ec *>(obj);
 
-    Pt *pt = new Pt (ec, r->mtd(), r->eip(), Pd::current, r->pt());
-
-    if (!Pd::current->Space_obj::insert (pt, Capability (pt))) {
+    Pt *pt = new Pt (Pd::current, r->pt(), ec, r->mtd(), r->eip());
+    if (!Space_obj::insert (pt, Capability (pt))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pt());
         delete pt;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -328,9 +327,8 @@ void Ec::sys_create_sm()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sm(), r->cnt());
 
-    Sm *sm = new Sm (r->cnt(), Pd::current, r->sm());
-
-    if (!Pd::current->Space_obj::insert (sm, Capability (sm))) {
+    Sm *sm = new Sm (Pd::current, r->sm(), r->cnt());
+    if (!Space_obj::insert (sm, Capability (sm))) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sm());
         delete sm;
         sys_finish<Sys_regs::BAD_CAP>();

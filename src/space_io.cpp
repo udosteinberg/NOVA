@@ -61,16 +61,21 @@ bool Space_io::remove (mword idx)
 
 bool Space_io::insert (Vma *vma)
 {
-    if (!vma->insert (&vma_head, &vma_head))
+    Space_io *s = vma->node_pd;
+    assert (s && s != &Pd::kern);
+
+    if (!vma->insert (&s->vma_head, &s->vma_head))
         return false;
 
-    assert (this != &Pd::kern);
-
-    // Whoever owns a VMA struct in the VMA list owns the respective PT slots
     for (unsigned long i = 0; i < (1ul << vma->node_order); i++)
-        insert (vma->node_base + i);
+        s->insert (vma->node_base + i);
 
     return true;
+}
+
+void Space_io::insert_root (mword b, unsigned o)
+{
+    (new Vma (&Pd::kern, b, o))->insert (&vma_head, &vma_head);
 }
 
 void Space_io::page_fault (mword addr, mword error)
@@ -86,9 +91,4 @@ void Space_io::page_fault (mword addr, mword error)
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
                                     Ptab::ATTR_NOEXEC,
                                     reinterpret_cast<Paddr>(&FRAME_1));
-}
-
-void Space_io::insert_root (mword b, unsigned o)
-{
-    (new Vma (&Pd::kern, b, o))->insert (&vma_head, &vma_head);
 }

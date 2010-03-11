@@ -52,7 +52,7 @@ void Gsi::init()
         row = screen.init_spinner (0);
 
     for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
-        Gsi::gsi_table[gsi].sm = new Sm (0, &Pd::kern, gsi);
+        Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, gsi));
         mask (gsi);
     }
 }

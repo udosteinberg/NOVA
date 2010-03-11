@@ -34,7 +34,7 @@ unsigned long Sc::prio_top;
 // Release Queue
 Sc::Rq Sc::release[NUM_CPU];
 
-Sc::Sc (Ec *o, unsigned long c, unsigned long p, unsigned long q) : Kobject (SC, 0), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *o, mword c, mword p, mword q) : Kobject (own, sel, SC, 0), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, o, c, p, q);
 }

@@ -30,12 +30,12 @@ Slab_cache Ec::cache (sizeof (Ec), 8);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *p, mword c, mword e, void (*f)()) : Kobject (EC, 0), cont (f), utcb (0), pd (p), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword e, void (*f)()) : Kobject (own, sel, EC, 0), cont (f), utcb (0), pd (p), cpu (c), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
 }
 
-Ec::Ec (Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (own, sel, EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -263,9 +263,9 @@ void Ec::root_invoke()
     for (unsigned i = 0; i < NUM_GSI; i++)
         Pd::current->delegate_obj (&Pd::kern, i, NUM_EXC + i, 0);
 
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 0, Capability (Pd::current));
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 1, Capability (Ec::current));
-    Pd::current->Space_obj::insert (NUM_EXC + NUM_GSI + 2, Capability (Sc::current));
+    Space_obj::insert (Pd::current, Capability (Pd::current));
+    Space_obj::insert (Ec::current, Capability (Ec::current));
+    Space_obj::insert (Sc::current, Capability (Sc::current));
 
     ret_user_iret();
 }

@@ -41,8 +41,7 @@ class Kobject : public Vma
             SM
         };
 
-        explicit Kobject (uint8 otype, uint16 r, Pd *p, mword b, mword o = 0, mword t = 0, mword a = 0) : Vma (p, b, o, t, a), objtype (otype), refcount (r) {}
-        explicit Kobject (uint8 otype, uint16 r) : Vma (0, 0, 0, 0, 0), objtype (otype), refcount (r) {}
+        explicit Kobject (Pd *own, mword sel, uint8 t, uint16 r) : Vma (own, sel, 0, 0, 0), objtype (t), refcount (r) {}
 
     public:
         unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }

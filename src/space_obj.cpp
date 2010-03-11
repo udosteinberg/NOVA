@@ -64,12 +64,21 @@ size_t Space_obj::lookup (mword idx, Capability &cap)
 
 bool Space_obj::insert (Vma *vma, Capability cap)
 {
-    if (!vma->insert (&vma_head, &vma_head))
+    Space_obj *s = vma->node_pd;
+    assert (s && s != &Pd::kern);
+
+    if (!vma->insert (&s->vma_head, &s->vma_head))
         return false;
 
-    assert (this != &Pd::kern);
+    return s->insert (vma->node_base, cap);
+}
 
-    return insert (vma->node_base, cap);
+void Space_obj::insert_root (Vma *vma)
+{
+    Space_obj *s = vma->node_pd;
+    assert (s && s == &Pd::kern);
+
+    vma->insert (&s->vma_head, &s->vma_head);
 }
 
 void Space_obj::page_fault (mword addr, mword error)
@@ -85,9 +94,4 @@ void Space_obj::page_fault (mword addr, mword error)
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
                                     Ptab::ATTR_NOEXEC,
                                     reinterpret_cast<Paddr>(&FRAME_0));
-}
-
-void Space_obj::insert_root (mword b)
-{
-    (new Vma (&Pd::kern, b, 0))->insert (&vma_head, &vma_head);
 }

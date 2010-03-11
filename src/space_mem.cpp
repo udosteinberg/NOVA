@@ -40,23 +40,24 @@ void Space_mem::init (unsigned cpu)
 
 bool Space_mem::insert (Vma *vma, Paddr phys)
 {
-    if (!vma->insert (&vma_head, &vma_head))
-        return false;
+    Space_mem *s = vma->node_pd;
+    assert (s && s != &Pd::kern);
 
-    assert (this != &Pd::kern);
+    if (!vma->insert (&s->vma_head, &s->vma_head))
+        return false;
 
     unsigned o = vma->node_order - PAGE_BITS;
 
-    if (dpt) {
+    if (s->dpt) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            dpt->insert (vma->node_base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), vma->node_attr);
+            s->dpt->insert (vma->node_base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), vma->node_attr);
     }
 
-    if (ept) {
+    if (s->ept) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            ept->insert (vma->node_base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), vma->node_attr, vma->node_type);
+            s->ept->insert (vma->node_base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), vma->node_attr, vma->node_type);
     }
 
     Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
@@ -64,7 +65,7 @@ bool Space_mem::insert (Vma *vma, Paddr phys)
                  (vma->node_attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
 
     // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    mst->insert (vma->node_base, o, a, phys);
+    s->mst->insert (vma->node_base, o, a, phys);
 
     return true;
 }
@@ -101,7 +102,7 @@ bool Space_mem::insert_utcb (mword b)
 
     if (vma->insert (&vma_head, &vma_head))
         return true;
-    
+
     delete vma;
 
     return false;

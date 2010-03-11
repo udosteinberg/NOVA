@@ -28,7 +28,7 @@ class Sm : public Kobject, public Queue<Ec>
         static Slab_cache cache;
 
     public:
-        Sm (mword, Pd *, mword);
+        Sm (Pd *, mword, mword = 0);
 
         ALWAYS_INLINE
         inline void dn()

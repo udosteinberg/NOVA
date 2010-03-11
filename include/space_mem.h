@@ -74,7 +74,7 @@ class Space_mem
 
         bool insert_utcb (mword);
 
-        bool insert (Vma *, Paddr);
+        static bool insert (Vma *, Paddr);
 
         void init (unsigned);
 

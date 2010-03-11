@@ -38,19 +38,13 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
-        // Current PD
         static Pd *current CPULOCAL_HOT;
-
-        // Kernel PD
-        static Pd kern;
-
-        // Root PD
-        static Pd *root;
+        static Pd kern, root;
 
         INIT
-        Pd();
+        Pd (Pd *, mword);
 
-        Pd (unsigned);
+        Pd (Pd *, mword, unsigned);
 
         ALWAYS_INLINE HOT
         inline void make_current()

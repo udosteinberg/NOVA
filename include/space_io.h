@@ -42,16 +42,15 @@ class Space_io
         ALWAYS_INLINE
         inline Space_mem *space_mem();
 
+        bool insert (mword);
+        bool remove (mword);
+
     public:
         void * const bmp;
 
         Space_io (unsigned);
 
-        bool insert (mword);
-        bool remove (mword);
-
-        bool insert (Vma *);
-
+        static bool insert (Vma *);
         static void page_fault (mword, mword);
 
         INIT

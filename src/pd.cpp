@@ -22,16 +22,12 @@
 // PD Cache
 Slab_cache Pd::cache (sizeof (Pd), 8);
 
-// Current PD
 Pd *Pd::current;
 
-// Kernel PD
-Pd Pd::kern;
+Pd Pd::kern (&Pd::kern, 0);
+Pd Pd::root (&Pd::root, NUM_EXC + NUM_GSI, 0x3);
 
-// Root PD
-Pd *Pd::root;
-
-Pd::Pd() : Kobject (PD, 0), Space_io (0)
+Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD, 0), Space_io (0)
 {
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
 
@@ -51,13 +47,9 @@ Pd::Pd() : Kobject (PD, 0), Space_io (0)
 
     // I/O Ports
     Space_io::insert_root (0, 16);
-
-    // GSI semaphores
-    for (unsigned i = 0; i < NUM_GSI; i++)
-        Space_obj::insert_root (i);
 }
 
-Pd::Pd (unsigned flags) : Kobject (PD, 1), Space_mem (flags), Space_io (flags)
+Pd::Pd (Pd *own, mword sel, unsigned flags) : Kobject (own, sel, PD, 1), Space_mem (flags), Space_io (flags)
 {
     trace (TRACE_SYSCALL, "PD:%p created (F=%#x)", this, flags);
 }
@@ -386,7 +378,7 @@ void Pd::revoke (Crd r, bool self)
 
 void Pd::delegate_items (Pd *pd, Crd rcv, mword *src, mword *dst, unsigned long ti)
 {
-    if (this == root && pd == root)
+    if (this == &root && pd == &root)
         pd = &kern;
 
     while (ti--) {
