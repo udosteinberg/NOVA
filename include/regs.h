@@ -1,7 +1,7 @@
 /*
  * Register File
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -130,10 +130,16 @@ class Exc_regs : public Sys_regs
         inline mword get_cr0() const;
 
         ALWAYS_INLINE
+        inline mword get_cr3() const;
+
+        ALWAYS_INLINE
         inline mword get_cr4() const;
 
         ALWAYS_INLINE
         inline void set_cr0 (mword);
+
+        ALWAYS_INLINE
+        inline void set_cr3 (mword);
 
         ALWAYS_INLINE
         inline void set_cr4 (mword);

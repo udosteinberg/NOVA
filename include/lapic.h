@@ -49,7 +49,7 @@ class Lapic : public Apic
             LAPIC_TMR_ICR   = 0x38,
             LAPIC_TMR_CCR   = 0x39,
             LAPIC_TMR_DCR   = 0x3e,
-            LAPIC_IPI_SELF  = 0x40
+            LAPIC_IPI_SELF  = 0x3f,
         };
 
         enum Model

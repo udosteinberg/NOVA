@@ -1,7 +1,7 @@
 /*
  * Register File
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2008-2010, Udo Steinberg <udo@hypervisor.org>
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -60,26 +60,39 @@ mword Exc_regs::get_cr0() const
 {
     mword msk = cr0_msk();
 
-    return (cr0_shadow & msk) | (Vmcs::read (Vmcs::GUEST_CR0) & ~msk);
+    return (Vmcs::read (Vmcs::GUEST_CR0) & ~msk) | (cr0_shadow & msk);
+}
+
+mword Exc_regs::get_cr3() const
+{
+    return ept_on ? Vmcs::read (Vmcs::GUEST_CR3) : cr3_shadow;
 }
 
 mword Exc_regs::get_cr4() const
 {
     mword msk = cr4_msk();
 
-    return (cr4_shadow & msk) | (Vmcs::read (Vmcs::GUEST_CR4) & ~msk);
+    return (Vmcs::read (Vmcs::GUEST_CR4) & ~msk) | (cr4_shadow & msk);
 }
 
 void Exc_regs::set_cr0 (mword val)
 {
-    Vmcs::write (Vmcs::CR0_READ_SHADOW, cr0_shadow = val);
     Vmcs::write (Vmcs::GUEST_CR0, (val & (~cr0_msk() | Cpu::CR0_PE)) | (cr0_set() & ~Cpu::CR0_PE));
+    Vmcs::write (Vmcs::CR0_READ_SHADOW, cr0_shadow = val);
+}
+
+void Exc_regs::set_cr3 (mword val)
+{
+    if (ept_on)
+        Vmcs::write (Vmcs::GUEST_CR3, val);
+    else
+        cr3_shadow = val;
 }
 
 void Exc_regs::set_cr4 (mword val)
 {
-    Vmcs::write (Vmcs::CR4_READ_SHADOW, cr4_shadow = val);
     Vmcs::write (Vmcs::GUEST_CR4, (val & ~cr4_msk()) | cr4_set());
+    Vmcs::write (Vmcs::CR4_READ_SHADOW, cr4_shadow = val);
 }
 
 void Exc_regs::set_exc_bitmap() const
@@ -129,9 +142,11 @@ void Exc_regs::ept_ctrl (bool on)
     assert (Vmcs::current == vmcs);
 
     mword cr0 = get_cr0();
+    mword cr3 = get_cr3();
     mword cr4 = get_cr4();
     ept_on = on;
     set_cr0 (cr0);
+    set_cr3 (cr3);
     set_cr4 (cr4);
 
     set_cpu_ctrl0 (Vmcs::read (Vmcs::CPU_EXEC_CTRL0));
@@ -141,12 +156,8 @@ void Exc_regs::ept_ctrl (bool on)
     Vmcs::write (Vmcs::CR0_MASK, cr0_msk());
     Vmcs::write (Vmcs::CR4_MASK, cr4_msk());
 
-    if (on)
-        Vmcs::write (Vmcs::GUEST_CR3, cr3_shadow);
-    else {
-        cr3_shadow = Vmcs::read (Vmcs::GUEST_CR3);
+    if (!on)
         Vmcs::write (Vmcs::GUEST_CR3, Buddy::ptr_to_phys (vtlb));
-    }
 }
 
 void Exc_regs::fpu_ctrl (bool on)
@@ -184,7 +195,7 @@ mword Exc_regs::read_cr (unsigned cr)
         case 2:
             return cr2;
         case 3:
-            return cr3_shadow;
+            return get_cr3();
         case 0:
             return get_cr0();
         case 4:
@@ -206,7 +217,7 @@ void Exc_regs::write_cr (unsigned cr, mword val)
 
         case 3:
             vtlb->flush (false, Vmcs::vpid());
-            cr3_shadow = val;
+            set_cr3 (val);
             break;
 
         case 0:

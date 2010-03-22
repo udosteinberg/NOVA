@@ -59,11 +59,11 @@ void Sc::ready_enqueue()
 
     trace (TRACE_SCHEDULE, "ENQ:%p (%02lu) PRIO:%#lx TOP:%#lx %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
 
+    if (prio > current->prio || (this != current && prio == current->prio && left))
+        Cpu::hazard |= Cpu::HZD_SCHED;
+
     if (!left)
         left = full;
-
-    if (prio > current->prio)
-        Cpu::hazard |= Cpu::HZD_SCHED;
 }
 
 void Sc::ready_dequeue()

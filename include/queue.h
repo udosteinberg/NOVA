@@ -30,10 +30,7 @@ class Queue
         inline Queue() : queue (0) {}
 
         ALWAYS_INLINE
-        inline bool empty() const
-        {
-            return !queue;
-        }
+        inline T *head() const { return queue; }
 
         ALWAYS_INLINE
         inline void enqueue (T *t)
