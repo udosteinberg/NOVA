@@ -136,7 +136,7 @@ class Ec : public Kobject, public Queue<Sc>
 
             asm volatile ("mov %0, %%esp;"
                           "jmp *%1"
-                          : : "g" (KSTCK_ADDR + PAGE_SIZE), "g" (cont) : "memory"); UNREACHED;
+                          : : "g" (KSTCK_ADDR + PAGE_SIZE), "rm" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE
