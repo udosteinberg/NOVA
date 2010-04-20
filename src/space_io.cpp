@@ -60,23 +60,18 @@ bool Space_io::remove (mword idx)
     return !Atomic::test_set_bit<true>(*static_cast<mword *>(Buddy::phys_to_ptr (phys)), idx_to_bit (idx));
 }
 
-bool Space_io::insert (Vma *vma)
+void Space_io::insert (Mdb *mdb, bool)
 {
-    Space_io *s = vma->node_pd;
+    Space_io *s = mdb->node_pd;
     assert (s && s != &Pd::kern);
 
-    if (!vma->insert (&s->vma_head, &s->vma_head))
-        return false;
-
-    for (unsigned long i = 0; i < (1ul << vma->node_order); i++)
-        s->insert (vma->node_base + i);
-
-    return true;
+    for (unsigned long i = 0; i < (1ul << mdb->node_order); i++)
+        s->insert (mdb->node_base + i);
 }
 
 void Space_io::insert_root (mword b, unsigned o)
 {
-    (new Vma (&Pd::kern, b, o))->insert (&vma_head, &vma_head);
+    insert_node (new Mdb (&Pd::kern, b, o));
 }
 
 void Space_io::page_fault (mword addr, mword error)

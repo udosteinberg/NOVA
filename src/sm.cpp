@@ -16,11 +16,13 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "initprio.h"
 #include "sm.h"
 
+INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sm::cache (sizeof (Sm), 16);
 
-Sm::Sm (Pd *own, mword sel, mword cnt) : Kobject (own, sel, SM, 0), counter (cnt)
+Sm::Sm (Pd *own, mword sel, mword cnt) : Kobject (own, sel, SM), counter (cnt)
 {
     trace (TRACE_SYSCALL, "SM:%p created (CNT:%lu)", this, cnt);
 }

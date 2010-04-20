@@ -19,14 +19,12 @@
 #pragma once
 
 #include "compiler.h"
+#include "space.h"
 
 class Space_mem;
 
-class Space_io
+class Space_io : public Space
 {
-    protected:
-        Vma vma_head;
-
     private:
         ALWAYS_INLINE
         static inline mword idx_to_virt (mword idx)
@@ -51,7 +49,11 @@ class Space_io
 
         Space_io (unsigned);
 
-        static bool insert (Vma *);
+        ALWAYS_INLINE
+        inline bool lookup_obj (mword, bool) const { return true; }
+
+        static void insert (Mdb *, bool);
+
         static void page_fault (mword, mword);
 
         INIT

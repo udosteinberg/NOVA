@@ -17,9 +17,10 @@
  */
 
 #include "ec.h"
+#include "initprio.h"
 #include "lapic.h"
 
-// SC Cache
+INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sc::cache (sizeof (Sc), 8);
 
 // Current SC
@@ -35,7 +36,7 @@ unsigned long Sc::prio_top;
 // Release Queue
 Sc::Rq Sc::release[NUM_CPU];
 
-Sc::Sc (Pd *own, mword sel, Ec *o, mword c, mword p, mword q) : Kobject (own, sel, SC, 0), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *o, mword c, mword p, mword q) : Kobject (own, sel, SC), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, o, c, p, q);
 }

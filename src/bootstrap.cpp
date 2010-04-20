@@ -40,8 +40,8 @@ void bootstrap()
     // Create root task
     if (Cpu::bsp) {
         Hip::add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + NUM_GSI + 1, &Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE, 0, 0, false);
-        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + NUM_GSI + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
+        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE, 0, 0, false);
+        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_cont (Ec::root_invoke);
         root_ec->set_sc (root_sc);
         root_sc->ready_enqueue();

@@ -31,17 +31,8 @@ class Refptr
         T * operator->() const  { return ptr; }
 
         ALWAYS_INLINE
-        inline Refptr (T *p) : ptr (p)
-        {
-            ptr->add_ref();
-        }
+        inline Refptr (T *p) : ptr (p->add_ref() ? p : 0) {}
 
-        /*
-         * If the reference count decreases to 0 then we were the last
-         * holder of a reference; in particular the root capability to
-         * the object no longer exists and thus new references cannot
-         * be obtained; therefore the object can be destroyed immediately.
-         */
         ALWAYS_INLINE
         inline ~Refptr()
         {

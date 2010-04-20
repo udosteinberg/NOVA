@@ -1,5 +1,5 @@
 /*
- * Capability
+ * AVL Tree
  *
  * Author: Udo Steinberg <udo@hypervisor.org>
  * TU Dresden, Operating Systems Group
@@ -20,23 +20,26 @@
 
 #include "compiler.h"
 
-class Kobject;
-
-class Capability
+class Avl
 {
     private:
-        mword val;
+        Avl *       ptr[2];
+        unsigned    bal;
 
-        static unsigned const mask = 0x7;
+        bool balanced() const { return bal == 2; }
+
+        static Avl *rotate (Avl *&, bool);
+        static Avl *rotate (Avl *&, bool, unsigned);
+
+    protected:
+        virtual bool larger (Avl *x) const;
+        virtual bool equal  (Avl *x) const;
+
+        Avl *link (bool d) const { return ptr[d]; }
+
+        explicit Avl() : bal (2) { ptr[0] = ptr[1] = 0; }
 
     public:
-        Capability() : val (0) {}
-
-        Capability (Kobject *o, unsigned a = mask) : val (reinterpret_cast<mword>(o) | a) {}
-
-        ALWAYS_INLINE
-        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~mask); }
-
-        ALWAYS_INLINE
-        inline unsigned acc() const { return val & mask; }
+        static bool insert (Avl **, Avl *);
+        static bool remove (Avl **, Avl *);
 };

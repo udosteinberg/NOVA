@@ -20,15 +20,12 @@
 
 #include "capability.h"
 #include "compiler.h"
-#include "vma.h"
+#include "space.h"
 
 class Space_mem;
 
-class Space_obj
+class Space_obj : public Space
 {
-    protected:
-        Vma vma_head;
-
     private:
         ALWAYS_INLINE
         static inline mword idx_to_virt (unsigned long idx)
@@ -53,9 +50,19 @@ class Space_obj
 
         size_t lookup (mword, Capability &);
 
-        static bool insert (Vma *, Capability);
-        static void page_fault (mword, mword);
+        ALWAYS_INLINE
+        inline Capability lookup_obj (mword addr, bool)
+        {
+            Capability cap;
 
-        INIT
-        static void insert_root (Vma *vma);
+            size_t size = lookup (addr, cap);
+            assert (size);
+
+            return cap;
+        }
+
+        static void insert (Mdb *, Capability);
+        static bool insert_root (Kobject *);
+
+        static void page_fault (mword, mword);
 };

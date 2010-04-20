@@ -20,6 +20,7 @@
 
 #include "compiler.h"
 #include "types.h"
+#include "util.h"
 
 ALWAYS_INLINE
 inline long int bit_scan_reverse (mword val)
@@ -41,6 +42,17 @@ inline long int bit_scan_forward (mword val)
     asm volatile ("bsf %1, %0" : "=r" (val) : "rm" (val));
 
     return val;
+}
+
+ALWAYS_INLINE
+inline unsigned max_order (mword base, size_t size)
+{
+    long int o = bit_scan_reverse (size);
+
+    if (base)
+        o = min (bit_scan_forward (base), o);
+
+    return o;
 }
 
 ALWAYS_INLINE

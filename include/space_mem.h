@@ -22,14 +22,14 @@
 #include "dpt.h"
 #include "ept.h"
 #include "ptab.h"
+#include "space.h"
 
-class Space_mem
+class Space_mem : public Space
 {
     private:
         static unsigned did_ctr;
 
     protected:
-        Vma     vma_head;
         Ptab *  percpu[NUM_CPU];
 
     public:
@@ -70,12 +70,27 @@ class Space_mem
             mst->insert (virt, o, attr, phys);
         }
 
+        ALWAYS_INLINE
+        inline Paddr lookup_obj (mword addr, bool priv)
+        {
+            Paddr phys;
+
+            if (priv)
+                phys = addr;
+            else {
+                size_t size = lookup (addr, phys);
+                assert (size);
+            }
+
+            return phys;
+        }
+
         INIT
         void insert_root (mword, size_t, mword);
 
         bool insert_utcb (mword);
 
-        static bool insert (Vma *, Paddr);
+        static void insert (Mdb *, Paddr);
 
         void init (unsigned);
 

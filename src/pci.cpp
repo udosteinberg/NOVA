@@ -16,10 +16,13 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "initprio.h"
 #include "pci.h"
 #include "pd.h"
 
+INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pci::cache (sizeof (Pci), 8);
+
 Paddr Pci::cfg_base;
 Pci *Pci::list;
 

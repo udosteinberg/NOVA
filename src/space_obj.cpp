@@ -63,23 +63,17 @@ size_t Space_obj::lookup (mword idx, Capability &cap)
     return 1;
 }
 
-bool Space_obj::insert (Vma *vma, Capability cap)
+void Space_obj::insert (Mdb *mdb, Capability cap)
 {
-    Space_obj *s = vma->node_pd;
-    assert (s && s != &Pd::kern);
-
-    if (!vma->insert (&s->vma_head, &s->vma_head))
-        return false;
-
-    return s->insert (vma->node_base, cap);
+    mdb->node_pd->Space_obj::insert (mdb->node_base, cap);
 }
 
-void Space_obj::insert_root (Vma *vma)
+bool Space_obj::insert_root (Kobject *obj)
 {
-    Space_obj *s = vma->node_pd;
-    assert (s && s == &Pd::kern);
+    if (!obj->node_pd->Space_obj::insert_node (obj))
+        return false;
 
-    vma->insert (&s->vma_head, &s->vma_head);
+    return obj->node_pd->Space_obj::insert (obj->node_base, Capability (obj));
 }
 
 void Space_obj::page_fault (mword addr, mword error)

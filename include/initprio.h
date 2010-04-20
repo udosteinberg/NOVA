@@ -23,3 +23,4 @@
 #define PRIO_BASE       100
 #define PRIO_CONSOLE    AFTER (PRIO_BASE)
 #define PRIO_BUDDY      AFTER (PRIO_CONSOLE)
+#define PRIO_SLAB       AFTER (PRIO_BUDDY)

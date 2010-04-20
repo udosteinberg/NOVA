@@ -1,5 +1,5 @@
 /*
- * Floating Point Unit (FPU)
+ * Mapping Database
  *
  * Author: Udo Steinberg <udo@hypervisor.org>
  * TU Dresden, Operating Systems Group
@@ -16,10 +16,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "fpu.h"
 #include "initprio.h"
-
-bool Fpu::enabled;
+#include "mdb.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Fpu::cache (sizeof (Fpu), 16);
+Slab_cache Mdb::cache (sizeof (Mdb), 16);

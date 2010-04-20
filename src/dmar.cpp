@@ -18,10 +18,13 @@
 
 #include "bits.h"
 #include "dmar.h"
+#include "initprio.h"
 #include "lapic.h"
 #include "pd.h"
 
+INIT_PRIORITY (PRIO_SLAB)
 Slab_cache  Dmar::cache (sizeof (Dmar), 8);
+
 Dmar *      Dmar::list;
 Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
 Dmar_irt *  Dmar::irt = new Dmar_irt;

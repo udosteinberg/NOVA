@@ -52,6 +52,7 @@
         #define NONNULL             __attribute__((nonnull))
         #define NORETURN            __attribute__((noreturn))
         #define REGPARM(X)          __attribute__((regparm(X)))
+        #define WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
 
         #define EXPECT_FALSE(X)     __builtin_expect(!!(X), 0)
         #define EXPECT_TRUE(X)      __builtin_expect(!!(X), 1)

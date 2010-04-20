@@ -212,7 +212,7 @@ void Ec::sys_create_pd()
     }
 
     Pd *pd = new Pd (Pd::current, r->pd(), r->flags());
-    if (!Space_obj::insert (pd, Capability (pd))) {
+    if (!Space_obj::insert_root (pd)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
         delete pd;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -222,11 +222,11 @@ void Ec::sys_create_pd()
     Sc *sc = new Sc (pd, NUM_EXC + 1, ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
 
     ec->set_sc (sc);
-    Space_obj::insert (ec, Capability (ec));
-    Space_obj::insert (sc, Capability (sc));
+    Space_obj::insert_root (ec);
+    Space_obj::insert_root (sc);
 
     Crd crd = r->crd();
-    pd->delegate (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
+    pd->delegate_item (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
     pd->insert_utcb (r->utcb());
 
     // Enqueue SC only after all the caps have been mapped
@@ -252,7 +252,7 @@ void Ec::sys_create_ec()
     }
 
     Ec *ec = new Ec (Pd::current, r->ec(), Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
-    if (!Space_obj::insert (ec, Capability (ec))) {
+    if (!Space_obj::insert_root (ec)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
         delete ec;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -282,7 +282,7 @@ void Ec::sys_create_sc()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    if (!Space_obj::insert (sc, Capability (sc))) {
+    if (!Space_obj::insert_root (sc)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
         delete sc;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -313,7 +313,7 @@ void Ec::sys_create_pt()
     Ec *ec = static_cast<Ec *>(obj);
 
     Pt *pt = new Pt (Pd::current, r->pt(), ec, r->mtd(), r->eip());
-    if (!Space_obj::insert (pt, Capability (pt))) {
+    if (!Space_obj::insert_root (pt)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pt());
         delete pt;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -329,7 +329,7 @@ void Ec::sys_create_sm()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sm(), r->cnt());
 
     Sm *sm = new Sm (Pd::current, r->sm(), r->cnt());
-    if (!Space_obj::insert (sm, Capability (sm))) {
+    if (!Space_obj::insert_root (sm)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sm());
         delete sm;
         sys_finish<Sys_regs::BAD_CAP>();
@@ -378,13 +378,13 @@ void Ec::sys_semctl()
 {
     Sys_semctl *r = static_cast<Sys_semctl *>(&current->regs);
 
-    Kobject *obj = Space_obj::lookup (r->sm()).obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::SM)) {
+    Capability cap = Space_obj::lookup (r->sm());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || (r->flags() & cap.acc()) != r->flags())) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Sm *sm = static_cast<Sm *>(obj);
+    Sm *sm = static_cast<Sm *>(cap.obj());
 
     switch (r->flags() & 1) {
         case Sys_semctl::DN:

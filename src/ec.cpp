@@ -20,23 +20,24 @@
 #include "ec.h"
 #include "elf.h"
 #include "hip.h"
+#include "initprio.h"
 #include "rcu.h"
 #include "svm.h"
 #include "vmx.h"
 #include "vtlb.h"
 
-// EC Cache
+INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Ec::cache (sizeof (Ec), 8);
 
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword e, void (*f)()) : Kobject (own, sel, EC, 0), cont (f), utcb (0), pd (p), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (p), cpu (c), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
 }
 
-Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (own, sel, EC, 1), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (own, sel, EC), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -247,26 +248,24 @@ void Ec::root_invoke()
         if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
             die ("Bad ELF");
 
-        for (size_t s = 0; s < ph->f_size; s += PAGE_SIZE)
-            Pd::current->delegate_mem (&Pd::kern,
-                                       s + align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE),
-                                       s + align_dn (ph->v_addr, PAGE_SIZE),
-                                       PAGE_BITS, attr);
+        mword p = align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE);
+        mword v = align_dn (ph->v_addr, PAGE_SIZE);
+        mword s = align_up (ph->f_size, PAGE_SIZE);
+
+        for (unsigned o; s; s -= 1UL << o, p += 1UL << o, v += 1UL << o)
+            Pd::current->delegate<Space_mem>(&Pd::kern, p, v, o = min (max_order (p, s), max_order (v, s)), attr);
     }
 
     // Map hypervisor information page
-    Pd::current->delegate_mem (&Pd::kern,
-                               reinterpret_cast<Paddr>(&FRAME_H),
-                               LINK_ADDR - PAGE_SIZE,
-                               PAGE_BITS, 1);
+    Pd::current->delegate<Space_mem>
+                (&Pd::kern,
+                 reinterpret_cast<Paddr>(&FRAME_H),
+                 LINK_ADDR - PAGE_SIZE,
+                 PAGE_BITS, 1);
 
-    // Delegate GSI portals
-    for (unsigned i = 0; i < NUM_GSI; i++)
-        Pd::current->delegate_obj (&Pd::kern, i, NUM_EXC + i, 0);
-
-    Space_obj::insert (Pd::current, Capability (Pd::current));
-    Space_obj::insert (Ec::current, Capability (Ec::current));
-    Space_obj::insert (Sc::current, Capability (Sc::current));
+    Space_obj::insert_root (Pd::current);
+    Space_obj::insert_root (Ec::current);
+    Space_obj::insert_root (Sc::current);
 
     ret_user_iret();
 }

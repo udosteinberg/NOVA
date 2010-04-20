@@ -20,10 +20,10 @@
 
 #include "atomic.h"
 #include "compiler.h"
+#include "mdb.h"
 #include "spinlock.h"
-#include "vma.h"
 
-class Kobject : public Vma
+class Kobject : public Mdb
 {
     private:
         uint8       objtype;
@@ -42,13 +42,20 @@ class Kobject : public Vma
             SM
         };
 
-        explicit Kobject (Pd *own, mword sel, uint8 t, uint16 r) : Vma (own, sel, 0, 0, 0), objtype (t), refcount (r) {}
+        explicit Kobject (Pd *own, mword sel, uint8 t) : Mdb (own, sel), objtype (t), refcount (1) {}
 
     public:
         unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }
 
         ALWAYS_INLINE
-        inline void add_ref() { Atomic::add (refcount, 1); }
+        inline bool add_ref()
+        {
+            for (uint16 r; (r = refcount); )
+                if (Atomic::cmp_swap<true>(&refcount, r, static_cast<typeof r>(r + 1)))
+                    return true;
+
+            return false;
+        }
 
         ALWAYS_INLINE
         inline bool del_ref() { return Atomic::sub (refcount, 1); }
