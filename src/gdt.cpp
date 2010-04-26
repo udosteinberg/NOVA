@@ -1,7 +1,8 @@
 /*
  * Global Descriptor Table (GDT)
  *
- * Copyright (C) 2006-2009, Udo Steinberg <udo@hypervisor.org>
+ * Author: Udo Steinberg <udo@hypervisor.org>
+ * TU Dresden, Operating Systems Group
  *
  * This file is part of the NOVA microhypervisor.
  *

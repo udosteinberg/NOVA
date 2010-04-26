@@ -1,7 +1,8 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2008-2009, Udo Steinberg <udo@hypervisor.org>
+ * Author: Udo Steinberg <udo@hypervisor.org>
+ * TU Dresden, Operating Systems Group
  *
  * This file is part of the NOVA microhypervisor.
  *
