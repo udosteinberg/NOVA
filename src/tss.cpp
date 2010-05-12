@@ -19,8 +19,8 @@
 #include "ptab.h"
 #include "tss.h"
 
-Tss Tss::run;
-Tss Tss::dbf;
+ALIGNED(8) Tss Tss::run;
+ALIGNED(8) Tss Tss::dbf;
 
 void Tss::build()
 {

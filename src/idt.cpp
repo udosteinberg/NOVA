@@ -20,7 +20,7 @@
 #include "idt.h"
 #include "selectors.h"
 
-Idt Idt::idt[VEC_MAX] ALIGNED(8);
+ALIGNED(8) Idt Idt::idt[VEC_MAX];
 
 void Idt::build()
 {

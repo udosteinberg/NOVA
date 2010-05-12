@@ -54,8 +54,8 @@ class Tss
         uint16  trap;                   // 0x64
         uint16  iobm;                   // 0x66
 
-        static Tss run ALIGNED(8) CPULOCAL;
-        static Tss dbf ALIGNED(8) CPULOCAL;
+        static Tss run CPULOCAL;
+        static Tss dbf CPULOCAL;
 
         static void build();
 

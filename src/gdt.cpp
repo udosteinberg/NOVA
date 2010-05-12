@@ -21,7 +21,7 @@
 #include "tss.h"
 
 // 2 kernel + 2 user segment descriptors should be within same cache line
-Gdt Gdt::gdt[SEL_MAX >> 3] ALIGNED(8);
+ALIGNED(8) Gdt Gdt::gdt[SEL_MAX >> 3];
 
 void Gdt::build()
 {

@@ -25,8 +25,8 @@ Slab_cache Pd::cache (sizeof (Pd), 8);
 
 Pd *Pd::current;
 
-Pd Pd::kern (&Pd::kern, 0);
-Pd Pd::root (&Pd::root, NUM_EXC, 0x3);
+ALIGNED(8) Pd Pd::kern (&Pd::kern, 0);
+ALIGNED(8) Pd Pd::root (&Pd::root, NUM_EXC, 0x3);
 
 Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD), Space_io (0)
 {
