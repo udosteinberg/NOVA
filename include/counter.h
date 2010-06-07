@@ -43,11 +43,15 @@ class Counter
         static void init();
         static void dump();
 
-        static void count (unsigned &counter, Console_vga::Color c, unsigned col)
+        static void print (unsigned val, Console_vga::Color c, unsigned col)
         {
-            counter++;
-
             if (EXPECT_FALSE (row))
-                screen.put (row, col, c, (counter & 0xf)["0123456789ABCDEF"]);
+                screen.put (row, col, c, (val & 0xf)["0123456789ABCDEF"]);
+        }
+
+        ALWAYS_INLINE
+        static inline unsigned remote (unsigned c, unsigned i)
+        {
+            return *reinterpret_cast<volatile unsigned *>(reinterpret_cast<mword>(ipi + i) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
 };

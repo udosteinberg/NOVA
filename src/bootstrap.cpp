@@ -26,14 +26,13 @@ extern "C" NORETURN
 void bootstrap()
 {
     Cpu::init();
-    Rcu::init();
 
     // Create idle EC
     Ec::current = new Ec (&Pd::kern, 0, &Pd::kern, Cpu::id, 0, Ec::idle);
     Sc::current = new Sc (&Pd::kern, 0, Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::sub (Cpu::boot_count, 1); Cpu::boot_count; pause()) ;
+    for (Atomic::sub (Cpu::boot_count, 1U); Cpu::boot_count; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 
@@ -45,6 +44,7 @@ void bootstrap()
         root_ec->set_cont (Ec::root_invoke);
         root_ec->set_sc (root_sc);
         root_sc->ready_enqueue();
+        Rcu::start_batch();
     }
 
     Sc::schedule();

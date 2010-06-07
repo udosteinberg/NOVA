@@ -39,7 +39,7 @@ class Ec : public Kobject, public Queue<Sc>
     private:
         Exc_regs    regs;                       // 0x4, must be first
         void        (*cont)();                  // 0x50
-        Capability  reply;                      // 0x54
+        Ec *        reply;                      // 0x54
         Mtd         mtr;
         Utcb *      utcb;
         Refptr<Pd>  pd;
@@ -87,6 +87,8 @@ class Ec : public Kobject, public Queue<Sc>
         NORETURN
         static inline void vmx_cr();
 
+        static bool fixup (mword &);
+
         NOINLINE
         static void handle_hazard (void (*)());
 
@@ -94,7 +96,7 @@ class Ec : public Kobject, public Queue<Sc>
         inline void set_partner (Ec *p)
         {
             partner = p;
-            partner->reply = Capability (this);
+            partner->reply = this;
             Sc::ctr_link++;
         }
 
@@ -102,7 +104,7 @@ class Ec : public Kobject, public Queue<Sc>
         inline unsigned clr_partner()
         {
             assert (partner == current);
-            partner->reply = Capability();
+            partner->reply = 0;
             partner = 0;
             return Sc::ctr_link--;
         }
@@ -149,7 +151,7 @@ class Ec : public Kobject, public Queue<Sc>
         NOINLINE NORETURN
         void help (void (*c)())
         {
-            Counter::count (Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 2);
+            Counter::print (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 3);
             current->cont = c;
 
             if (++Sc::ctr_loop >= 100) {

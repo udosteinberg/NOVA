@@ -71,15 +71,11 @@ void Slab_cache::grow()
 {
     Slab *slab = new Slab (this);
 
-    // Prepend to list
+    if (head)
+        head->prev = slab;
+
     slab->next = head;
     head = curr = slab;
-}
-
-void Slab_cache::reap()
-{
-    Slab *s;
-    for (Slab *slab = head; slab; s = slab, slab = slab->next, delete s) ;
 }
 
 void *Slab_cache::alloc()

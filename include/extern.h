@@ -33,7 +33,11 @@ extern char LINK_SIZE;
 extern char LOAD_SIZE;
 extern char OFFSET;
 
-extern void (*CTORS_S)();
+extern mword FIXUP_S;
+extern mword FIXUP_E;
+
+extern void (*CTORS_L)();
+extern void (*CTORS_G)();
 extern void (*CTORS_E)();
 
 extern uint64 PDP, PDE, PTE;

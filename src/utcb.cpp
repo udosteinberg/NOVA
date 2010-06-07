@@ -158,8 +158,13 @@ void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
     }
 
     if (mtd.xfer (Mtd::INJ)) {
-        intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_INFO));
-        intr_error = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_ERROR));
+        if (regs->dst_portal == 33 || regs->dst_portal == NUM_VMI - 1) {
+            intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_INFO));
+            intr_error = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_ERROR));
+        } else {
+            intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_INFO));
+            intr_error = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_ERROR));
+        }
     }
 
     if (mtd.xfer (Mtd::STA)) {

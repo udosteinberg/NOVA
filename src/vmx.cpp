@@ -123,8 +123,8 @@ void Vmcs::init()
         ctrl_cpu[1].val = Msr::read<uint64>(Msr::IA32_VMX_CTRL_CPU1);
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
-
-    Ept::ord = min (Ept::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
+    if (has_ept())
+        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
 
     ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_IO_BITMAP | CPU_SECONDARY;
     ctrl_cpu[1].set |= CPU_VPID;

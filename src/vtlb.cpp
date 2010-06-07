@@ -18,7 +18,9 @@
 
 #include "counter.h"
 #include "pd.h"
+#include "ptab.h"
 #include "regs.h"
+#include "user.h"
 #include "vpid.h"
 #include "vtlb.h"
 
@@ -36,36 +38,42 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword error, mword &phys, mword &
 
     unsigned lev = levels;
 
-    for (Vtlb *pte = reinterpret_cast<Vtlb *>(regs->cr3_shadow);; pte = reinterpret_cast<Vtlb *>(pte->addr())) {
+    for (Ptab val, *pte = reinterpret_cast<Ptab *>(regs->cr3_shadow);; pte = reinterpret_cast<Ptab *>(val.addr())) {
 
         unsigned shift = --lev * bpl + PAGE_BITS;
         pte += virt >> shift & ((1ul << bpl) - 1);
-        attr &= pte->attr();
+
+        if (peek_user (pte, val) != ~0UL) {         // XXX
+            phys = reinterpret_cast<Paddr>(pte);
+            return ~0ul;
+        }
+
+        attr &= val.attr();
 
         if (EXPECT_FALSE ((attr & bits) != bits))
             return 0;
 
-        if (EXPECT_FALSE (!pte->accessed()))
+        if (EXPECT_FALSE (!val.accessed()))
             Atomic::set_mask<true>(pte->val, ATTR_ACCESSED);
 
-        if (EXPECT_FALSE (lev && (!pse || !pte->super())))
+        if (EXPECT_FALSE (lev && (!pse || !val.super())))
             continue;
 
-        if (EXPECT_FALSE (!pte->dirty())) {
+        if (EXPECT_FALSE (!val.dirty())) {
             if (EXPECT_FALSE (error & ERROR_WRITE))
                 Atomic::set_mask<true>(pte->val, ATTR_DIRTY);
             else
                 attr &= ~ATTR_WRITABLE;
         }
 
-        attr |= pte->attr() & ATTR_UNCACHEABLE;
+        attr |= val.attr() & ATTR_UNCACHEABLE;
 
         if (EXPECT_TRUE (pge))
-            attr |= pte->attr() & ATTR_GLOBAL;
+            attr |= val.attr() & ATTR_GLOBAL;
 
         size_t size = 1ul << shift;
 
-        phys = pte->addr() | (virt & (size - 1));
+        phys = val.addr() | (virt & (size - 1));
 
         return size;
     }
@@ -98,7 +106,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
     if (gsize > hsize)
         attr |= ATTR_SPLINTER;
 
-    Counter::count (Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, 3);
+    Counter::print (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, 4);
 
     unsigned lev = levels;
 
@@ -173,7 +181,7 @@ void Vtlb::flush_addr (mword virt, unsigned long vpid)
             if (vpid)
                 Vpid::flush (Vpid::ADDRESS, vpid, virt);
 
-            Counter::count (Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 4);
+            Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 5);
 
             return;
         }
@@ -187,5 +195,5 @@ void Vtlb::flush (unsigned full, unsigned long vpid)
     if (vpid)
         Vpid::flush (full ? Vpid::CONTEXT_GLOBAL : Vpid::CONTEXT_NOGLOBAL, vpid);
 
-    Counter::count (Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 4);
+    Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 5);
 }

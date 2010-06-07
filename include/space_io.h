@@ -33,16 +33,15 @@ class Space_io : public Space
         }
 
         ALWAYS_INLINE
-        static inline mword idx_to_bit (mword idx)
+        static inline mword idx_to_mask (mword idx)
         {
-            return idx % (8 * sizeof (mword));
+            return 1UL << (idx % (8 * sizeof (mword)));
         }
 
         ALWAYS_INLINE
         inline Space_mem *space_mem();
 
-        bool insert (mword);
-        bool remove (mword);
+        void update (mword, mword);
 
     public:
         void * const bmp;
@@ -52,7 +51,7 @@ class Space_io : public Space
         ALWAYS_INLINE
         inline bool lookup_obj (mword, bool) const { return true; }
 
-        static void insert (Mdb *, bool);
+        void update (Mdb *, bool, mword);
 
         static void page_fault (mword, mword);
 

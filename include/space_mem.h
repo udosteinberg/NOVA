@@ -19,6 +19,7 @@
 #pragma once
 
 #include "compiler.h"
+#include "cpuset.h"
 #include "dpt.h"
 #include "ept.h"
 #include "ptab.h"
@@ -38,6 +39,9 @@ class Space_mem : public Space
         Dpt * const dpt;
         Ept * const ept;
 
+        Cpuset exist;
+        Cpuset flush;
+
         // Constructor for kernel memory space
         ALWAYS_INLINE INIT
         inline Space_mem() : mst (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
@@ -55,7 +59,7 @@ class Space_mem : public Space
         ALWAYS_INLINE
         inline void insert_local (mword virt, unsigned o, Paging::Attribute attr, Paddr phys)
         {
-            percpu[Cpu::id]->insert (virt, o, attr, phys);
+            percpu[Cpu::id]->update (virt, o, phys, attr);
         }
 
         ALWAYS_INLINE
@@ -67,7 +71,7 @@ class Space_mem : public Space
         ALWAYS_INLINE
         inline void insert (mword virt, unsigned o, Paging::Attribute attr, Paddr phys)
         {
-            mst->insert (virt, o, attr, phys);
+            mst->update (virt, o, phys, attr);
         }
 
         ALWAYS_INLINE
@@ -90,13 +94,21 @@ class Space_mem : public Space
 
         bool insert_utcb (mword);
 
-        static void insert (Mdb *, Paddr);
+        void update (Mdb *, Paddr, mword);
+
+        static void shootdown();
 
         void init (unsigned);
 
         ALWAYS_INLINE
-        inline bool sync (mword hla)
+        inline bool sync_mst (mword hla)
         {
             return percpu[Cpu::id]->sync_from (mst, hla);
+        }
+
+        ALWAYS_INLINE
+        inline bool sync_glb (mword hla)
+        {
+            return percpu[Cpu::id]->sync_from (Ptab::master(), hla);
         }
 };

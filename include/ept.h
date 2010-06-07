@@ -63,15 +63,12 @@ class Ept
         ALWAYS_INLINE
         inline void set (uint64 v) { val = v; }
 
-        ALWAYS_INLINE
-        inline void flush() { asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1ul) : "cc"); }
-
         Ept *walk (uint64, unsigned long, mword = 0);
 
     public:
         static unsigned const bpl = 9;
         static unsigned const max = 4;
-        static unsigned ord;
+        static mword ord;
 
         enum
         {
@@ -82,8 +79,10 @@ class Ept
             EPT_S               = 1ul << 7,
         };
 
-        void insert (uint64, mword, uint64, mword, mword);
-        void remove (uint64, mword);
+        void update (uint64, mword, uint64, mword, mword, bool = false);
+
+        ALWAYS_INLINE
+        inline void flush() { asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1UL) : "cc"); }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

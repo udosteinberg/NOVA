@@ -37,22 +37,18 @@ class Sc : public Kobject
 
         static unsigned const priorities = 256;
 
-        // SC Cache
         static Slab_cache cache;
 
-        // Ready List
+        static struct Rq {
+            Spinlock    lock;
+            Sc *        queue;
+        } rq CPULOCAL;
+
         static Sc *list[priorities] CPULOCAL;
 
         static unsigned long prio_top CPULOCAL;
 
-        // Release Queue
-        static struct Rq {
-            Spinlock    lock;
-            Sc *        queue;
-        } release[NUM_CPU];
-
     public:
-        // Current SC
         static Sc *     current     CPULOCAL_HOT;
         static unsigned ctr_link    CPULOCAL;
         static unsigned ctr_loop    CPULOCAL;
@@ -62,11 +58,25 @@ class Sc : public Kobject
 
         Sc (Pd *, mword, Ec *, mword, mword, mword);
 
+        ALWAYS_INLINE
+        inline Ec *ec() const
+        {
+            return owner;
+        }
+
+        ALWAYS_INLINE
+        static inline Rq *remote (unsigned c)
+        {
+            return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
+        }
+
         void ready_enqueue();
         void ready_dequeue();
 
         void remote_enqueue();
-        static void remote_enqueue_handler();
+
+        static void rrq_handler();
+        static void tlb_handler();
 
         NORETURN
         static void schedule (bool = false);

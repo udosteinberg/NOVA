@@ -29,6 +29,7 @@
 /*
  * Global Range from 0xc0000000 to 0xcfc00000
  */
+#define CPUGL_ADDR      0xcc000000
 
 /* HW Devices */
 #define HWDEV_EADDR     0xcfbfe000
@@ -40,7 +41,6 @@
  * CPU Local Range from 0xcfc00000 to 0xd0000000
  */
 #define LOCAL_SADDR     0xcfc00000
-#define LOCAL_EADDR     0xd0000000
 
 /* Local APIC */
 #define LAPIC_ADDR      0xcfffc000

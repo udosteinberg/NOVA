@@ -30,11 +30,6 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
     private:
         static Slab_cache cache;
 
-        static void revoke_mem  (mword, size_t, bool);
-        static void revoke_io   (mword, size_t, bool);
-        static void revoke_obj  (mword, size_t, bool);
-        static void revoke_pt   (Capability, mword, bool);
-
         WARN_UNUSED_RESULT
         mword clamp (mword,   mword &, mword, mword);
 
@@ -53,12 +48,25 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         ALWAYS_INLINE HOT
         inline void make_current()
         {
-            if (EXPECT_TRUE (current == this))
+            if (EXPECT_FALSE (flush.chk (Cpu::id))) {
+
+                flush.clr (Cpu::id);
+
+                if (ept)
+                    ept->flush();
+
+            } else if (EXPECT_TRUE (current == this))
                 return;
 
             current = this;
 
             cpu_ptab (Cpu::id)->make_current();
+        }
+
+        ALWAYS_INLINE
+        static inline Pd *remote (unsigned c)
+        {
+            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
 
         ALWAYS_INLINE
@@ -68,12 +76,15 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         }
 
         template <typename>
-        void delegate (Pd *, mword, mword, mword, mword = 0);
+        void delegate (Pd *, mword, mword, mword, mword);
+
+        template <typename>
+        void revoke (mword, mword, mword, bool);
 
         void delegate_item  (Pd *, Crd, Crd &, mword = 0);
         void delegate_items (Pd *, Crd, mword *, mword *, unsigned long);
 
-        static void revoke (Crd, bool);
+        void revoke_crd (Crd, bool);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

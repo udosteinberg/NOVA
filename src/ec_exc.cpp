@@ -84,12 +84,21 @@ bool Ec::handle_exc_pf (Exc_regs *r)
 {
     mword addr = r->cr2;
 
-    // User fault
     if (r->err & Ptab::ERROR_USER)
-        return addr < LINK_ADDR && Pd::current->Space_mem::sync (addr);
+        return addr < LINK_ADDR && Pd::current->Space_mem::sync_mst (addr);
 
-    // Kernel fault in user region (vTLB)
-    if (addr < LINK_ADDR && Pd::current->Space_mem::sync (addr))
+    if (addr < LINK_ADDR) {
+
+        if (Pd::current->Space_mem::sync_mst (addr))
+            return true;
+
+        if (fixup (r->eip)) {
+            r->eax = addr;
+            return true;
+        }
+    }
+
+    if (addr >= LINK_ADDR && addr < LOCAL_SADDR && Pd::current->Space_mem::sync_glb (addr))
         return true;
 
     // Kernel fault in I/O space

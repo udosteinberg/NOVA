@@ -53,9 +53,18 @@ SECTIONS
         *(.rodata .rodata.* .gnu.linkonce.r.*)
     } : kern
 
+    .fixup : AT (ADDR (.fixup) - OFFSET)
+    {
+        PROVIDE (FIXUP_S = .);
+        KEEP (*(.fixup))
+        PROVIDE (FIXUP_E = .);
+    } : kern
+
     .ctors : AT (ADDR (.ctors) - OFFSET)
     {
-        PROVIDE (CTORS_S = .);
+        PROVIDE (CTORS_L = .);
+        KEEP (*(.ctors.00001));
+        PROVIDE (CTORS_G = .);
         KEEP (*(.ctors))
         KEEP (*(SORT(.ctors.*)))
         PROVIDE (CTORS_E = .);

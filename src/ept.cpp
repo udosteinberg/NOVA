@@ -19,7 +19,7 @@
 #include "assert.h"
 #include "ept.h"
 
-unsigned Ept::ord = 8 * sizeof (mword);
+mword Ept::ord = 8 * sizeof (mword);
 
 Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
 {
@@ -45,19 +45,21 @@ Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
     }
 }
 
-void Ept::insert (uint64 gpa, mword o, uint64 hpa, mword a, mword t)
+void Ept::update (uint64 gpa, mword o, uint64 hpa, mword a, mword t, bool d)
 {
-    trace (TRACE_EPT, "INS EPT:%#010lx GPA:%#010llx O:%lu HPA:%#010llx A:%#05lx", Buddy::ptr_to_phys (this), gpa, o, hpa, a);
+    trace (TRACE_EPT, "EPT:%#010lx GPA:%#010llx O:%#02lx HPA:%#010llx A:%#lx D:%u", Buddy::ptr_to_phys (this), gpa, o, hpa, a, d);
 
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Ept *e = walk (gpa, l, EPT_R | EPT_W | EPT_X);
+    Ept *e = walk (gpa, l, d ? 0 : EPT_R | EPT_W | EPT_X);
+    assert (e);
+
     uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : 0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
 
-        assert (!e->present());
+        assert (d || !e->present());
 
         e->set (v);
 
@@ -68,32 +70,4 @@ void Ept::insert (uint64 gpa, mword o, uint64 hpa, mword a, mword t)
                e->attr(),
                s);
     }
-}
-
-void Ept::remove (uint64 gpa, mword o)
-{
-    trace (TRACE_EPT, "REM EPT:%#010lx GPA:%#010llx O:%lu", Buddy::ptr_to_phys (this), gpa, o);
-
-    unsigned long l = o / bpl;
-    unsigned long s = 1ul << (l * bpl + PAGE_BITS);
-
-    Ept *e = walk (gpa, l);
-    if (!e)
-        return;
-
-    for (unsigned long i = 1ul << o % bpl; i; i--, e++) {
-
-        assert (!e->present() || !l || e->super());
-
-        trace (TRACE_EPT, "L:%lu EPT:%#010lx HPA:%010lx A:%#05lx S:%#lx",
-               l,
-               Buddy::ptr_to_phys (e),
-               e->addr(),
-               e->attr(),
-               s);
-
-        e->set (0);
-    }
-
-    flush();
 }

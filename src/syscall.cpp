@@ -48,7 +48,7 @@ void Ec::activate (Ec *ec)
 template <bool C, void (*F)()>
 void Ec::delegate()
 {
-    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    Ec *ec = current->reply;
     assert (ec);
 
     Ec *src = C ? ec : current;
@@ -128,7 +128,7 @@ void Ec::sys_call()
 
 void Ec::recv_msg()
 {
-    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    Ec *ec = current->reply;
 
     if (EXPECT_TRUE (ec->cont == ret_user_sysexit)) {
         ec->utcb->save (current->utcb, current->mtr);
@@ -148,12 +148,14 @@ void Ec::recv_msg()
 
 void Ec::wait_msg()
 {
-    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    Ec *ec = current->reply;
 
     current->cont = static_cast<void (*)()>(0);
 
-    if (EXPECT_TRUE (ec->clr_partner()))
+    if (ec->clr_partner())
         ec->make_current();
+    else
+        Ec::activate (Sc::current->ec());
 
     Sc::schedule();
 }
@@ -162,7 +164,7 @@ void Ec::sys_reply()
 {
     Sys_reply *s = static_cast<Sys_reply *>(&current->regs);
 
-    Ec *ec = static_cast<Ec *>(current->reply.obj());
+    Ec *ec = current->reply;
 
     if (EXPECT_FALSE (!ec)) {
         current->cont = static_cast<void (*)()>(0);
@@ -344,7 +346,7 @@ void Ec::sys_revoke()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_REVOKE", current);
 
-    Pd::revoke (r->crd(), r->flags());
+    Pd::current->revoke_crd (r->crd(), r->flags());
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -474,10 +476,8 @@ void Ec::handle_sys (uint8 number)
         sys_create_pt();
     if (EXPECT_TRUE (number == Sys_regs::CREATE_SM))
         sys_create_sm();
-#if 0
     if (EXPECT_TRUE (number == Sys_regs::REVOKE))
         sys_revoke();
-#endif
     if (EXPECT_TRUE (number == Sys_regs::RECALL))
         sys_recall();
     if (EXPECT_TRUE (number == Sys_regs::SEMCTL))

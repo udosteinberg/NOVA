@@ -17,6 +17,9 @@
  */
 
 #include "bits.h"
+#include "counter.h"
+#include "hip.h"
+#include "lapic.h"
 #include "mtrr.h"
 #include "pd.h"
 
@@ -24,7 +27,7 @@ unsigned Space_mem::did_ctr;
 
 void Space_mem::init (unsigned cpu)
 {
-    if (!percpu[cpu]) {
+    if (exist.set (cpu)) {
 
         // Create ptab for this CPU
         percpu[cpu] = new Ptab;
@@ -39,31 +42,59 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::insert (Mdb *mdb, Paddr phys)
+void Space_mem::update (Mdb *mdb, Paddr phys, mword rem)
 {
-    Space_mem *s = mdb->node_pd;
-    assert (s && s != &Pd::kern);
+    assert (this == mdb->node_pd && this != &Pd::kern);
 
-    unsigned o = mdb->node_order - PAGE_BITS;
+    Lock_guard <Spinlock> guard (mdb->lock);
 
-    if (s->dpt) {
+    mword o = mdb->node_order - PAGE_BITS;
+    mword a = mdb->node_attr & ~rem;
+
+    if (dpt) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            s->dpt->insert (mdb->node_base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), mdb->node_attr);
+            dpt->update (mdb->node_base + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, rem);
     }
 
-    if (s->ept) {
+    if (ept) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned i = 0; i < 1u << (o - ord); i++)
-            s->ept->insert (mdb->node_base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), mdb->node_attr, mdb->node_type);
+            ept->update (mdb->node_base + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), a, mdb->node_type, rem);
     }
 
-    Ptab::Attribute a = Ptab::Attribute (Ptab::ATTR_USER |
-                 (mdb->node_attr & 0x4 ? Ptab::ATTR_NONE     : Ptab::ATTR_NOEXEC) |
-                 (mdb->node_attr & 0x2 ? Ptab::ATTR_WRITABLE : Ptab::ATTR_NONE));
+    bool l = mst->update (mdb->node_base, o, phys, Ptab::hw_attr (a), rem);
 
-    // Whoever owns a VMA struct in the VMA list owns the respective PT slots
-    s->mst->insert (mdb->node_base, o, a, phys);
+    if (rem) {
+
+        if (l)
+            for (unsigned i = 0; i < sizeof (percpu) / sizeof (*percpu); i++)
+                if (percpu[i])
+                    percpu[i]->update (mdb->node_base, o, phys, Ptab::hw_attr (a), rem);
+
+        flush.merge (exist);
+    }
+}
+
+void Space_mem::shootdown()
+{
+    for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
+
+        if (!Hip::cpu_online (cpu))
+            continue;
+
+        Pd *pd = Pd::remote (cpu);
+
+        if (!pd->flush.chk (cpu))
+            continue;
+
+        unsigned ctr = Counter::remote (cpu, 1);
+
+        Lapic::send_ipi (cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_TLB);
+
+        while (Counter::remote (cpu, 1) == ctr)
+            pause();
+    }
 }
 
 void Space_mem::insert_root (mword base, size_t size, mword attr)

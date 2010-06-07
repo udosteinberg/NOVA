@@ -47,7 +47,7 @@ class Dpt
     public:
         static unsigned const bpl = 9;
         static unsigned const max = 4;
-        static unsigned ord;
+        static mword ord;
 
         enum
         {
@@ -63,8 +63,7 @@ class Dpt
                 clflush (this + i);
         }
 
-        void insert (uint64, mword, uint64, mword);
-        void remove (uint64, mword);
+        void update (uint64, mword, uint64, mword, bool = false);
 
         ALWAYS_INLINE
         inline Dpt *level (unsigned l) { return walk (0, l, DPT_R | DPT_W); }

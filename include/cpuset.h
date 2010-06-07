@@ -1,5 +1,5 @@
 /*
- * Capability
+ * CPU Set
  *
  * Author: Udo Steinberg <udo@hypervisor.org>
  * TU Dresden, Operating Systems Group
@@ -18,25 +18,27 @@
 
 #pragma once
 
+#include "atomic.h"
 #include "compiler.h"
 
-class Kobject;
-
-class Capability
+class Cpuset
 {
     private:
-        mword val;
-
-        static unsigned const mask = 0x7;
+        unsigned long val;
 
     public:
-        Capability() : val (0) {}
-
-        Capability (Kobject *o, unsigned a) : val (a ? reinterpret_cast<mword>(o) | (a & mask) : 0) {}
+        ALWAYS_INLINE
+        inline explicit Cpuset() : val (0) {}
 
         ALWAYS_INLINE
-        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~mask); }
+        inline bool chk (unsigned cpu) const { return val & 1UL << cpu; }
 
         ALWAYS_INLINE
-        inline unsigned acc() const { return val & mask; }
+        inline bool set (unsigned cpu) { return !Atomic::test_set_bit<true>(val, cpu); }
+
+        ALWAYS_INLINE
+        inline void clr (unsigned cpu) { Atomic::clr_mask<true>(val, 1UL << cpu); }
+
+        ALWAYS_INLINE
+        inline void merge (Cpuset &s) { Atomic::set_mask<true>(val, s.val); }
 };

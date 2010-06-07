@@ -21,6 +21,7 @@
 #include "avl.h"
 #include "compiler.h"
 #include "slab.h"
+#include "spinlock.h"
 #include "util.h"
 
 class Pd;
@@ -28,19 +29,25 @@ class Pd;
 class Mdb : public Avl
 {
     private:
-        static Slab_cache cache;
+        static Slab_cache   cache;
+        static Spinlock     mdb;
 
+        bool alive() const { return prev->next == this && next->prev == this; }
         bool larger (Avl *x) const { return  node_base > static_cast<Mdb *>(x)->node_base; }
         bool equal  (Avl *x) const { return (node_base ^ static_cast<Mdb *>(x)->node_base) >> max (node_order, static_cast<Mdb *>(x)->node_order) == 0; }
 
     public:
+        Spinlock    lock;
+        Mdb *       prev;
+        Mdb *       next;
+        unsigned    dpth;
         Pd *  const node_pd;
         mword const node_base;
         mword const node_order;
-        mword const node_attr;
+        mword       node_attr;
         mword const node_type;
 
-        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0) : node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t) {}
+        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0) : prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t) {}
 
         static Mdb *lookup (Avl *tree, mword base)
         {
@@ -58,6 +65,10 @@ class Mdb : public Avl
 
             return n;
         }
+
+        bool insert_node (Mdb *, mword);
+        void demote_node (mword);
+        bool remove_node();
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

@@ -61,7 +61,8 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
 
         pd->Space_mem::insert (u, 0,
                                Ptab::Attribute (Ptab::ATTR_USER |
-                                                Ptab::ATTR_WRITABLE),
+                                                Ptab::ATTR_WRITABLE |
+                                                Ptab::ATTR_PRESENT),
                                Buddy::ptr_to_phys (utcb));
 
         regs.dst_portal = NUM_EXC - 2;
@@ -154,7 +155,7 @@ void Ec::ret_user_iret()
     if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
         handle_hazard (ret_user_iret);
 
-    Rcu::qstate();
+    Rcu::quiet();
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
@@ -173,6 +174,8 @@ void Ec::ret_user_vmresume()
 {
     if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
         handle_hazard (ret_user_vmresume);
+
+    Rcu::quiet();
 
     current->regs.vmcs->make_current();
 
@@ -197,6 +200,8 @@ void Ec::ret_user_vmrun()
     if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
         handle_hazard (ret_user_vmrun);
 
+    Rcu::quiet();
+
     current->regs.eax = Buddy::ptr_to_phys (current->regs.vmcb);
 
     asm volatile ("lea %0, %%esp;"
@@ -213,6 +218,8 @@ void Ec::ret_user_vmrun()
 
 void Ec::idle()
 {
+    Rcu::quiet();
+
     uint64 t1 = rdtsc();
     asm volatile ("sti; hlt; cli" : : : "memory");
     uint64 t2 = rdtsc();
@@ -273,6 +280,17 @@ void Ec::root_invoke()
 void Ec::handle_tss()
 {
     panic ("Task gate invoked\n");
+}
+
+bool Ec::fixup (mword &eip)
+{
+    for (mword *ptr = &FIXUP_S; ptr < &FIXUP_E; ptr += 2)
+        if (eip == *ptr) {
+            eip = *++ptr;
+            return true;
+        }
+
+    return false;
 }
 
 void Ec::die (char const *reason, Exc_regs *r)

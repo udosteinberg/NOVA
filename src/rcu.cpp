@@ -16,143 +16,80 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "assert.h"
 #include "atomic.h"
+#include "counter.h"
 #include "cpu.h"
-#include "lock_guard.h"
 #include "rcu.h"
 
-Spinlock    Rcu::g_lock;
-unsigned    Rcu::g_cpumask;
-unsigned    Rcu::g_current;
-unsigned    Rcu::g_completed;
-bool        Rcu::g_next_pending;
-
 unsigned    Rcu::batch;
+unsigned    Rcu::count;
+
 unsigned    Rcu::q_batch;
+unsigned    Rcu::c_batch;
 bool        Rcu::q_passed;
 bool        Rcu::q_pending;
-Rcu_elem *  Rcu::list_c;
-Rcu_elem ** Rcu::tail_c;
+
 Rcu_elem *  Rcu::list_n;
-Rcu_elem ** Rcu::tail_n;
+Rcu_elem *  Rcu::list_c;
 Rcu_elem *  Rcu::list_d;
-Rcu_elem ** Rcu::tail_d;
 
-void Rcu::init()
+void Rcu::invoke_batch()
 {
-    q_pending = false;
-    list_c = list_n = list_d = 0;
-    tail_c = &list_c;
-    tail_n = &list_n;
-    tail_d = &list_d;
-}
-
-void Rcu::call (Rcu_elem *e, void (*f)(Rcu_elem *))
-{
-    e->func = f;
-    e->next = 0;
-   *tail_n  = e;
-    tail_n  = &e->next;
-}
-
-void Rcu::quiet()
-{
-    Atomic::clr_mask<true>(g_cpumask, 1UL << Cpu::id);
-
-    if (!g_cpumask) {
-        g_completed = g_current;
-        start_batch();
+    for (Rcu_elem *e = list_d, *next; e; e = next) {
+        next = e->next;
+        (e->func)(e);
     }
 }
 
 void Rcu::start_batch()
 {
-    if (g_next_pending && g_completed == g_current) {
-        g_next_pending = false;
-        g_current++;
-        g_cpumask = ~0UL;
-    }
-}
+    count = Cpu::booted;
 
-bool Rcu::do_batch()
-{
-    for (Rcu_elem *e = list_d; e; e = e->next)
-        (e->func)(e);
-
-    list_d = 0;
-    tail_d = &list_d;
-
-    return true;
+    batch++;
 }
 
 void Rcu::check_quiescent_state()
 {
-    if (q_batch != g_current) {
+    if (q_batch != batch) {
+        q_batch = batch;
         q_pending = true;
         q_passed = false;
-        q_batch = g_current;
+        Counter::print (q_batch, Console_vga::COLOR_LIGHT_GREEN, 2);
         return;
     }
 
-    if (!q_pending)
-        return;
-
-    if (!q_passed)
+    if (!q_pending || !q_passed)
         return;
 
     q_pending = false;
 
-    Lock_guard<Spinlock> guard (g_lock);
+    assert (q_batch == batch);
 
-    if (q_batch == g_current)
-        quiet();
-}
-
-bool Rcu::pending()
-{
-    if (list_c && g_completed >= batch)
-        return true;
-
-    if (!list_c && list_n)
-        return true;
-
-    if (list_d)
-        return true;
-
-    if (q_batch != g_current || q_pending)
-        return 1;
-
-    return false;
+    if (Atomic::sub (count, 1U))
+        start_batch();
 }
 
 bool Rcu::process_callbacks()
 {
-    if (list_c && g_completed >= batch) {
-       *tail_d = list_c;
-        tail_d = tail_c;
+    if (list_c && batch > c_batch) {
+        list_d = list_c;
         list_c = 0;
-        tail_c = &list_c;
     }
 
     if (!list_c && list_n) {
         list_c = list_n;
-        tail_c = tail_n;
         list_n = 0;
-        tail_n = &list_n;
 
-        batch = g_current + 1;
-
-        if (!g_next_pending) {
-            Lock_guard<Spinlock> guard (g_lock);
-            g_next_pending = true;
-            start_batch();
-        }
+        c_batch = batch + 1;
     }
 
     check_quiescent_state();
 
-    if (list_d)
-        do_batch();
+    if (list_d) {
+        invoke_batch();
+        list_d = 0;
+    }
 
     return false;
 }

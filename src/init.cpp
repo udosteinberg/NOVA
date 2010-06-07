@@ -34,18 +34,20 @@ mword kern_ptab_setup()
     Ptab *ptab = new Ptab;
 
     // Allocate and map cpu page
-    ptab->insert (CPULC_ADDR, 0,
-                  Ptab::Attribute (Ptab::ATTR_NOEXEC |
-                                   Ptab::ATTR_GLOBAL |
-                                   Ptab::ATTR_WRITABLE),
-                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)));
+    ptab->update (CPULC_ADDR, 0,
+                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                  Ptab::Attribute (Ptab::ATTR_NOEXEC   |
+                                   Ptab::ATTR_GLOBAL   |
+                                   Ptab::ATTR_WRITABLE |
+                                   Ptab::ATTR_PRESENT));
 
     // Allocate and map kernel stack
-    ptab->insert (KSTCK_ADDR, 0,
-                  Ptab::Attribute (Ptab::ATTR_NOEXEC |
-                                   Ptab::ATTR_GLOBAL |
-                                   Ptab::ATTR_WRITABLE),
-                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)));
+    ptab->update (KSTCK_ADDR, 0,
+                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                  Ptab::Attribute (Ptab::ATTR_NOEXEC   |
+                                   Ptab::ATTR_GLOBAL   |
+                                   Ptab::ATTR_WRITABLE |
+                                   Ptab::ATTR_PRESENT));
 
     // Sync kernel code and data
     ptab->sync_master_range (LINK_ADDR, LOCAL_SADDR);
@@ -68,8 +70,7 @@ void init_ilp (mword mbi)
     // Enable paging
     Paging::enable();
 
-    // Call static constructors
-    for (void (**func)() = &CTORS_E; func != &CTORS_S; (*--func)()) ;
+    for (void (**func)() = &CTORS_E; func != &CTORS_G; (*--func)()) ;
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);

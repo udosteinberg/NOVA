@@ -33,7 +33,8 @@ Ioapic::Ioapic (Paddr phys, unsigned gsi, unsigned i) : reg_base ((hwdev_addr -=
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC      |
                                                  Ptab::ATTR_GLOBAL      |
                                                  Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE),
+                                                 Ptab::ATTR_WRITABLE    |
+                                                 Ptab::ATTR_PRESENT),
                                 phys & ~PAGE_MASK);
 
     trace (TRACE_APIC, "APIC:%#lx ID:%#x GSI:%lu VER:%#x IRT:%#x PRQ:%u",

@@ -29,7 +29,8 @@ void Console_vga::init()
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC |
                                                  Ptab::ATTR_GLOBAL |
                                                  Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE),
+                                                 Ptab::ATTR_WRITABLE |
+                                                 Ptab::ATTR_PRESENT),
                                 0xb9000);
 
     set_page (1);
@@ -73,8 +74,8 @@ unsigned Console_vga::init_spinner (Spinlock *lock)
     if (lock) {
         put (_num_row, 0, COLOR_LIGHT_RED, (Cpu::id & 0xf)["0123456789ABCDEF"]);
 
-        for (unsigned i = 0; i < 75; i++)
-            put (_num_row, i + 5, COLOR_LIGHT_BLACK, (i & 0xf)["0123456789ABCDEF"]);
+        for (unsigned i = 0; i < 74; i++)
+            put (_num_row, 6 + i, COLOR_LIGHT_BLACK, (i & 0xf)["0123456789ABCDEF"]);
 
         lock->unlock();
     }

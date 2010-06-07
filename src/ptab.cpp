@@ -16,85 +16,62 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "assert.h"
 #include "ptab.h"
 
 Paddr Ptab::remap_addr = static_cast<Paddr>(~0ull);
 
-Ptab *Ptab::walk (mword hla, unsigned long l, bool alloc)
+Ptab *Ptab::walk (mword hla, unsigned long l, mword p)
 {
     unsigned lev = levels;
 
-    for (Ptab *p = this;; p = static_cast<Ptab *>(Buddy::phys_to_ptr (p->addr()))) {
+    for (Ptab *e = this;; e = static_cast<Ptab *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        p += hla >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
+        e += hla >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         if (lev == l)
-            return p;
+            return e;
 
-        if (!p->present()) {
+        if (!e->present()) {
 
-            if (!alloc)
+            if (!p)
                 return 0;
 
-            p->val = Buddy::ptr_to_phys (new Ptab) | ATTR_PTAB;
+            e->set (Buddy::ptr_to_phys (new Ptab) | p);
         }
 
         else
-            assert (!p->super());
+            assert (!e->super());
     }
 }
 
-void Ptab::insert (mword hla, mword o, mword a, Paddr hpa)
+bool Ptab::update (mword hla, mword o, Paddr hpa, mword a, bool d)
 {
-    trace (TRACE_PTE, "INS PTE:%#010lx HLA:%#010lx O:%lu HPA:%#010lx A:%#05lx", Buddy::ptr_to_phys (this), hla, o, hpa, a);
+    trace (TRACE_PTE, "HPT:%#010lx HLA:%#010lx O:%02lx HPA:%#010lx A:%#lx D:%u", Buddy::ptr_to_phys (this), hla, o, hpa, a, d);
 
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Ptab *p = walk (hla, l, true);
-    Paddr v = hpa | a | ATTR_LEAF | (l ? ATTR_SUPERPAGE : 0);
+    Ptab *e = walk (hla, l, d ? 0 : ATTR_PTAB);
+    assert (e);
 
-    for (unsigned long i = 1ul << o % bpl; i; i--, p++, v += s) {
+    Paddr v = hpa | a | ATTR_DIRTY | ATTR_ACCESSED | (l ? ATTR_SUPERPAGE : 0);
 
-        assert (!p->present());
+    for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
 
-        p->val = v;
+        assert (d || !e->present());
 
-        trace (TRACE_PTE, "L:%lu PTE:%#010lx HPA:%010lx A:%#05x S:%#lx",
-               l,
-               Buddy::ptr_to_phys (p),
-               p->addr(),
-               p->attr(),
-               s);
-    }
-}
-
-void Ptab::remove (mword hla, mword o)
-{
-    trace (TRACE_PTE, "REM PTE:%#010lx HLA:%#010lx O:%lu", Buddy::ptr_to_phys (this), hla, o);
-
-    unsigned long l = o / bpl;
-    unsigned long s = 1ul << (l * bpl + PAGE_BITS);
-
-    Ptab *p = walk (hla, l, false);
-    if (!p)
-        return;
-
-    for (unsigned long i = 1ul << o % bpl; i; i--, p++) {
-
-        assert (!p->present() || !l || p->super());
+        e->set (v);
 
         trace (TRACE_PTE, "L:%lu PTE:%#010lx HPA:%010lx A:%#05x S:%#lx",
                l,
-               Buddy::ptr_to_phys (p),
-               p->addr(),
-               p->attr(),
+               Buddy::ptr_to_phys (e),
+               e->addr(),
+               e->attr(),
                s);
-
-        p->val = 0;
     }
 
-    flush();
+    return l;
 }
 
 size_t Ptab::lookup (mword virt, Paddr &phys)
@@ -179,13 +156,14 @@ void Ptab::sync_master_range (mword s_addr, mword e_addr)
 
 void *Ptab::remap (Paddr phys)
 {
-    unsigned offset = static_cast<unsigned>(phys & ((1u << 22) - 1));
+    unsigned const o = 11;
+    unsigned offset = static_cast<unsigned>(phys & ((1u << (o + PAGE_BITS)) - 1));
 
     phys &= ~offset;
 
     if (phys != remap_addr) {
-        remove (REMAP_SADDR, 11);
-        insert (REMAP_SADDR, 11, ATTR_WRITABLE, phys);
+        update (REMAP_SADDR, o, phys, 0x7, true);
+        flush();
         remap_addr = phys;
     }
 

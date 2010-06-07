@@ -67,7 +67,7 @@ class Paging
         INIT
         static void enable();
 
-    protected:
+    public:
         Paddr val;
 
         ALWAYS_INLINE

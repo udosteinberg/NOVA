@@ -35,14 +35,14 @@ class Ptab : public Paging
             asm volatile ("mov %%cr3, %0; mov %0, %%cr3" : "=&r" (cr3));
         }
 
-        Ptab *walk (mword, unsigned long, bool);
+        Ptab *walk (mword, unsigned long, mword = 0);
 
     public:
         ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
-        }
+        inline void set (Paddr v) { val = v; }
+
+        ALWAYS_INLINE
+        static mword hw_attr (mword a) { return a ? ATTR_USER | (a & 2) | ATTR_PRESENT : 0; }
 
         ALWAYS_INLINE
         static inline Ptab *master()
@@ -66,9 +66,6 @@ class Ptab : public Paging
             asm volatile ("mov %0, %%cr3" : : "r" (Buddy::ptr_to_phys (this)) : "memory");
         }
 
-        void insert (mword, mword, mword, Paddr);
-        void remove (mword, mword);
-
         size_t lookup (mword, Paddr &);
 
         bool sync_from (Ptab *, mword);
@@ -78,4 +75,12 @@ class Ptab : public Paging
         void sync_master_range (mword s_addr, mword e_addr);
 
         void *remap (Paddr phys);
+
+        bool update (mword, mword, Paddr, mword, bool = false);
+
+        ALWAYS_INLINE
+        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
 };

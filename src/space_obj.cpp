@@ -23,7 +23,7 @@ Space_mem *Space_obj::space_mem()
     return static_cast<Pd *>(this);
 }
 
-bool Space_obj::insert (mword idx, Capability cap)
+void Space_obj::update (mword idx, Capability cap)
 {
     mword virt = idx_to_virt (idx);
 
@@ -31,25 +31,13 @@ bool Space_obj::insert (mword idx, Capability cap)
     if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
         phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0));
         space_mem()->insert (virt & ~PAGE_MASK, 0,
-                             Ptab::Attribute (Ptab::ATTR_NOEXEC |
-                                              Ptab::ATTR_WRITABLE),
+                             Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE | Ptab::ATTR_PRESENT),
                              phys);
 
         phys |= virt & PAGE_MASK;
     }
 
-    // Insert capability only if slot empty
-    return Atomic::cmp_swap<true>(static_cast<Capability *>(Buddy::phys_to_ptr (phys)), Capability(), cap);
-}
-
-bool Space_obj::remove (mword idx, Capability cap)
-{
-    Paddr phys;
-    if (!space_mem()->lookup (idx_to_virt (idx), phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0))
-        return false;
-
-    // Remove capability only if still present
-    return Atomic::cmp_swap<true>(static_cast<Capability *>(Buddy::phys_to_ptr (phys)), cap, Capability());
+    *static_cast<Capability *>(Buddy::phys_to_ptr (phys)) = cap;
 }
 
 size_t Space_obj::lookup (mword idx, Capability &cap)
@@ -63,9 +51,11 @@ size_t Space_obj::lookup (mword idx, Capability &cap)
     return 1;
 }
 
-void Space_obj::insert (Mdb *mdb, Capability cap)
+void Space_obj::update (Mdb *mdb, Kobject *obj, mword rem)
 {
-    mdb->node_pd->Space_obj::insert (mdb->node_base, cap);
+    assert (this == mdb->node_pd && this != &Pd::kern);
+    Lock_guard <Spinlock> guard (mdb->lock);
+    update (mdb->node_base, Capability (obj, mdb->node_attr & ~rem));
 }
 
 bool Space_obj::insert_root (Kobject *obj)
@@ -73,7 +63,9 @@ bool Space_obj::insert_root (Kobject *obj)
     if (!obj->node_pd->Space_obj::insert_node (obj))
         return false;
 
-    return obj->node_pd->Space_obj::insert (obj->node_base, Capability (obj));
+    obj->node_pd->Space_obj::update (obj->node_base, Capability (obj, obj->node_attr));
+
+    return true;
 }
 
 void Space_obj::page_fault (mword addr, mword error)
@@ -82,11 +74,11 @@ void Space_obj::page_fault (mword addr, mword error)
     assert (!(error & Paging::ERROR_WRITE));
 
     // First try to sync with PD master page table
-    if (Pd::current->Space_mem::sync (addr))
+    if (Pd::current->Space_mem::sync_mst (addr))
         return;
 
     // If that didn't work, back the region with a r/o 0-page
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
-                                    Ptab::ATTR_NOEXEC,
+                                    Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_PRESENT),
                                     reinterpret_cast<Paddr>(&FRAME_0));
 }

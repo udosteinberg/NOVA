@@ -19,13 +19,10 @@
 #pragma once
 
 #include "compiler.h"
-#include "spinlock.h"
 
 class Rcu_elem
 {
-    friend class Rcu;
-
-    private:
+    public:
         Rcu_elem *next;
         void (*func)(Rcu_elem *);
 };
@@ -33,33 +30,24 @@ class Rcu_elem
 class Rcu
 {
     private:
-        static Spinlock g_lock;
-        static unsigned g_cpumask;
-        static unsigned g_current;
-        static unsigned g_completed;
-        static bool     g_next_pending;
+        static unsigned batch;
+        static unsigned count;
 
         static unsigned q_batch     CPULOCAL;
+        static unsigned c_batch     CPULOCAL;
+
         static bool     q_passed    CPULOCAL;
         static bool     q_pending   CPULOCAL;
 
-        static unsigned     batch   CPULOCAL;
-        static Rcu_elem *   list_c  CPULOCAL;
-        static Rcu_elem **  tail_c  CPULOCAL;
-        static Rcu_elem *   list_n  CPULOCAL;
-        static Rcu_elem **  tail_n  CPULOCAL;
-        static Rcu_elem *   list_d  CPULOCAL;
-        static Rcu_elem **  tail_d  CPULOCAL;
+        static Rcu_elem *list_n     CPULOCAL;
+        static Rcu_elem *list_c     CPULOCAL;
+        static Rcu_elem *list_d     CPULOCAL;
 
     public:
-        static void init();
-        static void call (Rcu_elem *, void (*)(Rcu_elem *));
-        static bool pending();
-        static bool process_callbacks();
+        static void quiet() { q_passed = true; }
+
+        static void invoke_batch();
         static void start_batch();
         static void check_quiescent_state();
-        static void quiet();
-        static bool do_batch();
-
-        static void qstate() { q_passed = true; }
+        static bool process_callbacks();
 };

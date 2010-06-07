@@ -25,4 +25,4 @@
 #define NUM_GSI         48
 #define NUM_LVT         6
 #define NUM_MSI         1
-#define NUM_IPI         1
+#define NUM_IPI         2

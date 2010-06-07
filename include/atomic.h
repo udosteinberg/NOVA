@@ -25,14 +25,14 @@ class Atomic
     public:
         template <typename T>
         ALWAYS_INLINE
-        static inline void add (T &val, unsigned long n)
+        static inline void add (T &val, T n)
         {
             asm volatile ("lock; add %1, %0" : "+m" (val) : "ir" (n) : "cc");
         }
 
         template <typename T>
         ALWAYS_INLINE
-        static inline bool sub (T &val, unsigned long n)
+        static inline bool sub (T &val, T n)
         {
             bool ret;
             asm volatile ("lock; sub %2, %1; setz %0" : "=q" (ret), "+m" (val) : "ir" (n) : "cc");

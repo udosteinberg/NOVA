@@ -65,17 +65,64 @@ void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
             break;
 
-//        trace (0, "A:%#010lx B:%#010lx O:%lu vs. B:%#010lx O:%lu -> %d", addr, mdb->node_base, mdb->node_order, b, ord, o);
+        Mdb *node = new Mdb (this, b - snd_base + rcv_base, o, 0, mdb->node_type);
 
-        // Adjust rcv_base by the clamping offset
-        Mdb *a = new Mdb (this, b - snd_base + rcv_base, o, mdb->node_attr & attr, mdb->node_type);
-        if (!S::insert_node (a)) {
-            delete a;
+        if (!S::insert_node (node)) {
+            delete node;
             continue;
         }
 
-        // Look up and insert sender mapping
-        S::insert (a, snd->S::lookup_obj (b, snd == &kern));
+        if (!node->insert_node (mdb, attr)) {
+            //S::remove_node (a);
+            delete node;
+            continue;
+        }
+
+        S::update (node, snd->S::lookup_obj (b, snd == &kern), 0);
+    }
+}
+
+template <typename S>
+void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
+{
+    Mdb *mdb;
+    for (mword addr = base; (mdb = S::lookup_node (addr)); addr = mdb->node_base + (1UL << mdb->node_order)) {
+
+        mword o, b = base;
+        if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
+            break;
+
+        Mdb *node = mdb;
+
+        unsigned d = node->dpth;
+
+        for (Mdb *succ;; node = succ) {
+
+            if ((node->node_attr & attr) && (self || node != mdb)) {
+                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base, false), attr);
+                node->demote_node (attr);
+            }
+
+            succ = ACCESS_ONCE (node->next);
+
+            if (succ->dpth <= d)
+                break;
+        }
+
+        Mdb *x = ACCESS_ONCE (node->next);
+        assert (x->dpth <= d || (x->dpth == node->dpth + 1 && !(x->node_attr & attr)));
+
+        for (Mdb *succ;; node = succ) {
+
+            if (node->remove_node() && !node->node_pd->S::remove_node (node)) {}
+
+            succ = ACCESS_ONCE (node->prev);
+
+            if (node->dpth <= d)
+                break;
+        }
+
+        assert (node == mdb);
     }
 }
 
@@ -130,41 +177,38 @@ void Pd::delegate_item (Pd *pd, Crd rcv, Crd &snd, mword hot)
 
         case Crd::IO:
             o = clamp (sb, rb, so, ro);     // XXX: o can be ~0UL
-            trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu", current, this, sb, o);
-            delegate<Space_io>(pd, rb, rb, o);
+            trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu A:%#lx", current, this, sb, o, a);
+            delegate<Space_io>(pd, rb, rb, o, 7);
             break;
 
         case Crd::OBJ:
             o = clamp (sb, rb, so, ro, hot);
-            trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu", current, this, sb, rb, o);
-            delegate<Space_obj>(pd, sb, rb, o);
+            trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
+            delegate<Space_obj>(pd, sb, rb, o, 7);
             break;
     }
 
     snd = Crd (rt, rb, o, a);
 }
 
-void Pd::revoke (Crd r, bool self)
+void Pd::revoke_crd (Crd crd, bool self)
 {
-    mword base = r.base();
-    mword size = 1ul << r.order();
-
-    switch (r.type()) {
+    switch (crd.type()) {
 
         case Crd::MEM:
-            base <<= PAGE_BITS;
-            trace (TRACE_MAP, "UNMAP MEM PD:%p B:%#010lx S:%#lx", current, base, size);
-            revoke_mem (base, size, self);
+            trace (TRACE_UNMAP, "UNMAP MEM PD:%p B:%#010lx O:%#x A:%#x", this, crd.base() << PAGE_BITS, crd.order() + PAGE_BITS, crd.attr());
+            revoke<Space_mem>(crd.base() << PAGE_BITS, crd.order() + PAGE_BITS, crd.attr(), self);
+            shootdown();
             break;
 
         case Crd::IO:
-            trace (TRACE_MAP, "UNMAP I/O PD:%p B:%#010lx S:%#lx", current, base, size);
-            revoke_io (base, size, self);
+            trace (TRACE_UNMAP, "UNMAP I/O PD:%p B:%#010lx O:%#x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            revoke<Space_io>(crd.base(), crd.order(), crd.attr(), self);
             break;
 
         case Crd::OBJ:
-            trace (TRACE_MAP, "UNMAP OBJ PD:%p B:%#010lx S:%#lx", current, base, size);
-            revoke_obj (base, size, self);
+            trace (TRACE_UNMAP, "UNMAP OBJ PD:%p B:%#010lx O:%#x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            revoke<Space_obj>(crd.base(), crd.order(), crd.attr(), self);
             break;
     }
 }

@@ -51,11 +51,6 @@ class Slab_cache
          * Front end deallocator
          */
         void free (void *ptr);
-
-        /*
-         * Back end deallocator
-         */
-        void reap();
 };
 
 class Slab

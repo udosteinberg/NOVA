@@ -49,8 +49,9 @@ enum {
     TRACE_MEMORY    = 1ul << 13,
     TRACE_PCI       = 1ul << 14,
     TRACE_SCHEDULE  = 1ul << 16,
-    TRACE_VTLB      = 1ul << 18,
-    TRACE_MAP       = 1ul << 19,
+    TRACE_VTLB      = 1ul << 17,
+    TRACE_MAP       = 1ul << 18,
+    TRACE_UNMAP     = 1ul << 19,
     TRACE_PTE       = 1ul << 20,
     TRACE_EPT       = 1ul << 21,
     TRACE_DPT       = 1ul << 22,
@@ -77,6 +78,7 @@ unsigned const trace_mask =
 //                            TRACE_SCHEDULE  |
 //                            TRACE_VTLB      |
 //                            TRACE_MAP       |
+//                            TRACE_UNMAP     |
 //                            TRACE_PTE       |
 //                            TRACE_EPT       |
 //                            TRACE_DPT       |

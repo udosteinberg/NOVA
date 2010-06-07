@@ -34,7 +34,8 @@ Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC      |
                                                  Ptab::ATTR_GLOBAL      |
                                                  Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE),
+                                                 Ptab::ATTR_WRITABLE    |
+                                                 Ptab::ATTR_PRESENT),
                                 cfg_base + (rid << PAGE_BITS));
 }
 

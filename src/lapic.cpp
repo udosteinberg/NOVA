@@ -36,7 +36,8 @@ void Lapic::init()
                            Ptab::Attribute (Ptab::ATTR_NOEXEC      |
                                             Ptab::ATTR_GLOBAL      |
                                             Ptab::ATTR_UNCACHEABLE |
-                                            Ptab::ATTR_WRITABLE),
+                                            Ptab::ATTR_WRITABLE    |
+                                            Ptab::ATTR_PRESENT),
                            apic_base & ~PAGE_MASK);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
@@ -134,35 +135,32 @@ void Lapic::timer_handler()
     if (!read (LAPIC_TMR_CCR))
         Cpu::hazard |= Cpu::HZD_SCHED;
 
-    if (Rcu::pending() && Rcu::process_callbacks())
+    if (Rcu::process_callbacks())
         Cpu::hazard |= Cpu::HZD_SCHED;
 }
 
 void Lapic::lvt_vector (unsigned vector)
 {
-    unsigned lvt = vector - VEC_LVT;
-
-    switch (lvt) {
-        case 0: timer_handler(); break;
-        case 3: error_handler(); break;
-        case 4: perfm_handler(); break;
-        case 5: therm_handler(); break;
+    switch (vector) {
+        case VEC_LVT_TIMER: timer_handler(); break;
+        case VEC_LVT_ERROR: error_handler(); break;
+        case VEC_LVT_PERFM: perfm_handler(); break;
+        case VEC_LVT_THERM: therm_handler(); break;
     }
 
     eoi();
 
-    Counter::count (Counter::lvt[lvt], Console_vga::COLOR_LIGHT_BLUE, 5 + vector - NUM_EXC);
+    Counter::print (++Counter::lvt[vector - VEC_LVT], Console_vga::COLOR_LIGHT_BLUE, 6 + vector - NUM_EXC);
 }
 
 void Lapic::ipi_vector (unsigned vector)
 {
-    unsigned ipi = vector - VEC_IPI;
-
-    switch (ipi) {
-        case 0: Sc::remote_enqueue_handler(); break;
+    switch (vector) {
+        case VEC_IPI_RRQ: Sc::rrq_handler(); break;
+        case VEC_IPI_TLB: Sc::tlb_handler(); break;
     }
 
     eoi();
 
-    Counter::count (Counter::ipi[ipi], Console_vga::COLOR_LIGHT_GREEN, 5 + vector - NUM_EXC);
+    Counter::print (++Counter::ipi[vector - VEC_IPI], Console_vga::COLOR_LIGHT_GREEN, 6 + vector - NUM_EXC);
 }

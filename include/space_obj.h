@@ -36,8 +36,7 @@ class Space_obj : public Space
         ALWAYS_INLINE
         inline Space_mem *space_mem();
 
-        bool insert (mword, Capability);
-        bool remove (mword, Capability);
+        void update (mword, Capability);
 
     public:
         static unsigned const caps = (OBJSP_EADDR - OBJSP_SADDR) / sizeof (Capability);
@@ -51,17 +50,18 @@ class Space_obj : public Space
         size_t lookup (mword, Capability &);
 
         ALWAYS_INLINE
-        inline Capability lookup_obj (mword addr, bool)
+        inline Kobject *lookup_obj (mword addr, bool)
         {
             Capability cap;
 
             size_t size = lookup (addr, cap);
             assert (size);
 
-            return cap;
+            return cap.obj();
         }
 
-        static void insert (Mdb *, Capability);
+        void update (Mdb *, Kobject *, mword);
+
         static bool insert_root (Kobject *);
 
         static void page_fault (mword, mword);

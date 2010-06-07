@@ -42,7 +42,7 @@ class Kobject : public Mdb
             SM
         };
 
-        explicit Kobject (Pd *own, mword sel, uint8 t) : Mdb (own, sel), objtype (t), refcount (1) {}
+        explicit Kobject (Pd *pd, mword b, uint8 t) : Mdb (pd, b, 0, 7), objtype (t), refcount (1) {}
 
     public:
         unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }
@@ -51,12 +51,12 @@ class Kobject : public Mdb
         inline bool add_ref()
         {
             for (uint16 r; (r = refcount); )
-                if (Atomic::cmp_swap<true>(&refcount, r, static_cast<typeof r>(r + 1)))
+                if (Atomic::cmp_swap<true>(&refcount, r, static_cast<typeof refcount>(r + 1)))
                     return true;
 
             return false;
         }
 
         ALWAYS_INLINE
-        inline bool del_ref() { return Atomic::sub (refcount, 1); }
+        inline bool del_ref() { return Atomic::sub (refcount, static_cast<typeof refcount>(1)); }
 };

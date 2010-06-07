@@ -1,5 +1,5 @@
 /*
- * Static Initialization Priorities
+ * User Memory Access
  *
  * Author: Udo Steinberg <udo@hypervisor.org>
  * TU Dresden, Operating Systems Group
@@ -18,10 +18,26 @@
 
 #pragma once
 
-#define AFTER(X)        (X + 1)
+#include "compiler.h"
 
-#define PRIO_GLOBAL     100
-#define PRIO_CONSOLE    AFTER (PRIO_GLOBAL)
-#define PRIO_BUDDY      AFTER (PRIO_CONSOLE)
-#define PRIO_SLAB       AFTER (PRIO_BUDDY)
-#define PRIO_LOCAL      0xfffe
+template <typename T>
+mword
+peek_user (T *addr, T &val)
+{
+    mword ret;
+    asm volatile ("1: mov %2, %1; or $-1, %0; 2:"
+                  ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
+                  : "=a" (ret), "=q" (val) : "m" (*addr));
+    return ret;
+}
+
+template <typename T>
+mword
+poke_user (T *addr, T &val)
+{
+    mword ret;
+    asm volatile ("1: mov %1, %2; or $-1, %0; 2:"
+                  ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
+                  : "=a" (ret) : "q" (val), "m" (*addr));
+    return ret;
+}

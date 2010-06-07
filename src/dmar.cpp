@@ -38,13 +38,14 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
                                 Ptab::Attribute (Ptab::ATTR_NOEXEC      |
                                                  Ptab::ATTR_GLOBAL      |
                                                  Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE),
+                                                 Ptab::ATTR_WRITABLE    |
+                                                 Ptab::ATTR_PRESENT),
                                 phys & ~PAGE_MASK);
 
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);
 
-    Dpt::ord = min (Dpt::ord, static_cast<unsigned>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
+    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
 
     write<uint32>(REG_FECTL,  0);
     write<uint32>(REG_FEDATA, VEC_MSI_DMAR);

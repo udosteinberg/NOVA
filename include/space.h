@@ -43,4 +43,10 @@ class Space
             Lock_guard <Spinlock> guard (lock);
             return Mdb::insert (&tree, node);
         }
+
+        bool remove_node (Mdb *node)
+        {
+            Lock_guard <Spinlock> guard (lock);
+            return Mdb::remove (&tree, node);
+        }
 };

@@ -16,8 +16,58 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "assert.h"
 #include "initprio.h"
+#include "lock_guard.h"
 #include "mdb.h"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Mdb::cache (sizeof (Mdb), 16);
+
+Spinlock Mdb::mdb;
+
+bool Mdb::insert_node (Mdb *p, mword a)
+{
+    Lock_guard <Spinlock> guard (mdb);
+
+    if (!p->alive())
+        return false;
+
+    if (!(node_attr = p->node_attr & a))
+        return false;
+
+    prev = p;
+    next = p->next;
+    dpth = p->dpth + 1;
+    p->next = p->next->prev = this;
+
+    return true;
+}
+
+void Mdb::demote_node (mword a)
+{
+    Lock_guard <Spinlock> guard (mdb);
+
+    node_attr &= ~a;
+}
+
+bool Mdb::remove_node()
+{
+    assert (dpth);
+
+    if (node_attr)
+        return false;
+
+    Lock_guard <Spinlock> guard (mdb);
+
+    if (!alive())
+        return false;
+
+    if (next->dpth > dpth)
+        return false;
+
+    next->prev = prev;
+    prev->next = next;
+
+    return true;
+}

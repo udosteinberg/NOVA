@@ -149,6 +149,8 @@ void Cpu::setup_sysenter()
 
 void Cpu::init()
 {
+    for (void (**func)() = &CTORS_G; func != &CTORS_L; (*--func)()) ;
+
     Gdt::build();
     Tss::build();
 
@@ -165,6 +167,14 @@ void Cpu::init()
 
     // Remember PDIR for this CPU
     Pd::init_cpu_ptab (Ptab::current());
+
+    Paddr phys;
+    Ptab::current()->lookup (CPULC_ADDR, phys);
+    Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0,
+                                Ptab::Attribute (Ptab::ATTR_NOEXEC   |
+                                                 Ptab::ATTR_GLOBAL   |
+                                                 Ptab::ATTR_WRITABLE |
+                                                 Ptab::ATTR_PRESENT), phys);
 
     // Initialize LAPIC
     Lapic::init();

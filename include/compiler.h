@@ -63,6 +63,8 @@
         #define UNREACHED           __builtin_unreachable()
     #endif
 
+        #define ACCESS_ONCE(x)      (*static_cast<volatile typeof(x) *>(&(x)))
+
 #else
         #define COMPILER            "unknown compiler"
         #define COMPILER_VERSION    0

@@ -19,7 +19,7 @@
 #include "assert.h"
 #include "dpt.h"
 
-unsigned Dpt::ord = 8 * sizeof (mword);
+mword Dpt::ord = 8 * sizeof (mword);
 
 Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
 {
@@ -45,19 +45,21 @@ Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
     }
 }
 
-void Dpt::insert (uint64 dpa, mword o, uint64 hpa, mword a)
+void Dpt::update (uint64 dpa, mword o, uint64 hpa, mword a, bool d)
 {
-    trace (TRACE_DPT, "INS DPT:%#010lx DPA:%#010llx O:%lu HPA:%#010llx A:%#05lx", Buddy::ptr_to_phys (this), dpa, o, hpa, a);
+    trace (TRACE_DPT, "DPT:%#010lx DPA:%#010llx O:%#02lx HPA:%#010llx A:%#lx D:%u", Buddy::ptr_to_phys (this), dpa, o, hpa, a, d);
 
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Dpt *e = walk (dpa, l, DPT_R | DPT_W);
+    Dpt *e = walk (dpa, l, d ? 0 : DPT_R | DPT_W);
+    assert (e);
+
     uint64 v = hpa | a | (l ? DPT_S : 0);
 
     for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
 
-        assert (!e->present());
+        assert (d || !e->present());
 
         e->set (v);
 
@@ -68,32 +70,9 @@ void Dpt::insert (uint64 dpa, mword o, uint64 hpa, mword a)
                e->attr(),
                s);
     }
-}
 
-void Dpt::remove (uint64 dpa, mword o)
-{
-    trace (TRACE_DPT, "REM DPT:%#010lx DPA:%#010llx O:%lu", Buddy::ptr_to_phys (this), dpa, o);
-
-    unsigned long l = o / bpl;
-    unsigned long s = 1ul << (l * bpl + PAGE_BITS);
-
-    Dpt *e = walk (dpa, l);
-    if (!e)
-        return;
-
-    for (unsigned long i = 1ul << o % bpl; i; i--, e++) {
-
-        assert (!e->present() || !l || e->super());
-
-        trace (TRACE_DPT, "L:%lu DPT:%#010lx HPA:%010lx A:%#05lx S:%#lx",
-               l,
-               Buddy::ptr_to_phys (e),
-               e->addr(),
-               e->attr(),
-               s);
-
-        e->set (0);
-    }
-
-    //flush();
+#if 0
+    if (d)
+        flush();
+#endif
 }

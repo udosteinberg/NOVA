@@ -91,7 +91,7 @@ void Gsi::mask (unsigned long gsi)
     }
 
     if (EXPECT_FALSE (row))
-        screen.put (row, 5 + gsi, Console_vga::COLOR_WHITE, 'M');
+        screen.put (row, 6 + gsi, Console_vga::COLOR_WHITE, 'M');
 }
 
 void Gsi::unmask (unsigned long gsi)
@@ -102,7 +102,7 @@ void Gsi::unmask (unsigned long gsi)
     }
 
     if (EXPECT_FALSE (row))
-        screen.put (row, 5 + gsi, Console_vga::COLOR_WHITE, 'U');
+        screen.put (row, 6 + gsi, Console_vga::COLOR_WHITE, 'U');
 }
 
 void Gsi::vector (unsigned vector)
@@ -122,5 +122,5 @@ void Gsi::vector (unsigned vector)
 
     gsi_table[gsi].sm->up();
 
-    Counter::count (Counter::gsi[gsi], Console_vga::COLOR_LIGHT_YELLOW, 5 + vector - NUM_EXC);
+    Counter::print (++Counter::gsi[gsi], Console_vga::COLOR_LIGHT_YELLOW, 6 + vector - NUM_EXC);
 }
