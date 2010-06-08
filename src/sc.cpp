@@ -117,15 +117,15 @@ void Sc::remote_enqueue()
         ready_enqueue();
 
     else {
-        Sc::Rq *rq = remote (cpu);
+        Sc::Rq *r = remote (cpu);
 
-        Lock_guard <Spinlock> guard (rq->lock);
+        Lock_guard <Spinlock> guard (r->lock);
 
-        if (!rq->queue)
-            rq->queue = prev = next = this;
+        if (!r->queue)
+            r->queue = prev = next = this;
         else {
-            next = rq->queue;
-            prev = rq->queue->prev;
+            next = r->queue;
+            prev = r->queue->prev;
             next->prev = prev->next = this;
         }
 

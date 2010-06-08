@@ -54,7 +54,7 @@ void Space_io::update (mword idx, mword attr)
 void Space_io::update (Mdb *mdb, bool, mword rem)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
-    Lock_guard <Spinlock> guard (mdb->lock);
+    Lock_guard <Spinlock> guard (mdb->node_lock);
     for (unsigned long i = 0; i < (1UL << mdb->node_order); i++)
         update (mdb->node_base + i, mdb->node_attr & ~rem);
 }

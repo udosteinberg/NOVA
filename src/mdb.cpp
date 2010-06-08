@@ -24,11 +24,11 @@
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Mdb::cache (sizeof (Mdb), 16);
 
-Spinlock Mdb::mdb;
+Spinlock Mdb::lock;
 
 bool Mdb::insert_node (Mdb *p, mword a)
 {
-    Lock_guard <Spinlock> guard (mdb);
+    Lock_guard <Spinlock> guard (lock);
 
     if (!p->alive())
         return false;
@@ -46,7 +46,7 @@ bool Mdb::insert_node (Mdb *p, mword a)
 
 void Mdb::demote_node (mword a)
 {
-    Lock_guard <Spinlock> guard (mdb);
+    Lock_guard <Spinlock> guard (lock);
 
     node_attr &= ~a;
 }
@@ -58,7 +58,7 @@ bool Mdb::remove_node()
     if (node_attr)
         return false;
 
-    Lock_guard <Spinlock> guard (mdb);
+    Lock_guard <Spinlock> guard (lock);
 
     if (!alive())
         return false;

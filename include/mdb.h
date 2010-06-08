@@ -30,14 +30,14 @@ class Mdb : public Avl
 {
     private:
         static Slab_cache   cache;
-        static Spinlock     mdb;
+        static Spinlock     lock;
 
         bool alive() const { return prev->next == this && next->prev == this; }
         bool larger (Avl *x) const { return  node_base > static_cast<Mdb *>(x)->node_base; }
         bool equal  (Avl *x) const { return (node_base ^ static_cast<Mdb *>(x)->node_base) >> max (node_order, static_cast<Mdb *>(x)->node_order) == 0; }
 
     public:
-        Spinlock    lock;
+        Spinlock    node_lock;
         Mdb *       prev;
         Mdb *       next;
         unsigned    dpth;

@@ -46,7 +46,7 @@ void Space_mem::update (Mdb *mdb, Paddr phys, mword rem)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
 
-    Lock_guard <Spinlock> guard (mdb->lock);
+    Lock_guard <Spinlock> guard (mdb->node_lock);
 
     mword o = mdb->node_order - PAGE_BITS;
     mword a = mdb->node_attr & ~rem;
