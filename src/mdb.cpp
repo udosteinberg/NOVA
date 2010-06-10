@@ -53,10 +53,10 @@ void Mdb::demote_node (mword a)
 
 bool Mdb::remove_node()
 {
-    assert (dpth);
-
     if (node_attr)
         return false;
+
+    assert (dpth);
 
     Lock_guard <Spinlock> guard (lock);
 

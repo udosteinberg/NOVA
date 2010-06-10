@@ -42,7 +42,7 @@ class Ptab : public Paging
         inline void set (Paddr v) { val = v; }
 
         ALWAYS_INLINE
-        static mword hw_attr (mword a) { return a ? ATTR_USER | (a & 2) | ATTR_PRESENT : 0; }
+        static inline mword hw_attr (mword a) { return a ? a | ATTR_USER | ATTR_PRESENT : 0; }
 
         ALWAYS_INLINE
         static inline Ptab *master()

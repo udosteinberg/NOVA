@@ -79,6 +79,9 @@ class Ept
             EPT_S               = 1ul << 7,
         };
 
+        ALWAYS_INLINE
+        static inline mword hw_attr (mword a) { return a ? a | EPT_R : 0; }
+
         void update (uint64, mword, uint64, mword, mword, bool = false);
 
         ALWAYS_INLINE
