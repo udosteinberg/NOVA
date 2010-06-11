@@ -193,6 +193,8 @@ void Pd::delegate_item (Pd *pd, Crd rcv, Crd &snd, mword hot)
 
 void Pd::revoke_crd (Crd crd, bool self)
 {
+    Cpu::preempt_enable();
+
     switch (crd.type()) {
 
         case Crd::MEM:
@@ -211,6 +213,8 @@ void Pd::revoke_crd (Crd crd, bool self)
             revoke<Space_obj>(crd.base(), crd.order(), crd.attr(), self);
             break;
     }
+
+    Cpu::preempt_disable();
 }
 
 void Pd::delegate_items (Pd *pd, Crd rcv, mword *src, mword *dst, unsigned long ti)

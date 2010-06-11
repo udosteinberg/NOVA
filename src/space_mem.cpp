@@ -88,6 +88,11 @@ void Space_mem::shootdown()
         if (!pd->flush.chk (cpu))
             continue;
 
+        if (Cpu::id == cpu) {
+            Cpu::hazard |= Cpu::HZD_SCHED;
+            continue;
+        }
+
         unsigned ctr = Counter::remote (cpu, 1);
 
         Lapic::send_ipi (cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_TLB);

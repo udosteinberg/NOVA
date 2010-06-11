@@ -210,6 +210,18 @@ class Cpu
             return features[feat / 32] & 1u << feat % 32;
         }
 
+        ALWAYS_INLINE
+        static inline void preempt_disable()
+        {
+            asm volatile ("cli" : : : "memory");
+        }
+
+        ALWAYS_INLINE
+        static inline void preempt_enable()
+        {
+            asm volatile ("sti" : : : "memory");
+        }
+
         ALWAYS_INLINE NORETURN
         static inline void shutdown()
         {
