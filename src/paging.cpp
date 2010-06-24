@@ -1,8 +1,8 @@
 /*
  * IA32 Paging Support
  *
- * Author: Udo Steinberg <udo@hypervisor.org>
- * TU Dresden, Operating Systems Group
+ * Copyright (C) 2009-2010 Udo Steinberg <udo@hypervisor.org>
+ * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * This file is part of the NOVA microhypervisor.
  *
