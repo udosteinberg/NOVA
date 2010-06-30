@@ -253,8 +253,11 @@ class Dmar
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
         ALWAYS_INLINE INIT
-        static inline void enable()
+        static inline void enable (unsigned flags)
         {
+            if (!(flags & 1))
+                gcmd &= ~GCMD_IRE;
+
             for (Dmar *dmar = list; dmar; dmar = dmar->next)
                 dmar->command (gcmd);
         }

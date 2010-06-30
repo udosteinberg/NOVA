@@ -18,11 +18,20 @@
 
 #pragma once
 
-#define NUM_CPU         8
+#define NUM_CPU         32
 #define NUM_IRQ         16
 #define NUM_EXC         32
 #define NUM_VMI         256
-#define NUM_GSI         48
+#define NUM_GSI         72
 #define NUM_LVT         6
 #define NUM_MSI         1
 #define NUM_IPI         2
+
+#define SPN_SCH         2
+#define SPN_RCU         3
+#define SPN_HLP         4
+#define SPN_VFI         5
+#define SPN_VFL         6
+#define SPN_LVT         7
+#define SPN_IPI         (SPN_LVT + NUM_LVT)
+#define SPN_GSI         (SPN_IPI + NUM_IPI)

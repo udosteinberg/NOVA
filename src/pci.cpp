@@ -39,8 +39,10 @@ Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr
                                 cfg_base + (rid << PAGE_BITS));
 }
 
-void Pci::init (unsigned b, unsigned l)
+unsigned Pci::init (unsigned b, unsigned l)
 {
+    unsigned m = b;
+
     for (unsigned d = 0; d < 32; d++) {
 
         for (unsigned f = 0; f < 8; f++) {
@@ -56,11 +58,13 @@ void Pci::init (unsigned b, unsigned l)
 
             // PCI bridge
             if ((htype & 0x7f) == 1)
-                init (bdf.read<uint8>(0x19), l + 1);
+                m = max (init (bdf.read<uint8>(0x19), l + 1), m);
 
             // Multi-function device
             if (!f && !(htype & 0x80))
                 break;
         }
     }
+
+    return m;
 }

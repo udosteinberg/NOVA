@@ -180,9 +180,9 @@ class Cpu
             HZD_RECALL  = 1ul << 31,            // 0x80000000
         };
 
-        static unsigned boot_lock           asm ("boot_lock");
-        static unsigned boot_count;
-        static unsigned booted;
+        static unsigned long boot_lock      asm ("boot_lock");
+        static unsigned long boot_count;
+        static unsigned long online;
 
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;

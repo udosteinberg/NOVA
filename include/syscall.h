@@ -141,6 +141,13 @@ class Sys_revoke : public Exc_regs
         inline Crd crd() const { return Crd (edi); }
 };
 
+class Sys_lookup : public Exc_regs
+{
+    public:
+        ALWAYS_INLINE
+        inline Crd & crd() { return reinterpret_cast<Crd &>(edi); }
+};
+
 class Sys_recall : public Exc_regs
 {
     public:

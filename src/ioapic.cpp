@@ -37,6 +37,6 @@ Ioapic::Ioapic (Paddr phys, unsigned gsi, unsigned i) : reg_base ((hwdev_addr -=
                                                  Ptab::ATTR_PRESENT),
                                 phys & ~PAGE_MASK);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x GSI:%lu VER:%#x IRT:%#x PRQ:%u",
-           phys, i, gsi_base, version(), irt_max(), prq());
+    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%lu",
+           phys, i, version(), irt_max(), prq(), gsi_base);
 }

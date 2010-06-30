@@ -30,6 +30,14 @@ void Acpi_table_madt::parse() const
 
     parse_entry (Acpi_apic::IOAPIC, &Acpi_table_madt::parse_ioapic);
     parse_entry (Acpi_apic::INTR_OVERRIDE, &Acpi_table_madt::parse_intr_override);
+
+    if (flags & 1) {
+        Io::out<uint8>(0x20, 0x11);
+        Io::out<uint8>(0x21, VEC_GSI);
+        Io::out<uint8>(0x21, 0x4);
+        Io::out<uint8>(0x21, 0x1);
+        Io::out<uint8>(0x21, 0xff);
+    }
 }
 
 void Acpi_table_madt::parse_entry (Acpi_apic::Type type, void (*handler)(Acpi_apic const *)) const

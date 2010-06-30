@@ -79,6 +79,8 @@ class Space_mem : public Space
         {
             Paddr phys;
 
+            addr <<= PAGE_BITS;
+
             if (priv)
                 phys = addr;
             else {
@@ -94,7 +96,7 @@ class Space_mem : public Space
 
         bool insert_utcb (mword);
 
-        void update (Mdb *, Paddr, mword);
+        void update (Mdb *, Paddr, mword, mword);
 
         static void shootdown();
 

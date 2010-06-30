@@ -26,9 +26,6 @@ class Sm;
 
 class Gsi
 {
-    private:
-        static unsigned row;
-
     public:
         Ioapic *        ioapic;
         Sm *            sm;

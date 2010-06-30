@@ -55,6 +55,9 @@ class Crd
         inline unsigned attr() const { return val >> 2 & 0x7; }
 
         ALWAYS_INLINE
+        inline unsigned sub() const { return val >> 5 & 0x3; }
+
+        ALWAYS_INLINE
         inline unsigned order() const { return val >> 7 & 0x1f; }
 
         ALWAYS_INLINE

@@ -51,7 +51,7 @@ void Space_io::update (mword idx, mword attr)
         Atomic::set_mask<true>(*static_cast<mword *>(Buddy::phys_to_ptr (phys)), idx_to_mask (idx));
 }
 
-void Space_io::update (Mdb *mdb, bool, mword rem)
+void Space_io::update (Mdb *mdb, bool, mword rem, mword)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);

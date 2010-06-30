@@ -24,6 +24,18 @@
 #include "vpid.h"
 #include "vtlb.h"
 
+bool Vtlb::load_pdpte (Exc_regs *regs, uint64 (&v)[4])
+{
+    mword *pte = reinterpret_cast<mword *>(regs->cr3_shadow);
+    mword *val = reinterpret_cast<mword *>(&v);
+
+    for (unsigned i = 0; i < sizeof (v) / sizeof (mword); i++, pte++, val++)
+        if (peek_user (pte, *val) != ~0UL)
+            return false;
+
+    return true;
+}
+
 size_t Vtlb::walk (Exc_regs *regs, mword virt, mword error, mword &phys, mword &attr)
 {
     if (EXPECT_FALSE (!(regs->cr0_shadow & Cpu::CR0_PG))) {
@@ -106,7 +118,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
     if (gsize > hsize)
         attr |= ATTR_SPLINTER;
 
-    Counter::print (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, 4);
+    Counter::print (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, SPN_VFI);
 
     unsigned lev = levels;
 
@@ -181,7 +193,7 @@ void Vtlb::flush_addr (mword virt, unsigned long vpid)
             if (vpid)
                 Vpid::flush (Vpid::ADDRESS, vpid, virt);
 
-            Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 5);
+            Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 
             return;
         }
@@ -195,5 +207,5 @@ void Vtlb::flush (unsigned full, unsigned long vpid)
     if (vpid)
         Vpid::flush (full ? Vpid::CONTEXT_GLOBAL : Vpid::CONTEXT_NOGLOBAL, vpid);
 
-    Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, 5);
+    Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 }

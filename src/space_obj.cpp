@@ -51,7 +51,7 @@ size_t Space_obj::lookup (mword idx, Capability &cap)
     return 1;
 }
 
-void Space_obj::update (Mdb *mdb, Kobject *obj, mword rem)
+void Space_obj::update (Mdb *mdb, Kobject *obj, mword rem, mword)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);

@@ -35,9 +35,9 @@ char const * const Cpu::vendor_string[] =
     "AuthenticAMD"
 };
 
-unsigned    Cpu::boot_lock;
-unsigned    Cpu::boot_count;
-unsigned    Cpu::booted;
+unsigned long   Cpu::boot_lock;
+unsigned long   Cpu::boot_count;
+unsigned long   Cpu::online;
 
 // Order of these matters
 unsigned    Cpu::id;
@@ -115,7 +115,7 @@ void Cpu::check_features()
     }
 
     if (!feature (FEAT_HTT))
-        id = booted;
+        id = online;
     else if (feature (FEAT_CMP_LEGACY))
         cpp = tpp;
 
@@ -127,7 +127,7 @@ void Cpu::check_features()
     core    = id >>  t_bits & ((1u << c_bits) - 1);
     package = id >> (t_bits + c_bits);
 
-    booted++;
+    online++;
 
     // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
     if (vendor == AMD)
@@ -188,7 +188,7 @@ void Cpu::init()
     Vmcs::init();
     Vmcb::init();
 
-    trace (TRACE_CPU, "CORE:%u:%u:%u %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
+    trace (TRACE_CPU, "CORE:%x:%x:%x %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
 
     Hip::add_cpu();
 

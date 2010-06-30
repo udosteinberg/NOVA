@@ -76,7 +76,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         }
 
         template <typename>
-        void delegate (Pd *, mword, mword, mword, mword);
+        void delegate (Pd *, mword, mword, mword, mword, mword = 0);
 
         template <typename>
         void revoke (mword, mword, mword, bool);
@@ -85,6 +85,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         void delegate_items (Pd *, Crd, mword *, mword *, unsigned long);
 
         void revoke_crd (Crd, bool);
+        void lookup_crd (Crd &);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

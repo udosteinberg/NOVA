@@ -141,6 +141,8 @@ void Lapic::timer_handler()
 
 void Lapic::lvt_vector (unsigned vector)
 {
+    unsigned lvt = vector - VEC_LVT;
+
     switch (vector) {
         case VEC_LVT_TIMER: timer_handler(); break;
         case VEC_LVT_ERROR: error_handler(); break;
@@ -150,11 +152,13 @@ void Lapic::lvt_vector (unsigned vector)
 
     eoi();
 
-    Counter::print (++Counter::lvt[vector - VEC_LVT], Console_vga::COLOR_LIGHT_BLUE, 6 + vector - NUM_EXC);
+    Counter::print (++Counter::lvt[lvt], Console_vga::COLOR_LIGHT_BLUE, lvt + SPN_LVT);
 }
 
 void Lapic::ipi_vector (unsigned vector)
 {
+    unsigned ipi = vector - VEC_IPI;
+
     switch (vector) {
         case VEC_IPI_RRQ: Sc::rrq_handler(); break;
         case VEC_IPI_TLB: Sc::tlb_handler(); break;
@@ -162,5 +166,5 @@ void Lapic::ipi_vector (unsigned vector)
 
     eoi();
 
-    Counter::print (++Counter::ipi[vector - VEC_IPI], Console_vga::COLOR_LIGHT_GREEN, 6 + vector - NUM_EXC);
+    Counter::print (++Counter::ipi[ipi], Console_vga::COLOR_LIGHT_GREEN, ipi + SPN_IPI);
 }

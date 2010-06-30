@@ -351,6 +351,17 @@ void Ec::sys_revoke()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
+void Ec::sys_lookup()
+{
+    Sys_lookup *s = static_cast<Sys_lookup *>(&current->regs);
+
+    trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%#x B:%#lx", current, s->crd().type(), s->crd().base());
+
+    Pd::current->lookup_crd (s->crd());
+
+    sys_finish<Sys_regs::SUCCESS>();
+}
+
 void Ec::sys_recall()
 {
     Sys_recall *r = static_cast<Sys_recall *>(&current->regs);
@@ -478,6 +489,8 @@ void Ec::handle_sys (uint8 number)
         sys_create_sm();
     if (EXPECT_TRUE (number == Sys_regs::REVOKE))
         sys_revoke();
+    if (EXPECT_TRUE (number == Sys_regs::LOOKUP))
+        sys_lookup();
     if (EXPECT_TRUE (number == Sys_regs::RECALL))
         sys_recall();
     if (EXPECT_TRUE (number == Sys_regs::SEMCTL))

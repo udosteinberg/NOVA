@@ -64,6 +64,7 @@ class Sys_regs
             CREATE_PT,
             CREATE_SM,
             REVOKE,
+            LOOKUP,
             RECALL,
             SEMCTL,
             ASSIGN_PCI,
@@ -157,6 +158,8 @@ class Exc_regs : public Sys_regs
 
         void set_cpu_ctrl0 (mword);
         void set_cpu_ctrl1 (mword);
+
+        void load_pdpte();
 
         mword read_gpr (unsigned);
         void write_gpr (unsigned, mword);

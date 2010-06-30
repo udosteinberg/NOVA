@@ -35,11 +35,11 @@ void Acpi_dmar::parse() const
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 
         switch (s->type) {
-            case 1:
-                Pci::claim_dev (dmar, s->b << 8 | s->d << 3 | s->f);
+            case 1 ... 2:
+                Pci::claim_dev (dmar, s->rid());
                 break;
             case 3:
-                Ioapic::claim_dev (dmar, s->b << 8 | s->d << 3 | s->f, s->id);
+                Ioapic::claim_dev (dmar, s->rid(), s->id);
                 break;
         }
     }
@@ -54,10 +54,9 @@ void Acpi_rmrr::parse() const
 
         switch (s->type) {
             case 1:
-                unsigned rid = s->b << 8 | s->d << 3 | s->f;
-                Dmar *dmar = Pci::find_dmar (rid);
+                Dmar *dmar = Pci::find_dmar (s->rid());
                 if (dmar)
-                    dmar->assign (rid, &Pd::kern);
+                    dmar->assign (s->rid(), &Pd::kern);
                 break;
         }
     }
@@ -79,5 +78,5 @@ void Acpi_table_dmar::parse() const
         }
     }
 
-    Dmar::enable();
+    Dmar::enable (flags);
 }

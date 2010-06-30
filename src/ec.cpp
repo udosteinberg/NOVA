@@ -260,15 +260,11 @@ void Ec::root_invoke()
         mword s = align_up (ph->f_size, PAGE_SIZE);
 
         for (unsigned o; s; s -= 1UL << o, p += 1UL << o, v += 1UL << o)
-            Pd::current->delegate<Space_mem>(&Pd::kern, p, v, o = min (max_order (p, s), max_order (v, s)), attr);
+            Pd::current->delegate<Space_mem>(&Pd::kern, p >> PAGE_BITS, v >> PAGE_BITS, (o = min (max_order (p, s), max_order (v, s))) - PAGE_BITS, attr);
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>
-                (&Pd::kern,
-                 reinterpret_cast<Paddr>(&FRAME_H),
-                 LINK_ADDR - PAGE_SIZE,
-                 PAGE_BITS, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (LINK_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);

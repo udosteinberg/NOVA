@@ -19,20 +19,26 @@
 #pragma once
 
 #include "compiler.h"
+#include "slab.h"
 #include "types.h"
 
 class Mtrr
 {
+    private:
+        uint64 const        base;
+        uint64 const        mask;
+        Mtrr *              next;
+
+        static unsigned     count;
+        static unsigned     dtype;
+        static Mtrr *       list;
+        static Slab_cache   cache;
+
     public:
-        uint32 count;
-        uint32 dtype;
+        explicit inline Mtrr (uint64, uint64);
 
-        struct {
-            uint64  base;
-            uint64  mask;
-        } var[8];
-
-        static Mtrr mtrr;
+        ALWAYS_INLINE INIT
+        static inline void *operator new (size_t) { return cache.alloc(); }
 
         INIT
         static void init();

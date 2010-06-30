@@ -70,9 +70,4 @@ void Dpt::update (uint64 dpa, mword o, uint64 hpa, mword a, bool d)
                e->attr(),
                s);
     }
-
-#if 0
-    if (d)
-        flush();
-#endif
 }

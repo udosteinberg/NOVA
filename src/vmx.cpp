@@ -125,12 +125,14 @@ void Vmcs::init()
         ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
     if (has_ept())
         Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
+    if (has_urg())
+        fix_cr0.set &= ~(Cpu::CR0_PG | Cpu::CR0_PE);
 
     ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_IO_BITMAP | CPU_SECONDARY;
-    ctrl_cpu[1].set |= CPU_VPID;
+    ctrl_cpu[1].set |= CPU_VPID | CPU_URG;
 
     if (Cmdline::noept || !ept_vpid.invept)
-        ctrl_cpu[1].clr &= ~CPU_EPT;
+        ctrl_cpu[1].clr &= ~(CPU_EPT | CPU_URG);
     if (Cmdline::novpid || !ept_vpid.invvpid)
         ctrl_cpu[1].clr &= ~CPU_VPID;
 
@@ -139,5 +141,5 @@ void Vmcs::init()
 
     Vmcs *root = new Vmcs;
 
-    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x VPID:%u EPT:%u", Buddy::ptr_to_phys (root), basic.revision, has_vpid(), has_ept());
+    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x VPID:%u EPT:%u UG:%u", Buddy::ptr_to_phys (root), basic.revision, has_vpid(), has_ept(), has_urg());
 }

@@ -31,8 +31,10 @@ enum
 
 void Console::print_number (uint64 val, unsigned base, unsigned width, unsigned flags)
 {
+    bool neg = false;
+
     if (flags & FLAG_SIGNED && static_cast<signed long long>(val) < 0) {
-        putc ('-');
+        neg = true;
         val = -val;
     }
 
@@ -43,6 +45,9 @@ void Console::print_number (uint64 val, unsigned base, unsigned width, unsigned 
         val = div64 (val, base, &r);
         *--ptr = r["0123456789abcdef"];
     } while (val);
+
+    if (neg)
+        *--ptr = '-';
 
     unsigned long count = buffer + sizeof buffer - ptr;
     unsigned long n = count + (flags & FLAG_ALT_FORM ? 2 : 0);

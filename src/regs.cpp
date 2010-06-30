@@ -145,7 +145,7 @@ void Exc_regs::ept_ctrl (bool on)
     mword cr0 = get_cr0();
     mword cr3 = get_cr3();
     mword cr4 = get_cr4();
-    ept_on = on;
+    ept_on = Vmcs::has_ept() && (Vmcs::has_urg() || on);
     set_cr0 (cr0);
     set_cr3 (cr3);
     set_cr4 (cr4);
@@ -157,7 +157,7 @@ void Exc_regs::ept_ctrl (bool on)
     Vmcs::write (Vmcs::CR0_MASK, cr0_msk());
     Vmcs::write (Vmcs::CR4_MASK, cr4_msk());
 
-    if (!on)
+    if (!ept_on)
         Vmcs::write (Vmcs::GUEST_CR3, Buddy::ptr_to_phys (vtlb));
 }
 
@@ -172,6 +172,18 @@ void Exc_regs::fpu_ctrl (bool on)
 
     set_exc_bitmap();
     Vmcs::write (Vmcs::CR0_MASK, cr0_msk());
+}
+
+void Exc_regs::load_pdpte()
+{
+    uint64 pdpte[4];
+
+    if (vtlb->load_pdpte (this, pdpte)) {
+        for (unsigned i = 0; i < 4; i++) {
+            Vmcs::write (Vmcs::Encoding (Vmcs::GUEST_PDPTE + 2 * i),     static_cast<mword>(pdpte[i]));
+            Vmcs::write (Vmcs::Encoding (Vmcs::GUEST_PDPTE + 2 * i + 1), static_cast<mword>(pdpte[i] >> 32));
+        }
+    }
 }
 
 mword Exc_regs::read_gpr (unsigned reg)
@@ -217,29 +229,45 @@ void Exc_regs::write_cr (unsigned cr, mword val)
             break;
 
         case 3:
-            vtlb->flush (false, Vmcs::vpid());
+            if (!ept_on) {
+                vtlb->flush (false, Vmcs::vpid());
+                if ((cr0_shadow & Cpu::CR0_PG) && (cr4_shadow & Cpu::CR4_PAE))
+                    load_pdpte();
+            }
+
             set_cr3 (val);
+
             break;
 
         case 0:
             toggled = get_cr0() ^ val;
 
-            if (toggled & (Cpu::CR0_PG | Cpu::CR0_PE))
-                vtlb->flush (false, Vmcs::vpid());
-
-            if (Vmcs::has_ept() && toggled & Cpu::CR0_PG)
-                ept_ctrl (val & Cpu::CR0_PG);
+            if (!ept_on) {
+                if (toggled & (Cpu::CR0_PG | Cpu::CR0_PE))
+                    vtlb->flush (true, Vmcs::vpid());
+                if ((toggled & Cpu::CR0_PG) && (cr4_shadow & Cpu::CR4_PAE))
+                    load_pdpte();
+            }
 
             set_cr0 (val);
+
+            if (toggled & Cpu::CR0_PG)
+                ept_ctrl (val & Cpu::CR0_PG);
+
             break;
 
         case 4:
             toggled = get_cr4() ^ val;
 
-            if (toggled & (Cpu::CR4_PGE | Cpu::CR4_PAE | Cpu::CR4_PSE))
-                vtlb->flush (toggled & Cpu::CR4_PGE, Vmcs::vpid());
+            if (!ept_on) {
+                if (toggled & (Cpu::CR4_PGE | Cpu::CR4_PAE | Cpu::CR4_PSE))
+                    vtlb->flush (true, Vmcs::vpid());
+                if ((toggled & Cpu::CR4_PAE) && (cr0_shadow & Cpu::CR0_PG))
+                    load_pdpte();
+            }
 
             set_cr4 (val);
+
             break;
 
         default:

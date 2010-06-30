@@ -21,9 +21,10 @@
 
 void Acpi_table_mcfg::parse() const
 {
-    for (Acpi_mcfg const *x = mcfg; x < reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
+    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
         if (!x->seg)
             Pci::cfg_base = static_cast<Paddr>(x->addr);
 
-    Pci::init();
+    for (unsigned i = 0; i < 255; i++)
+        i = Pci::init (i);
 }

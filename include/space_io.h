@@ -51,7 +51,7 @@ class Space_io : public Space
         ALWAYS_INLINE
         inline bool lookup_obj (mword, bool) const { return true; }
 
-        void update (Mdb *, bool, mword);
+        void update (Mdb *, bool, mword, mword);
 
         static void page_fault (mword, mword);
 

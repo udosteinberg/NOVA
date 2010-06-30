@@ -56,7 +56,7 @@ Pd::Pd (Pd *own, mword sel, unsigned flags) : Kobject (own, sel, PD), Space_mem 
 }
 
 template <typename S>
-void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord, mword const attr)
+void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord, mword const attr, mword const sub)
 {
     Mdb *mdb;
     for (mword addr = snd_base; (mdb = snd->S::lookup_node (addr)); addr = mdb->node_base + (1UL << mdb->node_order)) {
@@ -78,7 +78,7 @@ void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
             continue;
         }
 
-        S::update (node, snd->S::lookup_obj (b, snd == &kern), 0);
+        S::update (node, snd->S::lookup_obj (b, snd == &kern), 0, sub);
     }
 }
 
@@ -99,7 +99,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
         for (Mdb *succ;; node = succ) {
 
             if ((node->node_attr & attr) && (self || node != mdb)) {
-                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base, false), attr);
+                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base, false), attr, ~0UL);
                 node->demote_node (attr);
             }
 
@@ -171,20 +171,20 @@ void Pd::delegate_item (Pd *pd, Crd rcv, Crd &snd, mword hot)
 
         case Crd::MEM:
             o = clamp (sb, rb, so, ro, hot >> PAGE_BITS);
-            trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
-            delegate<Space_mem>(pd, sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
+            trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
+            delegate<Space_mem>(pd, sb, rb, o, a, snd.sub());
             break;
 
         case Crd::IO:
-            o = clamp (sb, rb, so, ro);     // XXX: o can be ~0UL
+            o = clamp (sb, rb, so, ro);
             trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu A:%#lx", current, this, sb, o, a);
-            delegate<Space_io>(pd, rb, rb, o, 7);
+            delegate<Space_io>(pd, rb, rb, o, a);
             break;
 
         case Crd::OBJ:
             o = clamp (sb, rb, so, ro, hot);
             trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
-            delegate<Space_obj>(pd, sb, rb, o, 7);
+            delegate<Space_obj>(pd, sb, rb, o, a);
             break;
     }
 
@@ -199,7 +199,7 @@ void Pd::revoke_crd (Crd crd, bool self)
 
         case Crd::MEM:
             trace (TRACE_UNMAP, "UNMAP MEM PD:%p B:%#010lx O:%#x A:%#x", this, crd.base() << PAGE_BITS, crd.order() + PAGE_BITS, crd.attr());
-            revoke<Space_mem>(crd.base() << PAGE_BITS, crd.order() + PAGE_BITS, crd.attr(), self);
+            revoke<Space_mem>(crd.base(), crd.order(), crd.attr(), self);
             shootdown();
             break;
 
@@ -215,6 +215,21 @@ void Pd::revoke_crd (Crd crd, bool self)
     }
 
     Cpu::preempt_disable();
+}
+
+void Pd::lookup_crd (Crd &crd)
+{
+    mword b = crd.base();
+
+    Mdb *mdb = 0;
+
+    switch (crd.type()) {
+        case Crd::MEM: mdb = Space_mem::lookup_node (b); break;
+        case Crd::IO:  mdb = Space_io::lookup_node (b); break;
+        case Crd::OBJ: mdb = Space_obj::lookup_node (b); break;
+    }
+
+    crd = !mdb || clamp (mdb->node_base, b, mdb->node_order, 0) == ~0UL ? Crd (0) : Crd (crd.type(), mdb->node_base, mdb->node_order, mdb->node_attr);
 }
 
 void Pd::delegate_items (Pd *pd, Crd rcv, mword *src, mword *dst, unsigned long ti)

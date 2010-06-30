@@ -44,7 +44,7 @@ void Rcu::invoke_batch()
 
 void Rcu::start_batch()
 {
-    count = Cpu::booted;
+    count = Cpu::online;
 
     batch++;
 }
@@ -55,7 +55,7 @@ void Rcu::check_quiescent_state()
         q_batch = batch;
         q_pending = true;
         q_passed = false;
-        Counter::print (q_batch, Console_vga::COLOR_LIGHT_GREEN, 2);
+        Counter::print (q_batch, Console_vga::COLOR_LIGHT_GREEN, SPN_RCU);
         return;
     }
 

@@ -17,7 +17,6 @@
  */
 
 #include "acpi.h"
-#include "cmdline.h"
 #include "dmar.h"
 #include "gsi.h"
 #include "ioapic.h"
@@ -27,7 +26,6 @@
 
 Gsi         Gsi::gsi_table[NUM_GSI];
 unsigned    Gsi::irq_table[NUM_IRQ];
-unsigned    Gsi::row;
 
 void Gsi::setup()
 {
@@ -49,9 +47,6 @@ void Gsi::setup()
 
 void Gsi::init()
 {
-    if (!Cmdline::nospinner)
-        row = screen.init_spinner (0);
-
     for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
         Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, gsi));
         mask (gsi);
@@ -89,9 +84,6 @@ void Gsi::mask (unsigned long gsi)
         gsi_table[gsi].msk = 1;
         gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
     }
-
-    if (EXPECT_FALSE (row))
-        screen.put (row, 6 + gsi, Console_vga::COLOR_WHITE, 'M');
 }
 
 void Gsi::unmask (unsigned long gsi)
@@ -100,9 +92,6 @@ void Gsi::unmask (unsigned long gsi)
         gsi_table[gsi].msk = 0;
         gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
     }
-
-    if (EXPECT_FALSE (row))
-        screen.put (row, 6 + gsi, Console_vga::COLOR_WHITE, 'U');
 }
 
 void Gsi::vector (unsigned vector)
@@ -122,5 +111,6 @@ void Gsi::vector (unsigned vector)
 
     gsi_table[gsi].sm->up();
 
-    Counter::print (++Counter::gsi[gsi], Console_vga::COLOR_LIGHT_YELLOW, 6 + vector - NUM_EXC);
+    if (gsi < 80 - SPN_GSI)
+        Counter::print (++Counter::gsi[gsi], Console_vga::COLOR_LIGHT_YELLOW, gsi + SPN_GSI);
 }

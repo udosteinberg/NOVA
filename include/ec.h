@@ -151,7 +151,7 @@ class Ec : public Kobject, public Queue<Sc>
         NOINLINE NORETURN
         void help (void (*c)())
         {
-            Counter::print (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, 3);
+            Counter::print (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, SPN_HLP);
             current->cont = c;
 
             if (++Sc::ctr_loop >= 100) {
@@ -246,6 +246,9 @@ class Ec : public Kobject, public Queue<Sc>
 
         NORETURN
         static void sys_revoke();
+
+        NORETURN
+        static void sys_lookup();
 
         NORETURN
         static void sys_recall();

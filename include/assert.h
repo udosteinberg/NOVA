@@ -22,7 +22,7 @@
 #include "stdio.h"
 
 #ifdef NDEBUG
-#define assert(X)   do {} while (0)
+#define assert(X)   do { (void) sizeof (X); } while (0)
 #else
 #define assert(X)   do {                                                                            \
                         if (EXPECT_FALSE (!(X)))                                                    \

@@ -60,7 +60,7 @@ class Space_obj : public Space
             return cap.obj();
         }
 
-        void update (Mdb *, Kobject *, mword);
+        void update (Mdb *, Kobject *, mword, mword);
 
         static bool insert_root (Kobject *);
 

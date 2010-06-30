@@ -141,6 +141,7 @@ class Vmcs
             GUEST_DEBUGCTL          = 0x2802ul,
             GUEST_DEBUGCTL_HI       = 0x2803ul,
             GUEST_PERF_GLOBAL_CTRL  = 0x2808ul,
+            GUEST_PDPTE             = 0x280aul,
 
             // 64-Bit Host State
             HOST_PERF_GLOBAL_CTRL   = 0x2c04ul,
@@ -281,7 +282,8 @@ class Vmcs
         enum Ctrl1
         {
             CPU_EPT                 = 1ul << 1,
-            CPU_VPID                = 1ul << 5
+            CPU_VPID                = 1ul << 5,
+            CPU_URG                 = 1ul << 7,
         };
 
         enum Reason
@@ -414,6 +416,7 @@ class Vmcs
         static bool has_secondary() { return ctrl_cpu[0].clr & CPU_SECONDARY; }
         static bool has_ept()       { return ctrl_cpu[1].clr & CPU_EPT; }
         static bool has_vpid()      { return ctrl_cpu[1].clr & CPU_VPID; }
+        static bool has_urg()       { return ctrl_cpu[1].clr & CPU_URG; }
 
         static void init();
 };

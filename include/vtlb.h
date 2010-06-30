@@ -62,4 +62,5 @@ class Vtlb : public Paging
         void flush (unsigned, unsigned long);
 
         static Reason miss (Exc_regs *, mword, mword);
+        static bool load_pdpte (Exc_regs *, uint64 (&)[4]);
 };

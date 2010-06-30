@@ -57,7 +57,7 @@
 
 /* I/O Space */
 #define IOBMP_SADDR     0xd0000000
-#define IOBMP_EADDR     IOBMP_SADDR + PAGE_SIZE * 2
+#define IOBMP_EADDR     (IOBMP_SADDR + PAGE_SIZE * 2)
 
 /* Remap Window */
 #define REMAP_SADDR     0xdf000000
@@ -65,4 +65,4 @@
 
 /* Object Space */
 #define OBJSP_SADDR     0xe0000000
-#define OBJSP_EADDR     OBJSP_SADDR + 0x20000000
+#define OBJSP_EADDR     (OBJSP_SADDR + 0x20000000)

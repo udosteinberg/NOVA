@@ -27,7 +27,7 @@
 do {                                                        \
     register mword __esp asm ("esp");                       \
     if (EXPECT_FALSE ((trace_mask & T) == T))               \
-        printf ("[%d] " format "\n",                        \
+        printf ("[%2d] " format "\n",                       \
                ((__esp - 1) & ~PAGE_MASK) == KSTCK_ADDR ?   \
                 Cpu::id : ~0u, ## __VA_ARGS__);             \
 } while (0)

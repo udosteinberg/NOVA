@@ -57,15 +57,6 @@ class Bdf
         bool operator == (Bdf const &b) const { return bdf == b.bdf; }
 
         ALWAYS_INLINE
-        unsigned bus() const { return bdf >> 16 & 0xff; }
-
-        ALWAYS_INLINE
-        unsigned dev() const { return bdf >> 11 & 0x1f; }
-
-        ALWAYS_INLINE
-        unsigned fun() const { return bdf >> 8 & 0x7; }
-
-        ALWAYS_INLINE
         inline Bdf (unsigned b, unsigned d, unsigned f) : bdf (1ul << 31 | b << 16 | d << 11 | f << 8) {}
 };
 
@@ -98,6 +89,16 @@ class Pci
             *reinterpret_cast<T volatile *>(reg_base + reg) = val;
         }
 
+        ALWAYS_INLINE
+        static inline Pci *find_dev (unsigned r)
+        {
+            for (Pci *pci = list; pci; pci = pci->next)
+                if (pci->rid == r)
+                    return pci;
+
+            return 0;
+        }
+
     public:
         INIT
         Pci (unsigned, unsigned, unsigned, unsigned);
@@ -119,25 +120,25 @@ class Pci
         ALWAYS_INLINE INIT
         static inline bool claim_dev (Dmar *d, unsigned r)
         {
-            for (Pci *pci = list; pci; pci = pci->next)
-                if (!pci->dmar && pci->rid == r) {
-                    pci->dmar = d;
-                    return true;
-                }
+            Pci *pci = find_dev (r);
 
-            return false;
+            if (!pci)
+                return false;
+
+            unsigned l = pci->level;
+            do pci->dmar = d; while ((pci = pci->next) && pci->level > l);
+
+            return true;
         }
 
         INIT
-        static void init (unsigned = 0, unsigned = 0);
+        static unsigned init (unsigned, unsigned = 0);
 
         ALWAYS_INLINE
         static inline Dmar *find_dmar (unsigned r)
         {
-            for (Pci *pci = list; pci; pci = pci->next)
-                if (pci->rid == r)
-                    return pci->dmar;
+            Pci *pci = find_dev (r);
 
-            return 0;
+            return pci ? pci->dmar : 0;
         }
 };
