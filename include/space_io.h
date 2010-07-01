@@ -26,6 +26,8 @@ class Space_mem;
 class Space_io : public Space
 {
     private:
+        Paddr bmp;
+
         ALWAYS_INLINE
         static inline mword idx_to_virt (mword idx)
         {
@@ -44,9 +46,7 @@ class Space_io : public Space
         void update (mword, mword);
 
     public:
-        void * const bmp;
-
-        Space_io (unsigned);
+        Paddr walk (mword = 0);
 
         ALWAYS_INLINE
         inline bool lookup_obj (mword, bool) const { return true; }

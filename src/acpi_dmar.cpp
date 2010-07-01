@@ -48,7 +48,7 @@ void Acpi_dmar::parse() const
 void Acpi_rmrr::parse() const
 {
     for (uint64 hpa = base & ~PAGE_MASK; hpa < limit; hpa += PAGE_SIZE)
-        Pd::kern.dpt->update (hpa, 0, hpa, Dpt::DPT_R | Dpt::DPT_W);
+        Pd::kern.dpt.update (hpa, 0, hpa, Dpt::DPT_R | Dpt::DPT_W);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 

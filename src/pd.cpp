@@ -25,10 +25,10 @@ Slab_cache Pd::cache (sizeof (Pd), 8);
 
 Pd *Pd::current;
 
-ALIGNED(8) Pd Pd::kern (&Pd::kern, 0);
-ALIGNED(8) Pd Pd::root (&Pd::root, NUM_EXC, 0x3);
+ALIGNED(8) Pd Pd::kern (&Pd::kern);
+ALIGNED(8) Pd Pd::root (&Pd::root, NUM_EXC);
 
-Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD), Space_io (0)
+Pd::Pd (Pd *own) : Kobject (own, 0, PD), Space_mem (Ptab::master())
 {
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
 
@@ -50,9 +50,9 @@ Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD), Space_io (0)
     Space_io::insert_root (0, 16);
 }
 
-Pd::Pd (Pd *own, mword sel, unsigned flags) : Kobject (own, sel, PD), Space_mem (flags), Space_io (flags)
+Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD), Space_mem (new Ptab)
 {
-    trace (TRACE_SYSCALL, "PD:%p created (F=%#x)", this, flags);
+    trace (TRACE_SYSCALL, "PD:%p created", this);
 }
 
 template <typename S>

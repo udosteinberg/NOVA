@@ -70,7 +70,8 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
 
 void Dmar::assign (unsigned rid, Pd *p)
 {
-    assert (p->did && p->dpt);
+    if (!p->did)
+        p->did = ++Pd::did_ctr;
 
     mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
 
@@ -84,7 +85,7 @@ void Dmar::assign (unsigned rid, Pd *p)
 
     flush_ctx();
 
-    c->set (lev | p->did << 8, Buddy::ptr_to_phys (p->dpt->level (lev + 1)) | 1);
+    c->set (lev | p->did << 8, Buddy::ptr_to_phys (p->dpt.level (lev + 1)) | 1);
 }
 
 void Dmar::fault_handler()

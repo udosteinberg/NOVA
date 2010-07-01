@@ -196,7 +196,7 @@ void Ec::sys_create_pd()
 {
     Sys_create_pd *r = static_cast<Sys_create_pd *>(&current->regs);
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx UTCB:%#lx VM:%u", current, r->pd(), r->utcb(), r->flags() & 1);
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx UTCB:%#lx", current, r->pd(), r->utcb());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
@@ -208,12 +208,7 @@ void Ec::sys_create_pd()
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    if ((r->flags() & 0x1) && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) {
-        trace (TRACE_ERROR, "%s: VM not supported", __func__);
-        sys_finish<Sys_regs::BAD_FTR>();
-    }
-
-    Pd *pd = new Pd (Pd::current, r->pd(), r->flags());
+    Pd *pd = new Pd (Pd::current, r->pd());
     if (!Space_obj::insert_root (pd)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
         delete pd;
@@ -431,14 +426,7 @@ void Ec::sys_assign_pci()
         sys_finish<Sys_regs::BAD_DEV>();
     }
 
-    Pd *pd = static_cast<Pd *>(obj);
-
-    if (!pd->dpt) {
-        trace (TRACE_ERROR, "%s: DMA not supported", __func__);
-        sys_finish<Sys_regs::BAD_CAP>();
-    }
-
-    dmar->assign (r->vf() ? r->vf() : r->pf(), pd);
+    dmar->assign (r->vf() ? r->vf() : r->pf(), static_cast<Pd *>(obj));
 
     sys_finish<Sys_regs::SUCCESS>();
 }

@@ -88,6 +88,9 @@ class Ept
         inline void flush() { asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1UL) : "cc"); }
 
         ALWAYS_INLINE
+        inline Ept *level (unsigned l) { return walk (0, l, EPT_R | EPT_W | EPT_X); }
+
+        ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
 
         ALWAYS_INLINE

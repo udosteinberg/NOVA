@@ -27,9 +27,11 @@ Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
 
     for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        e += dpa >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
+        e += dpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
-        if (lev == l)
+        assert (lev != max || e == this);
+
+        if (lev-- == l)
             return e;
 
         if (!e->present()) {

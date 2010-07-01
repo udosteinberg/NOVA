@@ -27,9 +27,11 @@ Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
 
     for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        e += gpa >> (--lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
+        e += gpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
-        if (lev == l)
+        assert (lev != max || e == this);
+
+        if (lev-- == l)
             return e;
 
         if (!e->present()) {

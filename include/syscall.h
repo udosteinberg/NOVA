@@ -52,9 +52,6 @@ class Sys_create_pd : public Exc_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 8 & 0xff; }
-
-        ALWAYS_INLINE
         inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE

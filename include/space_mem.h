@@ -27,27 +27,22 @@
 
 class Space_mem : public Space
 {
-    private:
-        static unsigned did_ctr;
-
     protected:
         Ptab *  percpu[NUM_CPU];
 
     public:
         Ptab *const mst;
-        mword const did;
-        Dpt * const dpt;
-        Ept * const ept;
+        mword did;
+        Dpt   dpt;
+        Ept   ept;
 
         Cpuset exist;
         Cpuset flush;
 
-        // Constructor for kernel memory space
-        ALWAYS_INLINE INIT
-        inline Space_mem() : mst (Ptab::master()), did (++did_ctr), dpt (new Dpt), ept (0) {}
+        static unsigned did_ctr;
 
         ALWAYS_INLINE
-        inline Space_mem (unsigned flags) : mst (new Ptab), did (flags & 0x2 ? ++did_ctr : 0), dpt (flags & 0x2 ? new Dpt : 0), ept (flags & 0x1 ? new Ept : 0) {}
+        inline Space_mem (Ptab *p) : mst (p) {}
 
         ALWAYS_INLINE
         inline Ptab *cpu_ptab (unsigned cpu) const

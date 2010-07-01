@@ -23,32 +23,24 @@ Space_mem *Space_io::space_mem()
     return static_cast<Pd *>(this);
 }
 
-Space_io::Space_io (unsigned flags) : bmp (flags & 0x1 ? Buddy::allocator.alloc (1, Buddy::FILL_1) : 0)
+Paddr Space_io::walk (mword idx)
 {
-    if (bmp)
+    if (!bmp)
         space_mem()->insert (IOBMP_SADDR, 1,
                              Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE | Ptab::ATTR_PRESENT),
-                             Buddy::ptr_to_phys (bmp));
+                             bmp = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1)));
+
+    return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
 }
 
 void Space_io::update (mword idx, mword attr)
 {
-    mword virt = idx_to_virt (idx);
-
-    Paddr phys;
-    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_1)) {
-        phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_1));
-        space_mem()->insert (virt & ~PAGE_MASK, 0,
-                             Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE | Ptab::ATTR_PRESENT),
-                             phys);
-
-        phys |= virt & PAGE_MASK;
-    }
+    mword *m = static_cast<mword *>(Buddy::phys_to_ptr (walk (idx)));
 
     if (attr)
-        Atomic::clr_mask<true>(*static_cast<mword *>(Buddy::phys_to_ptr (phys)), idx_to_mask (idx));
+        Atomic::clr_mask<true>(*m, idx_to_mask (idx));
     else
-        Atomic::set_mask<true>(*static_cast<mword *>(Buddy::phys_to_ptr (phys)), idx_to_mask (idx));
+        Atomic::set_mask<true>(*m, idx_to_mask (idx));
 }
 
 void Space_io::update (Mdb *mdb, bool, mword rem, mword)

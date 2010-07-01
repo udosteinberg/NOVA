@@ -75,18 +75,18 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
 
         if (Cpu::feature (Cpu::FEAT_VMX)) {
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
-                                  Buddy::ptr_to_phys (pd->bmp),
+                                  pd->Space_io::walk(),
                                   Buddy::ptr_to_phys (pd->cpu_ptab (c)),
-                                  Buddy::ptr_to_phys (pd->ept));
+                                  Buddy::ptr_to_phys (pd->ept.level (Ept::max - 1)));
 
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
             cont = send_msg<ret_user_vmresume>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p EPT:%p)", this, p, regs.vmcs, regs.vtlb, pd->ept);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, p, regs.vmcs, regs.vtlb);
         }
 
         if (Cpu::feature (Cpu::FEAT_SVM)) {
-            regs.vmcb = new Vmcb (Buddy::ptr_to_phys (pd->bmp),
+            regs.vmcb = new Vmcb (pd->Space_io::walk(),
                                   Buddy::ptr_to_phys (pd->mst));
             cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);

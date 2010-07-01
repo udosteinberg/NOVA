@@ -52,16 +52,16 @@ void Space_mem::update (Mdb *mdb, Paddr phys, mword rem, mword sub)
     mword o = mdb->node_order;
     mword a = mdb->node_attr & ~rem;
 
-    if (dpt && sub & 1) {
+    if (sub & 1) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            dpt->update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, rem);
+            dpt.update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, rem);
     }
 
-    if (ept && sub & 2) {
+    if (sub & 2) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            ept->update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, rem);
+            ept.update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, rem);
     }
 
     bool l = mst->update (b, o, phys, Ptab::hw_attr (a), rem);

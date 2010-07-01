@@ -41,9 +41,9 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         static Pd kern, root;
 
         INIT
-        Pd (Pd *, mword);
+        Pd (Pd *);
 
-        Pd (Pd *, mword, unsigned);
+        Pd (Pd *, mword);
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -52,8 +52,10 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
                 flush.clr (Cpu::id);
 
-                if (ept)
-                    ept->flush();
+#if 0
+                if (ept.addr())
+                    ept.flush();    // XXX: Fix INVEPT
+#endif
 
             } else if (EXPECT_TRUE (current == this))
                 return;
