@@ -46,8 +46,9 @@ class Mdb : public Avl
         mword const node_order;
         mword       node_attr;
         mword const node_type;
+        mword const node_sub;
 
-        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0) : prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t) {}
+        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
 
         static Mdb *lookup (Avl *tree, mword base)
         {

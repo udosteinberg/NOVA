@@ -65,7 +65,7 @@ void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
             break;
 
-        Mdb *node = new Mdb (this, b - snd_base + rcv_base, o, 0, mdb->node_type);
+        Mdb *node = new Mdb (this, b - snd_base + rcv_base, o, 0, mdb->node_type, sub);
 
         if (!S::insert_node (node)) {
             delete node;
@@ -99,7 +99,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
         for (Mdb *succ;; node = succ) {
 
             if ((node->node_attr & attr) && (self || node != mdb)) {
-                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base, false), attr, ~0UL);
+                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base, false), attr, node->node_sub);
                 node->demote_node (attr);
             }
 
