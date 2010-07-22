@@ -153,8 +153,13 @@ void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
     }
 
     if (mtd.xfer (Mtd::QUAL)) {
-        qual[0] = Vmcs::read (Vmcs::EXI_QUALIFICATION);
-        qual[1] = regs->ept_on ? Vmcs::read (Vmcs::INFO_PHYS_ADDR) : regs->ept_fault;
+        if (regs->dst_portal == 48 && !regs->ept_on) {
+            qual[0] = regs->ept_error;
+            qual[1] = regs->ept_fault;
+        } else {
+            qual[0] = Vmcs::read (Vmcs::EXI_QUALIFICATION);
+            qual[1] = Vmcs::read (Vmcs::INFO_PHYS_ADDR);
+        }
     }
 
     if (mtd.xfer (Mtd::INJ)) {

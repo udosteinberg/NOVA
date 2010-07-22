@@ -20,7 +20,6 @@
 #include "pd.h"
 #include "ptab.h"
 #include "regs.h"
-#include "user.h"
 #include "vpid.h"
 #include "vtlb.h"
 
@@ -30,68 +29,70 @@ bool Vtlb::load_pdpte (Exc_regs *regs, uint64 (&v)[4])
     mword *val = reinterpret_cast<mword *>(&v);
 
     for (unsigned i = 0; i < sizeof (v) / sizeof (mword); i++, pte++, val++)
-        if (peek_user (pte, *val) != ~0UL)
+        if (User::peek (pte, *val) != ~0UL)
             return false;
 
     return true;
 }
 
-size_t Vtlb::walk (Exc_regs *regs, mword virt, mword error, mword &phys, mword &attr)
+size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &type)
 {
     if (EXPECT_FALSE (!(regs->cr0_shadow & Cpu::CR0_PG))) {
         phys = virt;
-        return ~0ul;
+        return ~0UL;
     }
 
     bool pse = regs->cr4_shadow & (Cpu::CR4_PSE | Cpu::CR4_PAE);
     bool pge = regs->cr4_shadow &  Cpu::CR4_PGE;
 
-    mword bits = (error & (ERROR_USER | ERROR_WRITE)) | ERROR_PRESENT;
+    type &= ERROR_USER | ERROR_WRITE;
 
     unsigned lev = levels;
 
-    for (Ptab val, *pte = reinterpret_cast<Ptab *>(regs->cr3_shadow);; pte = reinterpret_cast<Ptab *>(val.addr())) {
+    for (Ptab e, *pte = reinterpret_cast<Ptab *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<Ptab *>(e.addr())) {
 
         unsigned shift = --lev * bpl + PAGE_BITS;
-        pte += virt >> shift & ((1ul << bpl) - 1);
+        pte += virt >> shift & ((1UL << bpl) - 1);
 
-        if (peek_user (pte, val) != ~0UL) {         // XXX
+        if (User::peek (pte, e) != ~0UL) {
             phys = reinterpret_cast<Paddr>(pte);
-            return ~0ul;
+            return ~0UL;
         }
 
-        attr &= val.attr();
-
-        if (EXPECT_FALSE ((attr & bits) != bits))
+        if (EXPECT_FALSE (!e.present()))
             return 0;
 
-        if (EXPECT_FALSE (!val.accessed()))
-            Atomic::set_mask<true>(pte->val, ATTR_ACCESSED);
+        attr &= e.attr();
 
-        if (EXPECT_FALSE (lev && (!pse || !val.super())))
+        if (lev && (!pse || !e.super())) {
+            pte->mark (&e, ATTR_ACCESSED);
             continue;
-
-        if (EXPECT_FALSE (!val.dirty())) {
-            if (EXPECT_FALSE (error & ERROR_WRITE))
-                Atomic::set_mask<true>(pte->val, ATTR_DIRTY);
-            else
-                attr &= ~ATTR_WRITABLE;
         }
 
-        attr |= val.attr() & ATTR_UNCACHEABLE;
+        if (EXPECT_FALSE ((attr & type) != type)) {
+            type |= ERROR_PRESENT;
+            return 0;
+        }
+
+        if (!(type & ERROR_WRITE) && !e.dirty())
+            attr &= ~ATTR_WRITABLE;
+
+        pte->mark (&e, (attr & 3) << 5);
+
+        attr |= e.attr() & ATTR_UNCACHEABLE;
 
         if (EXPECT_TRUE (pge))
-            attr |= val.attr() & ATTR_GLOBAL;
+            attr |= e.attr() & ATTR_GLOBAL;
 
-        size_t size = 1ul << shift;
+        size_t size = 1UL << shift;
 
-        phys = val.addr() | (virt & (size - 1));
+        phys = e.addr() | (virt & (size - 1));
 
         return size;
     }
 }
 
-Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
+Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 {
     mword attr = ATTR_USER | ATTR_WRITABLE | ATTR_PRESENT;
     mword phys;
@@ -99,7 +100,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
 
-    size_t gsize = walk (regs, virt, error, phys, attr);
+    size_t gsize = walk (regs, virt, phys, attr, error);
     if (EXPECT_FALSE (!gsize)) {
         regs->cr2 = virt;
         Counter::vtlb_gpf++;
@@ -109,6 +110,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
     size_t hsize = Pd::current->Space_mem::lookup (phys, host);
     if (EXPECT_FALSE (!hsize)) {
         regs->ept_fault = phys;
+        regs->ept_error = 1UL << !!(error & ERROR_WRITE);
         Counter::vtlb_hpf++;
         return GPA_HPA;
     }
@@ -125,11 +127,11 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
     for (Vtlb *tlb = regs->vtlb;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
 
         unsigned shift = --lev * bpl + PAGE_BITS;
-        tlb += virt >> shift & ((1ul << bpl) - 1);
+        tlb += virt >> shift & ((1UL << bpl) - 1);
 
         if (lev) {
 
-            if (size != 1ul << shift) {
+            if (size != 1UL << shift) {
 
                 if (tlb->super())
                     tlb->val = Buddy::ptr_to_phys (new Vtlb) | ATTR_GLOBAL | ATTR_PTAB;
@@ -159,7 +161,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword error)
 
 void Vtlb::flush_ptab (unsigned full)
 {
-    for (Vtlb *tlb = this; tlb < this + (1ul << bpl); tlb++) {
+    for (Vtlb *tlb = this; tlb < this + (1UL << bpl); tlb++) {
 
         if (EXPECT_TRUE (!tlb->present()))
             continue;
@@ -181,7 +183,7 @@ void Vtlb::flush_addr (mword virt, unsigned long vpid)
     for (Vtlb *tlb = this;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
 
         unsigned shift = --lev * bpl + PAGE_BITS;
-        tlb += virt >> shift & ((1ul << bpl) - 1);
+        tlb += virt >> shift & ((1UL << bpl) - 1);
 
         if (!tlb->present())
             return;

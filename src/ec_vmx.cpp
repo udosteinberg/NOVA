@@ -25,13 +25,12 @@
 
 void Ec::vmx_exception()
 {
-    uint32 intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::EXI_INTR_INFO));
-    uint32 intr_error = static_cast<uint32>(Vmcs::read (Vmcs::EXI_INTR_ERROR));
+    mword intr_info  = Vmcs::read (Vmcs::EXI_INTR_INFO);
     assert (intr_info & 0x80000000);
 
     // Handle event during IDT vectoring
-    uint32 vect_info  = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_INFO));
-    uint32 vect_error = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_ERROR));
+    mword vect_info  = Vmcs::read (Vmcs::IDT_VECT_INFO);
+    mword vect_error = Vmcs::read (Vmcs::IDT_VECT_ERROR);
 
     if (vect_info & 0x80000000) {
         Vmcs::write (Vmcs::ENT_INTR_INFO,  vect_info);
@@ -45,9 +44,9 @@ void Ec::vmx_exception()
 
     if (EXPECT_TRUE ((intr_info & 0x7ff) == 0x30e)) {
 
-        mword addr = Vmcs::read (Vmcs::EXI_QUALIFICATION);
+        mword intr_error = Vmcs::read (Vmcs::EXI_INTR_ERROR);
 
-        switch (Vtlb::miss (&current->regs, addr, intr_error)) {
+        switch (Vtlb::miss (&current->regs, Vmcs::read (Vmcs::EXI_QUALIFICATION), intr_error)) {
 
             case Vtlb::GPA_HPA:
                 current->regs.dst_portal = Vmcs::VMX_EPT_VIOLATION;

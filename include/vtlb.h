@@ -27,7 +27,7 @@ class Vtlb : public Paging
 {
     private:
         ALWAYS_INLINE
-        static inline size_t walk (Exc_regs *, mword, mword, mword &, mword &);
+        static inline size_t walk (Exc_regs *, mword, mword &, mword &, mword &);
 
         void flush_ptab (unsigned);
 
@@ -61,6 +61,6 @@ class Vtlb : public Paging
         void flush_addr (mword, unsigned long);
         void flush (unsigned, unsigned long);
 
-        static Reason miss (Exc_regs *, mword, mword);
+        static Reason miss (Exc_regs *, mword, mword &);
         static bool load_pdpte (Exc_regs *, uint64 (&)[4]);
 };

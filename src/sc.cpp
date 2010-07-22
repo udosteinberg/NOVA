@@ -154,6 +154,6 @@ void Sc::rrq_handler()
 
 void Sc::tlb_handler()
 {
-    if (Pd::current->Space_mem::flush.chk (Cpu::id))
+    if (Pd::current->Space_mem::htlb.chk (Cpu::id))
         Cpu::hazard |= Cpu::HZD_SCHED;
 }

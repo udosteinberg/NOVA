@@ -80,15 +80,16 @@ size_t Ptab::lookup (mword virt, Paddr &phys)
 
     for (Ptab *pte = this;; pte = static_cast<Ptab *>(Buddy::phys_to_ptr (pte->addr()))) {
 
-        unsigned shift = --lev * bpl + 12;
-        pte += virt >> shift & ((1ul << bpl) - 1);
-        size_t size = 1ul << shift;
+        unsigned shift = --lev * bpl + PAGE_BITS;
+        pte += virt >> shift & ((1UL << bpl) - 1);
 
         if (EXPECT_FALSE (!pte->present()))
             return 0;
 
         if (EXPECT_FALSE (lev && !pte->super()))
             continue;
+
+        size_t size = 1UL << shift;
 
         phys = pte->addr() | (virt & (size - 1));
 

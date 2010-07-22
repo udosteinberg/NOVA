@@ -347,7 +347,7 @@ class Vmcs
             return Buddy::allocator.alloc (0, Buddy::NOFILL);
         }
 
-        Vmcs (mword, mword, mword, mword);
+        Vmcs (mword, mword, mword, uint64);
 
         ALWAYS_INLINE
         inline Vmcs() : rev (basic.revision)

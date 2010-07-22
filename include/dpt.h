@@ -42,7 +42,7 @@ class Dpt
         ALWAYS_INLINE
         inline void set (uint64 v) { val = v; clflush (this); }
 
-        Dpt *walk (uint64, unsigned long, mword = 0);
+        Dpt *walk (uint64, unsigned long, bool = false);
 
     public:
         static unsigned const bpl = 9;
@@ -66,7 +66,7 @@ class Dpt
         void update (uint64, mword, uint64, mword, bool = false);
 
         ALWAYS_INLINE
-        inline Dpt *level (unsigned l) { return walk (0, l, DPT_R | DPT_W); }
+        inline uint64 root (unsigned l) { return Buddy::ptr_to_phys (walk (0, l)); }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

@@ -25,6 +25,36 @@ class Rcu_elem
     public:
         Rcu_elem *next;
         void (*func)(Rcu_elem *);
+
+        explicit Rcu_elem (void (*f)(Rcu_elem *)) : func (f) {}
+};
+
+class Rcu_list
+{
+    public:
+        Rcu_elem *  head;
+        Rcu_elem ** tail;
+
+        explicit Rcu_list() { clear(); }
+
+        ALWAYS_INLINE
+        inline void clear() { head = 0; tail = &head; }
+
+        ALWAYS_INLINE
+        inline void append (Rcu_list *l)
+        {
+            *tail = l->head;
+             tail = l->tail;
+             l->clear();
+        }
+
+        ALWAYS_INLINE
+        inline void enqueue (Rcu_elem *e)
+        {
+             e->next = 0;
+            *tail = e;
+             tail = &e->next;
+        }
 };
 
 class Rcu
@@ -39,12 +69,16 @@ class Rcu
         static bool     q_passed    CPULOCAL;
         static bool     q_pending   CPULOCAL;
 
-        static Rcu_elem *list_n     CPULOCAL;
-        static Rcu_elem *list_c     CPULOCAL;
-        static Rcu_elem *list_d     CPULOCAL;
+        static Rcu_list next        CPULOCAL;
+        static Rcu_list curr        CPULOCAL;
+        static Rcu_list done        CPULOCAL;
 
     public:
-        static void quiet() { q_passed = true; }
+        ALWAYS_INLINE
+        static inline void submit (Rcu_elem *e) { next.enqueue (e); }
+
+        ALWAYS_INLINE
+        static inline void quiet() { q_passed = true; }
 
         static void invoke_batch();
         static void start_batch();

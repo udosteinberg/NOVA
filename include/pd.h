@@ -48,16 +48,10 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         ALWAYS_INLINE HOT
         inline void make_current()
         {
-            if (EXPECT_FALSE (flush.chk (Cpu::id))) {
+            if (EXPECT_FALSE (htlb.chk (Cpu::id)))
+                htlb.clr (Cpu::id);
 
-                flush.clr (Cpu::id);
-
-#if 0
-                if (ept.addr())
-                    ept.flush();    // XXX: Fix INVEPT
-#endif
-
-            } else if (EXPECT_TRUE (current == this))
+            else if (EXPECT_TRUE (current == this))
                 return;
 
             current = this;

@@ -27,7 +27,7 @@ unsigned Space_mem::did_ctr;
 
 void Space_mem::init (unsigned cpu)
 {
-    if (exist.set (cpu)) {
+    if (cpus.set (cpu)) {
 
         // Create ptab for this CPU
         percpu[cpu] = new Ptab;
@@ -42,7 +42,7 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::update (Mdb *mdb, Paddr phys, mword rem, mword sub)
+void Space_mem::update (Mdb *mdb, Paddr phys, mword r, mword s)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
 
@@ -50,30 +50,32 @@ void Space_mem::update (Mdb *mdb, Paddr phys, mword rem, mword sub)
 
     mword b = mdb->node_base << PAGE_BITS;
     mword o = mdb->node_order;
-    mword a = mdb->node_attr & ~rem;
+    mword a = mdb->node_attr & ~r;
 
-    if (sub & 1) {
+    if (s & 1 && Dpt::ord != ~0UL) {
         unsigned ord = min (o, Dpt::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            dpt.update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, rem);
+            dpt.update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r);
     }
 
-    if (sub & 2) {
+    if (s & 2 && Ept::ord != ~0UL) {
         unsigned ord = min (o, Ept::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            ept.update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, rem);
+            ept.update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, r);
+        if (r)
+            gtlb.merge (cpus);
     }
 
-    bool l = mst->update (b, o, phys, Ptab::hw_attr (a), rem);
+    bool l = mst->update (b, o, phys, Ptab::hw_attr (a), r);
 
-    if (rem) {
+    if (r) {
 
         if (l)
             for (unsigned i = 0; i < sizeof (percpu) / sizeof (*percpu); i++)
                 if (percpu[i])
-                    percpu[i]->update (b, o, phys, Ptab::hw_attr (a), rem);
+                    percpu[i]->update (b, o, phys, Ptab::hw_attr (a), r);
 
-        flush.merge (exist);
+        htlb.merge (cpus);
     }
 }
 
@@ -86,7 +88,7 @@ void Space_mem::shootdown()
 
         Pd *pd = Pd::remote (cpu);
 
-        if (!pd->flush.chk (cpu))
+        if (!pd->htlb.chk (cpu))
             continue;
 
         if (Cpu::id == cpu) {

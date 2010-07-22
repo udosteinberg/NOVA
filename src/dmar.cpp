@@ -85,7 +85,7 @@ void Dmar::assign (unsigned rid, Pd *p)
 
     flush_ctx();
 
-    c->set (lev | p->did << 8, Buddy::ptr_to_phys (p->dpt.level (lev + 1)) | 1);
+    c->set (lev | p->did << 8, p->dpt.root (lev + 1) | 1);
 }
 
 void Dmar::fault_handler()

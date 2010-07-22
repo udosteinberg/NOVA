@@ -143,6 +143,12 @@ class Ec : public Kobject, public Queue<Sc>
         }
 
         ALWAYS_INLINE
+        static inline Ec *remote (unsigned c)
+        {
+            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
+        }
+
+        ALWAYS_INLINE
         inline void set_cont (void (*c)())
         {
             cont = c;
@@ -180,18 +186,9 @@ class Ec : public Kobject, public Queue<Sc>
         ALWAYS_INLINE
         inline void release()
         {
-            Sc *s;
+            Lock_guard <Spinlock> guard (lock);
 
-            for (;;) {      // This loop will go away
-
-                {   Lock_guard <Spinlock> guard (lock);
-
-                    if (!(s = dequeue()))
-                        return;
-                }
-
-                s->remote_enqueue();
-            }
+            for (Sc *s; (s = dequeue()); s->remote_enqueue()) ;
         }
 
         HOT NORETURN

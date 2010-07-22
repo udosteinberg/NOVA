@@ -20,6 +20,7 @@
 #include "atomic.h"
 #include "counter.h"
 #include "cpu.h"
+#include "initprio.h"
 #include "rcu.h"
 
 unsigned    Rcu::batch;
@@ -30,16 +31,18 @@ unsigned    Rcu::c_batch;
 bool        Rcu::q_passed;
 bool        Rcu::q_pending;
 
-Rcu_elem *  Rcu::list_n;
-Rcu_elem *  Rcu::list_c;
-Rcu_elem *  Rcu::list_d;
+INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::next;
+INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::curr;
+INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::done;
 
 void Rcu::invoke_batch()
 {
-    for (Rcu_elem *e = list_d, *next; e; e = next) {
+    for (Rcu_elem *e = done.head, *next; e; e = next) {
         next = e->next;
         (e->func)(e);
     }
+
+    done.clear();
 }
 
 void Rcu::start_batch()
@@ -72,24 +75,19 @@ void Rcu::check_quiescent_state()
 
 bool Rcu::process_callbacks()
 {
-    if (list_c && batch > c_batch) {
-        list_d = list_c;
-        list_c = 0;
-    }
+    if (curr.head && batch > c_batch)
+        done.append (&curr);
 
-    if (!list_c && list_n) {
-        list_c = list_n;
-        list_n = 0;
+    if (!curr.head && next.head) {
+        curr.append (&next);
 
         c_batch = batch + 1;
     }
 
     check_quiescent_state();
 
-    if (list_d) {
+    if (done.head)
         invoke_batch();
-        list_d = 0;
-    }
 
     return false;
 }

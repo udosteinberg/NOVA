@@ -373,9 +373,7 @@ void Ec::sys_recall()
 
         Atomic::set_mask<true>(ec->hazard, Cpu::HZD_RECALL);
 
-        // XXX: We only need to send the IPI if we were the first to set the
-        // recall hazard and if the target EC is currently running on its CPU.
-        if (Cpu::id != ec->cpu)
+        if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
             Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
     }
 

@@ -18,35 +18,23 @@
 
 #pragma once
 
+#include "assert.h"
 #include "buddy.h"
 #include "compiler.h"
-
-class Ept;
-
-class Eptp
-{
-    private:
-        uint64 val;
-
-    public:
-        ALWAYS_INLINE
-        inline Eptp (Ept *ept) : val (Buddy::ptr_to_phys (ept) | 0x1e) {}
-};
-
-class Invept : public Eptp
-{
-    private:
-        uint64 res;
-
-    public:
-        ALWAYS_INLINE
-        inline Invept (Ept *ept) : Eptp (ept) {}
-};
 
 class Ept
 {
     private:
         uint64 val;
+
+        enum
+        {
+            EPT_R   = 1UL << 0,
+            EPT_W   = 1UL << 1,
+            EPT_X   = 1UL << 2,
+            EPT_I   = 1UL << 6,
+            EPT_S   = 1UL << 7,
+        };
 
         ALWAYS_INLINE
         inline bool present() const { return val & (EPT_R | EPT_W | EPT_X); }
@@ -58,37 +46,33 @@ class Ept
         inline mword attr() const { return static_cast<mword>(val) & 0xfff; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
-
-        ALWAYS_INLINE
         inline void set (uint64 v) { val = v; }
 
-        Ept *walk (uint64, unsigned long, mword = 0);
+        Ept *walk (uint64, unsigned long, bool = false);
 
     public:
         static unsigned const bpl = 9;
         static unsigned const max = 4;
         static mword ord;
 
-        enum
-        {
-            EPT_R               = 1ul << 0,
-            EPT_W               = 1ul << 1,
-            EPT_X               = 1ul << 2,
-            EPT_I               = 1ul << 6,
-            EPT_S               = 1ul << 7,
-        };
-
         ALWAYS_INLINE
         static inline mword hw_attr (mword a) { return a ? a | EPT_R : 0; }
+
+        ALWAYS_INLINE
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
 
         void update (uint64, mword, uint64, mword, mword, bool = false);
 
         ALWAYS_INLINE
-        inline void flush() { asm volatile ("invept %0, %1" : : "m" (Invept (this)), "r" (1UL) : "cc"); }
+        inline void flush()
+        {
+            bool ret;
+            asm volatile ("invept %1, %2; seta %0" : "=q" (ret) : "m" (val), "r" (1UL) : "cc");
+            assert (ret);
+        }
 
         ALWAYS_INLINE
-        inline Ept *level (unsigned l) { return walk (0, l, EPT_R | EPT_W | EPT_X); }
+        inline uint64 root() { walk (0, max - 1); return val; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

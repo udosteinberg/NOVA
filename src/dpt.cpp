@@ -19,27 +19,27 @@
 #include "assert.h"
 #include "dpt.h"
 
-mword Dpt::ord = 8 * sizeof (mword);
+mword Dpt::ord = ~0UL;
 
-Dpt *Dpt::walk (uint64 dpa, unsigned long l, mword p)
+Dpt *Dpt::walk (uint64 dpa, unsigned long l, bool d)
 {
     unsigned lev = max;
 
-    for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr()))) {
+    for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr())), lev--) {
 
         e += dpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         assert (lev != max || e == this);
 
-        if (lev-- == l)
+        if (lev == l)
             return e;
 
         if (!e->present()) {
 
-            if (!p)
+            if (d)
                 return 0;
 
-            e->set (Buddy::ptr_to_phys (new Dpt) | p);
+            e->set (Buddy::ptr_to_phys (new Dpt) | DPT_R | DPT_W);
         }
 
         else
@@ -54,7 +54,7 @@ void Dpt::update (uint64 dpa, mword o, uint64 hpa, mword a, bool d)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Dpt *e = walk (dpa, l, d ? 0 : DPT_R | DPT_W);
+    Dpt *e = walk (dpa, l, d);
     assert (e);
 
     uint64 v = hpa | a | (l ? DPT_S : 0);

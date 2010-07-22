@@ -39,7 +39,7 @@ Vmcs::vmx_ctrl_ent  Vmcs::ctrl_ent;
 Vmcs::vmx_fix_cr0   Vmcs::fix_cr0;
 Vmcs::vmx_fix_cr4   Vmcs::fix_cr4;
 
-Vmcs::Vmcs (mword esp, mword bmp, mword cr3, mword eptp) : rev (basic.revision)
+Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 {
     clear();
 
@@ -68,8 +68,10 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, mword eptp) : rev (basic.revision)
     write (VMCS_LINK_PTR_HI, ~0ul);
 
     write (VPID, ++vpid_ctr);
-    write (EPTP, eptp | 0x1e);
-    write (EPTP_HI, 0);
+
+    write (EPTP,    static_cast<mword>(eptp));
+    write (EPTP_HI, static_cast<mword>(eptp >> 32));
+
     write (IO_BITMAP_A, bmp);
     write (IO_BITMAP_B, bmp + PAGE_SIZE);
 

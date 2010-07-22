@@ -111,8 +111,9 @@ class Exc_regs : public Sys_regs
                 mword   cr4_shadow; // 0x30
                 mword   dst_portal; // 0x34
                 mword   ept_fault;  // 0x38
-                uint8   ept_on;     // 0x3c
-                uint8   fpu_on;     // 0x3d
+                mword   ept_error;  // 0x3c
+                uint8   ept_on;     // 0x40
+                uint8   fpu_on;     // 0x41
             };
         };
 

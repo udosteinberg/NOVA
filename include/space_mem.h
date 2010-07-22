@@ -36,8 +36,9 @@ class Space_mem : public Space
         Dpt   dpt;
         Ept   ept;
 
-        Cpuset exist;
-        Cpuset flush;
+        Cpuset cpus;
+        Cpuset htlb;
+        Cpuset gtlb;
 
         static unsigned did_ctr;
 

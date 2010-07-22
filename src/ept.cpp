@@ -16,30 +16,29 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
 #include "ept.h"
 
-mword Ept::ord = 8 * sizeof (mword);
+mword Ept::ord = ~0UL;
 
-Ept *Ept::walk (uint64 gpa, unsigned long l, mword p)
+Ept *Ept::walk (uint64 gpa, unsigned long l, bool d)
 {
     unsigned lev = max;
 
-    for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr()))) {
+    for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr())), lev--) {
 
         e += gpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
 
         assert (lev != max || e == this);
 
-        if (lev-- == l)
+        if (lev == l)
             return e;
 
         if (!e->present()) {
 
-            if (!p)
+            if (d)
                 return 0;
 
-            e->set (Buddy::ptr_to_phys (new Ept) | p);
+            e->set (Buddy::ptr_to_phys (new Ept) | (lev == max ? (max - 1) << 3 | 6 : EPT_R | EPT_W | EPT_X));
         }
 
         else
@@ -54,7 +53,7 @@ void Ept::update (uint64 gpa, mword o, uint64 hpa, mword a, mword t, bool d)
     unsigned long l = o / bpl;
     unsigned long s = 1ul << (l * bpl + PAGE_BITS);
 
-    Ept *e = walk (gpa, l, d ? 0 : EPT_R | EPT_W | EPT_X);
+    Ept *e = walk (gpa, l, d);
     assert (e);
 
     uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : 0);

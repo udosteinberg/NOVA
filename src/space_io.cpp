@@ -43,12 +43,12 @@ void Space_io::update (mword idx, mword attr)
         Atomic::set_mask<true>(*m, idx_to_mask (idx));
 }
 
-void Space_io::update (Mdb *mdb, bool, mword rem, mword)
+void Space_io::update (Mdb *mdb, bool, mword r, mword)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);
     for (unsigned long i = 0; i < (1UL << mdb->node_order); i++)
-        update (mdb->node_base + i, mdb->node_attr & ~rem);
+        update (mdb->node_base + i, mdb->node_attr & ~r);
 }
 
 void Space_io::insert_root (mword b, unsigned o)

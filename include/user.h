@@ -20,24 +20,28 @@
 
 #include "compiler.h"
 
-template <typename T>
-mword
-peek_user (T *addr, T &val)
+class User
 {
-    mword ret;
-    asm volatile ("1: mov %2, %1; or $-1, %0; 2:"
-                  ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
-                  : "=a" (ret), "=q" (val) : "m" (*addr));
-    return ret;
-}
+    public:
+        template <typename T>
+        static inline mword
+        peek (T *addr, T &val)
+        {
+            mword ret;
+            asm volatile ("1: mov %2, %1; or $-1, %0; 2:"
+                          ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
+                          : "=a" (ret), "=r" (val) : "m" (*addr));
+            return ret;
+        }
 
-template <typename T>
-mword
-poke_user (T *addr, T &val)
-{
-    mword ret;
-    asm volatile ("1: mov %1, %2; or $-1, %0; 2:"
-                  ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
-                  : "=a" (ret) : "q" (val), "m" (*addr));
-    return ret;
-}
+        template <typename T>
+        static inline mword
+        cmp_swap (T *addr, T o, T n)
+        {
+            mword ret;
+            asm volatile ("1: lock; cmpxchg %3, %1; or $-1, %0; 2:"
+                          ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
+                          : "=a" (ret), "+m" (*addr) : "a" (o), "r" (n));
+            return ret;
+        }
+};

@@ -114,7 +114,8 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
 
         for (Mdb *succ;; node = succ) {
 
-            if (node->remove_node() && !node->node_pd->S::remove_node (node)) {}
+            if (node->remove_node() && node->node_pd->S::remove_node (node))
+                Rcu::submit (node);
 
             succ = ACCESS_ONCE (node->prev);
 
@@ -171,19 +172,19 @@ void Pd::delegate_item (Pd *pd, Crd rcv, Crd &snd, mword hot)
 
         case Crd::MEM:
             o = clamp (sb, rb, so, ro, hot >> PAGE_BITS);
-            trace (TRACE_MAP, "MAP MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb << PAGE_BITS, rb << PAGE_BITS, o + PAGE_BITS, a);
+            trace (TRACE_DEL, "DEL MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, sb, rb, o, a);
             delegate<Space_mem>(pd, sb, rb, o, a, snd.sub());
             break;
 
         case Crd::IO:
             o = clamp (sb, rb, so, ro);
-            trace (TRACE_MAP, "MAP I/O PD:%p->%p SB:%#010lx O:%lu A:%#lx", current, this, sb, o, a);
+            trace (TRACE_DEL, "DEL I/O PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, rb, rb, o, a);
             delegate<Space_io>(pd, rb, rb, o, a);
             break;
 
         case Crd::OBJ:
             o = clamp (sb, rb, so, ro, hot);
-            trace (TRACE_MAP, "MAP OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%lu A:%#lx", current, this, sb, rb, o, a);
+            trace (TRACE_DEL, "DEL OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, sb, rb, o, a);
             delegate<Space_obj>(pd, sb, rb, o, a);
             break;
     }
@@ -198,18 +199,18 @@ void Pd::revoke_crd (Crd crd, bool self)
     switch (crd.type()) {
 
         case Crd::MEM:
-            trace (TRACE_UNMAP, "UNMAP MEM PD:%p B:%#010lx O:%#x A:%#x", this, crd.base() << PAGE_BITS, crd.order() + PAGE_BITS, crd.attr());
+            trace (TRACE_REV, "REV MEM PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
             revoke<Space_mem>(crd.base(), crd.order(), crd.attr(), self);
             shootdown();
             break;
 
         case Crd::IO:
-            trace (TRACE_UNMAP, "UNMAP I/O PD:%p B:%#010lx O:%#x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            trace (TRACE_REV, "REV I/O PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
             revoke<Space_io>(crd.base(), crd.order(), crd.attr(), self);
             break;
 
         case Crd::OBJ:
-            trace (TRACE_UNMAP, "UNMAP OBJ PD:%p B:%#010lx O:%#x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            trace (TRACE_REV, "REV OBJ PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
             revoke<Space_obj>(crd.base(), crd.order(), crd.attr(), self);
             break;
     }

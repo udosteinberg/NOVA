@@ -20,13 +20,14 @@
 
 #include "avl.h"
 #include "compiler.h"
+#include "rcu.h"
 #include "slab.h"
 #include "spinlock.h"
 #include "util.h"
 
 class Pd;
 
-class Mdb : public Avl
+class Mdb : public Avl, public Rcu_elem
 {
     private:
         static Slab_cache   cache;
@@ -35,6 +36,11 @@ class Mdb : public Avl
         bool alive() const { return prev->next == this && next->prev == this; }
         bool larger (Avl *x) const { return  node_base > static_cast<Mdb *>(x)->node_base; }
         bool equal  (Avl *x) const { return (node_base ^ static_cast<Mdb *>(x)->node_base) >> max (node_order, static_cast<Mdb *>(x)->node_order) == 0; }
+
+        static void free (Rcu_elem *e)
+        {
+            delete static_cast<Mdb *>(e); (void) sizeof (e);
+        }
 
     public:
         Spinlock    node_lock;
@@ -48,7 +54,7 @@ class Mdb : public Avl
         mword const node_type;
         mword const node_sub;
 
-        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
+        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
 
         static Mdb *lookup (Avl *tree, mword base)
         {

@@ -77,8 +77,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
                                   pd->Space_io::walk(),
                                   Buddy::ptr_to_phys (pd->cpu_ptab (c)),
-                                  Buddy::ptr_to_phys (pd->ept.level (Ept::max - 1)));
-
+                                  pd->ept.root());
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
             cont = send_msg<ret_user_vmresume>;
@@ -179,6 +178,11 @@ void Ec::ret_user_vmresume()
 
     current->regs.vmcs->make_current();
 
+    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+        Pd::current->gtlb.clr (Cpu::id);
+        Pd::current->ept.flush();
+    }
+
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
@@ -203,6 +207,11 @@ void Ec::ret_user_vmrun()
     Rcu::quiet();
 
     current->regs.eax = Buddy::ptr_to_phys (current->regs.vmcb);
+
+    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+        Pd::current->gtlb.clr (Cpu::id);
+        current->regs.vmcb->tlb_control = 1;
+    }
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"

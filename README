@@ -90,8 +90,6 @@ The following is a list of issues you may encounter.
   running "objdump -p" on the roottask binary, filesz must be equal to memsz
   for all loadable sections.
 
-* The revoke hypercall is currently unavailable.
-
 Feedback
 ========
 
