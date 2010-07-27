@@ -203,7 +203,7 @@ void Ec::sys_create_pd()
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
-    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
+    if (EXPECT_FALSE (!r->utcb() || r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Sys_regs::BAD_MEM>();
     }
@@ -241,6 +241,11 @@ void Ec::sys_create_ec()
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
+    }
+
+    if (EXPECT_FALSE (!r->utcb() && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM)))) {
+        trace (TRACE_ERROR, "%s: VCPUs not supported", __func__);
+        sys_finish<Sys_regs::BAD_FTR>();
     }
 
     if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {

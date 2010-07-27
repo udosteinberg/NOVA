@@ -101,14 +101,10 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
 void Vmcs::init()
 {
-    if (!Cpu::feature (Cpu::FEAT_VMX)) {
+    if (!Cpu::feature (Cpu::FEAT_VMX) || (Msr::read<uint32>(Msr::IA32_FEATURE_CONTROL) & 0x5) != 0x5) {
         Hip::remove (Hip::FEAT_VMX);
         return;
     }
-
-    unsigned bits = 0x5;
-    if ((Msr::read<uint32>(Msr::IA32_FEATURE_CONTROL) & bits) != bits)
-        return;
 
     fix_cr0.set =  Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED0);
     fix_cr0.clr = ~Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED1);
