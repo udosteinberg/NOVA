@@ -48,8 +48,19 @@ __boot_gdt:             .word   0
                         .quad   0x00cff3000000ffff      /* User Data */
 __boot_gdt__:
 
+.macro                  INIT_STATE
+                        mov     $SEL_KERN_DATA, %ecx
+                        mov     %ecx, %ss
+                        mov     $SEL_USER_DATA, %ecx
+                        mov     %ecx, %ds
+                        mov     %ecx, %es
+                        mov     %ecx, %fs
+                        mov     %ecx, %gs
+                        mov     $STACK, %esp
+.endm
+
 /*
- * AP/RLP Startup Code
+ * AP Startup Code
  */
 .code16
 
@@ -63,51 +74,55 @@ __gdt_desc:             .word   __boot_gdt__ - __boot_gdt - 1
 
 .code32
 
-__start_rlp:            mov     $SEL_KERN_DATA, %ecx
-                        mov     %ecx, %ss
-                        mov     $SEL_USER_DATA, %ecx
-                        mov     %ecx, %ds
-                        mov     %ecx, %es
-                        mov     %ecx, %fs
-                        mov     %ecx, %gs
-                        mov     $STACK, %esp
+__start_rlp:            INIT_STATE
 
-                        xor     %eax, %eax
+                        xor     %edx, %edx
 1:                      pause
-                        xchg    %eax, boot_lock_p
-                        test    %eax, %eax
+                        xchg    %edx, boot_lock_p
+                        test    %edx, %edx
                         jz      1b
-
-                        call    init_rlp
 
                         jmp     __start_all
 
 /*
- * BSP/ILP Startup Code
+ * BSP Startup Code
  */
-__start_bsp:            xor     %ebp, %ebp
+__start_bsp:            lgdt    __boot_gdt + 2
+                        ljmp    $SEL_KERN_CODE, $1f
+
+1:                      INIT_STATE
+
                         cmp     $0x2badb002, %eax
-                        cmovne  %ebp, %ebx
+                        jne     1f
+                        testb   $0x4, (%ebx)
+                        je      1f
+                        mov     0x10(%ebx), %eax
+                        call    cmdline
 
-1:                      lgdt    __boot_gdt + 2
-                        ljmp    $SEL_KERN_CODE, $2f
-
-2:                      mov     $SEL_KERN_DATA, %ecx
-                        mov     %ecx, %ss
-                        mov     $SEL_USER_DATA, %ecx
-                        mov     %ecx, %ds
-                        mov     %ecx, %es
-                        mov     %ecx, %fs
-                        mov     %ecx, %gs
-                        mov     $STACK, %esp
-
-                        mov     %ebx, %eax
-                        call    init_ilp
+1:                      movl    $0xe3, LVL2
+                        mov     $(LINK_P + 0x1e3), %eax
+                        mov     $(LVL2 + LINK_ADDR >> 20), %edi
+1:                      stosl
+                        add     $0x400000, %eax
+                        cmp     $LINK_E, %eax
+                        jb      1b
 
 /*
  * Common Startup Code
  */
-__start_all:            call    kern_ptab_setup
+__start_all:            mov     $LVL2, %edx
+                        mov     %edx, %cr3
+                        mov     $0x698, %edx
+                        mov     %edx, %cr4
+                        mov     $0x8001002b, %edx
+                        mov     %edx, %cr0
+
+                        test    %eax, %eax
+                        je      1f
+                        mov     %ebx, %eax
+                        call    init
+
+1:                      call    kern_ptab_setup
                         jmp     1f
 
 .text

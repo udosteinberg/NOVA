@@ -29,11 +29,8 @@ INC_DIR		:= ../include
 INS_DIR		?= /boot/tftp/nova
 TARGET		:= hypervisor
 
-SRC		:= hypervisor.ld $(wildcard $(SRC_DIR)/*.S) $(wildcard $(SRC_DIR)/*.cpp)
-OBJ		:= $(notdir \
-		   $(patsubst %.ld,%.o,	 \
-		   $(patsubst %.S,%.o,	 \
-		   $(patsubst %.cpp,%.o, $(SRC)))))
+SRC		:= hypervisor.ld $(sort $(wildcard $(SRC_DIR)/*.S)) $(sort $(wildcard $(SRC_DIR)/*.cpp))
+OBJ		:= $(notdir $(patsubst %.ld,%.o, $(patsubst %.S,%.o, $(patsubst %.cpp,%.o, $(SRC)))))
 DEP		:= $(patsubst %.o,%.d, $(OBJ))
 
 # Messages
@@ -80,7 +77,7 @@ LFLAGS		:= --gc-sections --warn-common -static -n -T
 # Rules
 %.o:		%.ld $(MAKEFILE_LIST)
 		$(call message,PRE,$@)
-		$(CC) $(SFLAGS) -xc -undef -E -P $< -o $@
+		$(CC) $(SFLAGS) -xc -E -P $< -o $@
 
 %.o:		%.S $(MAKEFILE_LIST)
 		$(call message,ASM,$@)

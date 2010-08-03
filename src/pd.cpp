@@ -38,9 +38,9 @@ Pd::Pd (Pd *own) : Kobject (own, 0, PD), Space_mem (Ptab::master())
     Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000, 7);
 
     mword base = LOAD_ADDR + reinterpret_cast<mword>(&LOAD_SIZE);
-    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_PHYS) - base, 7);
+    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_P) - base, 7);
 
-    base = reinterpret_cast<mword>(&LINK_PHYS) + reinterpret_cast<mword>(&LINK_SIZE);
+    base = reinterpret_cast<mword>(&LINK_E);
     Space_mem::insert_root (base, 0 - base, 7);
 
     // HIP

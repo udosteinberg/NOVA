@@ -92,7 +92,7 @@ class Hip
 
         static void remove (Feature f)
         {
-            Atomic::clr_mask<true>(hip()->api_flg, f);
+            Atomic::clr_mask<true>(hip()->api_flg, static_cast<typeof hip()->api_flg>(f));
         }
 
         static bool cpu_online (unsigned cpu)

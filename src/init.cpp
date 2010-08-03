@@ -18,13 +18,12 @@
 
 #include "acpi.h"
 #include "compiler.h"
-#include "cmdline.h"
 #include "gsi.h"
 #include "hip.h"
 #include "idt.h"
 #include "keyb.h"
 #include "multiboot.h"
-#include "ptab_boot.h"
+#include "ptab.h"
 
 char const *version = "NOVA 0.2 (Bandon Beach)";
 
@@ -56,25 +55,16 @@ mword kern_ptab_setup()
 }
 
 extern "C" INIT REGPARM (1)
-void init_ilp (mword mbi)
+void init (mword mbi)
 {
-    Multiboot *mb = reinterpret_cast<Multiboot *>(mbi);
-
-    // Parse command line
-    if (mb && mb->flags & Multiboot::CMDLINE)
-        Cmdline::init (reinterpret_cast<char *>(mb->cmdline));
-
-    // Initialize boot page table
-    Ptab_boot::init();
-
-    // Enable paging
-    Paging::enable();
-
     for (void (**func)() = &CTORS_E; func != &CTORS_G; (*--func)()) ;
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
+
+    extern char __start_ap, __start_rlp;
+    memcpy (reinterpret_cast<void *>(0x1000), &__start_ap, &__start_rlp - &__start_ap);
 
     // Setup consoles
     serial.init();
@@ -90,11 +80,4 @@ void init_ilp (mword mbi)
     Acpi::setup();
 
     Keyb::init();
-}
-
-extern "C" INIT
-void init_rlp()
-{
-    // Enable paging
-    Paging::enable();
 }

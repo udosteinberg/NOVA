@@ -48,8 +48,7 @@ class Ptab : public Paging
         ALWAYS_INLINE
         static inline Ptab *master()
         {
-            extern Ptab _master_l;
-            return &_master_l;
+            extern Ptab PMST; return &PMST;
         }
 
         ALWAYS_INLINE

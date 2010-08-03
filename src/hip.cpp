@@ -107,8 +107,8 @@ void Hip::add_mhv (Hip_mem *&mem)
     mem->type = Hip_mem::HYPERVISOR;
     mem++;
 
-    mem->addr = reinterpret_cast<mword>(&LINK_PHYS);
-    mem->size = reinterpret_cast<mword>(&LINK_SIZE);
+    mem->addr = reinterpret_cast<mword>(&LINK_P);
+    mem->size = reinterpret_cast<mword>(&LINK_E) - reinterpret_cast<mword>(&LINK_P);
     mem->type = Hip_mem::HYPERVISOR;
     mem++;
 }

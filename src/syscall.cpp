@@ -196,7 +196,7 @@ void Ec::sys_create_pd()
 {
     Sys_create_pd *r = static_cast<Sys_create_pd *>(&current->regs);
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx UTCB:%#lx", current, r->pd(), r->utcb());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx CPU:%#lx UTCB:%#lx", current, r->pd(), r->cpu(), r->utcb());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
@@ -376,7 +376,7 @@ void Ec::sys_recall()
 
     if (!(ec->hazard & Cpu::HZD_RECALL)) {
 
-        Atomic::set_mask<true>(ec->hazard, Cpu::HZD_RECALL);
+        Atomic::set_mask<true>(ec->hazard, static_cast<typeof ec->hazard>(Cpu::HZD_RECALL));
 
         if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
             Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);

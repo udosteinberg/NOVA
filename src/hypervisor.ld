@@ -18,8 +18,8 @@
 
 #include "memory.h"
 
-OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
-OUTPUT_ARCH(i386)
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH("i386")
 ENTRY(__start_bsp)
 
 PHDRS
@@ -40,7 +40,7 @@ SECTIONS
 
     PROVIDE (LOAD_SIZE = . - LOAD_ADDR);
     OFFSET = LINK_ADDR - ALIGN (4M);
-    PROVIDE (LINK_PHYS = LINK_ADDR - OFFSET);
+    PROVIDE (LINK_P = LINK_ADDR - OFFSET);
 
     .text LINK_ADDR : AT (ADDR (.text) - OFFSET)
     {
@@ -82,22 +82,19 @@ SECTIONS
         . = ALIGN(4K);
         _mempool_l = .; PROVIDE (_mempool_p = _mempool_l - OFFSET);
 
-        PROVIDE (PAGE_0 = .); PROVIDE (FRAME_0 = PAGE_0 - OFFSET);
-        . += 4K;
-        PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = PAGE_1 - OFFSET);
-        . += 4K;
-        PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = PAGE_H - OFFSET);
-        . += 4K;
+        PROVIDE (PAGE_0 = .); PROVIDE (FRAME_0 = PAGE_0 - OFFSET); . += 4K;
+        PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = PAGE_1 - OFFSET); . += 4K;
+        PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = PAGE_H - OFFSET); . += 4K;
 
-        PROVIDE (_master_l = .); PROVIDE (_master_p = _master_l - OFFSET);
-        . += 4K;
-        PROVIDE (_tables_l = .); PROVIDE (_tables_p = _tables_l - OFFSET);
-        . += 64K;
+        PROVIDE (LVL2 = . - OFFSET); . += 4K;
+        PROVIDE (PMST = LVL2 + OFFSET);
+
         _mempool_f = .;
 
         . += 4M;
         . = ALIGN(4M);
-        PROVIDE (LINK_SIZE = . - LINK_ADDR);
+
+        PROVIDE (LINK_E = . - OFFSET);
 
         PROVIDE (_mempool_e = .);
 

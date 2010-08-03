@@ -28,8 +28,9 @@ extern char FRAME_0;
 extern char FRAME_1;
 extern char FRAME_H;
 
-extern char LINK_PHYS;
-extern char LINK_SIZE;
+extern char LINK_P;
+extern char LINK_E;
+
 extern char LOAD_SIZE;
 extern char OFFSET;
 

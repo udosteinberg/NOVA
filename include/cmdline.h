@@ -46,6 +46,6 @@ class Cmdline
                                             reinterpret_cast<mword>(&OFFSET));
         }
 
-        INIT
-        static void init (char *line);
+        INIT REGPARM(1)
+        static void init (char *line) asm ("cmdline");
 };
