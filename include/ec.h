@@ -270,6 +270,9 @@ class Ec : public Kobject, public Queue<Sc>
         static void delegate();
 
         NORETURN
+        static void die() { die ("Dead EC"); }
+
+        NORETURN
         static void die (char const *, Exc_regs * = &current->regs);
 
         ALWAYS_INLINE

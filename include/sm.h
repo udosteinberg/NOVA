@@ -47,8 +47,6 @@ class Sm : public Kobject, public Queue<Ec>
                 enqueue (e);
             }
 
-            assert (!e->head());
-
             e->block();
         }
 

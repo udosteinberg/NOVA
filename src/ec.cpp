@@ -303,12 +303,14 @@ bool Ec::fixup (mword &eip)
 
 void Ec::die (char const *reason, Exc_regs *r)
 {
+    current->cont = die;
+
     if (current->utcb || current->pd == &Pd::kern)
-        trace (0, "Killed EC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               current, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
+        trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
+               current, Sc::current, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
     else
-        trace (0, "Killed EC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
-               current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
+        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
+               current, Sc::current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
 
     Sc::schedule (true);
 }
