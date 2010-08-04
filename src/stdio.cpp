@@ -55,3 +55,5 @@ void printf (char const *format, ...)
     vprintf (format, args);
     va_end (args);
 }
+
+extern "C" NORETURN void __cxa_pure_virtual() { UNREACHED; }

@@ -32,8 +32,8 @@ class Avl
         static Avl *rotate (Avl *&, bool, unsigned);
 
     protected:
-        virtual bool larger (Avl *x) const;
-        virtual bool equal  (Avl *x) const;
+        virtual bool larger (Avl *x) const = 0;
+        virtual bool equal  (Avl *x) const = 0;
 
         Avl *link (bool d) const { return ptr[d]; }
 
