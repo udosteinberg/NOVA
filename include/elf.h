@@ -23,11 +23,6 @@
 class Elf_eh
 {
     public:
-        enum
-        {
-            EH_MAGIC        = 0x464c457f
-        };
-
         uint32          ident[4];
         uint16          type;
         uint16          machine;

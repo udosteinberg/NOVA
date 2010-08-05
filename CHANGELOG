@@ -1,0 +1,21 @@
+
+0.2
+---
+* Number of supported CPUs increased to 32.
+* Number of supported GSIs increased to 128.
+* Removed 8259 PIC mode and made IOAPIC a requirement.
+* Root PD no longer holds GSI capabilities at bootup.
+* Incoming portal id no longer stored in UTCB.
+* New mapping database and lookup hypercall.
+* Selective memory delegation (host/guest/IOMMU).
+* Revocation of platform resources (mem/IO).
+* PCI topology discovery.
+* VT-d interrupt remapping.
+* Direct assignment of PCI devices and GSIs to PDs.
+* VMX unrestricted guest.
+* vTLB page splintering.
+* Bug fixes.
+
+0.1
+---
+* Initial release

@@ -243,36 +243,34 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    // Map root task image
-    mword addr = reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr));
-
-    Elf_eh *eh = reinterpret_cast<Elf_eh *>(addr);
-    if (!Hip::root_addr || *eh->ident != Elf_eh::EH_MAGIC)
+    Elf_eh *eh = reinterpret_cast<Elf_eh *>(reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr)));
+    if (!Hip::root_addr || *eh->ident != 0x464c457f)
         die ("No ELF");
 
+    unsigned count    = eh->ph_count;
     current->regs.eip = eh->entry;
     current->regs.esp = LINK_ADDR - PAGE_SIZE;
 
-    Elf_ph *ph = reinterpret_cast<Elf_ph *>(addr + eh->ph_offset);
+    Elf_ph *ph = reinterpret_cast<Elf_ph *>(reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr + eh->ph_offset)));
 
-    for (unsigned i = 0; i < eh->ph_count; i++, ph++) {
+    for (unsigned i = 0; i < count; i++, ph++) {
 
-        if (ph->type != Elf_ph::PT_LOAD)
-            continue;
+        if (ph->type == Elf_ph::PT_LOAD) {
 
-        unsigned attr = !!(ph->flags & Elf_ph::PF_R) << 0 |
-                        !!(ph->flags & Elf_ph::PF_W) << 1 |
-                        !!(ph->flags & Elf_ph::PF_X) << 2;
+            unsigned attr = !!(ph->flags & Elf_ph::PF_R) << 0 |
+                            !!(ph->flags & Elf_ph::PF_W) << 1 |
+                            !!(ph->flags & Elf_ph::PF_X) << 2;
 
-        if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
-            die ("Bad ELF");
+            if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
+                die ("Bad ELF");
 
-        mword p = align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE);
-        mword v = align_dn (ph->v_addr, PAGE_SIZE);
-        mword s = align_up (ph->f_size, PAGE_SIZE);
+            mword p = align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE);
+            mword v = align_dn (ph->v_addr, PAGE_SIZE);
+            mword s = align_up (ph->f_size, PAGE_SIZE);
 
-        for (unsigned o; s; s -= 1UL << o, p += 1UL << o, v += 1UL << o)
-            Pd::current->delegate<Space_mem>(&Pd::kern, p >> PAGE_BITS, v >> PAGE_BITS, (o = min (max_order (p, s), max_order (v, s))) - PAGE_BITS, attr);
+            for (unsigned o; s; s -= 1UL << o, p += 1UL << o, v += 1UL << o)
+                Pd::current->delegate<Space_mem>(&Pd::kern, p >> PAGE_BITS, v >> PAGE_BITS, (o = min (max_order (p, s), max_order (v, s))) - PAGE_BITS, attr);
+        }
     }
 
     // Map hypervisor information page
