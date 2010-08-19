@@ -98,7 +98,7 @@ void Ec::send_msg()
 
 void Ec::sys_call()
 {
-    Sys_call *s = static_cast<Sys_call *>(&current->regs);
+    Sys_call *s = static_cast<Sys_call *>(current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (s->pt()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PT))
@@ -162,7 +162,7 @@ void Ec::wait_msg()
 
 void Ec::sys_reply()
 {
-    Sys_reply *s = static_cast<Sys_reply *>(&current->regs);
+    Sys_reply *s = static_cast<Sys_reply *>(current->sys_regs());
 
     Ec *ec = current->reply;
 
@@ -194,7 +194,7 @@ void Ec::sys_reply()
 
 void Ec::sys_create_pd()
 {
-    Sys_create_pd *r = static_cast<Sys_create_pd *>(&current->regs);
+    Sys_create_pd *r = static_cast<Sys_create_pd *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx CPU:%#lx UTCB:%#lx", current, r->pd(), r->cpu(), r->utcb());
 
@@ -234,7 +234,7 @@ void Ec::sys_create_pd()
 
 void Ec::sys_create_ec()
 {
-    Sys_create_ec *r = static_cast<Sys_create_ec *>(&current->regs);
+    Sys_create_ec *r = static_cast<Sys_create_ec *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
@@ -265,7 +265,7 @@ void Ec::sys_create_ec()
 
 void Ec::sys_create_sc()
 {
-    Sys_create_sc *r = static_cast<Sys_create_sc *>(&current->regs);
+    Sys_create_sc *r = static_cast<Sys_create_sc *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#lx Q:%#lx", current, r->sc(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
@@ -297,7 +297,7 @@ void Ec::sys_create_sc()
 
 void Ec::sys_create_pt()
 {
-    Sys_create_pt *r = static_cast<Sys_create_pt *>(&current->regs);
+    Sys_create_pt *r = static_cast<Sys_create_pt *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->pt(), r->ec(), r->eip());
 
@@ -326,7 +326,7 @@ void Ec::sys_create_pt()
 
 void Ec::sys_create_sm()
 {
-    Sys_create_sm *r = static_cast<Sys_create_sm *>(&current->regs);
+    Sys_create_sm *r = static_cast<Sys_create_sm *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sm(), r->cnt());
 
@@ -342,7 +342,7 @@ void Ec::sys_create_sm()
 
 void Ec::sys_revoke()
 {
-    Sys_revoke *r = static_cast<Sys_revoke *>(&current->regs);
+    Sys_revoke *r = static_cast<Sys_revoke *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_REVOKE", current);
 
@@ -353,7 +353,7 @@ void Ec::sys_revoke()
 
 void Ec::sys_lookup()
 {
-    Sys_lookup *s = static_cast<Sys_lookup *>(&current->regs);
+    Sys_lookup *s = static_cast<Sys_lookup *>(current->sys_regs());
 
     trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%#x B:%#lx", current, s->crd().type(), s->crd().base());
 
@@ -364,7 +364,7 @@ void Ec::sys_lookup()
 
 void Ec::sys_recall()
 {
-    Sys_recall *r = static_cast<Sys_recall *>(&current->regs);
+    Sys_recall *r = static_cast<Sys_recall *>(current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (r->ec()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
@@ -374,9 +374,9 @@ void Ec::sys_recall()
 
     Ec *ec = static_cast<Ec *>(obj);
 
-    if (!(ec->hazard & Cpu::HZD_RECALL)) {
+    if (!(ec->regs.hazard() & HZD_RECALL)) {
 
-        Atomic::set_mask<true>(ec->hazard, static_cast<typeof ec->hazard>(Cpu::HZD_RECALL));
+        ec->regs.set_hazard (HZD_RECALL);
 
         if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
             Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
@@ -387,7 +387,7 @@ void Ec::sys_recall()
 
 void Ec::sys_semctl()
 {
-    Sys_semctl *r = static_cast<Sys_semctl *>(&current->regs);
+    Sys_semctl *r = static_cast<Sys_semctl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || (r->flags() & cap.acc()) != r->flags())) {
@@ -415,7 +415,7 @@ void Ec::sys_semctl()
 
 void Ec::sys_assign_pci()
 {
-    Sys_assign_pci *r = static_cast<Sys_assign_pci *>(&current->regs);
+    Sys_assign_pci *r = static_cast<Sys_assign_pci *>(current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (r->pd()).obj();
     if (EXPECT_FALSE (obj->type() != Kobject::PD)) {
@@ -436,7 +436,7 @@ void Ec::sys_assign_pci()
 
 void Ec::sys_assign_gsi()
 {
-    Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(&current->regs);
+    Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(current->sys_regs());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());

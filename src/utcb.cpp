@@ -20,7 +20,7 @@
 #include "svm.h"
 #include "vmx.h"
 
-void Utcb::load_exc (Exc_regs *regs, Mtd mtd)
+void Utcb::load_exc (Cpu_regs *regs, Mtd mtd)
 {
     mtr = mtd;
 
@@ -52,7 +52,7 @@ void Utcb::load_exc (Exc_regs *regs, Mtd mtd)
     }
 }
 
-unsigned long Utcb::save_exc (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_exc (Cpu_regs *regs, Mtd mtd)
 {
     if (mtd.xfer (Mtd::GPR_ACDB)) {
         regs->eax = rax;
@@ -79,7 +79,7 @@ unsigned long Utcb::save_exc (Exc_regs *regs, Mtd mtd)
     return item - mr;
 }
 
-void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
+void Utcb::load_vmx (Cpu_regs *regs, Mtd mtd)
 {
     mtr = mtd;
 
@@ -177,13 +177,11 @@ void Utcb::load_vmx (Exc_regs *regs, Mtd mtd)
         actv_state = static_cast<uint32>(Vmcs::read (Vmcs::GUEST_ACTV_STATE));
     }
 
-    if (mtd.xfer (Mtd::TSC)) {
-        tsc_lo = static_cast<uint32>(Vmcs::read (Vmcs::TSC_OFFSET));
-        tsc_hi = static_cast<uint32>(Vmcs::read (Vmcs::TSC_OFFSET_HI));
-    }
+    if (mtd.xfer (Mtd::TSC))
+        tsc = regs->tsc_offset;
 }
 
-unsigned long Utcb::save_vmx (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_vmx (Cpu_regs *regs, Mtd mtd)
 {
     if (mtd.xfer (Mtd::GPR_ACDB)) {
         regs->eax = rax;
@@ -304,15 +302,13 @@ unsigned long Utcb::save_vmx (Exc_regs *regs, Mtd mtd)
         Vmcs::write (Vmcs::GUEST_ACTV_STATE, actv_state);
     }
 
-    if (mtd.xfer (Mtd::TSC)) {
-        Vmcs::write (Vmcs::TSC_OFFSET,    tsc_lo);
-        Vmcs::write (Vmcs::TSC_OFFSET_HI, tsc_hi);
-    }
+    if (mtd.xfer (Mtd::TSC))
+        regs->add_tsc_offset (tsc);
 
     return item - mr;
 }
 
-void Utcb::load_svm (Exc_regs *regs, Mtd mtd)
+void Utcb::load_svm (Cpu_regs *regs, Mtd mtd)
 {
     Vmcb * const vmcb = regs->vmcb;
 
@@ -400,7 +396,7 @@ void Utcb::load_svm (Exc_regs *regs, Mtd mtd)
         tsc = vmcb->tsc_offset;
 }
 
-unsigned long Utcb::save_svm (Exc_regs *regs, Mtd mtd)
+unsigned long Utcb::save_svm (Cpu_regs *regs, Mtd mtd)
 {
     Vmcb * const vmcb = regs->vmcb;
 

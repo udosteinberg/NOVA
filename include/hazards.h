@@ -1,5 +1,5 @@
 /*
- * Quantum Priority Descriptor (QPD)
+ * Hazards
  *
  * Copyright (C) 2009-2010 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -18,26 +18,8 @@
 
 #pragma once
 
-#include "compiler.h"
-
-class Qpd
-{
-    private:
-        mword val;
-
-    public:
-        ALWAYS_INLINE
-        inline explicit Qpd (mword v) : val (v) {}
-
-        ALWAYS_INLINE
-        inline unsigned long quantum() const
-        {
-            return val >> 12;
-        }
-
-        ALWAYS_INLINE
-        inline unsigned long prio() const
-        {
-            return val & 0xff;
-        }
-};
+#define HZD_SCHED       0x1
+#define HZD_DS_ES       0x2
+#define HZD_TR          0x4
+#define HZD_TSC         0x40000000
+#define HZD_RECALL      0x80000000

@@ -37,9 +37,9 @@ class Ec : public Kobject, public Queue<Sc>
     friend class Queue<Ec>;
 
     private:
-        Exc_regs    regs;                       // 0x4, must be first
-        void        (*cont)();                  // 0x50
-        Ec *        reply;                      // 0x54
+        Cpu_regs    regs;
+        void        (*cont)();
+        Ec *        reply;
         Mtd         mtr;
         Utcb *      utcb;
         Refptr<Pd>  pd;
@@ -50,7 +50,6 @@ class Ec : public Kobject, public Queue<Sc>
         Fpu *       fpu;
         mword const cpu;
         mword const evt;
-        mword       hazard;
 
         // EC Cache
         static Slab_cache cache;
@@ -90,7 +89,13 @@ class Ec : public Kobject, public Queue<Sc>
         static bool fixup (mword &);
 
         NOINLINE
-        static void handle_hazard (void (*)());
+        static void handle_hazard (mword, void (*)());
+
+        ALWAYS_INLINE
+        inline Sys_regs *sys_regs() { return &regs; }
+
+        ALWAYS_INLINE
+        inline Exc_regs *exc_regs() { return &regs; }
 
         ALWAYS_INLINE
         inline void set_partner (Ec *p)
@@ -123,6 +128,12 @@ class Ec : public Kobject, public Queue<Sc>
         }
 
         ALWAYS_INLINE
+        inline void add_tsc_offset (uint64 tsc)
+        {
+            regs.add_tsc_offset (tsc);
+        }
+
+        ALWAYS_INLINE
         inline bool blocked() const { return next; }
 
         ALWAYS_INLINE NORETURN
@@ -133,7 +144,7 @@ class Ec : public Kobject, public Queue<Sc>
             if (Fpu::enabled)
                 Fpu::disable();
 
-            Tss::run.sp0 = reinterpret_cast<mword>(&regs + 1);
+            Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
 
             pd->make_current();
 

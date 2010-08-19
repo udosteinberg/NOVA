@@ -70,8 +70,8 @@ bool Ec::handle_exc_ts (Exc_regs *r)
 
 bool Ec::handle_exc_gp (Exc_regs *)
 {
-    if (Cpu::hazard & Cpu::HZD_TR) {
-        Cpu::hazard &= ~Cpu::HZD_TR;
+    if (Cpu::hazard & HZD_TR) {
+        Cpu::hazard &= ~HZD_TR;
         Gdt::unbusy_tss();
         asm volatile ("ltr %w0" : : "r" (SEL_TSS_RUN));
         return true;

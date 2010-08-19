@@ -23,7 +23,7 @@
 #include "crd.h"
 #include "mtd.h"
 
-class Exc_regs;
+class Cpu_regs;
 
 class Utcb_segment
 {
@@ -71,13 +71,7 @@ class Utcb
                 uint32          intr_state, actv_state;
                 uint64          qual[2];
                 uint32          ctrl[2];
-                union {
-                    uint64      tsc;
-                    struct {
-                        uint32  tsc_lo;
-                        uint32  tsc_hi;
-                    };
-                };
+                uint64          tsc;
                 mword           inst_len;
                 mword           sysenter_cs, sysenter_rsp, sysenter_rip;
             };
@@ -117,12 +111,12 @@ class Utcb
 #endif
         }
 
-        void            load_exc (Exc_regs *, Mtd);
-        unsigned long   save_exc (Exc_regs *, Mtd);
+        void            load_exc (Cpu_regs *, Mtd);
+        unsigned long   save_exc (Cpu_regs *, Mtd);
 
-        void            load_vmx (Exc_regs *, Mtd);
-        unsigned long   save_vmx (Exc_regs *, Mtd);
+        void            load_vmx (Cpu_regs *, Mtd);
+        unsigned long   save_vmx (Cpu_regs *, Mtd);
 
-        void            load_svm (Exc_regs *, Mtd);
-        unsigned long   save_svm (Exc_regs *, Mtd);
+        void            load_svm (Cpu_regs *, Mtd);
+        unsigned long   save_svm (Cpu_regs *, Mtd);
 };

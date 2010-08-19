@@ -172,14 +172,6 @@ class Cpu
             EFL_ID      = 1ul << 21             // 0x200000
         };
 
-        enum
-        {
-            HZD_SCHED   = 1ul << 0,             // 0x1
-            HZD_DS_ES   = 1ul << 1,             // 0x2
-            HZD_TR      = 1ul << 2,             // 0x4
-            HZD_RECALL  = 1ul << 31,            // 0x80000000
-        };
-
         static unsigned long boot_lock      asm ("boot_lock");
         static unsigned long boot_count;
         static unsigned long online;

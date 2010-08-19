@@ -18,6 +18,7 @@
 
 #include "bits.h"
 #include "counter.h"
+#include "hazards.h"
 #include "hip.h"
 #include "lapic.h"
 #include "mtrr.h"
@@ -92,7 +93,7 @@ void Space_mem::shootdown()
             continue;
 
         if (Cpu::id == cpu) {
-            Cpu::hazard |= Cpu::HZD_SCHED;
+            Cpu::hazard |= HZD_SCHED;
             continue;
         }
 

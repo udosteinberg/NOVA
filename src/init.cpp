@@ -25,7 +25,7 @@
 #include "multiboot.h"
 #include "ptab.h"
 
-char const *version = "NOVA 0.2 (Bandon Beach)";
+char const *version = "NOVA 0.3 (Cleetwood Cove)";
 
 extern "C" INIT
 mword kern_ptab_setup()

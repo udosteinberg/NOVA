@@ -133,10 +133,10 @@ void Lapic::error_handler()
 void Lapic::timer_handler()
 {
     if (!read (LAPIC_TMR_CCR))
-        Cpu::hazard |= Cpu::HZD_SCHED;
+        Cpu::hazard |= HZD_SCHED;
 
     if (Rcu::process_callbacks())
-        Cpu::hazard |= Cpu::HZD_SCHED;
+        Cpu::hazard |= HZD_SCHED;
 }
 
 void Lapic::lvt_vector (unsigned vector)

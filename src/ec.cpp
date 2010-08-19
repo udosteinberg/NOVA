@@ -75,7 +75,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
 
         if (Hip::feature() & Hip::FEAT_VMX) {
 
-            regs.vmcs = new Vmcs (reinterpret_cast<mword>(static_cast<Sys_regs *>(&regs) + 1),
+            regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
                                   pd->Space_io::walk(),
                                   Buddy::ptr_to_phys (pd->cpu_ptab (c)),
                                   pd->ept.root());
@@ -96,21 +96,31 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
     }
 }
 
-void Ec::handle_hazard (void (*func)())
+void Ec::handle_hazard (mword hzd, void (*func)())
 {
-    if (Cpu::hazard & Cpu::HZD_SCHED) {
+    if (hzd & HZD_SCHED) {
         current->cont = func;
         Sc::schedule();
     }
 
-    if (Cpu::hazard & Cpu::HZD_DS_ES) {
-        Cpu::hazard &= ~Cpu::HZD_DS_ES;
+    if (hzd & HZD_DS_ES) {
+        Cpu::hazard &= ~HZD_DS_ES;
         asm volatile ("mov %0, %%ds; mov %0, %%es" : : "r" (SEL_USER_DATA));
     }
 
-    if (current->hazard & Cpu::HZD_RECALL) {
+    if (hzd & HZD_TSC) {
+        current->regs.clr_hazard (HZD_TSC);
 
-        current->hazard &= ~Cpu::HZD_RECALL;
+        if (func == ret_user_vmresume) {
+            current->regs.vmcs->make_current();
+            Vmcs::write (Vmcs::TSC_OFFSET,    static_cast<mword>(current->regs.tsc_offset));
+            Vmcs::write (Vmcs::TSC_OFFSET_HI, static_cast<mword>(current->regs.tsc_offset >> 32));
+        } else
+            current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
+    }
+
+    if (hzd & HZD_RECALL) {
+        current->regs.clr_hazard (HZD_RECALL);
 
         if (func == ret_user_vmresume) {
             current->regs.dst_portal = NUM_VMI - 1;
@@ -139,8 +149,9 @@ void Ec::handle_hazard (void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED | Cpu::HZD_DS_ES)))
-        handle_hazard (ret_user_sysexit);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_SCHED | HZD_DS_ES);
+    if (EXPECT_FALSE (hzd))
+        handle_hazard (hzd, ret_user_sysexit);
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
@@ -154,8 +165,9 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     // No need to check HZD_DS_ES because IRET will reload both anyway
-    if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
-        handle_hazard (ret_user_iret);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_SCHED);
+    if (EXPECT_FALSE (hzd))
+        handle_hazard (hzd, ret_user_iret);
 
     Rcu::quiet();
 
@@ -174,8 +186,9 @@ void Ec::ret_user_iret()
 
 void Ec::ret_user_vmresume()
 {
-    if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
-        handle_hazard (ret_user_vmresume);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_SCHED);
+    if (EXPECT_FALSE (hzd))
+        handle_hazard (hzd, ret_user_vmresume);
 
     Rcu::quiet();
 
@@ -204,8 +217,9 @@ void Ec::ret_user_vmresume()
 
 void Ec::ret_user_vmrun()
 {
-    if (EXPECT_FALSE ((Cpu::hazard | current->hazard) & (Cpu::HZD_RECALL | Cpu::HZD_SCHED)))
-        handle_hazard (ret_user_vmrun);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_SCHED);
+    if (EXPECT_FALSE (hzd))
+        handle_hazard (hzd, ret_user_vmrun);
 
     Rcu::quiet();
 

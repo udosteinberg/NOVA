@@ -60,10 +60,12 @@ void Sc::ready_enqueue()
     trace (TRACE_SCHEDULE, "ENQ:%p (%02lu) PRIO:%#lx TOP:%#lx %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
 
     if (prio > current->prio || (this != current && prio == current->prio && left))
-        Cpu::hazard |= Cpu::HZD_SCHED;
+        Cpu::hazard |= HZD_SCHED;
 
     if (!left)
         left = full;
+
+    tsc = rdtsc();
 }
 
 void Sc::ready_dequeue()
@@ -81,6 +83,8 @@ void Sc::ready_dequeue()
     while (!list[prio_top] && prio_top)
         prio_top--;
 
+    owner->add_tsc_offset (tsc - rdtsc());
+
     trace (TRACE_SCHEDULE, "DEQ:%p (%02lu) PRIO:%#lx TOP:%#lx", this, left, prio, prio_top);
 }
 
@@ -93,7 +97,7 @@ void Sc::schedule (bool suspend)
 
     current->left = Lapic::get_timer();
 
-    Cpu::hazard &= ~Cpu::HZD_SCHED;
+    Cpu::hazard &= ~HZD_SCHED;
 
     if (EXPECT_TRUE (!suspend))
         current->ready_enqueue();
@@ -155,5 +159,5 @@ void Sc::rrq_handler()
 void Sc::tlb_handler()
 {
     if (Pd::current->Space_mem::htlb.chk (Cpu::id))
-        Cpu::hazard |= Cpu::HZD_SCHED;
+        Cpu::hazard |= HZD_SCHED;
 }

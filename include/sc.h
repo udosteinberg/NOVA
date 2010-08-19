@@ -34,6 +34,7 @@ class Sc : public Kobject
         unsigned long   prio;
         unsigned long   full;
         unsigned long   left;
+        uint64          tsc;
 
         static unsigned const priorities = 256;
 
@@ -48,6 +49,9 @@ class Sc : public Kobject
 
         static unsigned long prio_top CPULOCAL;
 
+        void ready_enqueue();
+        void ready_dequeue();
+
     public:
         static Sc *     current     CPULOCAL_HOT;
         static unsigned ctr_link    CPULOCAL;
@@ -59,19 +63,13 @@ class Sc : public Kobject
         Sc (Pd *, mword, Ec *, mword, mword, mword);
 
         ALWAYS_INLINE
-        inline Ec *ec() const
-        {
-            return owner;
-        }
+        inline Ec *ec() const { return owner; }
 
         ALWAYS_INLINE
         static inline Rq *remote (unsigned c)
         {
             return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
-
-        void ready_enqueue();
-        void ready_dequeue();
 
         void remote_enqueue();
 

@@ -18,7 +18,9 @@
 
 #pragma once
 
+#include "atomic.h"
 #include "compiler.h"
+#include "hazards.h"
 #include "types.h"
 
 class Vmcb;
@@ -27,21 +29,22 @@ class Vtlb;
 
 class Sys_regs
 {
-    public:
+    protected:
         union {
             struct {
-                mword   edi;                // 0x0
-                mword   esi;                // 0x4
-                mword   ebp;                // 0x8
-                mword   cr2;                // 0xc
-                mword   ebx;                // 0x10
-                mword   edx;                // 0x14
-                mword   ecx;                // 0x18
-                mword   eax;                // 0x1c
+                mword   edi;
+                mword   esi;
+                mword   ebp;
+                mword   cr2;
+                mword   ebx;
+                mword   edx;
+                mword   ecx;
+                mword   eax;
             };
             mword gpr[];
         };
 
+    public:
         enum Status
         {
             SUCCESS,
@@ -83,40 +86,39 @@ class Sys_regs
 
 class Exc_regs : public Sys_regs
 {
-    friend class Utcb;
-
-    private:
+    protected:
         union {
             struct {
-                mword   gs;         // 0x20
-                mword   fs;         // 0x24
-                mword   es;         // 0x28
-                mword   ds;         // 0x2c
-                mword   err;        // 0x30
-                mword   vec;        // 0x34
-                mword   eip;        // 0x38
-                mword   cs;         // 0x3c
-                mword   efl;        // 0x40
-                mword   esp;        // 0x44
-                mword   ss;         // 0x48
+                mword   gs;
+                mword   fs;
+                mword   es;
+                mword   ds;
+                mword   err;
+                mword   vec;
+                mword   eip;
+                mword   cs;
+                mword   efl;
+                mword   esp;
+                mword   ss;
             };
             struct {
                 union {
-                    Vmcs *  vmcs;   // 0x20
-                    Vmcb *  vmcb;   // 0x20
+                    Vmcs *  vmcs;
+                    Vmcb *  vmcb;
                 };
-                Vtlb *  vtlb;       // 0x24
-                mword   cr0_shadow; // 0x28
-                mword   cr3_shadow; // 0x2c
-                mword   cr4_shadow; // 0x30
-                mword   dst_portal; // 0x34
-                mword   ept_fault;  // 0x38
-                mword   ept_error;  // 0x3c
-                uint8   ept_on;     // 0x40
-                uint8   fpu_on;     // 0x41
+                Vtlb *  vtlb;
+                mword   cr0_shadow;
+                mword   cr3_shadow;
+                mword   cr4_shadow;
+                mword   dst_portal;
+                mword   ept_fault;
+                mword   ept_error;
+                uint8   ept_on;
+                uint8   fpu_on;
             };
         };
 
+    private:
         ALWAYS_INLINE
         inline mword cr0_set() const;
 
@@ -167,4 +169,29 @@ class Exc_regs : public Sys_regs
 
         mword read_cr (unsigned);
         void write_cr (unsigned, mword);
+};
+
+class Cpu_regs : public Exc_regs
+{
+    private:
+        mword   hzd;
+
+    public:
+        uint64  tsc_offset;
+
+        ALWAYS_INLINE
+        inline mword hazard() const { return hzd; }
+
+        ALWAYS_INLINE
+        inline void set_hazard (mword h) { Atomic::set_mask<true>(hzd, h); }
+
+        ALWAYS_INLINE
+        inline void clr_hazard (mword h) { Atomic::clr_mask<true>(hzd, h); }
+
+        ALWAYS_INLINE
+        inline void add_tsc_offset (uint64 tsc)
+        {
+            tsc_offset += tsc;
+            set_hazard (HZD_TSC);
+        }
 };

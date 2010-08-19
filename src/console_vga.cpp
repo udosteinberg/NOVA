@@ -65,7 +65,7 @@ unsigned Console_vga::init_spinner (Spinlock *lock)
 
     if (lock)
         lock->lock();
-    
+
     if (_row == --_num_row) {
         _row--;
         clear_row (_num_row);

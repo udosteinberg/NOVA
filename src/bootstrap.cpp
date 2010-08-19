@@ -43,7 +43,7 @@ void bootstrap()
         Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_cont (Ec::root_invoke);
         root_ec->set_sc (root_sc);
-        root_sc->ready_enqueue();
+        root_sc->remote_enqueue();
         Rcu::start_batch();
     }
 

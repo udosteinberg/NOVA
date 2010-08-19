@@ -21,7 +21,7 @@
 #include "compiler.h"
 #include "qpd.h"
 
-class Sys_call : public Exc_regs
+class Sys_call : public Sys_regs
 {
     public:
         enum
@@ -41,14 +41,14 @@ class Sys_call : public Exc_regs
         inline Mtd mtd() const { return Mtd (esi); }
 };
 
-class Sys_reply : public Exc_regs
+class Sys_reply : public Sys_regs
 {
     public:
         ALWAYS_INLINE
         inline Mtd mtd() const { return Mtd (esi); }
 };
 
-class Sys_create_pd : public Exc_regs
+class Sys_create_pd : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -67,7 +67,7 @@ class Sys_create_pd : public Exc_regs
         inline Crd crd() const { return Crd (ebp); }
 };
 
-class Sys_create_ec : public Exc_regs
+class Sys_create_ec : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -89,7 +89,7 @@ class Sys_create_ec : public Exc_regs
         inline mword evt() const { return ebp; }
 };
 
-class Sys_create_sc : public Exc_regs
+class Sys_create_sc : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -102,7 +102,7 @@ class Sys_create_sc : public Exc_regs
         inline Qpd qpd() const { return Qpd (ebx); }
 };
 
-class Sys_create_pt : public Exc_regs
+class Sys_create_pt : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -118,7 +118,7 @@ class Sys_create_pt : public Exc_regs
         inline mword eip() const { return ebp; }
 };
 
-class Sys_create_sm : public Exc_regs
+class Sys_create_sm : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -128,7 +128,7 @@ class Sys_create_sm : public Exc_regs
         inline mword cnt() const { return esi; }
 };
 
-class Sys_revoke : public Exc_regs
+class Sys_revoke : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -138,21 +138,21 @@ class Sys_revoke : public Exc_regs
         inline Crd crd() const { return Crd (edi); }
 };
 
-class Sys_lookup : public Exc_regs
+class Sys_lookup : public Sys_regs
 {
     public:
         ALWAYS_INLINE
         inline Crd & crd() { return reinterpret_cast<Crd &>(edi); }
 };
 
-class Sys_recall : public Exc_regs
+class Sys_recall : public Sys_regs
 {
     public:
         ALWAYS_INLINE
         inline unsigned long ec() const { return edi; }
 };
 
-class Sys_semctl : public Exc_regs
+class Sys_semctl : public Sys_regs
 {
     public:
         enum
@@ -168,7 +168,7 @@ class Sys_semctl : public Exc_regs
         inline unsigned long sm() const { return edi; }
 };
 
-class Sys_assign_pci : public Exc_regs
+class Sys_assign_pci : public Sys_regs
 {
     public:
         ALWAYS_INLINE
@@ -181,7 +181,7 @@ class Sys_assign_pci : public Exc_regs
         inline unsigned long vf() const { return ebx; }
 };
 
-class Sys_assign_gsi : public Exc_regs
+class Sys_assign_gsi : public Sys_regs
 {
     public:
         ALWAYS_INLINE
