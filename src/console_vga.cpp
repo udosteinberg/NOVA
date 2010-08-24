@@ -25,13 +25,7 @@ void Console_vga::init()
     if (Cmdline::novga)
         return;
 
-    Pd::kern.Space_mem::insert (VGACN_ADDR, 0,
-                                Ptab::Attribute (Ptab::ATTR_NOEXEC |
-                                                 Ptab::ATTR_GLOBAL |
-                                                 Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE |
-                                                 Ptab::ATTR_PRESENT),
-                                0xb9000);
+    Pd::kern.Space_mem::insert (VGACN_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, 0xb9000);
 
     set_page (1);
 

@@ -23,7 +23,6 @@
 #include "ioapic.h"
 #include "pci.h"
 #include "pd.h"
-#include "stdio.h"
 
 void Acpi_dmar::parse() const
 {

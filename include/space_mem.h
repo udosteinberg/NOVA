@@ -22,19 +22,18 @@
 #include "cpuset.h"
 #include "dpt.h"
 #include "ept.h"
-#include "ptab.h"
+#include "hpt.h"
 #include "space.h"
 
 class Space_mem : public Space
 {
-    protected:
-        Ptab *  percpu[NUM_CPU];
-
     public:
-        Ptab *const mst;
-        mword did;
+        Hpt   loc[NUM_CPU];
+        Hpt   hpt;
         Dpt   dpt;
         Ept   ept;
+
+        mword did;
 
         Cpuset cpus;
         Cpuset htlb;
@@ -43,31 +42,21 @@ class Space_mem : public Space
         static unsigned did_ctr;
 
         ALWAYS_INLINE
-        inline Space_mem (Ptab *p) : mst (p) {}
-
-        ALWAYS_INLINE
-        inline Ptab *cpu_ptab (unsigned cpu) const
+        inline void insert_local (mword virt, unsigned o, mword attr, Paddr phys)
         {
-            assert (cpu < NUM_CPU);
-            return percpu[cpu];
-        }
-
-        ALWAYS_INLINE
-        inline void insert_local (mword virt, unsigned o, Paging::Attribute attr, Paddr phys)
-        {
-            percpu[Cpu::id]->update (virt, o, phys, attr);
+            loc[Cpu::id].update (virt, o, phys, attr);
         }
 
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
         {
-            return mst->lookup (virt, phys);
+            return hpt.lookup (virt, phys);
         }
 
         ALWAYS_INLINE
-        inline void insert (mword virt, unsigned o, Paging::Attribute attr, Paddr phys)
+        inline void insert (mword virt, unsigned o, mword attr, Paddr phys)
         {
-            mst->update (virt, o, phys, attr);
+            hpt.update (virt, o, phys, attr);
         }
 
         ALWAYS_INLINE
@@ -101,12 +90,12 @@ class Space_mem : public Space
         ALWAYS_INLINE
         inline bool sync_mst (mword hla)
         {
-            return percpu[Cpu::id]->sync_from (mst, hla);
+            return loc[Cpu::id].sync_from (hpt, hla);
         }
 
         ALWAYS_INLINE
         inline bool sync_glb (mword hla)
         {
-            return percpu[Cpu::id]->sync_from (Ptab::master(), hla);
+            return loc[Cpu::id].sync_from (Hpt (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P), hla);
         }
 };

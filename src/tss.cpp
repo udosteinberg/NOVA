@@ -16,7 +16,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ptab.h"
+#include "hpt.h"
 #include "tss.h"
 
 ALIGNED(8) Tss Tss::run;
@@ -28,7 +28,7 @@ void Tss::build()
     // and boot stack instead we don't have the faulting TSS state mapped.
     extern char tss_handler;
 
-    dbf.cr3     = Buddy::ptr_to_phys (Ptab::current());
+    dbf.cr3     = Hpt::current();
     dbf.eip     = reinterpret_cast<mword>(&tss_handler);
     dbf.esp     = KSTCK_ADDR + PAGE_SIZE;
     dbf.eflags  = 2;

@@ -26,7 +26,7 @@
 #define trace(T,format,...)                                 \
 do {                                                        \
     register mword __esp asm ("esp");                       \
-    if (EXPECT_FALSE ((trace_mask & T) == T))               \
+    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))           \
         printf ("[%2d] " format "\n",                       \
                ((__esp - 1) & ~PAGE_MASK) == KSTCK_ADDR ?   \
                 Cpu::id : ~0u, ## __VA_ARGS__);             \
@@ -85,9 +85,6 @@ unsigned const trace_mask =
 //                            TRACE_FPU       |
 #endif
                             0;
-
-FORMAT (1,0)
-void vprintf (char const *format, va_list args);
 
 FORMAT (1,2)
 void printf (char const *format, ...);

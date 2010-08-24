@@ -17,6 +17,7 @@
  */
 
 #include "cmdline.h"
+#include "hpt.h"
 #include "string.h"
 
 bool Cmdline::dmar;
@@ -64,12 +65,12 @@ char *Cmdline::get_arg (char **line)
     return arg;
 }
 
-void Cmdline::init (char *line)
+void Cmdline::init (mword addr)
 {
-    char *arg;
+    char *arg, *line = static_cast<char *>(Hpt::remap (addr));
 
     while ((arg = get_arg (&line)))
         for (unsigned i = 0; i < sizeof params / sizeof *params; i++)
-            if (!strcmp (static_cast<char const *>(phys_ptr (params[i].string)), arg))
-                *static_cast<bool *>(phys_ptr (params[i].param)) = true;
+            if (!strcmp (params[i].string, arg))
+                *params[i].param = true;
 }

@@ -26,8 +26,8 @@
 #include "assert.h"
 #include "cmdline.h"
 #include "gsi.h"
+#include "hpt.h"
 #include "io.h"
-#include "ptab.h"
 #include "stdio.h"
 #include "x86.h"
 
@@ -103,18 +103,18 @@ void Acpi::setup()
     Acpi_rsdp::parse();
 
     if (xsdt)
-        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (xsdt))->parse (xsdt, sizeof (uint64));
+        static_cast<Acpi_table_rsdt *>(Hpt::remap (xsdt))->parse (xsdt, sizeof (uint64));
     else if (rsdt)
-        static_cast<Acpi_table_rsdt *>(Ptab::master()->remap (rsdt))->parse (rsdt, sizeof (uint32));
+        static_cast<Acpi_table_rsdt *>(Hpt::remap (rsdt))->parse (rsdt, sizeof (uint32));
 
     if (fadt)
-        static_cast<Acpi_table_fadt *>(Ptab::master()->remap (fadt))->parse();
+        static_cast<Acpi_table_fadt *>(Hpt::remap (fadt))->parse();
     if (madt)
-        static_cast<Acpi_table_madt *>(Ptab::master()->remap (madt))->parse();
+        static_cast<Acpi_table_madt *>(Hpt::remap (madt))->parse();
     if (mcfg)
-        static_cast<Acpi_table_mcfg *>(Ptab::master()->remap (mcfg))->parse();
+        static_cast<Acpi_table_mcfg *>(Hpt::remap (mcfg))->parse();
     if (dmar)
-        static_cast<Acpi_table_dmar *>(Ptab::master()->remap (dmar))->parse();
+        static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
 
     setup_sci();
 

@@ -27,7 +27,7 @@ Paddr Space_io::walk (mword idx)
 {
     if (!bmp)
         space_mem()->insert (IOBMP_SADDR, 1,
-                             Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE | Ptab::ATTR_PRESENT),
+                             Hpt::HPT_NX | Hpt::HPT_W | Hpt::HPT_P,
                              bmp = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1)));
 
     return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
@@ -59,7 +59,7 @@ void Space_io::insert_root (mword b, unsigned o)
 void Space_io::page_fault (mword addr, mword error)
 {
     // Should never get a write fault during lookup
-    assert (!(error & Paging::ERROR_WRITE));
+    assert (!(error & 2));
 
     // First try to sync with PD master page table
     if (Pd::current->Space_mem::sync_mst (addr))
@@ -67,6 +67,6 @@ void Space_io::page_fault (mword addr, mword error)
 
     // If that didn't work, back the region with a r/o 1-page
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
-                                    Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_PRESENT),
+                                    Hpt::HPT_NX | Hpt::HPT_P,
                                     reinterpret_cast<Paddr>(&FRAME_1));
 }

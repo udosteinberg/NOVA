@@ -154,10 +154,10 @@ class Dmar
         inline unsigned nfr() const { return static_cast<unsigned>(cap >> 40 & 0xff) + 1; }
 
         ALWAYS_INLINE
-        inline unsigned fro() const { return static_cast<unsigned>(cap >> 20 & 0x3ff0) + reg_base; }
+        inline mword fro() const { return static_cast<mword>(cap >> 20 & 0x3ff0) + reg_base; }
 
         ALWAYS_INLINE
-        inline unsigned iro() const { return static_cast<unsigned>(ecap >> 4 & 0x3ff0) + reg_base; }
+        inline mword iro() const { return static_cast<mword>(ecap >> 4 & 0x3ff0) + reg_base; }
 
         ALWAYS_INLINE
         inline unsigned ir() const { return static_cast<unsigned>(ecap) & 0x8; }
@@ -271,7 +271,7 @@ class Dmar
         ALWAYS_INLINE
         static bool ire() { return gcmd & GCMD_IRE; }
 
-        void assign (unsigned, Pd *);
+        void assign (unsigned long, Pd *);
 
         REGPARM (1)
         static void vector (unsigned) asm ("msi_vector");

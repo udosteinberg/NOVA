@@ -66,7 +66,7 @@ class Dpt
         void update (uint64, mword, uint64, mword, bool = false);
 
         ALWAYS_INLINE
-        inline uint64 root (unsigned l) { return Buddy::ptr_to_phys (walk (0, l)); }
+        inline uint64 root (mword l) { return Buddy::ptr_to_phys (walk (0, l)); }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

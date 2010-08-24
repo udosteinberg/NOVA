@@ -32,13 +32,7 @@ void Lapic::init()
 
     Cpu::bsp = apic_base & 0x100;
 
-    Pd::kern.insert_local (LAPIC_ADDR, 0,
-                           Ptab::Attribute (Ptab::ATTR_NOEXEC      |
-                                            Ptab::ATTR_GLOBAL      |
-                                            Ptab::ATTR_UNCACHEABLE |
-                                            Ptab::ATTR_WRITABLE    |
-                                            Ptab::ATTR_PRESENT),
-                           apic_base & ~PAGE_MASK);
+    Pd::kern.insert_local (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
 

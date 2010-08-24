@@ -75,8 +75,8 @@ INTRGATE                \DPL
  */
 entry_exc:              push    $0
 entry_exc_error:        SAVE_STATE
-                        mov     %cr2, %edx
-                        mov     %edx, 0xc(%ebx)
+                        mov     %cr2, %eax
+                        mov     %eax, 0xc(%ebx)
                         mov     %ebx, %eax
                         call    exc_handler
                         jmp     ret_from_interrupt
@@ -173,7 +173,7 @@ entry_ipi:              push    $0
 /*
  * Interrupt Return
  */
-ret_from_interrupt:     testb   $3, 60(%ebx)
+ret_from_interrupt:     testb   $3, 0x3c(%ebx)
                         jnz     ret_user_iret
                         popa
                         add     $24, %esp
@@ -189,11 +189,6 @@ entry_sysenter:         cld
                         lea     -44(%esp), %esp
                         pusha
                         mov     $(KSTCK_ADDR + PAGE_SIZE), %esp
-#if 0
-                        mov     $SEL_USER_DATA, %ebx
-                        mov     %ebx, %ds
-                        mov     %ebx, %es
-#endif
                         jmp     sys_handler
 
 /*

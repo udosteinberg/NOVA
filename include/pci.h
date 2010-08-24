@@ -90,7 +90,7 @@ class Pci
         }
 
         ALWAYS_INLINE
-        static inline Pci *find_dev (unsigned r)
+        static inline Pci *find_dev (unsigned long r)
         {
             for (Pci *pci = list; pci; pci = pci->next)
                 if (pci->rid == r)
@@ -135,7 +135,7 @@ class Pci
         static unsigned init (unsigned, unsigned = 0);
 
         ALWAYS_INLINE
-        static inline Dmar *find_dmar (unsigned r)
+        static inline Dmar *find_dmar (unsigned long r)
         {
             Pci *pci = find_dev (r);
 

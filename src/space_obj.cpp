@@ -31,7 +31,7 @@ void Space_obj::update (mword idx, Capability cap)
     if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
         phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0));
         space_mem()->insert (virt & ~PAGE_MASK, 0,
-                             Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_WRITABLE | Ptab::ATTR_PRESENT),
+                             Hpt::HPT_NX | Hpt::HPT_W | Hpt::HPT_P,
                              phys);
 
         phys |= virt & PAGE_MASK;
@@ -71,7 +71,7 @@ bool Space_obj::insert_root (Kobject *obj)
 void Space_obj::page_fault (mword addr, mword error)
 {
     // Should never get a write fault during lookup
-    assert (!(error & Paging::ERROR_WRITE));
+    assert (!(error & 2));
 
     // First try to sync with PD master page table
     if (Pd::current->Space_mem::sync_mst (addr))
@@ -79,6 +79,6 @@ void Space_obj::page_fault (mword addr, mword error)
 
     // If that didn't work, back the region with a r/o 0-page
     Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
-                                    Ptab::Attribute (Ptab::ATTR_NOEXEC | Ptab::ATTR_PRESENT),
+                                    Hpt::HPT_NX | Hpt::HPT_P,
                                     reinterpret_cast<Paddr>(&FRAME_0));
 }

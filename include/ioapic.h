@@ -28,13 +28,13 @@ class Dmar;
 class Ioapic : public Apic
 {
     private:
-        mword const reg_base;
-        mword const gsi_base;
-        mword const id;
-        uint16      rid;
-        Ioapic *    next;
-        Dmar *      dmar;
-        Spinlock    lock;
+        mword    const  reg_base;
+        unsigned const  gsi_base;
+        unsigned const  id;
+        uint16          rid;
+        Ioapic *        next;
+        Dmar *          dmar;
+        Spinlock        lock;
 
         static Slab_cache cache;
         static Ioapic *list;
@@ -108,22 +108,13 @@ class Ioapic : public Apic
         inline unsigned get_gsi() const { return gsi_base; }
 
         ALWAYS_INLINE
-        inline unsigned version()
-        {
-            return read (IOAPIC_VER) & 0xff;
-        }
+        inline unsigned version() { return read (IOAPIC_VER) & 0xff; }
 
         ALWAYS_INLINE
-        inline unsigned prq()
-        {
-            return read (IOAPIC_VER) >> 15 & 0x1;
-        }
+        inline unsigned prq() { return read (IOAPIC_VER) >> 15 & 0x1; }
 
         ALWAYS_INLINE
-        inline unsigned irt_max()
-        {
-            return read (IOAPIC_VER) >> 16 & 0xff;
-        }
+        inline unsigned irt_max() { return read (IOAPIC_VER) >> 16 & 0xff; }
 
         ALWAYS_INLINE
         inline void set_irt (unsigned gsi, unsigned val)

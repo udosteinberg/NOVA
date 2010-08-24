@@ -34,13 +34,14 @@ Sc *Sc::list[Sc::priorities];
 
 unsigned long Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, Ec *o, mword c, mword p, mword q) : Kobject (own, sel, SC), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *o, unsigned c, mword p, mword q) : Kobject (own, sel, SC), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
-    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#lx P:%#lx Q:%#lx)", this, o, c, p, q);
+    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#lx Q:%#lx)", this, o, c, p, q);
 }
 
 void Sc::ready_enqueue()
 {
+    assert (prio < priorities);
     assert (cpu == Cpu::id);
     assert (this != reinterpret_cast<Sc *>(~0ul));
 
@@ -70,6 +71,7 @@ void Sc::ready_enqueue()
 
 void Sc::ready_dequeue()
 {
+    assert (prio < priorities);
     assert (cpu == Cpu::id);
     assert (prev && next);
 

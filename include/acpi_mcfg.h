@@ -20,6 +20,8 @@
 
 #include "acpi_table.h"
 
+#pragma pack(1)
+
 class Acpi_mcfg
 {
     public:
@@ -39,3 +41,5 @@ class Acpi_table_mcfg : public Acpi_table
         INIT
         void parse() const;
 };
+
+#pragma pack()

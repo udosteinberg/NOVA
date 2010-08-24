@@ -84,10 +84,10 @@ bool Ec::handle_exc_pf (Exc_regs *r)
 {
     mword addr = r->cr2;
 
-    if (r->err & Ptab::ERROR_USER)
-        return addr < LINK_ADDR && Pd::current->Space_mem::sync_mst (addr);
+    if (r->err & 4)
+        return addr < USER_ADDR && Pd::current->Space_mem::sync_mst (addr);
 
-    if (addr < LINK_ADDR) {
+    if (addr < USER_ADDR) {
 
         if (Pd::current->Space_mem::sync_mst (addr))
             return true;
@@ -140,11 +140,10 @@ void Ec::handle_exc (Exc_regs *r)
             if (handle_exc_pf (r))
                 return;
             break;
-
-        default:
-            if (!r->user())
-                die ("EXC", r);
     }
 
-    send_msg<ret_user_iret>();
+    if (r->user())
+        send_msg<ret_user_iret>();
+
+    die ("EXC", r);
 }

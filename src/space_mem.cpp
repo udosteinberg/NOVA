@@ -30,16 +30,12 @@ void Space_mem::init (unsigned cpu)
 {
     if (cpus.set (cpu)) {
 
-        // Create ptab for this CPU
-        percpu[cpu] = new Ptab;
-
-        // Sync cpu-local range
-        percpu[cpu]->sync_from (Pd::kern.cpu_ptab (cpu), LOCAL_SADDR);
+        loc[cpu].sync_from (Pd::kern.loc[cpu], LOCAL_SADDR);
 
         // Sync kernel code and data
-        percpu[cpu]->sync_master_range (LINK_ADDR, LOCAL_SADDR);
+        loc[cpu].sync_master_range (LINK_ADDR, LOCAL_SADDR);
 
-        trace (TRACE_MEMORY, "PD:%p PTAB[%u]:%#lx", static_cast<Pd *>(this), cpu, Buddy::ptr_to_phys (percpu[cpu]));
+        trace (TRACE_MEMORY, "PD:%p PTAB[%u]:%#lx", static_cast<Pd *>(this), cpu, loc[cpu].addr());
     }
 }
 
@@ -54,27 +50,27 @@ void Space_mem::update (Mdb *mdb, Paddr phys, mword r, mword s)
     mword a = mdb->node_attr & ~r;
 
     if (s & 1 && Dpt::ord != ~0UL) {
-        unsigned ord = min (o, Dpt::ord);
+        mword ord = min (o, Dpt::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
             dpt.update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r);
     }
 
     if (s & 2 && Ept::ord != ~0UL) {
-        unsigned ord = min (o, Ept::ord);
+        mword ord = min (o, Ept::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
             ept.update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, r);
         if (r)
             gtlb.merge (cpus);
     }
 
-    bool l = mst->update (b, o, phys, Ptab::hw_attr (a), r);
+    bool l = hpt.update (b, o, phys, Hpt::hw_attr (a), r);
 
     if (r) {
 
         if (l)
-            for (unsigned i = 0; i < sizeof (percpu) / sizeof (*percpu); i++)
-                if (percpu[i])
-                    percpu[i]->update (b, o, phys, Ptab::hw_attr (a), r);
+            for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
+                if (loc[i].addr())
+                    loc[i].update (b, o, phys, Hpt::hw_attr (a), r);
 
         htlb.merge (cpus);
     }
@@ -118,7 +114,7 @@ void Space_mem::insert_root (mword base, size_t size, mword attr)
 
         size_t s = frag;
 
-        for (unsigned o; s; s -= 1UL << o, base += 1UL << o)
+        for (unsigned long o; s; s -= 1UL << o, base += 1UL << o)
             insert_node (new Mdb (&Pd::kern, base >> PAGE_BITS, (o = max_order (base, s)) - PAGE_BITS, attr, type));
     }
 }

@@ -18,7 +18,7 @@
 
 #include "acpi.h"
 #include "acpi_rsdt.h"
-#include "ptab.h"
+#include "hpt.h"
 
 void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
 {
@@ -33,7 +33,7 @@ void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
 
     for (unsigned i = 0; i < count; i++) {
 
-        Acpi_table *acpi = static_cast<Acpi_table *>(Ptab::master()->remap (table[i]));
+        Acpi_table *acpi = static_cast<Acpi_table *>(Hpt::remap (table[i]));
 
         if (!acpi->good_checksum (table[i]))
             continue;

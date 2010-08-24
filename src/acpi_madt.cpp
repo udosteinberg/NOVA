@@ -54,7 +54,7 @@ void Acpi_table_madt::parse_lapic (Acpi_apic const *acpi_apic)
     Acpi_lapic const *acpi_lapic = static_cast<Acpi_lapic const *>(acpi_apic);
 
     if (acpi_lapic->enabled)
-        Lapic::mask_cpu |= 1UL << acpi_lapic->id;
+        Lapic::mask_cpu |= 1U << acpi_lapic->id;
 }
 
 void Acpi_table_madt::parse_ioapic (Acpi_apic const *acpi_apic)

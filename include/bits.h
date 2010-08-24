@@ -45,7 +45,7 @@ inline long int bit_scan_forward (mword val)
 }
 
 ALWAYS_INLINE
-inline unsigned max_order (mword base, size_t size)
+inline unsigned long max_order (mword base, size_t size)
 {
     long int o = bit_scan_reverse (size);
 

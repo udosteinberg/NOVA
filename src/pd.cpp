@@ -28,16 +28,17 @@ Pd *Pd::current;
 ALIGNED(8) Pd Pd::kern (&Pd::kern);
 ALIGNED(8) Pd Pd::root (&Pd::root, NUM_EXC);
 
-Pd::Pd (Pd *own) : Kobject (own, 0, PD), Space_mem (Ptab::master())
+Pd::Pd (Pd *own) : Kobject (own, 0, PD)
 {
+    hpt.set (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P);
+
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
 
     Mtrr::init();
 
-    Space_mem::insert_root (0, 0x100000, 7);
-    Space_mem::insert_root (0x100000, LOAD_ADDR - 0x100000, 7);
+    Space_mem::insert_root (0, LOAD_ADDR, 7);
 
-    mword base = LOAD_ADDR + reinterpret_cast<mword>(&LOAD_SIZE);
+    mword base = reinterpret_cast<mword>(&LOAD_E);
     Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_P) - base, 7);
 
     base = reinterpret_cast<mword>(&LINK_E);
@@ -48,11 +49,6 @@ Pd::Pd (Pd *own) : Kobject (own, 0, PD), Space_mem (Ptab::master())
 
     // I/O Ports
     Space_io::insert_root (0, 16);
-}
-
-Pd::Pd (Pd *own, mword sel) : Kobject (own, sel, PD), Space_mem (new Ptab)
-{
-    trace (TRACE_SYSCALL, "PD:%p created", this);
 }
 
 template <typename S>

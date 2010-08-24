@@ -19,6 +19,7 @@
 #pragma once
 
 #include "compiler.h"
+#include "types.h"
 
 class Msr
 {
@@ -88,28 +89,15 @@ class Msr
         ALWAYS_INLINE
         static inline T read (Register msr)
         {
-            T val;
-            switch (sizeof (T)) {
-                case 8:
-                    asm volatile ("rdmsr" : "=A" (val) : "c" (msr));
-                    return val;
-                default:
-                    asm volatile ("rdmsr" : "=a" (val) : "c" (msr) : "edx");
-                    return val;
-            }
+            mword h, l;
+            asm volatile ("rdmsr" : "=a" (l), "=d" (h) : "c" (msr));
+            return static_cast<T>(static_cast<uint64>(h) << 32 | l);
         }
 
         template <typename T>
         ALWAYS_INLINE
         static inline void write (Register msr, T val)
         {
-            switch (sizeof (T)) {
-                case 8:
-                    asm volatile ("wrmsr" : : "A" (val), "c" (msr));
-                    break;
-                default:
-                    asm volatile ("wrmsr" : : "a" (val), "d" (0), "c" (msr));
-                    break;
-            }
+            asm volatile ("wrmsr" : : "a" (static_cast<mword>(val)), "d" (static_cast<mword>(static_cast<uint64>(val) >> 32)), "c" (msr));
         }
 };

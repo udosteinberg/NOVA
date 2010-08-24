@@ -25,11 +25,7 @@ Dpt *Dpt::walk (uint64 dpa, unsigned long l, bool d)
 {
     unsigned lev = max;
 
-    for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr())), lev--) {
-
-        e += dpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
-
-        assert (lev != max || e == this);
+    for (Dpt *e = this;; e = static_cast<Dpt *>(Buddy::phys_to_ptr (e->addr())) + (dpa >> (--lev * bpl + PAGE_BITS) & ((1UL << bpl) - 1))) {
 
         if (lev == l)
             return e;
@@ -52,14 +48,14 @@ void Dpt::update (uint64 dpa, mword o, uint64 hpa, mword a, bool d)
     trace (TRACE_DPT, "DPT:%#010lx DPA:%#010llx O:%#02lx HPA:%#010llx A:%#lx D:%u", Buddy::ptr_to_phys (this), dpa, o, hpa, a, d);
 
     unsigned long l = o / bpl;
-    unsigned long s = 1ul << (l * bpl + PAGE_BITS);
+    unsigned long s = 1UL << (l * bpl + PAGE_BITS);
 
     Dpt *e = walk (dpa, l, d);
     assert (e);
 
     uint64 v = hpa | a | (l ? DPT_S : 0);
 
-    for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
+    for (unsigned long i = 1UL << o % bpl; i; i--, e++, v += s) {
 
         assert (d || !e->present());
 

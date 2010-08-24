@@ -30,7 +30,7 @@ class Sc : public Kobject
         Ec * const      owner;
         Sc *            prev;
         Sc *            next;
-        unsigned long   cpu;
+        unsigned        cpu;
         unsigned long   prio;
         unsigned long   full;
         unsigned long   left;
@@ -60,13 +60,13 @@ class Sc : public Kobject
         static unsigned long const default_prio = 1;
         static unsigned long const default_quantum = 10000;
 
-        Sc (Pd *, mword, Ec *, mword, mword, mword);
+        Sc (Pd *, mword, Ec *, unsigned, mword, mword);
 
         ALWAYS_INLINE
         inline Ec *ec() const { return owner; }
 
         ALWAYS_INLINE
-        static inline Rq *remote (unsigned c)
+        static inline Rq *remote (unsigned long c)
         {
             return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }

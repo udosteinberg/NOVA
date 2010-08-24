@@ -32,14 +32,14 @@ void bootstrap()
     Sc::current = new Sc (&Pd::kern, 0, Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::sub (Cpu::boot_count, 1UL); Cpu::boot_count; pause()) ;
+    for (Atomic::sub (Cpu::boot_count, 1U); Cpu::boot_count; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 
     // Create root task
     if (Cpu::bsp) {
         Hip::add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Cpu::id, LINK_ADDR - 2 * PAGE_SIZE, 0, 0, false);
+        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Cpu::id, USER_ADDR - 2 * PAGE_SIZE, 0, 0, false);
         Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_cont (Ec::root_invoke);
         root_ec->set_sc (root_sc);

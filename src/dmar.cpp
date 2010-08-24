@@ -34,13 +34,7 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
 {
     Dmar **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
-    Pd::kern.Space_mem::insert (hwdev_addr, 0,
-                                Ptab::Attribute (Ptab::ATTR_NOEXEC      |
-                                                 Ptab::ATTR_GLOBAL      |
-                                                 Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE    |
-                                                 Ptab::ATTR_PRESENT),
-                                phys & ~PAGE_MASK);
+    Pd::kern.Space_mem::insert (hwdev_addr, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, phys & ~PAGE_MASK);
 
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);
@@ -68,7 +62,7 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     }
 }
 
-void Dmar::assign (unsigned rid, Pd *p)
+void Dmar::assign (unsigned long rid, Pd *p)
 {
     if (!p->did)
         p->did = ++Pd::did_ctr;

@@ -43,7 +43,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         INIT
         Pd (Pd *);
 
-        Pd (Pd *, mword);
+        Pd (Pd *own, mword sel) : Kobject (own, sel, PD) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -56,19 +56,13 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
             current = this;
 
-            cpu_ptab (Cpu::id)->make_current();
+            loc[Cpu::id].make_current();
         }
 
         ALWAYS_INLINE
         static inline Pd *remote (unsigned c)
         {
             return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
-        }
-
-        ALWAYS_INLINE
-        static inline void init_cpu_ptab (Ptab *ptab)
-        {
-            kern.percpu[Cpu::id] = ptab;
         }
 
         template <typename>

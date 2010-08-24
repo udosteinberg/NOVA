@@ -196,14 +196,14 @@ void Ec::sys_create_pd()
 {
     Sys_create_pd *r = static_cast<Sys_create_pd *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx CPU:%#lx UTCB:%#lx", current, r->pd(), r->cpu(), r->utcb());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx CPU:%#x UTCB:%#lx", current, r->pd(), r->cpu(), r->utcb());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
-    if (EXPECT_FALSE (!r->utcb() || r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK)) {
+    if (EXPECT_FALSE (!r->utcb() || r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK)) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Sys_regs::BAD_MEM>();
     }
@@ -236,10 +236,10 @@ void Ec::sys_create_ec()
 {
     Sys_create_ec *r = static_cast<Sys_create_ec *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#lx UTCB:%#lx ESP:%#lx EVT:%#lx", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
@@ -248,7 +248,7 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_FTR>();
     }
 
-    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {
+    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Sys_regs::BAD_MEM>();
     }
@@ -301,7 +301,7 @@ void Ec::sys_create_pt()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->pt(), r->ec(), r->eip());
 
-    if (EXPECT_FALSE (r->eip() >= LINK_ADDR)) {
+    if (EXPECT_FALSE (r->eip() >= USER_ADDR)) {
         trace (TRACE_ERROR, "%s: Invalid EIP (%#lx)", __func__, r->eip());
         sys_finish<Sys_regs::BAD_MEM>();
     }
@@ -400,7 +400,7 @@ void Ec::sys_semctl()
     switch (r->flags() & 1) {
         case Sys_semctl::DN:
             if (sm->node_pd == &Pd::kern)
-                Gsi::unmask (sm->node_base);
+                Gsi::unmask (static_cast<unsigned>(sm->node_base));
             r->set_status (Sys_regs::SUCCESS);
             current->cont = ret_user_sysexit;
             sm->dn();
@@ -439,7 +439,7 @@ void Ec::sys_assign_gsi()
     Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(current->sys_regs());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#lx)", __func__, r->cpu());
+        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
@@ -456,7 +456,7 @@ void Ec::sys_assign_gsi()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_msi (Gsi::set (sm->node_base, r->cpu(), r->rid()));
+    r->set_msi (Gsi::set (static_cast<unsigned>(sm->node_base), r->cpu(), r->rid()));
 
     sys_finish<Sys_regs::SUCCESS>();
 }

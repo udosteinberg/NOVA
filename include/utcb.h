@@ -93,10 +93,7 @@ class Utcb
         }
 
         ALWAYS_INLINE
-        inline mword *ptr (unsigned n)
-        {
-            return mr + n;
-        }
+        inline mword *ptr (unsigned long n) { return mr + n; }
 
         ALWAYS_INLINE NONNULL
         inline void save (Utcb *dst, Mtd mtd)

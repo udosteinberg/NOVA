@@ -24,8 +24,6 @@
  */
 .section .init
 
-.globl                  __start_ap
-.globl                  __start_rlp
 .globl                  __start_bsp
 
 /*
@@ -59,70 +57,72 @@ __boot_gdt__:
                         mov     $STACK, %esp
 .endm
 
+.macro                  INIT_PAGING
+                        mov     $0x698, %edx
+                        mov     %edx, %cr4
+                        mov     $PDBR, %edx
+                        mov     %edx, %cr3
+                        mov     $0x8001002b, %edx
+                        mov     %edx, %cr0
+.endm
+
 /*
  * AP Startup Code
  */
 .code16
 
-__start_ap:             lgdtl   %cs:__gdt_desc - __start_ap
-                        mov     $1, %dx
-                        lmsw    %dx
-                        ljmpl   $SEL_KERN_CODE, $__start_rlp
+__start_ap:             INIT_PAGING
+                        lgdtl   %cs:__gdt_desc - __start_ap
+                        ljmpl   $SEL_KERN_CODE, $__start_all
 
 __gdt_desc:             .word   __boot_gdt__ - __boot_gdt - 1
                         .long   __boot_gdt
 
-.code32
-
-__start_rlp:            INIT_STATE
-
-                        xor     %edx, %edx
-1:                      pause
-                        xchg    %edx, boot_lock_p
-                        test    %edx, %edx
-                        jz      1b
-
-                        jmp     __start_all
-
 /*
  * BSP Startup Code
  */
-__start_bsp:            lgdt    __boot_gdt + 2
-                        ljmp    $SEL_KERN_CODE, $1f
+.code32
 
-1:                      INIT_STATE
+__start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
+                        mov     $__start_ap, %esi
+                        mov     $0x1000, %edi
+                        rep     movsb
 
-                        cmp     $0x2badb002, %eax
-                        jne     1f
-                        testb   $0x4, (%ebx)
-                        je      1f
-                        mov     0x10(%ebx), %eax
-                        call    cmdline
+                        mov     $0xe3, %eax
+                        mov     $PDBR, %edi
+1:                      stosl
+                        add     $0x400000, %eax
+                        cmp     $LOAD_E, %eax
+                        jb      1b
 
-1:                      movl    $0xe3, LVL2
                         mov     $(LINK_P + 0x1e3), %eax
-                        mov     $(LVL2 + LINK_ADDR >> 20), %edi
+                        mov     $(PDBR + (LINK_ADDR >> 20)), %edi
 1:                      stosl
                         add     $0x400000, %eax
                         cmp     $LINK_E, %eax
                         jb      1b
 
+                        INIT_PAGING
+                        lgdt    __boot_gdt + 2
+                        ljmp    $SEL_KERN_CODE, $__start_all
+
 /*
  * Common Startup Code
  */
-__start_all:            mov     $LVL2, %edx
-                        mov     %edx, %cr3
-                        mov     $0x698, %edx
-                        mov     %edx, %cr4
-                        mov     $0x8001002b, %edx
-                        mov     %edx, %cr0
+__start_all:            INIT_STATE
+                        test    %ebx, %ebx
+                        je      2f
 
-                        test    %eax, %eax
-                        je      1f
                         mov     %ebx, %eax
                         call    init
+                        jmp     3f
 
-1:                      call    kern_ptab_setup
+1:                      pause
+2:                      xchg    %ebx, boot_lock
+                        test    %ebx, %ebx
+                        je      1b
+
+3:                      call    kern_ptab_setup
                         jmp     1f
 
 .text

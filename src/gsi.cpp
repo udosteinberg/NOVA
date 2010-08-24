@@ -53,7 +53,7 @@ void Gsi::init()
     }
 }
 
-uint64 Gsi::set (unsigned long gsi, unsigned long cpu, unsigned rid)
+uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
 {
     assert (gsi < NUM_GSI);
 
@@ -69,7 +69,7 @@ uint64 Gsi::set (unsigned long gsi, unsigned long cpu, unsigned rid)
         ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
         rid = ioapic->get_rid();
     } else {
-        msi_addr = 0xfee00000 | (Dmar::ire() ? 3ul << 3 : cpu << 12);
+        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : cpu << 12);
         msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
     }
 
@@ -78,7 +78,7 @@ uint64 Gsi::set (unsigned long gsi, unsigned long cpu, unsigned rid)
     return static_cast<uint64>(msi_addr) << 32 | msi_data;
 }
 
-void Gsi::mask (unsigned long gsi)
+void Gsi::mask (unsigned gsi)
 {
     if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
         gsi_table[gsi].msk = 1;
@@ -86,7 +86,7 @@ void Gsi::mask (unsigned long gsi)
     }
 }
 
-void Gsi::unmask (unsigned long gsi)
+void Gsi::unmask (unsigned gsi)
 {
     if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
         gsi_table[gsi].msk = 0;

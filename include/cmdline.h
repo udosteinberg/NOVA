@@ -38,14 +38,6 @@ class Cmdline
         static bool novga;
         static bool novpid;
 
-        ALWAYS_INLINE
-        static inline void *phys_ptr (void const *ptr)
-        {
-            extern char OFFSET;
-            return reinterpret_cast<void *>(reinterpret_cast<mword>(ptr) -
-                                            reinterpret_cast<mword>(&OFFSET));
-        }
-
-        INIT REGPARM(1)
-        static void init (char *line) asm ("cmdline");
+        INIT
+        static void init (mword);
 };

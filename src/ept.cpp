@@ -24,11 +24,7 @@ Ept *Ept::walk (uint64 gpa, unsigned long l, bool d)
 {
     unsigned lev = max;
 
-    for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr())), lev--) {
-
-        e += gpa >> (lev * bpl + PAGE_BITS) & ((1ul << bpl) - 1);
-
-        assert (lev != max || e == this);
+    for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr())) + (gpa >> (--lev * bpl + PAGE_BITS) & ((1UL << bpl) - 1))) {
 
         if (lev == l)
             return e;
@@ -51,14 +47,14 @@ void Ept::update (uint64 gpa, mword o, uint64 hpa, mword a, mword t, bool d)
     trace (TRACE_EPT, "EPT:%#010lx GPA:%#010llx O:%#02lx HPA:%#010llx A:%#lx D:%u", Buddy::ptr_to_phys (this), gpa, o, hpa, a, d);
 
     unsigned long l = o / bpl;
-    unsigned long s = 1ul << (l * bpl + PAGE_BITS);
+    unsigned long s = 1UL << (l * bpl + PAGE_BITS);
 
     Ept *e = walk (gpa, l, d);
     assert (e);
 
     uint64 v = hpa | t << 3 | a | EPT_I | (l ? EPT_S : 0);
 
-    for (unsigned long i = 1ul << o % bpl; i; i--, e++, v += s) {
+    for (unsigned long i = 1UL << o % bpl; i; i--, e++, v += s) {
 
         assert (d || !e->present());
 

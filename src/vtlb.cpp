@@ -18,7 +18,6 @@
 
 #include "counter.h"
 #include "pd.h"
-#include "ptab.h"
 #include "regs.h"
 #include "vpid.h"
 #include "vtlb.h"
@@ -49,7 +48,7 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
 
     unsigned lev = levels;
 
-    for (Ptab e, *pte = reinterpret_cast<Ptab *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<Ptab *>(e.addr())) {
+    for (Hpt e, *pte = reinterpret_cast<Hpt *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<Hpt *>(e.addr())) {
 
         unsigned shift = --lev * bpl + PAGE_BITS;
         pte += virt >> shift & ((1UL << bpl) - 1);

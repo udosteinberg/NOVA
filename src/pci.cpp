@@ -30,13 +30,7 @@ Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr
 {
     Pci **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
-    Pd::kern.Space_mem::insert (hwdev_addr, 0,
-                                Ptab::Attribute (Ptab::ATTR_NOEXEC      |
-                                                 Ptab::ATTR_GLOBAL      |
-                                                 Ptab::ATTR_UNCACHEABLE |
-                                                 Ptab::ATTR_WRITABLE    |
-                                                 Ptab::ATTR_PRESENT),
-                                cfg_base + (rid << PAGE_BITS));
+    Pd::kern.Space_mem::insert (hwdev_addr, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, cfg_base + (rid << PAGE_BITS));
 }
 
 unsigned Pci::init (unsigned b, unsigned l)
@@ -49,7 +43,7 @@ unsigned Pci::init (unsigned b, unsigned l)
 
             Bdf bdf (b, d, f);
 
-            if (bdf.read<uint32>(0x0) == ~0ul)
+            if (bdf.read<uint32>(0x0) == 0xffffffff)
                 continue;
 
             new Pci (b, d, f, l);

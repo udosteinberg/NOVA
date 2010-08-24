@@ -18,7 +18,7 @@
 
 #include "cmdline.h"
 #include "console_serial.h"
-#include "ptab.h"
+#include "hpt.h"
 #include "x86.h"
 
 void Console_serial::init()
@@ -26,7 +26,7 @@ void Console_serial::init()
     if (!Cmdline::serial)
         return;
 
-    char *mem = static_cast<char *>(Ptab::master()->remap (0));
+    char *mem = static_cast<char *>(Hpt::remap (0));
     if (!(base = *reinterpret_cast<uint16 *>(mem + 0x400)) &&
         !(base = *reinterpret_cast<uint16 *>(mem + 0x402)))
         return;

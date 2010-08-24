@@ -55,7 +55,7 @@ class Sys_create_pd : public Sys_regs
         inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned long cpu() const { return esi & 0xfff; }
+        inline unsigned cpu() const { return esi & 0xfff; }
 
         ALWAYS_INLINE
         inline mword utcb() const { return esi & ~0xfff; }
@@ -77,7 +77,7 @@ class Sys_create_ec : public Sys_regs
         inline unsigned long ec() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned long cpu() const { return esi & 0xfff; }
+        inline unsigned cpu() const { return esi & 0xfff; }
 
         ALWAYS_INLINE
         inline mword utcb() const { return esi & ~0xfff; }
@@ -86,7 +86,7 @@ class Sys_create_ec : public Sys_regs
         inline mword esp() const { return ebx; }
 
         ALWAYS_INLINE
-        inline mword evt() const { return ebp; }
+        inline unsigned evt() const { return static_cast<unsigned>(ebp); }
 };
 
 class Sys_create_sc : public Sys_regs
@@ -188,10 +188,10 @@ class Sys_assign_gsi : public Sys_regs
         inline unsigned long sm() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned long cpu() const { return esi; }
+        inline unsigned cpu() const { return static_cast<unsigned>(esi); }
 
         ALWAYS_INLINE
-        inline unsigned long rid() const { return ebx; }
+        inline unsigned rid() const { return static_cast<unsigned>(ebx); }
 
         ALWAYS_INLINE
         inline void set_msi (uint64 val)

@@ -43,7 +43,7 @@ class Crd
         inline explicit Crd (mword v) : val (v) {}
 
         ALWAYS_INLINE
-        inline explicit Crd (Type t, mword b, unsigned o, unsigned a) : val (b << 12 | o << 7 | a << 2 | t) {}
+        inline explicit Crd (Type t, mword b, mword o, mword a) : val (b << 12 | o << 7 | a << 2 | t) {}
 
         ALWAYS_INLINE
         inline mword raw() const { return val; }

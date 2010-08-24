@@ -43,10 +43,10 @@ class Gsi
         INIT
         static void init();
 
-        static uint64 set (unsigned long, unsigned long = 0, unsigned = 0);
+        static uint64 set (unsigned, unsigned = 0, unsigned = 0);
 
-        static void mask (unsigned long);
-        static void unmask (unsigned long);
+        static void mask (unsigned);
+        static void unmask (unsigned);
 
         ALWAYS_INLINE
         static inline unsigned irq_to_gsi (unsigned irq)

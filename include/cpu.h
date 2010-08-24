@@ -172,9 +172,9 @@ class Cpu
             EFL_ID      = 1ul << 21             // 0x200000
         };
 
-        static unsigned long boot_lock      asm ("boot_lock");
-        static unsigned long boot_count;
-        static unsigned long online;
+        static unsigned boot_lock           asm ("boot_lock");
+        static unsigned boot_count;
+        static unsigned online;
 
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;

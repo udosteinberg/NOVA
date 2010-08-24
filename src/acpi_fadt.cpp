@@ -18,7 +18,6 @@
 
 #include "acpi.h"
 #include "acpi_fadt.h"
-#include "ptab.h"
 
 void Acpi_table_fadt::parse() const
 {

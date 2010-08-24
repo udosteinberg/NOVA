@@ -42,9 +42,9 @@ static inline void pause()
 ALWAYS_INLINE
 static inline uint64 rdtsc()
 {
-    uint64 val;
-    asm volatile ("rdtsc" : "=A" (val));
-    return val;
+    mword h, l;
+    asm volatile ("rdtsc" : "=a" (l), "=d" (h));
+    return static_cast<uint64>(h) << 32 | l;
 }
 
 ALWAYS_INLINE

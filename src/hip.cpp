@@ -16,11 +16,12 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "cmdline.h"
 #include "cpu.h"
 #include "hip.h"
+#include "hpt.h"
 #include "lapic.h"
 #include "multiboot.h"
-#include "ptab.h"
 #include "space_obj.h"
 
 mword Hip::root_addr;
@@ -44,9 +45,10 @@ void Hip::build (mword addr)
     h->cfg_page   = PAGE_SIZE;
     h->cfg_utcb   = PAGE_SIZE;
 
-    Multiboot *mbi = static_cast<Multiboot *>(Ptab::master()->remap (addr));
+    Multiboot *mbi = static_cast<Multiboot *>(Hpt::remap (addr));
 
     uint32 flags       = mbi->flags;
+    uint32 cmdline     = mbi->cmdline;
     uint32 mmap_addr   = mbi->mmap_addr;
     uint32 mmap_len    = mbi->mmap_len;
     uint32 mods_addr   = mbi->mods_addr;
@@ -60,6 +62,9 @@ void Hip::build (mword addr)
     if (flags & Multiboot::MODULES)
         add_mod (mem, mods_addr, mods_count);
 
+    if (flags & Multiboot::CMDLINE)
+        Cmdline::init (cmdline);
+
     add_mhv (mem);
 
     h->length = static_cast<uint16>(reinterpret_cast<mword>(mem) - reinterpret_cast<mword>(h));
@@ -67,7 +72,7 @@ void Hip::build (mword addr)
 
 void Hip::add_mem (Hip_mem *&mem, mword addr, size_t len)
 {
-    char *mmap_addr = static_cast<char *>(Ptab::master()->remap (addr));
+    char *mmap_addr = static_cast<char *>(Hpt::remap (addr));
 
     for (char *ptr = mmap_addr; ptr < mmap_addr + len; mem++) {
 
@@ -84,7 +89,7 @@ void Hip::add_mem (Hip_mem *&mem, mword addr, size_t len)
 
 void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
 {
-    Multiboot_module *mod = static_cast<Multiboot_module *>(Ptab::master()->remap (addr));
+    Multiboot_module *mod = static_cast<Multiboot_module *>(Hpt::remap (addr));
 
     if (count) {
         root_addr = mod->s_addr;
@@ -103,12 +108,12 @@ void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
 void Hip::add_mhv (Hip_mem *&mem)
 {
     mem->addr = LOAD_ADDR;
-    mem->size = reinterpret_cast<mword>(&LOAD_SIZE);
+    mem->size = reinterpret_cast<mword>(&LOAD_E) - mem->addr;
     mem->type = Hip_mem::HYPERVISOR;
     mem++;
 
     mem->addr = reinterpret_cast<mword>(&LINK_P);
-    mem->size = reinterpret_cast<mword>(&LINK_E) - reinterpret_cast<mword>(&LINK_P);
+    mem->size = reinterpret_cast<mword>(&LINK_E) - mem->addr;
     mem->type = Hip_mem::HYPERVISOR;
     mem++;
 }

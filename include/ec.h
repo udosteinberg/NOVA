@@ -37,8 +37,8 @@ class Ec : public Kobject, public Queue<Sc>
     friend class Queue<Ec>;
 
     private:
-        Cpu_regs    regs;
         void        (*cont)();
+        Cpu_regs    regs;
         Ec *        reply;
         Mtd         mtr;
         Utcb *      utcb;
@@ -48,8 +48,8 @@ class Ec : public Kobject, public Queue<Sc>
         Ec *        prev;
         Ec *        next;
         Fpu *       fpu;
-        mword const cpu;
-        mword const evt;
+        unsigned const cpu;
+        unsigned const evt;
 
         // EC Cache
         static Slab_cache cache;
@@ -118,8 +118,8 @@ class Ec : public Kobject, public Queue<Sc>
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, mword, Pd *, mword, mword, void (*)());            // Kernel EC
-        Ec (Pd *, mword, Pd *, mword, mword, mword, mword, bool);    // Regular EC
+        Ec (Pd *, mword, Pd *, unsigned, unsigned, void (*)());
+        Ec (Pd *, mword, Pd *, unsigned, mword, mword, unsigned, bool);
 
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)

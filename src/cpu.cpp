@@ -35,9 +35,9 @@ char const * const Cpu::vendor_string[] =
     "AuthenticAMD"
 };
 
-unsigned long   Cpu::boot_lock;
-unsigned long   Cpu::boot_count;
-unsigned long   Cpu::online;
+unsigned    Cpu::boot_lock;
+unsigned    Cpu::boot_count;
+unsigned    Cpu::online;
 
 // Order of these matters
 unsigned    Cpu::id;
@@ -165,18 +165,11 @@ void Cpu::init()
     // Initialize event counters
     Counter::init();
 
-    // Remember PDIR for this CPU
-    Pd::init_cpu_ptab (Ptab::current());
-
     Paddr phys;
-    Ptab::current()->lookup (CPULC_ADDR, phys);
-    Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0,
-                                Ptab::Attribute (Ptab::ATTR_NOEXEC   |
-                                                 Ptab::ATTR_GLOBAL   |
-                                                 Ptab::ATTR_WRITABLE |
-                                                 Ptab::ATTR_PRESENT), phys);
+    Pd::kern.Space_mem::loc[id] = Hpt (Hpt::current() | Hpt::HPT_P);
+    Pd::kern.Space_mem::loc[id].lookup (CPULC_ADDR, phys);
+    Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
 
-    // Initialize LAPIC
     Lapic::init();
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))

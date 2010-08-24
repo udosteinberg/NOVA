@@ -27,17 +27,17 @@
 #include "vtlb.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Ec::cache (sizeof (Ec), 8);
+Slab_cache Ec::cache (sizeof (Ec), 16);
 
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (p), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, unsigned e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (p), cpu (c), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
 }
 
-Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) : Kobject (own, sel, EC), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (own, sel, EC), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -59,15 +59,11 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
 
         utcb = new Utcb;
 
-        pd->Space_mem::insert (u, 0,
-                               Ptab::Attribute (Ptab::ATTR_USER |
-                                                Ptab::ATTR_WRITABLE |
-                                                Ptab::ATTR_PRESENT),
-                               Buddy::ptr_to_phys (utcb));
+        pd->Space_mem::insert (u, 0, Hpt::HPT_U | Hpt::HPT_W | Hpt::HPT_P, Buddy::ptr_to_phys (utcb));
 
         regs.dst_portal = NUM_EXC - 2;
 
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#lx UTCB:%#lx ESP:%lx EVT:%#lx W:%u)", this, p, c, u, s, e, w);
+        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x W:%u)", this, p, c, u, s, e, w);
 
     } else {
 
@@ -77,7 +73,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
                                   pd->Space_io::walk(),
-                                  Buddy::ptr_to_phys (pd->cpu_ptab (c)),
+                                  pd->loc[c].addr(),
                                   pd->ept.root());
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
@@ -88,7 +84,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, mword c, mword u, mword s, mword e, bool w) :
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
             regs.vmcb = new Vmcb (pd->Space_io::walk(),
-                                  Buddy::ptr_to_phys (pd->mst));
+                                  pd->hpt.addr());
             cont = send_msg<ret_user_vmrun>;
 
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
@@ -257,38 +253,38 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    Elf_eh *eh = reinterpret_cast<Elf_eh *>(reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr)));
-    if (!Hip::root_addr || *eh->ident != 0x464c457f)
+    Eh *e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
+    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_data != 1 || e->type != 2)
         die ("No ELF");
 
-    unsigned count    = eh->ph_count;
-    current->regs.eip = eh->entry;
-    current->regs.esp = LINK_ADDR - PAGE_SIZE;
+    unsigned count    = e->ph_count;
+    current->regs.eip = e->entry;
+    current->regs.esp = USER_ADDR - PAGE_SIZE;
 
-    Elf_ph *ph = reinterpret_cast<Elf_ph *>(reinterpret_cast<mword>(Ptab::current()->remap (Hip::root_addr + eh->ph_offset)));
+    Ph *p = static_cast<Ph *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
-    for (unsigned i = 0; i < count; i++, ph++) {
+    for (unsigned i = 0; i < count; i++, p++) {
 
-        if (ph->type == Elf_ph::PT_LOAD) {
+        if (p->type == Ph::PT_LOAD) {
 
-            unsigned attr = !!(ph->flags & Elf_ph::PF_R) << 0 |
-                            !!(ph->flags & Elf_ph::PF_W) << 1 |
-                            !!(ph->flags & Elf_ph::PF_X) << 2;
+            unsigned attr = !!(p->flags & Ph::PF_R) << 0 |
+                            !!(p->flags & Ph::PF_W) << 1 |
+                            !!(p->flags & Ph::PF_X) << 2;
 
-            if (ph->f_size != ph->m_size || ph->v_addr % PAGE_SIZE != ph->f_offs % PAGE_SIZE)
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
                 die ("Bad ELF");
 
-            mword p = align_dn (ph->f_offs + Hip::root_addr, PAGE_SIZE);
-            mword v = align_dn (ph->v_addr, PAGE_SIZE);
-            mword s = align_up (ph->f_size, PAGE_SIZE);
+            mword phys = align_dn (p->f_offs + Hip::root_addr, PAGE_SIZE);
+            mword virt = align_dn (p->v_addr, PAGE_SIZE);
+            mword size = align_up (p->f_size, PAGE_SIZE);
 
-            for (unsigned o; s; s -= 1UL << o, p += 1UL << o, v += 1UL << o)
-                Pd::current->delegate<Space_mem>(&Pd::kern, p >> PAGE_BITS, v >> PAGE_BITS, (o = min (max_order (p, s), max_order (v, s))) - PAGE_BITS, attr);
+            for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
+                Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = min (max_order (phys, size), max_order (virt, size))) - PAGE_BITS, attr);
         }
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (LINK_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);

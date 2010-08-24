@@ -20,6 +20,8 @@
 
 #include "acpi_table.h"
 
+#pragma pack(1)
+
 /*
  * Root System Description Table (5.2.7 and 5.2.8)
  */
@@ -41,3 +43,5 @@ class Acpi_table_rsdt : public Acpi_table
         INIT
         void parse (Paddr addr, size_t size) const;
 };
+
+#pragma pack()

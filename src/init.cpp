@@ -20,38 +20,31 @@
 #include "compiler.h"
 #include "gsi.h"
 #include "hip.h"
+#include "hpt.h"
 #include "idt.h"
 #include "keyb.h"
-#include "multiboot.h"
-#include "ptab.h"
 
 char const *version = "NOVA 0.3 (Cleetwood Cove)";
 
 extern "C" INIT
 mword kern_ptab_setup()
 {
-    Ptab *ptab = new Ptab;
+    Hpt hpt;
 
     // Allocate and map cpu page
-    ptab->update (CPULC_ADDR, 0,
-                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
-                  Ptab::Attribute (Ptab::ATTR_NOEXEC   |
-                                   Ptab::ATTR_GLOBAL   |
-                                   Ptab::ATTR_WRITABLE |
-                                   Ptab::ATTR_PRESENT));
+    hpt.update (CPULC_ADDR, 0,
+                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map kernel stack
-    ptab->update (KSTCK_ADDR, 0,
-                  Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
-                  Ptab::Attribute (Ptab::ATTR_NOEXEC   |
-                                   Ptab::ATTR_GLOBAL   |
-                                   Ptab::ATTR_WRITABLE |
-                                   Ptab::ATTR_PRESENT));
+    hpt.update (KSTCK_ADDR, 0,
+                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
-    ptab->sync_master_range (LINK_ADDR, LOCAL_SADDR);
+    hpt.sync_master_range (LINK_ADDR, LOCAL_SADDR);
 
-    return Buddy::ptr_to_phys (ptab);
+    return hpt.addr();
 }
 
 extern "C" INIT REGPARM (1)
@@ -63,8 +56,7 @@ void init (mword mbi)
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
 
-    extern char __start_ap, __start_rlp;
-    memcpy (reinterpret_cast<void *>(0x1000), &__start_ap, &__start_rlp - &__start_ap);
+    Hip::build (mbi);
 
     // Setup consoles
     serial.init();
@@ -72,8 +64,6 @@ void init (mword mbi)
 
      // Now we're ready to talk to the world
     printf ("\f%s: %s %s [%s]\n\n", version, __DATE__, __TIME__, COMPILER_STRING);
-
-    Hip::build (mbi);
 
     Idt::build();
     Gsi::setup();
