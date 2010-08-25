@@ -279,7 +279,7 @@ void Ec::sys_create_sc()
     Sc *sc = new Sc (Pd::current, r->sc(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
 
     if (!ec->set_sc (sc)) {
-        trace (TRACE_ERROR, "%s: Cannot attach SC", __func__);
+        trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
         delete sc;
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -313,6 +313,11 @@ void Ec::sys_create_pt()
     }
 
     Ec *ec = static_cast<Ec *>(obj);
+
+    if (ec->pd != Pd::current) {
+        trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
 
     Pt *pt = new Pt (Pd::current, r->pt(), ec, r->mtd(), r->eip());
     if (!Space_obj::insert_root (pt)) {
