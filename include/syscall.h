@@ -162,7 +162,7 @@ class Sys_semctl : public Sys_regs
         };
 
         ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 8 & 0xff; }
+        inline unsigned op() const { return eax >> 8 & 0x1; }
 
         ALWAYS_INLINE
         inline unsigned long sm() const { return edi; }

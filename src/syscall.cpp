@@ -395,23 +395,25 @@ void Ec::sys_semctl()
     Sys_semctl *r = static_cast<Sys_semctl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
-    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || (r->flags() & cap.acc()) != r->flags())) {
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || !(cap.prm() & 1U << r->op()))) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
     Sm *sm = static_cast<Sm *>(cap.obj());
 
-    switch (r->flags() & 1) {
+    switch (r->op()) {
+
+        case Sys_semctl::UP:
+            sm->up();
+            break;
+
         case Sys_semctl::DN:
             if (sm->node_pd == &Pd::kern)
                 Gsi::unmask (static_cast<unsigned>(sm->node_base));
             r->set_status (Sys_regs::SUCCESS);
             current->cont = ret_user_sysexit;
             sm->dn();
-            break;
-        case Sys_semctl::UP:
-            sm->up();
             break;
     }
 

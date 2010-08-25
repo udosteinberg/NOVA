@@ -38,5 +38,5 @@ class Capability
         inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~mask); }
 
         ALWAYS_INLINE
-        inline unsigned acc() const { return val & mask; }
+        inline unsigned prm() const { return val & mask; }
 };
