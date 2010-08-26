@@ -50,7 +50,7 @@ class Space_obj : public Space
         size_t lookup (mword, Capability &);
 
         ALWAYS_INLINE
-        inline Kobject *lookup_obj (mword addr, bool)
+        inline Kobject *lookup_obj (mword addr, bool = false)
         {
             Capability cap;
 

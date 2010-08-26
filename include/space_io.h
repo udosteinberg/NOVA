@@ -49,7 +49,7 @@ class Space_io : public Space
         Paddr walk (mword = 0);
 
         ALWAYS_INLINE
-        inline bool lookup_obj (mword, bool) const { return true; }
+        inline bool lookup_obj (mword, bool = false) const { return true; }
 
         void update (Mdb *, bool, mword, mword);
 

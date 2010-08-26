@@ -71,9 +71,9 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         template <typename>
         void revoke (mword, mword, mword, bool);
 
-        void delegate_item  (Pd *, Crd, Crd &, mword = 0);
-        void delegate_items (Pd *, Crd, mword *, mword *, unsigned long);
+        void xfer_items (Pd *, Crd, Xfer *, Xfer *, unsigned long);
 
+        void delegate_crd (Pd *, Crd, Crd &, mword = 0);
         void revoke_crd (Crd, bool);
         void lookup_crd (Crd &);
 

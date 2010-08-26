@@ -59,11 +59,11 @@ void Ec::delegate()
 
     bool user = C || dst->cont == ret_user_sysexit;
 
-    dst->pd->delegate_items (src->pd,
-                             user ? dst->utcb->crd : Crd (Crd::MEM, 0, Crd::whole, 0),
-                             src->utcb->ptr (ui),
-                             user ? dst->utcb->ptr (ui) : 0,
-                             ti);
+    dst->pd->xfer_items (src->pd,
+                         user ? dst->utcb->crd : Crd (Crd::MEM, 0, Crd::whole, 0),
+                         src->utcb->xfer (ui),
+                         user ? dst->utcb->xfer (ui) : 0,
+                         ti);
 
     F();
 }
@@ -223,7 +223,7 @@ void Ec::sys_create_pd()
     Space_obj::insert_root (sc);
 
     Crd crd = r->crd();
-    pd->delegate_item (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
+    pd->delegate_crd (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
     pd->insert_utcb (r->utcb());
 
     // Enqueue SC only after all the caps have been mapped

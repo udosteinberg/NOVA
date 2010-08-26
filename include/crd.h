@@ -31,7 +31,7 @@ class Crd
         {
             MEM = 1,
             IO  = 2,
-            OBJ = 3
+            OBJ = 3,
         };
 
         static unsigned const whole = 0x1f;
@@ -62,4 +62,26 @@ class Crd
 
         ALWAYS_INLINE
         inline mword base() const { return val >> 12; }
+};
+
+class Xfer : public Crd
+{
+    private:
+        mword val;
+
+    public:
+        enum Op
+        {
+            ID  = 0,
+            DEL = 1,
+        };
+
+        ALWAYS_INLINE
+        inline explicit Xfer (Op o, Crd c) : Crd (c), val (o) {}
+
+        ALWAYS_INLINE
+        inline Op op() const { return static_cast<Op>(val & 0x1); }
+
+        ALWAYS_INLINE
+        inline mword hotspot() const { return val >> 12; }
 };

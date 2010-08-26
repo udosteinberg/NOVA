@@ -77,7 +77,7 @@ class Utcb
             };
             mword mr[];
         };
-        mword item[];
+        mword x[];
 
     public:
         ALWAYS_INLINE
@@ -93,7 +93,7 @@ class Utcb
         }
 
         ALWAYS_INLINE
-        inline mword *ptr (unsigned long n) { return mr + n; }
+        inline Xfer *xfer (unsigned long n) { return reinterpret_cast<Xfer *>(mr + n); }
 
         ALWAYS_INLINE NONNULL
         inline void save (Utcb *dst, Mtd mtd)

@@ -60,7 +60,7 @@ class Space_mem : public Space
         }
 
         ALWAYS_INLINE
-        inline Paddr lookup_obj (mword addr, bool priv)
+        inline Paddr lookup_obj (mword addr, bool priv = false)
         {
             Paddr phys;
 
