@@ -155,14 +155,11 @@ class Sys_recall : public Sys_regs
 class Sys_semctl : public Sys_regs
 {
     public:
-        enum
-        {
-            UP,
-            DN
-        };
-
         ALWAYS_INLINE
         inline unsigned op() const { return eax >> 8 & 0x1; }
+
+        ALWAYS_INLINE
+        inline unsigned zc() const { return eax >> 9 & 0x1; }
 
         ALWAYS_INLINE
         inline unsigned long sm() const { return edi; }

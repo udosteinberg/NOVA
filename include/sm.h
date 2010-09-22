@@ -32,14 +32,14 @@ class Sm : public Kobject, public Queue<Ec>
         Sm (Pd *, mword, mword = 0);
 
         ALWAYS_INLINE
-        inline void dn()
+        inline void dn (bool zero)
         {
             Ec *e = Ec::current;
 
             {   Lock_guard <Spinlock> guard (lock);
 
                 if (counter) {
-                    counter--;
+                    counter = zero ? 0 : counter - 1;
                     return;
                 }
 

@@ -404,16 +404,16 @@ void Ec::sys_semctl()
 
     switch (r->op()) {
 
-        case Sys_semctl::UP:
+        case 0:
             sm->up();
             break;
 
-        case Sys_semctl::DN:
+        case 1:
             if (sm->node_pd == &Pd::kern)
                 Gsi::unmask (static_cast<unsigned>(sm->node_base));
             r->set_status (Sys_regs::SUCCESS);
             current->cont = ret_user_sysexit;
-            sm->dn();
+            sm->dn (r->zc());
             break;
     }
 
