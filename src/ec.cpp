@@ -32,12 +32,12 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (own), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (EC, own, sel), cont (f), utcb (0), pd (own), cpu (c), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (own, sel, EC), pd (own), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (EC, own, sel), pd (own), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);

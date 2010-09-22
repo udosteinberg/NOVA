@@ -24,7 +24,7 @@
 class Cpuset
 {
     private:
-        unsigned long val;
+        mword val;
 
     public:
         ALWAYS_INLINE

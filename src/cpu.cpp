@@ -35,11 +35,11 @@ char const * const Cpu::vendor_string[] =
     "AuthenticAMD"
 };
 
-unsigned    Cpu::boot_lock;
-unsigned    Cpu::boot_count;
-unsigned    Cpu::online;
+mword       Cpu::boot_lock;
+mword       Cpu::boot_count;
 
 // Order of these matters
+unsigned    Cpu::online;
 unsigned    Cpu::id;
 unsigned    Cpu::hazard;
 unsigned    Cpu::package;

@@ -32,7 +32,7 @@ void bootstrap()
     Sc::current = new Sc (&Pd::kern, 0, Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::sub (Cpu::boot_count, 1U); Cpu::boot_count; pause()) ;
+    for (Atomic::sub (Cpu::boot_count, 1UL); Cpu::boot_count; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 

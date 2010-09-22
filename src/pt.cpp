@@ -23,7 +23,7 @@
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pt::cache (sizeof (Pt), 32);
 
-Pt::Pt (Pd *own, mword sel, Ec *e, Mtd m, mword addr) : Kobject (own, sel, PT), ec (e), mtd (m), ip (addr)
+Pt::Pt (Pd *own, mword sel, Ec *e, Mtd m, mword addr) : Kobject (PT, own, sel), ec (e), mtd (m), ip (addr)
 {
     trace (TRACE_SYSCALL, "PT:%p created (EC:%p IP:%#lx)", this, e, ip);
 }

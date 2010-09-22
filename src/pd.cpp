@@ -26,9 +26,9 @@ Slab_cache Pd::cache (sizeof (Pd), 32);
 Pd *Pd::current;
 
 ALIGNED(32) Pd Pd::kern (&Pd::kern);
-ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC);
+ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC, perm);
 
-Pd::Pd (Pd *own) : Kobject (own, 0, PD)
+Pd::Pd (Pd *own) : Kobject (PD, own, 0)
 {
     hpt.set (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P);
 
@@ -214,31 +214,19 @@ void Pd::revoke_crd (Crd crd, bool self)
     Cpu::preempt_disable();
 }
 
-void Pd::lookup_crd (Crd &crd)
-{
-    mword b = crd.base();
-
-    Mdb *mdb = 0;
-
-    switch (crd.type()) {
-        case Crd::MEM: mdb = Space_mem::lookup_node (b); break;
-        case Crd::IO:  mdb = Space_io::lookup_node (b); break;
-        case Crd::OBJ: mdb = Space_obj::lookup_node (b); break;
-    }
-
-    crd = mdb ? Crd (crd.type(), mdb->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
-}
-
 void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
 {
     for (Crd crd; ti--; s--) {
 
-        Capability cap; Kobject *obj;
-
         switch (s->flags() & 1) {
 
             case 0:     // Translate
-                crd = s->type() != Crd::OBJ || s->order() || !src->Space_obj::lookup (s->base(), cap) || (obj = cap.obj())->type() == INVALID || obj->node_pd != this ? Crd (0) : Crd (Crd::OBJ, obj->node_base, obj->node_order, obj->node_attr);
+                Mdb *mdb, *node;
+                for (node = mdb = src->lookup_crd (*s); node; node = node->prnt)
+                    if (node->node_pd == this && node != mdb)
+                        break;
+
+                crd = node ? Crd (s->type(), mdb->node_phys - node->node_phys + node->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
                 break;
 
             case 1:     // Delegate

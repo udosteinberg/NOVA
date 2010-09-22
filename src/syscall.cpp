@@ -195,7 +195,7 @@ void Ec::sys_create_pd()
     }
     Pd *dst = static_cast<Pd *>(cap.obj());
 
-    Pd *pd = new Pd (dst, r->sel());
+    Pd *pd = new Pd (dst, r->sel(), cap.prm());
     if (!dst->Space_obj::insert_root (pd)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete pd;
@@ -361,7 +361,9 @@ void Ec::sys_lookup()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%#x B:%#lx", current, s->crd().type(), s->crd().base());
 
-    Pd::current->lookup_crd (s->crd());
+    Mdb *mdb = Pd::current->lookup_crd (s->crd());
+
+    s->crd() = mdb ? Crd (s->crd().type(), mdb->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
 
     sys_finish<Sys_regs::SUCCESS>();
 }

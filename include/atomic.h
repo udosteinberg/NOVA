@@ -27,7 +27,7 @@ class Atomic
         ALWAYS_INLINE
         static inline void add (T &val, T n)
         {
-            asm volatile ("lock; add %1, %0" : "+m" (val) : "ir" (n) : "cc");
+            asm volatile ("lock; add%z0 %1, %0" : "+m" (val) : "ir" (n) : "cc");
         }
 
         template <typename T>
@@ -35,7 +35,7 @@ class Atomic
         static inline bool sub (T &val, T n)
         {
             bool ret;
-            asm volatile ("lock; sub %2, %1; setz %0" : "=q" (ret), "+m" (val) : "ir" (n) : "cc");
+            asm volatile ("lock; sub%z1 %2, %1; setz %0" : "=q" (ret), "+m" (val) : "ir" (n) : "cc");
             return ret;
         }
 
@@ -45,9 +45,9 @@ class Atomic
         {
             bool ret;
             if (L)
-                asm volatile ("lock; btr %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+                asm volatile ("lock; btr%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             else
-                asm volatile ("      btr %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+                asm volatile ("      btr%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             return ret;
         }
 
@@ -57,9 +57,9 @@ class Atomic
         {
             bool ret;
             if (L)
-                asm volatile ("lock; bts %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+                asm volatile ("lock; bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             else
-                asm volatile ("      bts %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+                asm volatile ("      bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             return ret;
         }
 
@@ -89,17 +89,9 @@ class Atomic
         {
             bool ret;
             if (L)
-                asm volatile ("lock; cmpxchg %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
+                asm volatile ("lock; cmpxchg%z1 %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
             else
-                asm volatile ("      cmpxchg %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
+                asm volatile ("      cmpxchg%z1 %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
             return ret;
-        }
-
-        template <typename T>
-        ALWAYS_INLINE
-        static inline T exchange (T *ptr, T n)
-        {
-            asm volatile ("xchg %1, %0" : "+m" (*ptr), "+r" (n) : : "cc");
-            return n;
         }
 };

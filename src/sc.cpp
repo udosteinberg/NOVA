@@ -34,7 +34,7 @@ Sc *Sc::list[Sc::priorities];
 
 unsigned long Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, Ec *o, unsigned c, mword p, mword q) : Kobject (own, sel, SC), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *o, unsigned c, mword p, mword q) : Kobject (SC, own, sel), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#lx Q:%#lx)", this, o, c, p, q);
 }

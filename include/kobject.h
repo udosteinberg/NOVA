@@ -42,12 +42,12 @@ class Kobject : public Mdb
             INVALID,
         };
 
-        explicit Kobject (Pd *pd, mword b, Type t) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, perm), objtype (t), refcount (1) {}
+        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, a), objtype (t), refcount (1) {}
 
     public:
         static mword const perm = 0x1f;
 
-        Type type() const { return EXPECT_TRUE (this) ? Type (objtype) : INVALID ; }
+        Type type() const { return EXPECT_TRUE (this) ? Type (objtype) : INVALID; }
 
         ALWAYS_INLINE
         inline bool add_ref()

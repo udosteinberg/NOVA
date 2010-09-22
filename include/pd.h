@@ -43,7 +43,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         INIT
         Pd (Pd *);
 
-        Pd (Pd *own, mword sel) : Kobject (own, sel, PD) {}
+        Pd (Pd *own, mword sel, mword a) : Kobject (PD, own, sel, a) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -65,6 +65,18 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
             return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
 
+        ALWAYS_INLINE
+        inline Mdb *lookup_crd (Crd crd)
+        {
+            switch (crd.type()) {
+                case Crd::MEM:  return Space_mem::lookup_node (crd.base());
+                case Crd::IO:   return Space_io::lookup_node (crd.base());
+                case Crd::OBJ:  return Space_obj::lookup_node (crd.base());
+            }
+
+            return 0;
+        }
+
         template <typename>
         void delegate (Pd *, mword, mword, mword, mword, mword = 0);
 
@@ -75,7 +87,6 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
         void delegate_crd (Pd *, Crd, Crd &, mword = 0, mword = 0);
         void revoke_crd (Crd, bool);
-        void lookup_crd (Crd &);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
