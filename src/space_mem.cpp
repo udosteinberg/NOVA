@@ -39,38 +39,43 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::update (Mdb *mdb, Paddr phys, mword r, mword s)
+void Space_mem::update (Mdb *mdb, mword r)
 {
     assert (this == mdb->node_pd && this != &Pd::kern);
 
     Lock_guard <Spinlock> guard (mdb->node_lock);
 
+    Paddr p = mdb->node_phys << PAGE_BITS;
     mword b = mdb->node_base << PAGE_BITS;
     mword o = mdb->node_order;
     mword a = mdb->node_attr & ~r;
+    mword s = mdb->node_sub;
 
     if (s & 1 && Dpt::ord != ~0UL) {
         mword ord = min (o, Dpt::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            dpt.update (b + i * (1UL << (Dpt::ord + PAGE_BITS)), ord, phys + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r);
+            dpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r);
     }
 
-    if (s & 2 && Ept::ord != ~0UL) {
+    if (s & 2) {
         mword ord = min (o, Ept::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            ept.update (b + i * (1UL << (Ept::ord + PAGE_BITS)), ord, phys + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, r);
-        if (r)
+            ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, r);
+        if (r && Ept::ord != ~0UL)
             gtlb.merge (cpus);
     }
 
-    bool l = hpt.update (b, o, phys, Hpt::hw_attr (a), r);
+    if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
+        return;
+
+    bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r);
 
     if (r) {
 
         if (l)
             for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
                 if (loc[i].addr())
-                    loc[i].update (b, o, phys, Hpt::hw_attr (a), r);
+                    loc[i].update (b, o, p, Hpt::hw_attr (a), r);
 
         htlb.merge (cpus);
     }
@@ -115,7 +120,7 @@ void Space_mem::insert_root (mword base, size_t size, mword attr)
         size_t s = frag;
 
         for (unsigned long o; s; s -= 1UL << o, base += 1UL << o)
-            insert_node (new Mdb (&Pd::kern, base >> PAGE_BITS, (o = max_order (base, s)) - PAGE_BITS, attr, type));
+            insert_node (new Mdb (&Pd::kern, base >> PAGE_BITS, base >> PAGE_BITS, (o = max_order (base, s)) - PAGE_BITS, attr, type));
     }
 }
 
@@ -124,7 +129,7 @@ bool Space_mem::insert_utcb (mword b)
     if (!b)
         return true;
 
-    Mdb *mdb = new Mdb (&Pd::kern, b >> PAGE_BITS, 0);
+    Mdb *mdb = new Mdb (&Pd::kern, 0, b >> PAGE_BITS, 0);
 
     if (insert_node (mdb))
         return true;

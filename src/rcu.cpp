@@ -37,8 +37,8 @@ INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::done;
 
 void Rcu::invoke_batch()
 {
-    for (Rcu_elem *e = done.head, *next; e; e = next) {
-        next = e->next;
+    for (Rcu_elem *e = done.head, *n; e; e = n) {
+        n = e->next;
         (e->func)(e);
     }
 

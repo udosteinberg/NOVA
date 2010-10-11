@@ -68,3 +68,23 @@ void Ept::update (uint64 gpa, mword o, uint64 hpa, mword a, mword t, bool d)
                s);
     }
 }
+
+size_t Ept::lookup (uint64 gpa, Paddr &hpa)
+{
+    unsigned lev = max;
+
+    for (Ept *e = this;; e = static_cast<Ept *>(Buddy::phys_to_ptr (e->addr())) + (gpa >> (--lev * bpl + PAGE_BITS) & ((1UL << bpl) - 1))) {
+
+        if (EXPECT_FALSE (!e->present()))
+            return 0;
+
+        if (EXPECT_FALSE (lev && !e->super()))
+            continue;
+
+        size_t size = 1UL << (lev * bpl + PAGE_BITS);
+
+        hpa = static_cast<Paddr>(e->addr() | (gpa & (size - 1)));
+
+        return size;
+    }
+}

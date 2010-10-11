@@ -36,7 +36,7 @@ bool Mdb::insert_node (Mdb *p, mword a)
     if (!(node_attr = p->node_attr & a))
         return false;
 
-    prev = p;
+    prev = prnt = p;
     next = p->next;
     dpth = p->dpth + 1;
     p->next = p->next->prev = this;

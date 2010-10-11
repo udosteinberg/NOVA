@@ -59,29 +59,12 @@ class Space_mem : public Space
             hpt.update (virt, o, phys, attr);
         }
 
-        ALWAYS_INLINE
-        inline Paddr lookup_obj (mword addr, bool priv = false)
-        {
-            Paddr phys;
-
-            addr <<= PAGE_BITS;
-
-            if (priv)
-                phys = addr;
-            else {
-                size_t size = lookup (addr, phys);
-                assert (size);
-            }
-
-            return phys;
-        }
-
         INIT
         void insert_root (mword, size_t, mword);
 
         bool insert_utcb (mword);
 
-        void update (Mdb *, Paddr, mword, mword);
+        void update (Mdb *, mword = 0);
 
         static void shootdown();
 

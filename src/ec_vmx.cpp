@@ -124,7 +124,7 @@ void Ec::vmx_cr()
 
 void Ec::handle_vmx()
 {
-    Cpu::hazard |= HZD_DS_ES | HZD_TR;
+    Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
 
     mword reason = Vmcs::read (Vmcs::EXI_REASON) & 0xff;
 

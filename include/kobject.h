@@ -42,7 +42,7 @@ class Kobject : public Mdb
             SM
         };
 
-        explicit Kobject (Pd *pd, mword b, uint8 t) : Mdb (pd, b, 0, 7), objtype (t), refcount (1) {}
+        explicit Kobject (Pd *pd, mword b, uint8 t) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, 7), objtype (t), refcount (1) {}
 
     public:
         unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }

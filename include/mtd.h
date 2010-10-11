@@ -23,10 +23,9 @@
 
 class Mtd
 {
-    private:
+    public:
         mword val;
 
-    public:
         enum Item
         {
             // IPC
@@ -53,29 +52,5 @@ class Mtd
         };
 
         ALWAYS_INLINE
-        inline explicit Mtd() {}
-
-        ALWAYS_INLINE
         inline explicit Mtd (mword v) : val (v) {}
-
-        ALWAYS_INLINE
-        inline explicit Mtd (mword t, mword u) : val (t << 23 | u) {}
-
-        ALWAYS_INLINE
-        inline bool xfer (Item item) const
-        {
-            return val & item;
-        }
-
-        ALWAYS_INLINE
-        inline unsigned long ui() const
-        {
-            return val & 0x3ff;
-        }
-
-        ALWAYS_INLINE
-        inline unsigned long ti() const
-        {
-            return val >> 23;
-        }
 };

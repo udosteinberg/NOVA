@@ -99,22 +99,6 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         Sc::schedule();
     }
 
-    if (hzd & HZD_DS_ES) {
-        Cpu::hazard &= ~HZD_DS_ES;
-        asm volatile ("mov %0, %%ds; mov %0, %%es" : : "r" (SEL_USER_DATA));
-    }
-
-    if (hzd & HZD_TSC) {
-        current->regs.clr_hazard (HZD_TSC);
-
-        if (func == ret_user_vmresume) {
-            current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::TSC_OFFSET,    static_cast<mword>(current->regs.tsc_offset));
-            Vmcs::write (Vmcs::TSC_OFFSET_HI, static_cast<mword>(current->regs.tsc_offset >> 32));
-        } else
-            current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
-    }
-
     if (hzd & HZD_RECALL) {
         current->regs.clr_hazard (HZD_RECALL);
 
@@ -141,11 +125,31 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->regs.dst_portal = NUM_EXC - 1;
         send_msg<ret_user_iret>();
     }
+
+    if (hzd & HZD_TSC) {
+        current->regs.clr_hazard (HZD_TSC);
+
+        if (func == ret_user_vmresume) {
+            current->regs.vmcs->make_current();
+            Vmcs::write (Vmcs::TSC_OFFSET,    static_cast<mword>(current->regs.tsc_offset));
+            Vmcs::write (Vmcs::TSC_OFFSET_HI, static_cast<mword>(current->regs.tsc_offset >> 32));
+        } else
+            current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
+    }
+
+    if (hzd & HZD_DS_ES) {
+        Cpu::hazard &= ~HZD_DS_ES;
+        asm volatile ("mov %0, %%ds; mov %0, %%es" : : "r" (SEL_USER_DATA));
+    }
+
+    if (hzd & HZD_FPU)
+        if (current != fpowner)
+            Fpu::disable();
 }
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_SCHED | HZD_DS_ES);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_FPU | HZD_DS_ES | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
@@ -161,7 +165,7 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     // No need to check HZD_DS_ES because IRET will reload both anyway
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 

@@ -32,10 +32,10 @@ class Space
     public:
         Space() : tree (0) {}
 
-        Mdb *lookup_node (mword idx)
+        Mdb *lookup_node (mword idx, bool next = false)
         {
             Lock_guard <Spinlock> guard (lock);
-            return Mdb::lookup (tree, idx);
+            return Mdb::lookup (tree, idx, next);
         }
 
         bool insert_node (Mdb *node)

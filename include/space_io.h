@@ -48,10 +48,7 @@ class Space_io : public Space
     public:
         Paddr walk (mword = 0);
 
-        ALWAYS_INLINE
-        inline bool lookup_obj (mword, bool = false) const { return true; }
-
-        void update (Mdb *, bool, mword, mword);
+        void update (Mdb *, mword = 0);
 
         static void page_fault (mword, mword);
 

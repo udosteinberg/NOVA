@@ -46,17 +46,19 @@ class Mdb : public Avl, public Rcu_elem
         Spinlock    node_lock;
         Mdb *       prev;
         Mdb *       next;
+        Mdb *       prnt;
         unsigned    dpth;
         Pd *  const node_pd;
+        mword const node_phys;
         mword const node_base;
         mword const node_order;
         mword       node_attr;
         mword const node_type;
         mword const node_sub;
 
-        explicit Mdb (Pd *p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), node_pd (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
+        explicit Mdb (Pd *pd, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
 
-        static Mdb *lookup (Avl *tree, mword base)
+        static Mdb *lookup (Avl *tree, mword base, bool next)
         {
             Mdb *n = 0;
             bool d;
@@ -66,7 +68,7 @@ class Mdb : public Avl, public Rcu_elem
                 if ((m->node_base ^ base) >> m->node_order == 0)
                     return m;
 
-                if ((d = base > m->node_base) == 0)
+                if ((d = base > m->node_base) == 0 && next)
                     n = m;
             }
 

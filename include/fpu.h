@@ -20,6 +20,7 @@
 
 #include "compiler.h"
 #include "cpu.h"
+#include "hazards.h"
 #include "slab.h"
 #include "x86.h"
 
@@ -31,8 +32,6 @@ class Fpu
         static Slab_cache cache;
 
     public:
-        static bool enabled CPULOCAL;
-
         ALWAYS_INLINE
         inline void save() { asm volatile ("fxsave %0" : "=m" (*data)); }
 
@@ -43,10 +42,10 @@ class Fpu
         static inline void init() { asm volatile ("fninit"); }
 
         ALWAYS_INLINE
-        static inline void enable() { asm volatile ("clts"); enabled = true; }
+        static inline void enable() { asm volatile ("clts"); Cpu::hazard |= HZD_FPU; }
 
         ALWAYS_INLINE
-        static inline void disable() { set_cr0 (get_cr0() | Cpu::CR0_TS); enabled = false; }
+        static inline void disable() { set_cr0 (get_cr0() | Cpu::CR0_TS); Cpu::hazard &= ~HZD_FPU; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

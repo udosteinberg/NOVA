@@ -189,7 +189,8 @@ entry_sysenter:         cld
                         lea     -44(%esp), %esp
                         pusha
                         mov     $(KSTCK_ADDR + PAGE_SIZE), %esp
-                        jmp     sys_handler
+                        and     $0xf, %eax
+                        jmp     *syscall(,%eax,4)
 
 /*
  * VMX Entry

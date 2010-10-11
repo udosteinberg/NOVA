@@ -54,8 +54,8 @@ void Ec::delegate()
     Ec *src = C ? ec : current;
     Ec *dst = C ? current : ec;
 
-    unsigned long ui = current->mtr.ui();
-    unsigned long ti = current->mtr.ti();
+    unsigned long ui = src->utcb->ui;
+    unsigned long ti = src->utcb->ti;
 
     bool user = C || dst->cont == ret_user_sysexit;
 
@@ -86,7 +86,7 @@ void Ec::send_msg()
     if (EXPECT_TRUE (!ec->cont)) {
         current->cont = C;
         current->set_partner (ec);
-        ec->mtr  = pt->mtd;
+        current->regs.mtd = pt->mtd.val;
         ec->cont = recv_msg;
         ec->regs.set_pt (pt->node_base);
         ec->regs.set_ip (pt->ip);
@@ -113,7 +113,6 @@ void Ec::sys_call()
     if (EXPECT_TRUE (!ec->cont)) {
         current->cont = ret_user_sysexit;
         current->set_partner (ec);
-        ec->mtr  = s->mtd();
         ec->cont = recv_msg;
         ec->regs.set_ip (pt->ip);
         ec->regs.set_pt (pt->node_base);
@@ -131,17 +130,17 @@ void Ec::recv_msg()
     Ec *ec = current->reply;
 
     if (EXPECT_TRUE (ec->cont == ret_user_sysexit)) {
-        ec->utcb->save (current->utcb, current->mtr);
-        if (EXPECT_FALSE (current->mtr.ti()))
+        ec->utcb->save (current->utcb);
+        if (EXPECT_FALSE (ec->utcb->ti))
             delegate<true, ret_user_sysexit>();
     }
 
     else if (ec->cont == ret_user_iret)
-        current->utcb->load_exc (&ec->regs, current->mtr);
+        current->utcb->load_exc (&ec->regs);
     else if (ec->cont == ret_user_vmresume)
-        current->utcb->load_vmx (&ec->regs, current->mtr);
+        current->utcb->load_vmx (&ec->regs);
     else if (ec->cont == ret_user_vmrun)
-        current->utcb->load_svm (&ec->regs, current->mtr);
+        current->utcb->load_svm (&ec->regs);
 
     ret_user_sysexit();
 }
@@ -152,44 +151,38 @@ void Ec::wait_msg()
 
     current->cont = static_cast<void (*)()>(0);
 
-    if (ec->clr_partner())
-        ec->make_current();
-    else
-        Ec::activate (Sc::current->ec());
+    if (EXPECT_TRUE (ec)) {
+        if (ec->clr_partner())
+            ec->make_current();
+        else
+            Ec::activate (Sc::current->ec());
+    }
 
-    Sc::schedule();
+    Sc::schedule (true);
 }
 
 void Ec::sys_reply()
 {
-    Sys_reply *s = static_cast<Sys_reply *>(current->sys_regs());
-
     Ec *ec = current->reply;
 
-    if (EXPECT_FALSE (!ec)) {
-        current->cont = static_cast<void (*)()>(0);
-        Sc::schedule (true);
+    if (EXPECT_TRUE (ec)) {
+
+        Utcb *src = current->utcb;
+
+        if (EXPECT_TRUE (ec->cont == ret_user_sysexit))
+            src->save (ec->utcb);
+        else if (ec->cont == ret_user_iret)
+            src->save_exc (&ec->regs);
+        else if (ec->cont == ret_user_vmresume)
+            src->save_vmx (&ec->regs);
+        else if (ec->cont == ret_user_vmrun)
+            src->save_svm (&ec->regs);
+
+        if (EXPECT_FALSE (src->ti))
+            delegate<false, wait_msg>();
     }
 
-    Utcb *src = current->utcb;
-
-    unsigned long ui = s->mtd().ui();
-
-    if (EXPECT_TRUE (ec->cont == ret_user_sysexit))
-        src->save (ec->utcb, s->mtd());
-    else if (ec->cont == ret_user_iret)
-        ui = src->save_exc (&ec->regs, s->mtd());
-    else if (ec->cont == ret_user_vmresume)
-        ui = src->save_vmx (&ec->regs, s->mtd());
-    else if (ec->cont == ret_user_vmrun)
-        ui = src->save_svm (&ec->regs, s->mtd());
-
-    unsigned long ti = s->mtd().ti();
-    if (EXPECT_TRUE (!ti))
-        wait_msg();
-
-    current->mtr = Mtd (ti, ui);
-    delegate<false, wait_msg>();
+    wait_msg();
 }
 
 void Ec::sys_create_pd()
@@ -468,38 +461,26 @@ void Ec::sys_assign_gsi()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
-void Ec::handle_sys (uint8 number)
+extern "C"
+void (*const syscall[])() =
 {
-    // This is actually faster than a switch
-    if (EXPECT_TRUE (number == Sys_regs::CALL))
-        sys_call();
-    if (EXPECT_TRUE (number == Sys_regs::REPLY))
-        sys_reply();
-    if (EXPECT_TRUE (number == Sys_regs::CREATE_PD))
-        sys_create_pd();
-    if (EXPECT_TRUE (number == Sys_regs::CREATE_EC))
-        sys_create_ec();
-    if (EXPECT_TRUE (number == Sys_regs::CREATE_SC))
-        sys_create_sc();
-    if (EXPECT_TRUE (number == Sys_regs::CREATE_PT))
-        sys_create_pt();
-    if (EXPECT_TRUE (number == Sys_regs::CREATE_SM))
-        sys_create_sm();
-    if (EXPECT_TRUE (number == Sys_regs::REVOKE))
-        sys_revoke();
-    if (EXPECT_TRUE (number == Sys_regs::LOOKUP))
-        sys_lookup();
-    if (EXPECT_TRUE (number == Sys_regs::RECALL))
-        sys_recall();
-    if (EXPECT_TRUE (number == Sys_regs::SEMCTL))
-        sys_semctl();
-    if (EXPECT_TRUE (number == Sys_regs::ASSIGN_PCI))
-        sys_assign_pci();
-    if (EXPECT_TRUE (number == Sys_regs::ASSIGN_GSI))
-        sys_assign_gsi();
-
-    sys_finish<Sys_regs::BAD_SYS>();
-}
+    &Ec::sys_call,
+    &Ec::sys_reply,
+    &Ec::sys_create_pd,
+    &Ec::sys_create_ec,
+    &Ec::sys_create_sc,
+    &Ec::sys_create_pt,
+    &Ec::sys_create_sm,
+    &Ec::sys_revoke,
+    &Ec::sys_lookup,
+    &Ec::sys_recall,
+    &Ec::sys_semctl,
+    &Ec::sys_assign_pci,
+    &Ec::sys_assign_gsi,
+    &Ec::sys_finish<Sys_regs::BAD_SYS>,
+    &Ec::sys_finish<Sys_regs::BAD_SYS>,
+    &Ec::sys_finish<Sys_regs::BAD_SYS>,
+};
 
 template void Ec::send_msg<Ec::ret_user_vmresume>();
 template void Ec::send_msg<Ec::ret_user_vmrun>();

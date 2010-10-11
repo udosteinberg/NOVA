@@ -25,14 +25,10 @@ void Ec::handle_exc_nm()
            fpowner, fpowner && fpowner->utcb ? 'T' : 'V',
            current,            current->utcb ? 'T' : 'V');
 
-    assert (!Fpu::enabled);
-
     Fpu::enable();
 
-    if (current == fpowner) {
-        assert (fpowner->utcb);     // Should never happen for a vCPU
+    if (current == fpowner)
         return;
-    }
 
     if (fpowner) {
 

@@ -36,16 +36,6 @@ class Sys_call : public Sys_regs
 
         ALWAYS_INLINE
         inline unsigned long pt() const { return edi; }
-
-        ALWAYS_INLINE
-        inline Mtd mtd() const { return Mtd (esi); }
-};
-
-class Sys_reply : public Sys_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline Mtd mtd() const { return Mtd (esi); }
 };
 
 class Sys_create_pd : public Sys_regs

@@ -178,6 +178,7 @@ class Cpu_regs : public Exc_regs
 
     public:
         uint64  tsc_offset;
+        mword   mtd;
 
         ALWAYS_INLINE
         inline mword hazard() const { return hzd; }

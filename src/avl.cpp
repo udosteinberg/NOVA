@@ -94,8 +94,8 @@ bool Avl::insert (Avl **tree, Avl *node)
     return true;
 }
 
-bool Avl::remove (Avl **tree, Avl *node) {
-
+bool Avl::remove (Avl **tree, Avl *node)
+{
     Avl **p = tree, **item = 0;
     bool d;
 
@@ -147,7 +147,6 @@ bool Avl::remove (Avl **tree, Avl *node) {
                 item = (*p)->ptr + d;
         }
     }
-
 
     Avl *n = *tree;
 

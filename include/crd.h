@@ -70,17 +70,11 @@ class Xfer : public Crd
         mword val;
 
     public:
-        enum Op
-        {
-            ID  = 0,
-            DEL = 1,
-        };
+        ALWAYS_INLINE
+        inline explicit Xfer (Crd c, mword v) : Crd (c), val (v) {}
 
         ALWAYS_INLINE
-        inline explicit Xfer (Op o, Crd c) : Crd (c), val (o) {}
-
-        ALWAYS_INLINE
-        inline Op op() const { return static_cast<Op>(val & 0x1); }
+        inline mword flags() const { return val & 0xfff; }
 
         ALWAYS_INLINE
         inline mword hotspot() const { return val >> 12; }

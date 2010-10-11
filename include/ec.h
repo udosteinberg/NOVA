@@ -40,7 +40,6 @@ class Ec : public Kobject, public Queue<Sc>
         void        (*cont)();
         Cpu_regs    regs;
         Ec *        reply;
-        Mtd         mtr;
         Utcb *      utcb;
         Refptr<Pd>  pd;
         Sc *        sc;
@@ -53,9 +52,6 @@ class Ec : public Kobject, public Queue<Sc>
 
         // EC Cache
         static Slab_cache cache;
-
-        HOT NORETURN REGPARM (1)
-        static void handle_sys (uint8) asm ("sys_handler");
 
         REGPARM (1)
         static void handle_exc (Exc_regs *) asm ("exc_handler");
@@ -140,9 +136,6 @@ class Ec : public Kobject, public Queue<Sc>
         inline void make_current()
         {
             current = this;
-
-            if (Fpu::enabled)
-                Fpu::disable();
 
             Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
 

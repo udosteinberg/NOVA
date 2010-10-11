@@ -55,13 +55,13 @@ template <typename S>
 void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord, mword const attr, mword const sub)
 {
     Mdb *mdb;
-    for (mword addr = snd_base; (mdb = snd->S::lookup_node (addr)); addr = mdb->node_base + (1UL << mdb->node_order)) {
+    for (mword addr = snd_base; (mdb = snd->S::lookup_node (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
 
         mword o, b = snd_base;
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
             break;
 
-        Mdb *node = new Mdb (this, b - snd_base + rcv_base, o, 0, mdb->node_type, sub);
+        Mdb *node = new Mdb (this, b - mdb->node_base + mdb->node_phys, b - snd_base + rcv_base, o, 0, mdb->node_type, sub);
 
         if (!S::insert_node (node)) {
             delete node;
@@ -74,7 +74,7 @@ void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
             continue;
         }
 
-        S::update (node, snd->S::lookup_obj (b, snd == &kern), 0, sub);
+        S::update (node);
     }
 }
 
@@ -82,7 +82,7 @@ template <typename S>
 void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
 {
     Mdb *mdb;
-    for (mword addr = base; (mdb = S::lookup_node (addr)); addr = mdb->node_base + (1UL << mdb->node_order)) {
+    for (mword addr = base; (mdb = S::lookup_node (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
 
         mword o, b = base;
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
@@ -95,7 +95,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
         for (Mdb *succ;; node = succ) {
 
             if ((node->node_attr & attr) && (self || node != mdb)) {
-                node->node_pd->S::update (node, node->node_pd->S::lookup_obj (node->node_base), attr, node->node_sub);
+                node->node_pd->S::update (node, attr);
                 node->demote_node (attr);
             }
 
@@ -168,19 +168,19 @@ void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword hot)
 
         case Crd::MEM:
             o = clamp (sb, rb, so, ro, hot);
-            trace (TRACE_DEL, "DEL MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, sb, rb, o, a);
+            trace (TRACE_DEL, "DEL MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, sb, rb, o, a);
             delegate<Space_mem>(pd, sb, rb, o, a, snd.sub());
             break;
 
         case Crd::IO:
             o = clamp (sb, rb, so, ro);
-            trace (TRACE_DEL, "DEL I/O PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, rb, rb, o, a);
+            trace (TRACE_DEL, "DEL I/O PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, rb, rb, o, a);
             delegate<Space_io>(pd, rb, rb, o, a);
             break;
 
         case Crd::OBJ:
             o = clamp (sb, rb, so, ro, hot);
-            trace (TRACE_DEL, "DEL OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", current, this, sb, rb, o, a);
+            trace (TRACE_DEL, "DEL OBJ PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, sb, rb, o, a);
             delegate<Space_obj>(pd, sb, rb, o, a);
             break;
     }
@@ -226,30 +226,27 @@ void Pd::lookup_crd (Crd &crd)
         case Crd::OBJ: mdb = Space_obj::lookup_node (b); break;
     }
 
-    crd = !mdb || clamp (mdb->node_base, b, mdb->node_order, 0) == ~0UL ? Crd (0) : Crd (crd.type(), mdb->node_base, mdb->node_order, mdb->node_attr);
+    crd = mdb ? Crd (crd.type(), mdb->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
 }
 
 void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
 {
-    if (this == &root && this == src)
-        src = &kern;
-
     for (Crd crd; ti--; s++) {
 
         Capability cap; Kobject *obj;
 
-        switch (s->op()) {
+        switch (s->flags() & 1) {
 
-            case Xfer::ID:
+            case 0:     // Translate
                 crd = s->type() != Crd::OBJ || s->order() || !src->Space_obj::lookup (s->base(), cap) || (obj = cap.obj())->type() == INVALID || obj->node_pd != this ? Crd (0) : Crd (Crd::OBJ, obj->node_base, obj->node_order, obj->node_attr);
                 break;
 
-            case Xfer::DEL:
-                delegate_crd (src, rcv, crd = *s, s->hotspot());
+            case 1:     // Delegate
+                delegate_crd (src == &root && s->flags() & 0x800 ? &kern : src, rcv, crd = *s, s->hotspot());
                 break;
         };
 
         if (d)
-            *d++ = Xfer (s->op(), crd);
+            *d++ = Xfer (crd, s->flags());
     }
 }

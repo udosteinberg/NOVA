@@ -93,8 +93,7 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
 
 Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 {
-    mword attr = ATTR_USER | ATTR_WRITABLE | ATTR_PRESENT;
-    mword phys;
+    mword phys, attr = ATTR_USER | ATTR_WRITABLE | ATTR_PRESENT;
     Paddr host;
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
@@ -106,7 +105,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
         return GLA_GPA;
     }
 
-    size_t hsize = Pd::current->Space_mem::lookup (phys, host);
+    size_t hsize = Pd::current->ept.lookup (phys, host);
     if (EXPECT_FALSE (!hsize)) {
         regs->ept_fault = phys;
         regs->ept_error = 1UL << !!(error & ERROR_WRITE);
@@ -130,7 +129,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 
         if (lev) {
 
-            if (size != 1UL << shift) {
+            if (size < 1UL << shift) {
 
                 if (tlb->super())
                     tlb->val = Buddy::ptr_to_phys (new Vtlb) | ATTR_GLOBAL | ATTR_PTAB;
@@ -152,7 +151,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
             attr |= ATTR_SUPERPAGE;
         }
 
-        tlb->val = (host & ~(size - 1)) | attr | ATTR_LEAF;
+        tlb->val = (host & ~((1UL << shift) - 1)) | attr | ATTR_LEAF;
 
         return SUCCESS;
     }

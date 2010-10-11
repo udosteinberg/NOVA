@@ -63,6 +63,8 @@ class Ept
 
         void update (uint64, mword, uint64, mword, mword, bool = false);
 
+        size_t lookup (uint64, Paddr &);
+
         ALWAYS_INLINE
         inline void flush()
         {

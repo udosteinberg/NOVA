@@ -49,18 +49,7 @@ class Space_obj : public Space
 
         size_t lookup (mword, Capability &);
 
-        ALWAYS_INLINE
-        inline Kobject *lookup_obj (mword addr, bool = false)
-        {
-            Capability cap;
-
-            size_t size = lookup (addr, cap);
-            assert (size);
-
-            return cap.obj();
-        }
-
-        void update (Mdb *, Kobject *, mword, mword);
+        void update (Mdb *, mword = 0);
 
         static bool insert_root (Kobject *);
 

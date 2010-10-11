@@ -21,7 +21,6 @@
 #include "buddy.h"
 #include "compiler.h"
 #include "crd.h"
-#include "mtd.h"
 
 class Cpu_regs;
 
@@ -49,31 +48,35 @@ class Utcb_segment
 class Utcb
 {
     public:
-        mword   res1;
-        Mtd     mtr;
+        union {
+            struct {
+                uint16  ui, ti;
+            };
+            mword items;
+        };
         Crd     crd;
-        mword   res2[2];
         mword   tls;
+        mword   res;
 
     private:
         union {
             struct {
-                mword           rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
-                mword           rflags, rip;
-                mword           cr0, cr2, cr3, cr4, cr8, dr7;
-                Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
+                mword           mtd, inst_len, rip, rflags;
+                uint32          intr_state, actv_state;
                 union {
                     uint64      inj;
                     struct {
                         uint32  intr_info, intr_error;
                     };
                 };
-                uint32          intr_state, actv_state;
+
+                mword           rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
                 uint64          qual[2];
                 uint32          ctrl[2];
                 uint64          tsc;
-                mword           inst_len;
-                mword           sysenter_cs, sysenter_rsp, sysenter_rip;
+                mword           cr0, cr2, cr3, cr4;
+                mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
+                Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
             };
             mword mr[];
         };
@@ -96,24 +99,24 @@ class Utcb
         inline Xfer *xfer (unsigned long n) { return reinterpret_cast<Xfer *>(mr + n); }
 
         ALWAYS_INLINE NONNULL
-        inline void save (Utcb *dst, Mtd mtd)
+        inline void save (Utcb *dst)
         {
-            dst->mtr = mtd;
+            dst->items = items;
 #if 0
-            mword *d = dst->mr, *s = mr, u = mtd.ui();
+            mword *d = dst->mr, *s = mr, u = ui;
             asm volatile ("rep; movsl" : "+D" (d), "+S" (s), "+c" (u) : : "memory");
 #else
-            for (unsigned long i = 0; i < mtd.ui(); i++)
+            for (unsigned long i = 0; i < ui; i++)
                 dst->mr[i] = mr[i];
 #endif
         }
 
-        void            load_exc (Cpu_regs *, Mtd);
-        unsigned long   save_exc (Cpu_regs *, Mtd);
+        void    load_exc (Cpu_regs *);
+        void    save_exc (Cpu_regs *);
 
-        void            load_vmx (Cpu_regs *, Mtd);
-        unsigned long   save_vmx (Cpu_regs *, Mtd);
+        void    load_vmx (Cpu_regs *);
+        void    save_vmx (Cpu_regs *);
 
-        void            load_svm (Cpu_regs *, Mtd);
-        unsigned long   save_svm (Cpu_regs *, Mtd);
+        void    load_svm (Cpu_regs *);
+        void    save_svm (Cpu_regs *);
 };

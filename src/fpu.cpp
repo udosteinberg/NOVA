@@ -19,7 +19,5 @@
 #include "fpu.h"
 #include "initprio.h"
 
-bool Fpu::enabled;
-
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Fpu::cache (sizeof (Fpu), 16);
