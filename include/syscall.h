@@ -32,9 +32,6 @@ class Sys_call : public Sys_regs
         };
 
         ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 8 & 0xff; }
-
-        ALWAYS_INLINE
         inline unsigned long pt() const { return edi; }
 };
 
@@ -60,9 +57,6 @@ class Sys_create_pd : public Sys_regs
 class Sys_create_ec : public Sys_regs
 {
     public:
-        ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 8 & 0xff; }
-
         ALWAYS_INLINE
         inline unsigned long ec() const { return edi; }
 
@@ -122,9 +116,6 @@ class Sys_revoke : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 8 & 0xff; }
-
-        ALWAYS_INLINE
         inline Crd crd() const { return Crd (edi); }
 };
 
@@ -146,10 +137,10 @@ class Sys_semctl : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned op() const { return eax >> 8 & 0x1; }
+        inline unsigned op() const { return flags() & 0x1; }
 
         ALWAYS_INLINE
-        inline unsigned zc() const { return eax >> 9 & 0x1; }
+        inline unsigned zc() const { return flags() & 0x2; }
 
         ALWAYS_INLINE
         inline unsigned long sm() const { return edi; }

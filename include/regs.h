@@ -75,6 +75,9 @@ class Sys_regs
         };
 
         ALWAYS_INLINE
+        inline unsigned flags() const { return eax >> 4 & 0xf; }
+
+        ALWAYS_INLINE
         inline void set_status (Status status) { eax = status; }
 
         ALWAYS_INLINE
