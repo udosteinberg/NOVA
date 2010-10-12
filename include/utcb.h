@@ -45,7 +45,7 @@ class Utcb_segment
         }
 };
 
-class Utcb
+class Utcb_head
 {
     public:
         union {
@@ -57,17 +57,20 @@ class Utcb
         Crd     crd;
         mword   tls;
         mword   res;
+};
 
-    private:
+class Utcb_data
+{
+    protected:
         union {
             struct {
                 mword           mtd, inst_len, rip, rflags;
                 uint32          intr_state, actv_state;
                 union {
-                    uint64      inj;
                     struct {
                         uint32  intr_info, intr_error;
                     };
+                    uint64      inj;
                 };
 
                 mword           rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
@@ -78,25 +81,20 @@ class Utcb
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
                 Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
             };
+
             mword mr[];
         };
-        mword x[];
+};
 
+class Utcb : public Utcb_head, private Utcb_data
+{
     public:
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
-        }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr)
-        {
-            Buddy::allocator.free (reinterpret_cast<mword>(ptr));
-        }
-
-        ALWAYS_INLINE
-        inline Xfer *xfer (unsigned long n) { return reinterpret_cast<Xfer *>(mr + n); }
+        void load_exc (Cpu_regs *);
+        void load_vmx (Cpu_regs *);
+        void load_svm (Cpu_regs *);
+        void save_exc (Cpu_regs *);
+        void save_vmx (Cpu_regs *);
+        void save_svm (Cpu_regs *);
 
         ALWAYS_INLINE NONNULL
         inline void save (Utcb *dst)
@@ -111,12 +109,12 @@ class Utcb
 #endif
         }
 
-        void    load_exc (Cpu_regs *);
-        void    save_exc (Cpu_regs *);
+        ALWAYS_INLINE
+        inline Xfer *xfer() { return reinterpret_cast<Xfer *>(this) + PAGE_SIZE / sizeof (Xfer) - 1; }
 
-        void    load_vmx (Cpu_regs *);
-        void    save_vmx (Cpu_regs *);
+        ALWAYS_INLINE
+        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
 
-        void    load_svm (Cpu_regs *);
-        void    save_svm (Cpu_regs *);
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
 };

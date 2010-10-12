@@ -231,7 +231,7 @@ void Pd::lookup_crd (Crd &crd)
 
 void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
 {
-    for (Crd crd; ti--; s++) {
+    for (Crd crd; ti--; s--) {
 
         Capability cap; Kobject *obj;
 
@@ -247,6 +247,6 @@ void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
         };
 
         if (d)
-            *d++ = Xfer (crd, s->flags());
+            *d-- = Xfer (crd, s->flags());
     }
 }

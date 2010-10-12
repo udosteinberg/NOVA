@@ -54,16 +54,13 @@ void Ec::delegate()
     Ec *src = C ? ec : current;
     Ec *dst = C ? current : ec;
 
-    unsigned long ui = src->utcb->ui;
-    unsigned long ti = src->utcb->ti;
-
     bool user = C || dst->cont == ret_user_sysexit;
 
     dst->pd->xfer_items (src->pd,
                          user ? dst->utcb->crd : Crd (Crd::MEM, 0, Crd::whole, 0),
-                         src->utcb->xfer (ui),
-                         user ? dst->utcb->xfer (ui) : 0,
-                         ti);
+                         src->utcb->xfer(),
+                         user ? dst->utcb->xfer() : 0,
+                         src->utcb->ti);
 
     F();
 }

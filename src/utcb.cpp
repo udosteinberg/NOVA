@@ -23,8 +23,8 @@
 
 void Utcb::load_exc (Cpu_regs *regs)
 {
-    ui  = x - mr;
-    ti  = 0;
+    items = sizeof (Utcb_data) / sizeof (mword);
+
     mtd = regs->mtd;
 
     if (mtd & Mtd::GPR_ACDB) {
@@ -82,8 +82,8 @@ void Utcb::save_exc (Cpu_regs *regs)
 
 void Utcb::load_vmx (Cpu_regs *regs)
 {
-    ui  = x - mr;
-    ti  = 0;
+    items = sizeof (Utcb_data) / sizeof (mword);
+
     mtd = regs->mtd;
 
     if (mtd & Mtd::GPR_ACDB) {
@@ -311,11 +311,11 @@ void Utcb::save_vmx (Cpu_regs *regs)
 
 void Utcb::load_svm (Cpu_regs *regs)
 {
-    ui  = x - mr;
-    ti  = 0;
+    items = sizeof (Utcb_data) / sizeof (mword);
+
     mtd = regs->mtd;
 
-    Vmcb * const vmcb = regs->vmcb;
+    Vmcb *const vmcb = regs->vmcb;
 
     if (mtd & Mtd::GPR_ACDB) {
         rax = static_cast<mword>(vmcb->rax);
