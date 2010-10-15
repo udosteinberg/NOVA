@@ -45,7 +45,7 @@ void Ec::activate (Ec *ec)
     ec->make_current();
 }
 
-template <bool C, void (*F)()>
+template <bool C>
 void Ec::delegate()
 {
     Ec *ec = current->reply;
@@ -62,7 +62,7 @@ void Ec::delegate()
                          user ? dst->utcb->xfer() : 0,
                          src->utcb->ti);
 
-    F();
+    (C ? ret_user_sysexit : wait_msg)();
 }
 
 template <void (*C)()>
@@ -129,7 +129,7 @@ void Ec::recv_msg()
     if (EXPECT_TRUE (ec->cont == ret_user_sysexit)) {
         ec->utcb->save (current->utcb);
         if (EXPECT_FALSE (ec->utcb->ti))
-            delegate<true, ret_user_sysexit>();
+            delegate<true>();
     }
 
     else if (ec->cont == ret_user_iret)
@@ -176,7 +176,7 @@ void Ec::sys_reply()
             src->save_svm (&ec->regs);
 
         if (EXPECT_FALSE (src->ti))
-            delegate<false, wait_msg>();
+            delegate<false>();
     }
 
     wait_msg();
@@ -186,38 +186,24 @@ void Ec::sys_create_pd()
 {
     Sys_create_pd *r = static_cast<Sys_create_pd *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx CPU:%#x UTCB:%#lx", current, r->pd(), r->cpu(), r->utcb());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
 
-    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
-        sys_finish<Sys_regs::BAD_CPU>();
+    Kobject *p = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
     }
+    Pd *dst = static_cast<Pd *>(p);
 
-    if (EXPECT_FALSE (!r->utcb() || r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK)) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish<Sys_regs::BAD_MEM>();
-    }
-
-    Pd *pd = new Pd (Pd::current, r->pd());
-    if (!Space_obj::insert_root (pd)) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pd());
+    Pd *pd = new Pd (dst, r->sel());
+    if (!dst->Space_obj::insert_root (pd)) {
+        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete pd;
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Ec *ec = new Ec (pd, NUM_EXC + 0, pd, r->cpu(), r->utcb(), 0, 0, false);
-    Sc *sc = new Sc (pd, NUM_EXC + 1, ec, r->cpu(), r->qpd().prio(), r->qpd().quantum());
-
-    ec->set_sc (sc);
-    Space_obj::insert_root (ec);
-    Space_obj::insert_root (sc);
-
     Crd crd = r->crd();
-    pd->delegate_crd (current->pd, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
-    pd->insert_utcb (r->utcb());
-
-    // Enqueue SC only after all the caps have been mapped
-    sc->remote_enqueue();
+    pd->delegate_crd (dst, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -226,7 +212,7 @@ void Ec::sys_create_ec()
 {
     Sys_create_ec *r = static_cast<Sys_create_ec *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->ec(), r->cpu(), r->utcb(), r->esp(), r->evt());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
     if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
@@ -238,14 +224,22 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_FTR>();
     }
 
-    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !Pd::current->insert_utcb (r->utcb()))) {
+    Kobject *p = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+    Pd *dst = static_cast<Pd *>(p);
+
+    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !dst->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    Ec *ec = new Ec (Pd::current, r->ec(), Pd::current, r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
-    if (!Space_obj::insert_root (ec)) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->ec());
+    Ec *ec = new Ec (dst, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
+
+    if (!dst->Space_obj::insert_root (ec)) {
+        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete ec;
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -257,16 +251,23 @@ void Ec::sys_create_sc()
 {
     Sys_create_sc *r = static_cast<Sys_create_sc *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#lx Q:%#lx", current, r->sc(), r->ec(), r->qpd().prio(), r->qpd().quantum());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#lx Q:%#lx", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
-    Kobject *obj = Space_obj::lookup (r->ec()).obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
+    Kobject *p = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+    Pd *dst = static_cast<Pd *>(p);
+
+    Capability cap; Kobject *e;
+    if (!dst->Space_obj::lookup (r->ec(), cap) || (e = cap.obj())->type() != Kobject::EC) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
+    Ec *ec = static_cast<Ec *>(e);
 
-    Ec *ec = static_cast<Ec *>(obj);
-    Sc *sc = new Sc (Pd::current, r->sc(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
+    Sc *sc = new Sc (dst, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
 
     if (!ec->set_sc (sc)) {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
@@ -274,8 +275,8 @@ void Ec::sys_create_sc()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    if (!Space_obj::insert_root (sc)) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sc());
+    if (!dst->Space_obj::insert_root (sc)) {
+        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete sc;
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -289,29 +290,35 @@ void Ec::sys_create_pt()
 {
     Sys_create_pt *r = static_cast<Sys_create_pt *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->pt(), r->ec(), r->eip());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->sel(), r->ec(), r->eip());
 
     if (EXPECT_FALSE (r->eip() >= USER_ADDR)) {
         trace (TRACE_ERROR, "%s: Invalid EIP (%#lx)", __func__, r->eip());
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    Kobject *obj = Space_obj::lookup (r->ec()).obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
+    Kobject *p = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+    Pd *dst = static_cast<Pd *>(p);
+
+    Capability cap; Kobject *e;
+    if (!dst->Space_obj::lookup (r->ec(), cap) || (e = cap.obj())->type() != Kobject::EC) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
+    Ec *ec = static_cast<Ec *>(e);
 
-    Ec *ec = static_cast<Ec *>(obj);
-
-    if (ec->pd != Pd::current) {
+    if (ec->pd != dst) {
         trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Pt *pt = new Pt (Pd::current, r->pt(), ec, r->mtd(), r->eip());
-    if (!Space_obj::insert_root (pt)) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->pt());
+    Pt *pt = new Pt (dst, r->sel(), ec, r->mtd(), r->eip());
+    if (!dst->Space_obj::insert_root (pt)) {
+        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete pt;
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -323,11 +330,18 @@ void Ec::sys_create_sm()
 {
     Sys_create_sm *r = static_cast<Sys_create_sm *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sm(), r->cnt());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sel(), r->cnt());
 
-    Sm *sm = new Sm (Pd::current, r->sm(), r->cnt());
-    if (!Space_obj::insert_root (sm)) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sm());
+    Kobject *p = Space_obj::lookup (r->pd()).obj();
+    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+    Pd *dst = static_cast<Pd *>(p);
+
+    Sm *sm = new Sm (dst, r->sel(), r->cnt());
+    if (!dst->Space_obj::insert_root (sm)) {
+        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete sm;
         sys_finish<Sys_regs::BAD_CAP>();
     }

@@ -32,12 +32,12 @@ Slab_cache Ec::cache (sizeof (Ec), 16);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, unsigned e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (p), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (own, sel, EC), cont (f), utcb (0), pd (own), cpu (c), evt (e)
 {
-    trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, p);
+    trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (own, sel, EC), pd (p), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (own, sel, EC), pd (own), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -63,7 +63,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, mword u, mword s, unsigned e, boo
 
         regs.dst_portal = NUM_EXC - 2;
 
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x W:%u)", this, p, c, u, s, e, w);
+        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x W:%u)", this, own, c, u, s, e, w);
 
     } else {
 
@@ -79,7 +79,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, mword u, mword s, unsigned e, boo
             regs.ept_ctrl (false);
             cont = send_msg<ret_user_vmresume>;
 
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, p, regs.vmcs, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, own, regs.vmcs, regs.vtlb);
 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
@@ -87,7 +87,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, unsigned c, mword u, mword s, unsigned e, boo
                                   pd->hpt.addr());
             cont = send_msg<ret_user_vmrun>;
 
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, own, regs.vmcb, regs.vtlb);
         }
     }
 }

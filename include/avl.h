@@ -23,7 +23,7 @@
 class Avl
 {
     private:
-        Avl *       ptr[2];
+        Avl *       lnk[2];
         unsigned    bal;
 
         bool balanced() const { return bal == 2; }
@@ -35,9 +35,9 @@ class Avl
         virtual bool larger (Avl *x) const = 0;
         virtual bool equal  (Avl *x) const = 0;
 
-        Avl *link (bool d) const { return ptr[d]; }
+        Avl *link (bool d) const { return lnk[d]; }
 
-        explicit Avl() : bal (2) { ptr[0] = ptr[1] = 0; }
+        explicit Avl() : bal (2) { lnk[0] = lnk[1] = 0; }
 
     public:
         static bool insert (Avl **, Avl *);

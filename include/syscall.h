@@ -32,33 +32,30 @@ class Sys_call : public Sys_regs
         };
 
         ALWAYS_INLINE
-        inline unsigned long pt() const { return edi; }
+        inline unsigned long pt() const { return eax >> 8; }
 };
 
 class Sys_create_pd : public Sys_regs
 {
     public:
         ALWAYS_INLINE
+        inline unsigned long sel() const { return eax >> 8; }
+
+        ALWAYS_INLINE
         inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned cpu() const { return esi & 0xfff; }
-
-        ALWAYS_INLINE
-        inline mword utcb() const { return esi & ~0xfff; }
-
-        ALWAYS_INLINE
-        inline Qpd qpd() const { return Qpd (ebx); }
-
-        ALWAYS_INLINE
-        inline Crd crd() const { return Crd (ebp); }
+        inline Crd crd() const { return Crd (esi); }
 };
 
 class Sys_create_ec : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long ec() const { return edi; }
+        inline unsigned long sel() const { return eax >> 8; }
+
+        ALWAYS_INLINE
+        inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
         inline unsigned cpu() const { return esi & 0xfff; }
@@ -77,7 +74,10 @@ class Sys_create_sc : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long sc() const { return edi; }
+        inline unsigned long sel() const { return eax >> 8; }
+
+        ALWAYS_INLINE
+        inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
         inline unsigned long ec() const { return esi; }
@@ -90,7 +90,10 @@ class Sys_create_pt : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long pt() const { return edi; }
+        inline unsigned long sel() const { return eax >> 8; }
+
+        ALWAYS_INLINE
+        inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
         inline unsigned long ec() const { return esi; }
@@ -106,7 +109,10 @@ class Sys_create_sm : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long sm() const { return edi; }
+        inline unsigned long sel() const { return eax >> 8; }
+
+        ALWAYS_INLINE
+        inline unsigned long pd() const { return edi; }
 
         ALWAYS_INLINE
         inline mword cnt() const { return esi; }
@@ -130,46 +136,46 @@ class Sys_recall : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long ec() const { return edi; }
+        inline unsigned long ec() const { return eax >> 8; }
 };
 
 class Sys_semctl : public Sys_regs
 {
     public:
         ALWAYS_INLINE
+        inline unsigned long sm() const { return eax >> 8; }
+
+        ALWAYS_INLINE
         inline unsigned op() const { return flags() & 0x1; }
 
         ALWAYS_INLINE
         inline unsigned zc() const { return flags() & 0x2; }
-
-        ALWAYS_INLINE
-        inline unsigned long sm() const { return edi; }
 };
 
 class Sys_assign_pci : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long pd() const { return edi; }
+        inline unsigned long pd() const { return eax >> 8; }
 
         ALWAYS_INLINE
-        inline unsigned long pf() const { return esi; }
+        inline unsigned long pf() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned long vf() const { return ebx; }
+        inline unsigned long vf() const { return esi; }
 };
 
 class Sys_assign_gsi : public Sys_regs
 {
     public:
         ALWAYS_INLINE
-        inline unsigned long sm() const { return edi; }
+        inline unsigned long sm() const { return eax >> 8; }
 
         ALWAYS_INLINE
-        inline unsigned cpu() const { return static_cast<unsigned>(esi); }
+        inline unsigned cpu() const { return static_cast<unsigned>(edi); }
 
         ALWAYS_INLINE
-        inline unsigned rid() const { return static_cast<unsigned>(ebx); }
+        inline unsigned rid() const { return static_cast<unsigned>(esi); }
 
         ALWAYS_INLINE
         inline void set_msi (uint64 val)

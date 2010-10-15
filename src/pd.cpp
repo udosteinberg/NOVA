@@ -92,28 +92,28 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
 
         unsigned d = node->dpth;
 
-        for (Mdb *succ;; node = succ) {
+        for (Mdb *ptr;; node = ptr) {
 
             if ((node->node_attr & attr) && (self || node != mdb)) {
                 node->node_pd->S::update (node, attr);
                 node->demote_node (attr);
             }
 
-            succ = ACCESS_ONCE (node->next);
+            ptr = ACCESS_ONCE (node->next);
 
-            if (succ->dpth <= d)
+            if (ptr->dpth <= d)
                 break;
         }
 
         Mdb *x = ACCESS_ONCE (node->next);
         assert (x->dpth <= d || (x->dpth == node->dpth + 1 && !(x->node_attr & attr)));
 
-        for (Mdb *succ;; node = succ) {
+        for (Mdb *ptr;; node = ptr) {
 
             if (node->remove_node() && node->node_pd->S::remove_node (node))
                 Rcu::submit (node);
 
-            succ = ACCESS_ONCE (node->prev);
+            ptr = ACCESS_ONCE (node->prev);
 
             if (node->dpth <= d)
                 break;

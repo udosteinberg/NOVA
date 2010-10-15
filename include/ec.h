@@ -114,8 +114,8 @@ class Ec : public Kobject, public Queue<Sc>
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, mword, Pd *, unsigned, unsigned, void (*)());
-        Ec (Pd *, mword, Pd *, unsigned, mword, mword, unsigned, bool);
+        Ec (Pd *, mword, unsigned, unsigned, void (*)());
+        Ec (Pd *, mword, unsigned, mword, mword, unsigned, bool);
 
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)
@@ -269,7 +269,7 @@ class Ec : public Kobject, public Queue<Sc>
         NORETURN
         static void root_invoke();
 
-        template <bool, void (*)()>
+        template <bool>
         NORETURN
         static void delegate();
 
