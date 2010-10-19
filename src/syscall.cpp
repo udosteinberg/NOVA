@@ -188,12 +188,12 @@ void Ec::sys_create_pd()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
 
-    Kobject *p = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+    Capability cap = Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PD)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
-    Pd *dst = static_cast<Pd *>(p);
+    Pd *dst = static_cast<Pd *>(cap.obj());
 
     Pd *pd = new Pd (dst, r->sel());
     if (!dst->Space_obj::insert_root (pd)) {
@@ -224,12 +224,12 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_FTR>();
     }
 
-    Kobject *p = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+    Capability cap = Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::EC)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
-    Pd *dst = static_cast<Pd *>(p);
+    Pd *dst = static_cast<Pd *>(cap.obj());
 
     if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !dst->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
@@ -253,14 +253,14 @@ void Ec::sys_create_sc()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#lx Q:%#lx", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
-    Kobject *p = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+    Capability cap = Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SC)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
-    Pd *dst = static_cast<Pd *>(p);
+    Pd *dst = static_cast<Pd *>(cap.obj());
 
-    Capability cap; Kobject *e;
+    Kobject *e;
     if (!dst->Space_obj::lookup (r->ec(), cap) || (e = cap.obj())->type() != Kobject::EC) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
@@ -292,19 +292,14 @@ void Ec::sys_create_pt()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->sel(), r->ec(), r->eip());
 
-    if (EXPECT_FALSE (r->eip() >= USER_ADDR)) {
-        trace (TRACE_ERROR, "%s: Invalid EIP (%#lx)", __func__, r->eip());
-        sys_finish<Sys_regs::BAD_MEM>();
-    }
-
-    Kobject *p = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+    Capability cap = Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PT)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
-    Pd *dst = static_cast<Pd *>(p);
+    Pd *dst = static_cast<Pd *>(cap.obj());
 
-    Capability cap; Kobject *e;
+    Kobject *e;
     if (!dst->Space_obj::lookup (r->ec(), cap) || (e = cap.obj())->type() != Kobject::EC) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
@@ -332,12 +327,12 @@ void Ec::sys_create_sm()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sel(), r->cnt());
 
-    Kobject *p = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (p->type() != Kobject::PD)) {
+    Capability cap = Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SM)) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
-    Pd *dst = static_cast<Pd *>(p);
+    Pd *dst = static_cast<Pd *>(cap.obj());
 
     Sm *sm = new Sm (dst, r->sel(), r->cnt());
     if (!dst->Space_obj::insert_root (sm)) {
@@ -399,7 +394,7 @@ void Ec::sys_semctl()
     Sys_semctl *r = static_cast<Sys_semctl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
-    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || !(cap.prm() & 1U << r->op()))) {
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op()))) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }

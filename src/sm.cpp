@@ -20,7 +20,7 @@
 #include "sm.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Sm::cache (sizeof (Sm), 16);
+Slab_cache Sm::cache (sizeof (Sm), 32);
 
 Sm::Sm (Pd *own, mword sel, mword cnt) : Kobject (own, sel, SM), counter (cnt)
 {

@@ -21,7 +21,7 @@
 #include "lapic.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Sc::cache (sizeof (Sc), 8);
+Slab_cache Sc::cache (sizeof (Sc), 32);
 
 INIT_PRIORITY (PRIO_LOCAL)
 Sc::Rq Sc::rq;

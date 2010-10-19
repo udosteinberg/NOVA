@@ -32,20 +32,22 @@ class Kobject : public Mdb
         Spinlock    lock;
         uint16      refcount;
 
-        enum
+        enum Type
         {
-            INVALID,
-            PT,
+            PD,
             EC,
             SC,
-            PD,
-            SM
+            PT,
+            SM,
+            INVALID,
         };
 
-        explicit Kobject (Pd *pd, mword b, uint8 t) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, 7), objtype (t), refcount (1) {}
+        explicit Kobject (Pd *pd, mword b, Type t) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, perm), objtype (t), refcount (1) {}
 
     public:
-        unsigned type() const { return EXPECT_TRUE (this) ? objtype : 0; }
+        static mword const perm = 0x1f;
+
+        Type type() const { return EXPECT_TRUE (this) ? Type (objtype) : INVALID ; }
 
         ALWAYS_INLINE
         inline bool add_ref()

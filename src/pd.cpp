@@ -21,12 +21,12 @@
 #include "pd.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 8);
+Slab_cache Pd::cache (sizeof (Pd), 32);
 
 Pd *Pd::current;
 
-ALIGNED(8) Pd Pd::kern (&Pd::kern);
-ALIGNED(8) Pd Pd::root (&Pd::root, NUM_EXC);
+ALIGNED(32) Pd Pd::kern (&Pd::kern);
+ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC);
 
 Pd::Pd (Pd *own) : Kobject (own, 0, PD)
 {
@@ -153,7 +153,7 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
     }
 }
 
-void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword hot)
+void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword sub, mword hot)
 {
     Crd::Type st = snd.type(), rt = rcv.type();
 
@@ -169,7 +169,7 @@ void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword hot)
         case Crd::MEM:
             o = clamp (sb, rb, so, ro, hot);
             trace (TRACE_DEL, "DEL MEM PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, sb, rb, o, a);
-            delegate<Space_mem>(pd, sb, rb, o, a, snd.sub());
+            delegate<Space_mem>(pd, sb, rb, o, a, sub);
             break;
 
         case Crd::IO:
@@ -242,7 +242,7 @@ void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
                 break;
 
             case 1:     // Delegate
-                delegate_crd (src == &root && s->flags() & 0x800 ? &kern : src, rcv, crd = *s, s->hotspot());
+                delegate_crd (src == &root && s->flags() & 0x800 ? &kern : src, rcv, crd = *s, s->flags() >> 9 & 3, s->hotspot());
                 break;
         };
 

@@ -21,7 +21,7 @@
 #include "pt.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pt::cache (sizeof (Pt), 16);
+Slab_cache Pt::cache (sizeof (Pt), 32);
 
 Pt::Pt (Pd *own, mword sel, Ec *e, Mtd m, mword addr) : Kobject (own, sel, PT), ec (e), mtd (m), ip (addr)
 {

@@ -73,7 +73,7 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
 
         void xfer_items (Pd *, Crd, Xfer *, Xfer *, unsigned long);
 
-        void delegate_crd (Pd *, Crd, Crd &, mword = 0);
+        void delegate_crd (Pd *, Crd, Crd &, mword = 0, mword = 0);
         void revoke_crd (Crd, bool);
         void lookup_crd (Crd &);
 

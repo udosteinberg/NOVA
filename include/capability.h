@@ -19,24 +19,21 @@
 #pragma once
 
 #include "compiler.h"
-
-class Kobject;
+#include "kobject.h"
 
 class Capability
 {
     private:
         mword val;
 
-        static mword const mask = 0x7;
-
     public:
         Capability() : val (0) {}
 
-        Capability (Kobject *o, mword a) : val (a ? reinterpret_cast<mword>(o) | (a & mask) : 0) {}
+        Capability (Kobject *o, mword a) : val (a ? reinterpret_cast<mword>(o) | (a & Kobject::perm) : 0) {}
 
         ALWAYS_INLINE
-        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~mask); }
+        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~Kobject::perm); }
 
         ALWAYS_INLINE
-        inline unsigned prm() const { return val & mask; }
+        inline unsigned prm() const { return val & Kobject::perm; }
 };

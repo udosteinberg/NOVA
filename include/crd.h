@@ -37,7 +37,7 @@ class Crd
         static unsigned const whole = 0x1f;
 
         ALWAYS_INLINE
-        inline explicit Crd() {}
+        inline explicit Crd() : val (0) {}
 
         ALWAYS_INLINE
         inline explicit Crd (mword v) : val (v) {}
@@ -46,16 +46,10 @@ class Crd
         inline explicit Crd (Type t, mword b, mword o, mword a) : val (b << 12 | o << 7 | a << 2 | t) {}
 
         ALWAYS_INLINE
-        inline mword raw() const { return val; }
-
-        ALWAYS_INLINE
         inline Type type() const { return static_cast<Type>(val & 0x3); }
 
         ALWAYS_INLINE
-        inline unsigned attr() const { return val >> 2 & 0x7; }
-
-        ALWAYS_INLINE
-        inline unsigned sub() const { return val >> 5 & 0x3; }
+        inline unsigned attr() const { return val >> 2 & 0x1f; }
 
         ALWAYS_INLINE
         inline unsigned order() const { return val >> 7 & 0x1f; }

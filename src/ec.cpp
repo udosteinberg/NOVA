@@ -27,7 +27,7 @@
 #include "vtlb.h"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Ec::cache (sizeof (Ec), 16);
+Slab_cache Ec::cache (sizeof (Ec), 32);
 
 Ec *Ec::current, *Ec::fpowner;
 
