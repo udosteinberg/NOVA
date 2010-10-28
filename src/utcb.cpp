@@ -396,7 +396,7 @@ void Utcb::load_svm (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::TSC)
-        tsc = vmcb->tsc_offset;
+        tsc = regs->tsc_offset;
 }
 
 void Utcb::save_svm (Cpu_regs *regs)
@@ -490,5 +490,5 @@ void Utcb::save_svm (Cpu_regs *regs)
         vmcb->int_shadow = intr_state;
 
     if (mtd & Mtd::TSC)
-        vmcb->tsc_offset = tsc;
+        regs->add_tsc_offset (tsc);
 }

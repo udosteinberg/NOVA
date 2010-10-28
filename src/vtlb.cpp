@@ -44,14 +44,14 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
     bool pse = regs->cr4_shadow & (Cpu::CR4_PSE | Cpu::CR4_PAE);
     bool pge = regs->cr4_shadow &  Cpu::CR4_PGE;
 
-    type &= ERROR_USER | ERROR_WRITE;
+    type &= ERR_U | ERR_W;
 
-    unsigned lev = levels;
+    unsigned lev = max();
 
     for (Hpt e, *pte = reinterpret_cast<Hpt *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<Hpt *>(e.addr())) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        pte += virt >> shift & ((1UL << bpl) - 1);
+        unsigned shift = --lev * bpl() + PAGE_BITS;
+        pte += virt >> shift & ((1UL << bpl()) - 1);
 
         if (User::peek (pte, e) != ~0UL) {
             phys = reinterpret_cast<Paddr>(pte);
@@ -64,24 +64,24 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
         attr &= e.attr();
 
         if (lev && (!pse || !e.super())) {
-            pte->mark (&e, ATTR_ACCESSED);
+            pte->mark (&e, Hpt::HPT_A);
             continue;
         }
 
         if (EXPECT_FALSE ((attr & type) != type)) {
-            type |= ERROR_PRESENT;
+            type |= ERR_P;
             return 0;
         }
 
-        if (!(type & ERROR_WRITE) && !e.dirty())
-            attr &= ~ATTR_WRITABLE;
+        if (!(type & ERR_W) && !(e.val & Hpt::HPT_D))
+            attr &= ~Hpt::HPT_W;
 
         pte->mark (&e, (attr & 3) << 5);
 
-        attr |= e.attr() & ATTR_UNCACHEABLE;
+        attr |= e.val & Hpt::HPT_UC;
 
         if (EXPECT_TRUE (pge))
-            attr |= e.attr() & ATTR_GLOBAL;
+            attr |= e.val & Hpt::HPT_G;
 
         size_t size = 1UL << shift;
 
@@ -93,7 +93,7 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
 
 Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 {
-    mword phys, attr = ATTR_USER | ATTR_WRITABLE | ATTR_PRESENT;
+    mword phys, attr = Hpt::HPT_U | Hpt::HPT_W | Hpt::HPT_P;
     Paddr host;
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
@@ -108,7 +108,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
     size_t hsize = Pd::current->ept.lookup (phys, host);
     if (EXPECT_FALSE (!hsize)) {
         regs->ept_fault = phys;
-        regs->ept_error = 1UL << !!(error & ERROR_WRITE);
+        regs->ept_error = 1UL << !!(error & ERR_W);
         Counter::vtlb_hpf++;
         return GPA_HPA;
     }
@@ -116,31 +116,31 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
     size_t size = min (gsize, hsize);
 
     if (gsize > hsize)
-        attr |= ATTR_SPLINTER;
+        attr |= TLB_F;
 
     Counter::print (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, SPN_VFI);
 
-    unsigned lev = levels;
+    unsigned lev = max();
 
     for (Vtlb *tlb = regs->vtlb;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        tlb += virt >> shift & ((1UL << bpl) - 1);
+        unsigned shift = --lev * bpl() + PAGE_BITS;
+        tlb += virt >> shift & ((1UL << bpl()) - 1);
 
         if (lev) {
 
             if (size < 1UL << shift) {
 
                 if (tlb->super())
-                    tlb->val = Buddy::ptr_to_phys (new Vtlb) | ATTR_GLOBAL | ATTR_PTAB;
+                    tlb->val = Buddy::ptr_to_phys (new Vtlb) | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P;
 
                 else if (!tlb->present()) {
                     static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))->flush_ptab (tlb->global());
-                    tlb->val = tlb->addr() | ATTR_GLOBAL | ATTR_PTAB;
+                    tlb->val = tlb->addr() | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P;
                 }
 
-                tlb->val &= attr | ~ATTR_GLOBAL;
-                tlb->val |= attr & ATTR_SPLINTER;
+                tlb->val &= attr | ~TLB_G;
+                tlb->val |= attr & TLB_F;
 
                 continue;
             }
@@ -148,10 +148,10 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
             if (!tlb->super())
                 delete static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()));
 
-            attr |= ATTR_SUPERPAGE;
+            attr |= TLB_S;
         }
 
-        tlb->val = (host & ~((1UL << shift) - 1)) | attr | ATTR_LEAF;
+        tlb->val = (host & ~((1UL << shift) - 1)) | attr | TLB_D | TLB_A;
 
         return SUCCESS;
     }
@@ -159,36 +159,36 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 
 void Vtlb::flush_ptab (unsigned full)
 {
-    for (Vtlb *tlb = this; tlb < this + (1UL << bpl); tlb++) {
+    for (Vtlb *tlb = this; tlb < this + (1UL << bpl()); tlb++) {
 
         if (EXPECT_TRUE (!tlb->present()))
             continue;
 
         if (EXPECT_FALSE (full))
-            tlb->val |= ATTR_GLOBAL;
+            tlb->val |= TLB_G;
 
         else if (EXPECT_FALSE (tlb->global()))
             continue;
 
-        tlb->val &= ~ATTR_PRESENT;
+        tlb->val &= ~TLB_P;
     }
 }
 
 void Vtlb::flush_addr (mword virt, unsigned long vpid)
 {
-    unsigned lev = levels;
+    unsigned lev = max();
 
     for (Vtlb *tlb = this;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
 
-        unsigned shift = --lev * bpl + PAGE_BITS;
-        tlb += virt >> shift & ((1UL << bpl) - 1);
+        unsigned shift = --lev * bpl() + PAGE_BITS;
+        tlb += virt >> shift & ((1UL << bpl()) - 1);
 
         if (!tlb->present())
             return;
 
-        if (!lev || tlb->splinter()) {
-            tlb->val |=  ATTR_GLOBAL;
-            tlb->val &= ~ATTR_PRESENT;
+        if (!lev || tlb->frag()) {
+            tlb->val |=  TLB_G;
+            tlb->val &= ~TLB_P;
 
             if (vpid)
                 Vpid::flush (Vpid::ADDRESS, vpid, virt);

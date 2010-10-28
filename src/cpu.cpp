@@ -166,7 +166,7 @@ void Cpu::init()
     Counter::init();
 
     Paddr phys;
-    Pd::kern.Space_mem::loc[id] = Hpt (Hpt::current() | Hpt::HPT_P);
+    Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current() | Hpt::HPT_P);
     Pd::kern.Space_mem::loc[id].lookup (CPULC_ADDR, phys);
     Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
 

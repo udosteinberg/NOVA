@@ -30,7 +30,7 @@ ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC, perm);
 
 Pd::Pd (Pd *own) : Kobject (PD, own, 0)
 {
-    hpt.set (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P);
+    hpt = Hptp (reinterpret_cast<mword>(&PDBR) | Hpt::HPT_P);
 
     // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
 

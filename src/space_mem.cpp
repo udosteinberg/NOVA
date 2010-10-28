@@ -58,11 +58,19 @@ void Space_mem::update (Mdb *mdb, mword r)
     }
 
     if (s & 2) {
-        mword ord = min (o, Ept::ord);
-        for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a), mdb->node_type, r);
-        if (r && Ept::ord != ~0UL)
-            gtlb.merge (cpus);
+        if (Hip::feature() & Hip::FEAT_VMX) {
+            mword ord = min (o, Ept::ord);
+            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
+                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r);
+            if (r && Ept::ord != ~0UL)
+                gtlb.merge (cpus);
+        } else {
+            mword ord = min (o, Hpt::ord);
+            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
+                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Hpt::ord + PAGE_BITS)), Hpt::hw_attr (a), r);
+            if (r)
+                gtlb.merge (cpus);
+        }
     }
 
     if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)

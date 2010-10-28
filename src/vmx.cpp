@@ -69,7 +69,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
     write (VPID, ++vpid_ctr);
 
-    write (EPTP,    static_cast<mword>(eptp));
+    write (EPTP,    static_cast<mword>(eptp) | (Ept::max() - 1) << 3 | 6);
     write (EPTP_HI, static_cast<mword>(eptp >> 32));
 
     write (IO_BITMAP_A, bmp);
@@ -120,7 +120,7 @@ void Vmcs::init()
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
     if (has_ept())
-        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl - 1);
+        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
     if (has_urg())
         fix_cr0.set &= ~(Cpu::CR0_PG | Cpu::CR0_PE);
 

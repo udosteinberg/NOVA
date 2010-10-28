@@ -28,10 +28,13 @@
 class Space_mem : public Space
 {
     public:
-        Hpt   loc[NUM_CPU];
-        Hpt   hpt;
-        Dpt   dpt;
-        Ept   ept;
+        Hpt loc[NUM_CPU];
+        Hpt hpt;
+        Dpt dpt;
+        union {
+            Ept ept;
+            Hpt npt;
+        };
 
         mword did;
 
@@ -79,6 +82,6 @@ class Space_mem : public Space
         ALWAYS_INLINE
         inline bool sync_glb (mword hla)
         {
-            return loc[Cpu::id].sync_from (Hpt (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P), hla);
+            return loc[Cpu::id].sync_from (Hptp (reinterpret_cast<mword>(&PDBR) + Hpt::HPT_P), hla);
         }
 };

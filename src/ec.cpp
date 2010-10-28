@@ -73,7 +73,7 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : 
 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
                                   pd->Space_io::walk(),
-                                  pd->loc[c].addr(),
+                                  pd->loc[c].root(),
                                   pd->ept.root());
             regs.vtlb = new Vtlb;
             regs.ept_ctrl (false);
@@ -84,7 +84,7 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
             regs.vmcb = new Vmcb (pd->Space_io::walk(),
-                                  pd->hpt.addr());
+                                  pd->npt.root());
             cont = send_msg<ret_user_vmrun>;
 
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, own, regs.vmcb, regs.vtlb);

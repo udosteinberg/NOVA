@@ -22,9 +22,18 @@
 
 template <typename T>
 ALWAYS_INLINE
-static inline void clflush (T t)
+static inline void flush (T t)
 {
     asm volatile ("clflush %0" : : "m" (*t) : "memory");
+}
+
+ALWAYS_INLINE NONNULL
+inline void *flush (void *d, size_t n)
+{
+    for (char *p = static_cast<char *>(d); p < static_cast<char *>(d) + n; p += 32)
+        flush (p);
+
+    return d;
 }
 
 ALWAYS_INLINE

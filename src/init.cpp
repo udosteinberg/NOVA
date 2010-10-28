@@ -29,7 +29,7 @@ char const *version = "NOVA 0.3 (Cleetwood Cove)";
 extern "C" INIT
 mword kern_ptab_setup()
 {
-    Hpt hpt;
+    Hptp hpt;
 
     // Allocate and map cpu page
     hpt.update (CPULC_ADDR, 0,

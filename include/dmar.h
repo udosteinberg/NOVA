@@ -58,23 +58,16 @@ class Dmar_ctx
 
     public:
         ALWAYS_INLINE
-        inline Dmar_ctx()
-        {
-            for (unsigned i = 0; i < PAGE_SIZE / sizeof (*this); i++)
-                clflush (this + i);
-        }
-
-        ALWAYS_INLINE
         inline bool present() const { return lo & 1; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~0xfff; }
+        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~PAGE_MASK; }
 
         ALWAYS_INLINE
-        inline void set (uint64 h, uint64 l) { hi = h; lo = l; clflush (this); }
+        inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
 };
 
 class Dmar_irt
@@ -84,17 +77,10 @@ class Dmar_irt
 
     public:
         ALWAYS_INLINE
-        inline Dmar_irt()
-        {
-            for (unsigned i = 0; i < PAGE_SIZE / sizeof (*this); i++)
-                clflush (this + i);
-        }
+        inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        inline void set (uint64 h, uint64 l) { hi = h; lo = l; clflush (this); }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
 };
 
 class Dmar

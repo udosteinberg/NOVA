@@ -41,7 +41,6 @@ enum {
     TRACE_APIC      = 1ul << 3,
     TRACE_DMAR      = 1ul << 4,
     TRACE_SVM       = 1ul << 5,
-    TRACE_INTERRUPT = 1ul << 7,
     TRACE_ACPI      = 1ul << 8,
     TRACE_KEYB      = 1ul << 9,
     TRACE_ERROR     = 1ul << 10,
@@ -52,9 +51,6 @@ enum {
     TRACE_VTLB      = 1ul << 17,
     TRACE_DEL       = 1ul << 18,
     TRACE_REV       = 1ul << 19,
-    TRACE_PTE       = 1ul << 20,
-    TRACE_EPT       = 1ul << 21,
-    TRACE_DPT       = 1ul << 22,
     TRACE_FPU       = 1ul << 23,
 };
 
@@ -68,7 +64,6 @@ unsigned const trace_mask =
 //                            TRACE_APIC      |
                             TRACE_DMAR      |
                             TRACE_SVM       |
-//                            TRACE_INTERRUPT |
 //                            TRACE_ACPI      |
 //                            TRACE_KEYB      |
                             TRACE_ERROR     |
@@ -79,9 +74,6 @@ unsigned const trace_mask =
 //                            TRACE_VTLB      |
 //                            TRACE_DEL       |
 //                            TRACE_REV       |
-//                            TRACE_PTE       |
-//                            TRACE_EPT       |
-//                            TRACE_DPT       |
 //                            TRACE_FPU       |
 #endif
                             0;

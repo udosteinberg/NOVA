@@ -19,32 +19,15 @@
 #pragma once
 
 #include "assert.h"
-#include "buddy.h"
 #include "compiler.h"
+#include "pte.h"
 #include "user.h"
 
-class Hpt
+class Hpt : public Pte<Hpt, mword, 2, 10>
 {
     friend class Vtlb;
 
     private:
-        mword val;
-
-        ALWAYS_INLINE
-        inline bool present() const { return val & HPT_P; }
-
-        ALWAYS_INLINE
-        inline bool super() const { return val & HPT_S; }
-
-        ALWAYS_INLINE
-        inline bool accessed() const { return val & HPT_A; }
-
-        ALWAYS_INLINE
-        inline bool dirty() const { return val & HPT_D; }
-
-        ALWAYS_INLINE
-        inline mword attr() const { return static_cast<mword>(val) & 0xfff; }
-
         ALWAYS_INLINE
         static inline void flush()
         {
@@ -52,11 +35,8 @@ class Hpt
             asm volatile ("mov %%cr3, %0; mov %0, %%cr3" : "=&r" (cr3));
         }
 
-        Hpt *walk (mword, unsigned long, bool = false);
-
     public:
-        static unsigned const bpl = 10;
-        static unsigned const max = 2;
+        static mword ord;
 
         enum
         {
@@ -69,19 +49,17 @@ class Hpt
             HPT_S   = 1UL << 7,
             HPT_G   = 1UL << 8,
             HPT_NX  = 0,
+
+            PTE_P   = HPT_P,
+            PTE_S   = HPT_S,
+            PTE_N   = HPT_A | HPT_U | HPT_W | HPT_P,
         };
-
-        ALWAYS_INLINE
-        inline explicit Hpt (mword v = 0) : val (v) {}
-
-        ALWAYS_INLINE
-        inline void set (Paddr v) { val = v; }
 
         ALWAYS_INLINE
         inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
 
         ALWAYS_INLINE
-        static inline mword hw_attr (mword a) { return a ? a | HPT_U | HPT_P : 0; }
+        static inline mword hw_attr (mword a) { return a ? a | HPT_D | HPT_A | HPT_U | HPT_P : 0; }
 
         ALWAYS_INLINE
         static inline mword current()
@@ -103,20 +81,17 @@ class Hpt
             return EXPECT_TRUE ((e->val & bits) == bits) || User::cmp_swap (&val, e->val, e->val | bits) == ~0UL;
         }
 
-        size_t lookup (mword, Paddr &);
-
-        bool update (mword, mword, Paddr, mword, bool = false);
-
         bool sync_from (Hpt, mword);
 
         size_t sync_master (mword virt);
         void sync_master_range (mword s_addr, mword e_addr);
 
         static void *remap (Paddr phys);
+};
 
+class Hptp : public Hpt
+{
+    public:
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
+        inline explicit Hptp (mword v = 0) { val = v; }
 };

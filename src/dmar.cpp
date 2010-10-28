@@ -39,7 +39,7 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);
 
-    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl - 1);
+    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
 
     write<uint32>(REG_FECTL,  0);
     write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
