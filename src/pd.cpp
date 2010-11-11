@@ -226,7 +226,12 @@ void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
                     if (node->node_pd == this && node != mdb)
                         break;
 
-                crd = node ? Crd (s->type(), mdb->node_phys - node->node_phys + node->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
+                if (node) {
+                    mword b = s->base(), o = clamp (mdb->node_base, b, mdb->node_order, s->order());
+                    crd = Crd (s->type(), (b - mdb->node_base) + (mdb->node_phys - node->node_phys) + node->node_base, o, mdb->node_attr);
+                } else
+                    crd = Crd (0);
+
                 break;
 
             case 1:     // Delegate
