@@ -20,6 +20,7 @@
 
 #include "apic.h"
 #include "compiler.h"
+#include "config.h"
 #include "memory.h"
 
 class Lapic : public Apic
@@ -96,9 +97,9 @@ class Lapic : public Apic
         }
 
         ALWAYS_INLINE
-        static inline void set_lvt (Register reg, unsigned vector, Delivery_mode dlv, Mask msk = UNMASKED, Mode mod = ONESHOT)
+        static inline void set_lvt (Register reg, unsigned vector, Delivery_mode dlv, Mask msk = UNMASKED)
         {
-            write (reg, mod | msk | dlv | vector);
+            write (reg, msk | dlv | vector);
         }
 
         ALWAYS_INLINE
@@ -116,7 +117,7 @@ class Lapic : public Apic
     public:
         static unsigned freq_tsc;
         static unsigned freq_bus;
-        static unsigned mask_cpu;
+        static uint8    apic_id[NUM_CPU];
 
         ALWAYS_INLINE
         static inline unsigned id()
@@ -158,7 +159,7 @@ class Lapic : public Apic
         static void calibrate();
         static void wake_ap();
 
-        static void send_ipi (unsigned cpu, Destination_mode dst, Delivery_mode dlv, unsigned vector);
+        static void send_ipi (unsigned cpu, Delivery_mode dlv, unsigned vector);
 
         REGPARM (1)
         static void lvt_vector (unsigned) asm ("lvt_vector");

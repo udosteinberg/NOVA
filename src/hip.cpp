@@ -125,7 +125,7 @@ void Hip::add_cpu()
     cpu->package = static_cast<uint8>(Cpu::package);
     cpu->core    = static_cast<uint8>(Cpu::core);
     cpu->thread  = static_cast<uint8>(Cpu::thread);
-    cpu->flags   = 1;
+    cpu->flags   = static_cast<uint8>(Cpu::bsp << 1 | 1);
 }
 
 void Hip::add_check()

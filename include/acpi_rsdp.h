@@ -55,7 +55,7 @@ class Acpi_rsdp
         }
 
         INIT
-        static Acpi_rsdp *find (mword start, unsigned len);
+        static Acpi_rsdp *find (mword, unsigned);
 
     public:
         INIT

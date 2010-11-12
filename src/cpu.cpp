@@ -36,7 +36,6 @@ char const * const Cpu::vendor_string[] =
 };
 
 mword       Cpu::boot_lock;
-mword       Cpu::boot_count;
 
 // Order of these matters
 unsigned    Cpu::online;
@@ -60,7 +59,7 @@ bool        Cpu::bsp;
 
 void Cpu::check_features()
 {
-    unsigned tpp = 1, cpp = 1;
+    unsigned top, tpp = 1, cpp = 1;
 
     uint32 eax, ebx, ecx, edx;
 
@@ -82,7 +81,6 @@ void Cpu::check_features()
 
     switch (static_cast<uint8>(eax)) {
         default:
-        case 0x4 ... 0x9:
             cpuid (0x4, 0, eax, ebx, ecx, edx);
             cpp = (eax >> 26 & 0x3f) + 1;
         case 0x1 ... 0x3:
@@ -91,7 +89,7 @@ void Cpu::check_features()
             model    = (eax >> 4 & 0xf) + (eax >> 12 & 0xf0);
             stepping =  eax & 0xf;
             brand    =  ebx & 0xff;
-            id       =  ebx >> 24;
+            top      =  ebx >> 24;
             tpp      =  ebx >> 16 & 0xff;
     }
 
@@ -115,7 +113,7 @@ void Cpu::check_features()
     }
 
     if (!feature (FEAT_HTT))
-        id = online;
+        top = Lapic::id();
     else if (feature (FEAT_CMP_LEGACY))
         cpp = tpp;
 
@@ -123,11 +121,9 @@ void Cpu::check_features()
     unsigned long t_bits = bit_scan_reverse (tpc - 1) + 1;
     unsigned long c_bits = bit_scan_reverse (cpp - 1) + 1;
 
-    thread  = id            & ((1u << t_bits) - 1);
-    core    = id >>  t_bits & ((1u << c_bits) - 1);
-    package = id >> (t_bits + c_bits);
-
-    online++;
+    thread  = top            & ((1u << t_bits) - 1);
+    core    = top >>  t_bits & ((1u << c_bits) - 1);
+    package = top >> (t_bits + c_bits);
 
     // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
     if (vendor == AMD)
@@ -159,6 +155,8 @@ void Cpu::init()
     Tss::load();
     Idt::load();
 
+    Lapic::init();
+
     // Initialize CPU number and check features
     check_features();
 
@@ -169,8 +167,6 @@ void Cpu::init()
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current() | Hpt::HPT_P);
     Pd::kern.Space_mem::loc[id].lookup (CPULC_ADDR, phys);
     Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
-
-    Lapic::init();
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))
         setup_thermal();

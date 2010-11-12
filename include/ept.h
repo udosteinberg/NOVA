@@ -46,8 +46,10 @@ class Ept : public Pte<Ept, uint64, 4, 9>
         ALWAYS_INLINE
         inline void flush()
         {
+            uint64 eptp = addr() | (max() - 1) << 3 | 6;
+
             bool ret;
-            asm volatile ("invept %1, %2; seta %0" : "=q" (ret) : "m" (val), "r" (1UL) : "cc");
+            asm volatile ("invept %1, %2; seta %0" : "=q" (ret) : "m" (eptp), "r" (1UL) : "cc");
             assert (ret);
         }
 };

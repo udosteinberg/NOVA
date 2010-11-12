@@ -24,7 +24,7 @@
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;
-unsigned    Lapic::mask_cpu;
+uint8       Lapic::apic_id[NUM_CPU];
 
 void Lapic::init()
 {
@@ -32,7 +32,7 @@ void Lapic::init()
 
     Cpu::bsp = apic_base & 0x100;
 
-    Pd::kern.insert_local (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
+    Hptp (Hpt::current() | Hpt::HPT_P).update (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
 
@@ -52,7 +52,7 @@ void Lapic::init()
         case 1:
             set_lvt (LAPIC_LVT_LINT0, 0, DLV_EXTINT, MASKED);
         case 0:
-            set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED, UNMASKED, ONESHOT);
+            set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED, UNMASKED);
     }
 
     write (LAPIC_TPR, 0x10);
@@ -61,6 +61,12 @@ void Lapic::init()
 
     set_ldr (1u << Cpu::id);
     set_dfr (LAPIC_FLAT);
+
+    for (unsigned i = id(), n = 0; n < NUM_CPU; n++)
+        if (apic_id[n] == i) {
+            Cpu::id = n;
+            break;
+        }
 
     if (Cpu::bsp)
         calibrate();
@@ -85,33 +91,25 @@ void Lapic::calibrate()
     trace (TRACE_CPU, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
 }
 
-void Lapic::send_ipi (unsigned cpu, Destination_mode dst, Delivery_mode dlv, unsigned vector)
+void Lapic::send_ipi (unsigned cpu, Delivery_mode dlv, unsigned vector)
 {
-    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & STS_PENDING))
+    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 0x1000))
         pause();
 
-    write (LAPIC_ICR_HI, cpu << 24);
-    write (LAPIC_ICR_LO, dst | dlv | vector);
+    write (LAPIC_ICR_HI, apic_id[cpu] << 24);
+    write (LAPIC_ICR_LO, dlv | vector);
 }
 
 void Lapic::wake_ap()
 {
-    for (unsigned i = 0; i < NUM_CPU; i++) {
-
-        if (id() != i) {
-
-            if (!(mask_cpu & 1UL << i))
-                continue;
-
-            send_ipi (i, DST_PHYSICAL, DLV_INIT, 0);
+    for (unsigned i = 0; i < Cpu::online; i++)
+        if (id() != apic_id[i]) {
+            send_ipi (i, DLV_INIT, 0);
             Acpi::delay (10);
-            send_ipi (i, DST_PHYSICAL, DLV_SIPI, 1);
+            send_ipi (i, DLV_SIPI, 1);
             Acpi::delay (1);
-            send_ipi (i, DST_PHYSICAL, DLV_SIPI, 1);
+            send_ipi (i, DLV_SIPI, 1);
         }
-
-        Cpu::boot_count++;
-    }
 }
 
 void Lapic::therm_handler() {}
@@ -155,7 +153,7 @@ void Lapic::ipi_vector (unsigned vector)
 
     switch (vector) {
         case VEC_IPI_RRQ: Sc::rrq_handler(); break;
-        case VEC_IPI_TLB: Sc::tlb_handler(); break;
+        case VEC_IPI_RKE: Sc::rke_handler(); break;
     }
 
     eoi();

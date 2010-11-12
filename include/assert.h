@@ -21,11 +21,11 @@
 #include "compiler.h"
 #include "stdio.h"
 
-#ifdef NDEBUG
-#define assert(X)   do { (void) sizeof (X); } while (0)
-#else
+#ifdef DEBUG
 #define assert(X)   do {                                                                            \
                         if (EXPECT_FALSE (!(X)))                                                    \
                             panic ("Assertion \"%s\" failed at %s:%d\n", #X, __FILE__, __LINE__);   \
                     } while (0)
+#else
+#define assert(X)   do { (void) sizeof (X); } while (0)
 #endif

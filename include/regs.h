@@ -57,23 +57,6 @@ class Sys_regs
             BAD_DEV,
         };
 
-        enum
-        {
-            CALL,
-            REPLY,
-            CREATE_PD,
-            CREATE_EC,
-            CREATE_SC,
-            CREATE_PT,
-            CREATE_SM,
-            REVOKE,
-            LOOKUP,
-            RECALL,
-            SEMCTL,
-            ASSIGN_PCI,
-            ASSIGN_GSI,
-        };
-
         ALWAYS_INLINE
         inline unsigned flags() const { return eax >> 4 & 0xf; }
 

@@ -65,7 +65,7 @@ class Acpi_table_fadt : public Acpi_table
         uint8       century;                        // 108
         uint16      iapc_boot_arch;                 // 109
         uint8       reserved_1;                     // 111
-        uint32      feature_flags;                  // 112
+        uint32      flags;                          // 112
         Acpi_gas    reset_reg;                      // 116
         uint8       reset_value;                    // 128
         uint8       reserved_2[3];                  // 129

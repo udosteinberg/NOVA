@@ -45,12 +45,6 @@ class Space_mem : public Space
         static unsigned did_ctr;
 
         ALWAYS_INLINE
-        inline void insert_local (mword virt, unsigned o, mword attr, Paddr phys)
-        {
-            loc[Cpu::id].update (virt, o, phys, attr);
-        }
-
-        ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
         {
             return hpt.lookup (virt, phys);

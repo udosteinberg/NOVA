@@ -41,7 +41,7 @@ class Acpi_table_rsdt : public Acpi_table
         };
 
         INIT
-        void parse (Paddr addr, size_t size) const;
+        void parse (Paddr, size_t) const;
 };
 
 #pragma pack()

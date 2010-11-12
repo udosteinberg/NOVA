@@ -24,7 +24,7 @@ void Acpi_table_fadt::parse() const
     Acpi::irq         = sci_irq;
     Acpi::smi_cmd     = smi_cmd;
     Acpi::enable_val  = acpi_enable;
-    Acpi::feature     = feature_flags;
+    Acpi::feature     = flags;
 
     // XXX: Use x_pm blocks if they exist
 

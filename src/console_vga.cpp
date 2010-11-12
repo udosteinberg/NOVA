@@ -54,6 +54,8 @@ void Console_vga::putc (int c)
 
 unsigned Console_vga::init_spinner (Spinlock *lock)
 {
+    char const *dig = "0123456789ABCDEF";
+
     if (!initialized)
         return 0;
 
@@ -66,11 +68,11 @@ unsigned Console_vga::init_spinner (Spinlock *lock)
     }
 
     if (lock) {
-        put (_num_row, 0, COLOR_LIGHT_RED, (Cpu::id >> 4 & 0xf)["0123456789ABCDEF"]);
-        put (_num_row, 1, COLOR_LIGHT_RED, (Cpu::id >> 0 & 0xf)["0123456789ABCDEF"]);
+        put (_num_row, 0, COLOR_LIGHT_RED, (Cpu::id / 10)[dig]);
+        put (_num_row, 1, COLOR_LIGHT_RED, (Cpu::id % 10)[dig]);
 
         for (unsigned i = SPN_GSI; i < 80; i++)
-            put (_num_row, i, COLOR_LIGHT_BLACK, ((i - SPN_GSI) & 0xf)["0123456789ABCDEF"]);
+            put (_num_row, i, COLOR_LIGHT_BLACK, ((i - SPN_GSI) & 0xf)[dig]);
 
         lock->unlock();
     }

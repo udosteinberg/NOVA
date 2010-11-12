@@ -24,7 +24,7 @@
 #include "acpi_rsdp.h"
 #include "acpi_rsdt.h"
 #include "assert.h"
-#include "cmdline.h"
+#include "bits.h"
 #include "gsi.h"
 #include "hpt.h"
 #include "io.h"
@@ -43,12 +43,14 @@ Acpi_gas Acpi::pm2_cnt;
 Acpi_gas Acpi::pm_tmr;
 Acpi_gas Acpi::reset_reg;
 
+uint32      Acpi::tmr_ovf;
 uint32      Acpi::feature;
 uint32      Acpi::smi_cmd;
-unsigned    Acpi::gsi;
-unsigned    Acpi::irq;
 uint8       Acpi::enable_val;
 uint8       Acpi::reset_val;
+
+unsigned    Acpi::gsi;
+unsigned    Acpi::irq;
 
 bool        Acpi_table_madt::sci_overridden = false;
 
@@ -65,22 +67,25 @@ void Acpi::setup_sci()
         sci_override.flags.trg = Acpi_inti::TRG_CONFORMING;
         Acpi_table_madt::parse_intr_override (&sci_override);
     }
+
+    Gsi::set (gsi);
+
+    trace (TRACE_ACPI, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
 }
 
 void Acpi::enable()
 {
-    trace (TRACE_ACPI, "ACPI: GSI:%#x", gsi);
+    setup_sci();
 
-    write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL);
+    if (smi_cmd && enable_val) {
+        Io::out (smi_cmd, enable_val);
+        while (!(read (PM1_CNT) & PM1_CNT_SCI_EN))
+            pause();
+    }
 
-    Gsi::set (gsi);
+    write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
 
-    if (Cmdline::noacpi || !smi_cmd || !enable_val)
-        return;
-
-    Io::out (smi_cmd, enable_val);
-    while ((read (PM1_CNT) & PM1_CNT_SCI_EN) == 0)
-        pause();
+    for (; tmr_ovf = read (PM_TMR) >> tmr_msb(), read (PM1_STS) & PM1_STS_TMR; write (PM1_STS, PM1_STS_TMR)) ;
 }
 
 void Acpi::delay (unsigned ms)
@@ -88,14 +93,20 @@ void Acpi::delay (unsigned ms)
     unsigned cnt = timer_frequency * ms / 1000;
     unsigned val = read (PM_TMR);
 
-    while ((read (PM_TMR) - val) % (1ul << 24) < cnt)
+    while ((read (PM_TMR) - val) % (1UL << 24) < cnt)
         pause();
+}
+
+uint64 Acpi::time()
+{
+    uint32 dummy;
+    mword b = tmr_msb(), c = read (PM_TMR), p = 1UL << b;
+    return div64 (1000000 * ((tmr_ovf + ((c >> b ^ tmr_ovf) & 1)) * static_cast<uint64>(p) + (c & (p - 1))), timer_frequency, &dummy);
 }
 
 void Acpi::reset()
 {
-//  if (feature & 0x400)
-        write (RESET, reset_val);
+    write (RESET, reset_val);
 }
 
 void Acpi::setup()
@@ -115,8 +126,6 @@ void Acpi::setup()
         static_cast<Acpi_table_mcfg *>(Hpt::remap (mcfg))->parse();
     if (dmar)
         static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
-
-    setup_sci();
 
     Gsi::init();
 
@@ -214,5 +223,10 @@ void Acpi::hw_write (Acpi_gas *gas, unsigned val)
 
 void Acpi::interrupt()
 {
-    write (PM1_STS, read (PM1_STS));
+    unsigned sts = read (PM1_STS);
+
+    if (sts & PM1_STS_TMR)
+        tmr_ovf++;
+
+    write (PM1_STS, sts);
 }

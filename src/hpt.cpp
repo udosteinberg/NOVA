@@ -44,8 +44,8 @@ size_t Hpt::sync_master (mword virt)
          pte = static_cast<Hpt *>(Buddy::phys_to_ptr (pte->addr())),
          mst = static_cast<Hpt *>(Buddy::phys_to_ptr (mst->addr()))) {
 
-        unsigned shift = --lev * bpl() + 12;
-        unsigned slot = virt >> shift & ((1UL << bpl()) - 1);
+        mword shift = --lev * bpl() + 12;
+        mword slot = virt >> shift & ((1UL << bpl()) - 1);
         size_t size = 1UL << shift;
 
         mst += slot;

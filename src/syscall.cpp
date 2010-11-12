@@ -77,7 +77,7 @@ void Ec::send_msg()
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
-    if (EXPECT_FALSE (current->cpu != ec->cpu))
+    if (EXPECT_FALSE (current->cpu != ec->xcpu))
         die ("PT wrong CPU");
 
     if (EXPECT_TRUE (!ec->cont)) {
@@ -104,7 +104,7 @@ void Ec::sys_call()
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
-    if (EXPECT_FALSE (current->cpu != ec->cpu))
+    if (EXPECT_FALSE (current->cpu != ec->xcpu))
         sys_finish<Sys_regs::BAD_CPU>();
 
     if (EXPECT_TRUE (!ec->cont)) {
@@ -385,7 +385,7 @@ void Ec::sys_recall()
         ec->regs.set_hazard (HZD_RECALL);
 
         if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
-            Lapic::send_ipi (ec->cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
+            Lapic::send_ipi (ec->cpu, Lapic::DLV_FIXED, VEC_IPI_RKE);
     }
 
     sys_finish<Sys_regs::SUCCESS>();

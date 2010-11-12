@@ -20,6 +20,7 @@
 
 #include "atomic.h"
 #include "compiler.h"
+#include "types.h"
 
 class Cpuset
 {

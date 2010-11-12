@@ -133,16 +133,16 @@ class Acpi_table_madt : public Acpi_table
         void parse() const;
 
         INIT
-        void parse_entry (Acpi_apic::Type type, void (*handler)(Acpi_apic const *)) const;
+        void parse_entry (Acpi_apic::Type, void (*)(Acpi_apic const *)) const;
 
         INIT
-        static void parse_lapic (Acpi_apic const *acpi_apic);
+        static void parse_lapic (Acpi_apic const *);
 
         INIT
-        static void parse_ioapic (Acpi_apic const *acpi_apic);
+        static void parse_ioapic (Acpi_apic const *);
 
         INIT
-        static void parse_intr_override (Acpi_apic const *acpi_apic);
+        static void parse_intr_override (Acpi_apic const *);
 };
 
 #pragma pack()

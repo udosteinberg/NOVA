@@ -32,22 +32,19 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (EC, own, sel), cont (f), utcb (0), pd (own), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (EC, own, sel), cont (f), utcb (0), pd (own), cpu (static_cast<uint16>(c)), glb (true), evt (e)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : Kobject (EC, own, sel), pd (own), sc (w ? reinterpret_cast<Sc *>(~0ul) : 0), cpu (c), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : Kobject (EC, own, sel), pd (own), sc (g ? 0 : reinterpret_cast<Sc *>(~0ul)), cpu (static_cast<uint16>(c)), glb (g), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
 
     if (u) {
 
-        if (w) {
-            cont = static_cast<void (*)()>(0);
-            regs.ecx = s;
-        } else {
+        if (g) {
             cont = send_msg<ret_user_iret>;
             regs.cs  = SEL_USER_CODE;
             regs.ds  = SEL_USER_DATA;
@@ -55,6 +52,9 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : 
             regs.ss  = SEL_USER_DATA;
             regs.efl = Cpu::EFL_IF;
             regs.esp = s;
+        } else {
+            cont = static_cast<void (*)()>(0);
+            regs.ecx = s;
         }
 
         utcb = new Utcb;
@@ -63,7 +63,7 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool w) : 
 
         regs.dst_portal = NUM_EXC - 2;
 
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x W:%u)", this, own, c, u, s, e, w);
+        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, own, c, u, s, e);
 
     } else {
 

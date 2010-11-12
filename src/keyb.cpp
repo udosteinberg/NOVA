@@ -35,23 +35,9 @@ void Keyb::init()
     // Disable scan code translation
     send_ctrl (CMD_RD_CCB);
     unsigned ccb = read_keyb();
-#if 0
-    send_ctrl (CMD_WR_CCB);
-    send_keyb (ccb & ~CCB_XLATE);
-
-    // Set scan code set 1
-    send_keyb (KEYB_SCAN_CODE);
-    if (read_keyb() == KEYB_ACK) {
-        send_keyb(1);
-        read_keyb();
-    }
-#endif
-
-    send_keyb (KEYB_READ_ID);
-    unsigned id = read_keyb() == KEYB_ACK ? read_keyb() | read_keyb() << 8 : 0;
 
     gsi = Gsi::irq_to_gsi (irq);
-    trace (TRACE_KEYB, "KEYB: GSI:%#x CCB:%#x ID:%#x", gsi, ccb, id);
+    trace (TRACE_KEYB, "KEYB: GSI:%#x CCB:%#x", gsi, ccb);
 
     Gsi::set (gsi);
 }

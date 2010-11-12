@@ -47,7 +47,13 @@ class Ec : public Kobject, public Queue<Sc>
         Ec *        prev;
         Ec *        next;
         Fpu *       fpu;
-        unsigned const cpu;
+        union {
+            struct {
+                uint16  cpu;
+                uint16  glb;
+            };
+            uint32  xcpu;
+        };
         unsigned const evt;
 
         // EC Cache
@@ -115,7 +121,7 @@ class Ec : public Kobject, public Queue<Sc>
         static Ec *fpowner CPULOCAL;
 
         Ec (Pd *, mword, unsigned, unsigned, void (*)());
-        Ec (Pd *, mword, unsigned, mword, mword, unsigned, bool);
+        Ec (Pd *, mword, unsigned, mword, mword, unsigned, bool = true);
 
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)

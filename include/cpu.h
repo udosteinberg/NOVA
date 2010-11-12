@@ -173,7 +173,6 @@ class Cpu
         };
 
         static mword    boot_lock           asm ("boot_lock");
-        static mword    boot_count;
 
         static unsigned online;
         static unsigned id                  CPULOCAL_HOT;

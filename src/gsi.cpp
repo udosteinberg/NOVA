@@ -60,20 +60,20 @@ uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
     gsi_table[gsi].msk = 0;
     gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
 
-    uint32 msi_addr = 0, msi_data = 0;
+    uint32 msi_addr = 0, msi_data = 0, aid = Lapic::apic_id[cpu];
 
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic) {
-        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : cpu);
+        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : aid);
         ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
         rid = ioapic->get_rid();
     } else {
-        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : cpu << 12);
+        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
         msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
     }
 
-    Dmar::set_irt (gsi, rid, cpu, VEC_GSI + gsi, gsi_table[gsi].trg);
+    Dmar::set_irt (gsi, rid, aid, VEC_GSI + gsi, gsi_table[gsi].trg);
 
     return static_cast<uint64>(msi_addr) << 32 | msi_data;
 }

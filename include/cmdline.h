@@ -31,9 +31,7 @@ class Cmdline
         static bool dmar;
         static bool keyb;
         static bool serial;
-        static bool noacpi;
         static bool noept;
-        static bool nomp;
         static bool nospinner;
         static bool novga;
         static bool novpid;

@@ -127,15 +127,14 @@ void Sc::remote_enqueue()
 
         Lock_guard <Spinlock> guard (r->lock);
 
-        if (!r->queue)
-            r->queue = prev = next = this;
-        else {
+        if (r->queue) {
             next = r->queue;
             prev = r->queue->prev;
             next->prev = prev->next = this;
+        } else {
+            r->queue = prev = next = this;
+            Lapic::send_ipi (cpu, Lapic::DLV_FIXED, VEC_IPI_RRQ);
         }
-
-        Lapic::send_ipi (cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_RRQ);
     }
 }
 
@@ -158,7 +157,7 @@ void Sc::rrq_handler()
     rq.queue = 0;
 }
 
-void Sc::tlb_handler()
+void Sc::rke_handler()
 {
     if (Pd::current->Space_mem::htlb.chk (Cpu::id))
         Cpu::hazard |= HZD_SCHED;

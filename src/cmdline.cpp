@@ -23,9 +23,7 @@
 bool Cmdline::dmar;
 bool Cmdline::keyb;
 bool Cmdline::serial;
-bool Cmdline::noacpi;
 bool Cmdline::noept;
-bool Cmdline::nomp;
 bool Cmdline::nospinner;
 bool Cmdline::novga;
 bool Cmdline::novpid;
@@ -39,9 +37,7 @@ struct param
     { "dmar",       &Cmdline::dmar      },
     { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
-    { "noacpi",     &Cmdline::noacpi    },
     { "noept",      &Cmdline::noept     },
-    { "nomp",       &Cmdline::nomp      },
     { "nospinner",  &Cmdline::nospinner },
     { "novga",      &Cmdline::novga     },
     { "novpid",     &Cmdline::novpid    },

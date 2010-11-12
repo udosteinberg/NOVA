@@ -108,7 +108,7 @@ void Space_mem::shootdown()
 
         unsigned ctr = Counter::remote (cpu, 1);
 
-        Lapic::send_ipi (cpu, Lapic::DST_PHYSICAL, Lapic::DLV_FIXED, VEC_IPI_TLB);
+        Lapic::send_ipi (cpu, Lapic::DLV_FIXED, VEC_IPI_RKE);
 
         while (Counter::remote (cpu, 1) == ctr)
             pause();
