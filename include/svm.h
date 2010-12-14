@@ -27,8 +27,8 @@ class Vmcb
         union {
             char pad[1024];
             struct {
-                uint32      intercept_cr0;          // 0x0
-                uint32      intercept_dr0;          // 0x4
+                uint32      intercept_cr;           // 0x0
+                uint32      intercept_dr;           // 0x4
                 uint32      intercept_exc;          // 0x8
                 uint32      intercept_cpu[2];       // 0xc
                 uint32      reserved1[11];          // 0x14
@@ -69,6 +69,11 @@ class Vmcb
         static uint32       svm_version CPULOCAL;
         static uint32       svm_feature CPULOCAL;
 
+        static mword const fix_cr0_set = 0;
+        static mword const fix_cr0_clr = 0;
+        static mword const fix_cr4_set = 0;
+        static mword const fix_cr4_clr = 0;
+
         enum Ctrl0
         {
             CPU_INTR        = 1ul << 0,
@@ -77,6 +82,7 @@ class Vmcb
             CPU_VINTR       = 1ul << 4,
             CPU_INVD        = 1ul << 22,
             CPU_HLT         = 1ul << 24,
+            CPU_INVLPG      = 1ul << 25,
             CPU_IO          = 1ul << 27,
             CPU_MSR         = 1ul << 28,
             CPU_SHUTDOWN    = 1ul << 31,
@@ -107,7 +113,7 @@ class Vmcb
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            return Buddy::allocator.alloc (0, Buddy::NOFILL);
+            return Buddy::allocator.alloc (0, Buddy::FILL_0);
         }
 
         Vmcb (mword, mword);
@@ -117,6 +123,18 @@ class Vmcb
         {
             asm volatile ("vmsave" : : "a" (Buddy::ptr_to_phys (root = this)) : "memory");
         }
+
+        ALWAYS_INLINE
+        inline void adjust_rip (mword len)
+        {
+            rip += len;
+
+            if (int_shadow)
+                int_shadow = 0;
+        }
+
+        static bool has_npt() { return Vmcb::svm_feature & 1; }
+        static bool has_urg() { return true; }
 
         static void init();
 };

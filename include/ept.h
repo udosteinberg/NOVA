@@ -22,7 +22,7 @@
 #include "compiler.h"
 #include "pte.h"
 
-class Ept : public Pte<Ept, uint64, 4, 9>
+class Ept : public Pte<Ept, uint64, 4, 9, false>
 {
     public:
         static mword ord;

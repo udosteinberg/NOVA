@@ -25,12 +25,12 @@ mword Dpt::ord = ~0UL;
 mword Ept::ord = ~0UL;
 mword Hpt::ord = ~0UL;
 
-template <typename P, typename E, unsigned L, unsigned B>
-P *Pte<P,E,L,B>::walk (E v, unsigned long n, bool d)
+template <typename P, typename E, unsigned L, unsigned B, bool F>
+P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool d)
 {
     unsigned long l = L;
 
-    for (P *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
+    for (P *p, *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
 
         if (l == n)
             return e;
@@ -40,13 +40,14 @@ P *Pte<P,E,L,B>::walk (E v, unsigned long n, bool d)
             if (d)
                 return 0;
 
-            e->set (Buddy::ptr_to_phys (new P) | P::PTE_N);
+            if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? P::PTE_P : P::PTE_N)))
+                delete p;
         }
     }
 }
 
-template <typename P, typename E, unsigned L, unsigned B>
-size_t Pte<P,E,L,B>::lookup (E v, Paddr &p)
+template <typename P, typename E, unsigned L, unsigned B, bool F>
+size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
 {
     unsigned long l = L;
 
@@ -66,22 +67,24 @@ size_t Pte<P,E,L,B>::lookup (E v, Paddr &p)
     }
 }
 
-template <typename P, typename E, unsigned L, unsigned B>
-bool Pte<P,E,L,B>::update (E v, mword o, E p, mword a, bool d)
+template <typename P, typename E, unsigned L, unsigned B, bool F>
+bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool d)
 {
-    unsigned long l = o / B;
-    unsigned long s = 1UL << (l * B + PAGE_BITS);
+    unsigned long l = o / B, n = 1UL << o % B, s = 1UL << (l * B + PAGE_BITS);
 
     P *e = walk (v, l, d);
 
     p |= a | (l ? P::PTE_S : 0);
 
-    for (unsigned long i = 1UL << o % B; i; i--, e++, p += s)
-        e->set (p);
+    for (unsigned long i = 0; i < n; i++, p += s)
+        e[i].val = p;
+
+    if (F)
+        flush (e, n * sizeof (E));
 
     return l;
 }
 
-template class Pte<Dpt, uint64, 4, 9>;
-template class Pte<Ept, uint64, 4, 9>;
-template class Pte<Hpt, mword, 2, 10>;
+template class Pte<Dpt, uint64, 4, 9, true>;
+template class Pte<Ept, uint64, 4, 9, false>;
+template class Pte<Hpt, mword, 2, 10, false>;

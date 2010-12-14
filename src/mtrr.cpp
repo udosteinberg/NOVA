@@ -42,7 +42,7 @@ void Mtrr::init()
                   Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_MASK + 2 * i)));
 }
 
-unsigned Mtrr::memtype (Paddr phys)
+unsigned Mtrr::memtype (uint64 phys)
 {
     if (phys < 0x80000)
         return static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>

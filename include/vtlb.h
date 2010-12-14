@@ -23,7 +23,7 @@
 
 class Exc_regs;
 
-class Vtlb : public Pte<Vtlb, mword, 2, 10>
+class Vtlb : public Pte<Vtlb, mword, 2, 10, false>
 {
     private:
         enum
@@ -39,12 +39,11 @@ class Vtlb : public Pte<Vtlb, mword, 2, 10>
         ALWAYS_INLINE
         inline bool frag() const { return val & TLB_F; }
 
-        ALWAYS_INLINE
-        static inline size_t walk (Exc_regs *, mword, mword &, mword &, mword &);
-
-        void flush_ptab (unsigned);
+        void flush_ptab (bool);
 
     public:
+        static size_t walk (Exc_regs *, mword, mword &, mword &, mword &);
+
         enum
         {
             TLB_P   = 1UL << 0,
@@ -74,11 +73,10 @@ class Vtlb : public Pte<Vtlb, mword, 2, 10>
                 this[i].val = TLB_S;
         }
 
-        void flush_addr (mword, unsigned long);
-        void flush (unsigned, unsigned long);
+        void flush (mword);
+        void flush (bool);
 
         static Reason miss (Exc_regs *, mword, mword &);
-        static bool load_pdpte (Exc_regs *, uint64 (&)[4]);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::NOFILL); }

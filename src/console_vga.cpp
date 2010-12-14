@@ -32,50 +32,37 @@ void Console_vga::init()
     initialized = true;
 }
 
+void Console_vga::setup()
+{
+    if (!Cmdline::spinner || !initialized)
+        return;
+
+    for (unsigned c = 0; c < min (Cpu::online, 12U); c++) {
+
+        if (row == --num)
+            clear_row (row--);
+
+        for (unsigned i = SPN_GSI; i < 80; i++)
+            put (num, i, COLOR_LIGHT_BLACK, ((i - SPN_GSI) & 0xf)["0123456789ABCDEF"]);
+    }
+}
+
 void Console_vga::putc (int c)
 {
     if (EXPECT_FALSE (c == '\f')) {
         clear_all();
-        _row = _col = 0;
+        row = col = 0;
         return;
     }
 
     if (EXPECT_TRUE (c != '\n')) {
-        put (_row, _col, COLOR_LIGHT_WHITE, c);
-        if (EXPECT_TRUE (++_col < 80))
+        put (row, col, COLOR_LIGHT_WHITE, c);
+        if (EXPECT_TRUE (++col < 80))
             return;
     }
 
-    _col = 0;
+    col = 0;
 
-    if (EXPECT_FALSE (++_row == _num_row))
-        clear_row (--_row);
-}
-
-unsigned Console_vga::init_spinner (Spinlock *lock)
-{
-    char const *dig = "0123456789ABCDEF";
-
-    if (!initialized)
-        return 0;
-
-    if (lock)
-        lock->lock();
-
-    if (_row == --_num_row) {
-        _row--;
-        clear_row (_num_row);
-    }
-
-    if (lock) {
-        put (_num_row, 0, COLOR_LIGHT_RED, (Cpu::id / 10)[dig]);
-        put (_num_row, 1, COLOR_LIGHT_RED, (Cpu::id % 10)[dig]);
-
-        for (unsigned i = SPN_GSI; i < 80; i++)
-            put (_num_row, i, COLOR_LIGHT_BLACK, ((i - SPN_GSI) & 0xf)[dig]);
-
-        lock->unlock();
-    }
-
-    return _num_row;
+    if (EXPECT_TRUE (++row == num))
+        clear_row (--row);
 }

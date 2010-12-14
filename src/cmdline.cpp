@@ -23,22 +23,18 @@
 bool Cmdline::dmar;
 bool Cmdline::keyb;
 bool Cmdline::serial;
-bool Cmdline::noept;
-bool Cmdline::nospinner;
+bool Cmdline::spinner;
+bool Cmdline::vtlb;
 bool Cmdline::novga;
 bool Cmdline::novpid;
 
-struct param
-{
-    char const *string;
-    bool *param;
-} params[] INITDATA =
+struct Cmdline::param_map Cmdline::map[] INITDATA =
 {
     { "dmar",       &Cmdline::dmar      },
     { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
-    { "noept",      &Cmdline::noept     },
-    { "nospinner",  &Cmdline::nospinner },
+    { "spinner",    &Cmdline::spinner   },
+    { "vtlb",       &Cmdline::vtlb      },
     { "novga",      &Cmdline::novga     },
     { "novpid",     &Cmdline::novpid    },
 };
@@ -66,7 +62,7 @@ void Cmdline::init (mword addr)
     char *arg, *line = static_cast<char *>(Hpt::remap (addr));
 
     while ((arg = get_arg (&line)))
-        for (unsigned i = 0; i < sizeof params / sizeof *params; i++)
-            if (!strcmp (params[i].string, arg))
-                *params[i].param = true;
+        for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
+            if (!strcmp (map[i].arg, arg))
+                *map[i].ptr = true;
 }

@@ -16,11 +16,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
 #include "counter.h"
 #include "x86.h"
 
-unsigned    Counter::row;
 unsigned    Counter::ipi[NUM_IPI];
 unsigned    Counter::lvt[NUM_LVT];
 unsigned    Counter::gsi[NUM_GSI];
@@ -33,13 +31,6 @@ unsigned    Counter::vtlb_flush;
 unsigned    Counter::schedule;
 unsigned    Counter::helping;
 uint64      Counter::cycles_idle;
-
-void Counter::init()
-{
-    extern Spinlock printf_lock;
-    if (!Cmdline::nospinner)
-        row = screen.init_spinner (&printf_lock);
-}
 
 void Counter::dump()
 {

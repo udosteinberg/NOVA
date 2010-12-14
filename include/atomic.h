@@ -25,73 +25,39 @@ class Atomic
     public:
         template <typename T>
         ALWAYS_INLINE
-        static inline void add (T &val, T n)
-        {
-            asm volatile ("lock; add%z0 %1, %0" : "+m" (val) : "ir" (n) : "cc");
-        }
+        static inline bool cmp_swap (T &ptr, T o, T n) { return __sync_bool_compare_and_swap (&ptr, o, n); }
 
         template <typename T>
         ALWAYS_INLINE
-        static inline bool sub (T &val, T n)
-        {
-            bool ret;
-            asm volatile ("lock; sub%z1 %2, %1; setz %0" : "=q" (ret), "+m" (val) : "ir" (n) : "cc");
-            return ret;
-        }
+        static inline T add (T &ptr, T v) { return __sync_add_and_fetch (&ptr, v); }
 
-        template <bool L, typename T>
+        template <typename T>
         ALWAYS_INLINE
-        static inline bool test_clr_bit (T &val, unsigned long bit)
-        {
-            bool ret;
-            if (L)
-                asm volatile ("lock; btr%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
-            else
-                asm volatile ("      btr%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
-            return ret;
-        }
+        static inline T sub (T &ptr, T v) { return __sync_sub_and_fetch (&ptr, v); }
 
-        template <bool L, typename T>
+        template <typename T>
+        ALWAYS_INLINE
+        static inline void set_mask (T &ptr, T v) { __sync_or_and_fetch (&ptr, v); }
+
+        template <typename T>
+        ALWAYS_INLINE
+        static inline void clr_mask (T &ptr, T v) { __sync_and_and_fetch (&ptr, ~v); }
+
+        template <typename T>
         ALWAYS_INLINE
         static inline bool test_set_bit (T &val, unsigned long bit)
         {
             bool ret;
-            if (L)
-                asm volatile ("lock; bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
-            else
-                asm volatile ("      bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+            asm volatile ("lock; bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             return ret;
         }
 
-        template <bool L, typename T>
+        template <typename T>
         ALWAYS_INLINE
-        static inline void set_mask (T &val, T mask)
-        {
-            if (L)
-                asm volatile ("lock; or%z0 %1, %0" : "+m" (val) : "r" (mask) : "cc");
-            else
-                asm volatile ("      or%z0 %1, %0" : "+m" (val) : "r" (mask) : "cc");
-        }
-
-        template <bool L, typename T>
-        ALWAYS_INLINE
-        static inline void clr_mask (T &val, T mask)
-        {
-            if (L)
-                asm volatile ("lock; and%z0 %1, %0" : "+m" (val) : "r" (~mask) : "cc");
-            else
-                asm volatile ("      and%z0 %1, %0" : "+m" (val) : "r" (~mask) : "cc");
-        }
-
-        template <bool L, typename T>
-        ALWAYS_INLINE
-        static inline bool cmp_swap (T *ptr, T o, T n)
+        static inline bool test_clr_bit (T &val, unsigned long bit)
         {
             bool ret;
-            if (L)
-                asm volatile ("lock; cmpxchg%z1 %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
-            else
-                asm volatile ("      cmpxchg%z1 %3, %1; sete %0" : "=q" (ret), "+m" (*ptr), "+a" (o) : "r" (n) : "cc");
+            asm volatile ("lock; btr%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
             return ret;
         }
 };

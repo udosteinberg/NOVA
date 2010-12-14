@@ -52,6 +52,7 @@ unsigned    Cpu::model;
 unsigned    Cpu::stepping;
 unsigned    Cpu::brand;
 unsigned    Cpu::patch;
+unsigned    Cpu::row;
 
 uint32      Cpu::name[12];
 uint32      Cpu::features[4];
@@ -160,8 +161,7 @@ void Cpu::init()
     // Initialize CPU number and check features
     check_features();
 
-    // Initialize event counters
-    Counter::init();
+    row = screen.spinner (id);
 
     Paddr phys;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current() | Hpt::HPT_P);

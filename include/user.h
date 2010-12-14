@@ -24,8 +24,8 @@ class User
 {
     public:
         template <typename T>
-        static inline mword
-        peek (T *addr, T &val)
+        ALWAYS_INLINE
+        static inline mword peek (T *addr, T &val)
         {
             mword ret;
             asm volatile ("1: mov %2, %1; or $-1, %0; 2:"
@@ -35,8 +35,8 @@ class User
         }
 
         template <typename T>
-        static inline mword
-        cmp_swap (T *addr, T o, T n)
+        ALWAYS_INLINE
+        static inline mword cmp_swap (T *addr, T o, T n)
         {
             mword ret;
             asm volatile ("1: lock; cmpxchg %3, %1; or $-1, %0; 2:"

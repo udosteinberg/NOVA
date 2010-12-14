@@ -20,7 +20,6 @@
 #include "ec.h"
 #include "hip.h"
 #include "msr.h"
-#include "rcu.h"
 
 extern "C" NORETURN
 void bootstrap()
@@ -46,7 +45,6 @@ void bootstrap()
         root_ec->set_cont (Ec::root_invoke);
         root_ec->set_sc (root_sc);
         root_sc->remote_enqueue();
-        Rcu::start_batch();
     }
 
     Sc::schedule();

@@ -140,10 +140,10 @@ void Utcb::load_vmx (Cpu_regs *regs)
         id.set_vmx (0, Vmcs::read (Vmcs::GUEST_BASE_IDTR), Vmcs::read (Vmcs::GUEST_LIMIT_IDTR), 0);
 
     if (mtd & Mtd::CR) {
-        cr2 = regs->read_cr (2);
-        cr3 = regs->read_cr (3);
-        cr0 = regs->read_cr (0);
-        cr4 = regs->read_cr (4);
+        cr0 = regs->read_cr<Vmcs> (0);
+        cr2 = regs->read_cr<Vmcs> (2);
+        cr3 = regs->read_cr<Vmcs> (3);
+        cr4 = regs->read_cr<Vmcs> (4);
     }
 
     if (mtd & Mtd::DR)
@@ -156,9 +156,9 @@ void Utcb::load_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::QUAL) {
-        if (regs->dst_portal == 48 && !regs->ept_on) {
-            qual[0] = regs->ept_error;
-            qual[1] = regs->ept_fault;
+        if (regs->dst_portal == 48 && !regs->nst_on) {
+            qual[0] = regs->nst_error;
+            qual[1] = regs->nst_fault;
         } else {
             qual[0] = Vmcs::read (Vmcs::EXI_QUALIFICATION);
             qual[1] = Vmcs::read (Vmcs::INFO_PHYS_ADDR);
@@ -266,10 +266,10 @@ void Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CR) {
-        regs->write_cr (2, cr2);
-        regs->write_cr (3, cr3);
-        regs->write_cr (0, cr0);
-        regs->write_cr (4, cr4);
+        regs->write_cr<Vmcs> (0, cr0);
+        regs->write_cr<Vmcs> (2, cr2);
+        regs->write_cr<Vmcs> (3, cr3);
+        regs->write_cr<Vmcs> (4, cr4);
     }
 
     if (mtd & Mtd::DR)
@@ -282,8 +282,8 @@ void Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CTRL) {
-        regs->set_cpu_ctrl0 (ctrl[0]);
-        regs->set_cpu_ctrl1 (ctrl[1]);
+        regs->vmx_set_cpu_ctrl0 (ctrl[0]);
+        regs->vmx_set_cpu_ctrl1 (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {
@@ -367,10 +367,10 @@ void Utcb::load_svm (Cpu_regs *regs)
         id = vmcb->idtr;
 
     if (mtd & Mtd::CR) {
-        cr0 = static_cast<mword>(vmcb->cr0);
-        cr2 = static_cast<mword>(vmcb->cr2);
-        cr3 = static_cast<mword>(vmcb->cr3);
-        cr4 = static_cast<mword>(vmcb->cr4);
+        cr0 = regs->read_cr<Vmcb> (0);
+        cr2 = regs->read_cr<Vmcb> (2);
+        cr3 = regs->read_cr<Vmcb> (3);
+        cr4 = regs->read_cr<Vmcb> (4);
     }
 
     if (mtd & Mtd::DR)
@@ -383,12 +383,21 @@ void Utcb::load_svm (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::QUAL) {
-        qual[0] = vmcb->exitinfo1;
-        qual[1] = vmcb->exitinfo2;
+        if (regs->dst_portal == NUM_VMI - 4 && !regs->nst_on) {
+            qual[0] = regs->nst_error;
+            qual[1] = regs->nst_fault;
+        } else {
+            qual[0] = vmcb->exitinfo1;
+            qual[1] = vmcb->exitinfo2;
+        }
     }
 
-    if (mtd & Mtd::INJ)
-        inj = vmcb->inj_control;
+    if (mtd & Mtd::INJ) {
+        if (regs->dst_portal == NUM_VMI - 3 || regs->dst_portal == NUM_VMI - 1)
+            inj = vmcb->inj_control;
+        else
+            inj = vmcb->exitintinfo;
+    }
 
     if (mtd & Mtd::STA) {
         intr_state = static_cast<uint32>(vmcb->int_shadow);
@@ -453,10 +462,10 @@ void Utcb::save_svm (Cpu_regs *regs)
         vmcb->idtr = id;
 
     if (mtd & Mtd::CR) {
-        vmcb->cr0 = cr0;
-        vmcb->cr2 = cr2;
-        vmcb->cr3 = cr3;
-        vmcb->cr4 = cr4;
+        regs->write_cr<Vmcb> (0, cr0);
+        regs->write_cr<Vmcb> (2, cr2);
+        regs->write_cr<Vmcb> (3, cr3);
+        regs->write_cr<Vmcb> (4, cr4);
     }
 
     if (mtd & Mtd::DR)
@@ -469,8 +478,8 @@ void Utcb::save_svm (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CTRL) {
-        vmcb->intercept_cpu[0] = ctrl[0] | Vmcb::force_ctrl0;
-        vmcb->intercept_cpu[1] = ctrl[1] | Vmcb::force_ctrl1;
+        regs->svm_set_cpu_ctrl0 (ctrl[0]);
+        regs->svm_set_cpu_ctrl1 (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {

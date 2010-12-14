@@ -159,6 +159,6 @@ void Sc::rrq_handler()
 
 void Sc::rke_handler()
 {
-    if (Pd::current->Space_mem::htlb.chk (Cpu::id))
+    if (Pd::current->Space_mem::htlb.chk (Cpu::id) || Pd::current->Space_mem::gtlb.chk (Cpu::id))
         Cpu::hazard |= HZD_SCHED;
 }

@@ -73,6 +73,15 @@ void Hpt::sync_master_range (mword s_addr, mword e_addr)
     }
 }
 
+Paddr Hpt::replace (mword v, mword p)
+{
+    Hpt o, *e = walk (v, 0); assert (e);
+
+    do o = *e; while (o.val != p && !(o.attr() & HPT_W) && !e->set (o.val, p));
+
+    return e->addr();
+}
+
 void *Hpt::remap (Paddr phys)
 {
     Hptp hpt (current() | HPT_P);
@@ -85,9 +94,8 @@ void *Hpt::remap (Paddr phys)
 
     Paddr old;
     if (hpt.lookup (REMAP_SADDR, old)) {
-        hpt.update (REMAP_SADDR,        bpl(), 0, 0, true);
-        hpt.update (REMAP_SADDR + size, bpl(), 0, 0, true);
-        flush();
+        hpt.update (REMAP_SADDR,        bpl(), 0, 0, true); flush (REMAP_SADDR);
+        hpt.update (REMAP_SADDR + size, bpl(), 0, 0, true); flush (REMAP_SADDR + size);
     }
 
     hpt.update (REMAP_SADDR,        bpl(), phys,        HPT_W | HPT_P);

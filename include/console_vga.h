@@ -23,8 +23,6 @@
 #include "memory.h"
 #include "string.h"
 
-class Spinlock;
-
 class Console_vga : public Console
 {
     private:
@@ -34,9 +32,7 @@ class Console_vga : public Console
             START_ADDR_LO   = 0xd
         };
 
-        unsigned    _num_row;
-        unsigned    _row;
-        unsigned    _col;
+        unsigned num, row, col;
 
         ALWAYS_INLINE
         static inline unsigned read (Register reg)
@@ -55,14 +51,14 @@ class Console_vga : public Console
         ALWAYS_INLINE
         inline void clear_all()
         {
-            memset (reinterpret_cast<void *>(VGACN_ADDR), 0, 160 * _num_row);
+            memset (reinterpret_cast<void *>(VGACN_ADDR), 0, 160 * num);
         }
 
         ALWAYS_INLINE
-        inline void clear_row (unsigned row)
+        inline void clear_row (unsigned r)
         {
-            memcpy (reinterpret_cast<void *>(VGACN_ADDR), reinterpret_cast<void *>(VGACN_ADDR + 160), 160 * row);
-            memset (reinterpret_cast<void *>(VGACN_ADDR + 160 * row), 0, 160);
+            memcpy (reinterpret_cast<void *>(VGACN_ADDR), reinterpret_cast<void *>(VGACN_ADDR + 160), 160 * r);
+            memset (reinterpret_cast<void *>(VGACN_ADDR + 160 * r), 0, 160);
         }
 
         void putc (int c);
@@ -88,15 +84,21 @@ class Console_vga : public Console
             COLOR_LIGHT_WHITE   = 0xf
         };
 
-        Console_vga() : _num_row (25), _row (0), _col (0) {}
+        Console_vga() : num (25), row (0), col (0) {}
 
         INIT
         void init();
 
+        INIT
+        void setup();
+
         ALWAYS_INLINE
-        inline void put (unsigned long row, unsigned long col, Color color, int c)
+        inline unsigned spinner (unsigned id) { return id < 25 - num ? 24 - id : 0; }
+
+        ALWAYS_INLINE
+        inline void put (unsigned long r, unsigned long c, Color color, int x)
         {
-            *reinterpret_cast<unsigned short volatile *>(VGACN_ADDR + row * 160 + col * 2) = static_cast<unsigned short>(color << 8 | c);
+            *reinterpret_cast<unsigned short volatile *>(VGACN_ADDR + r * 160 + c * 2) = static_cast<unsigned short>(color << 8 | x);
         }
 
         ALWAYS_INLINE
@@ -106,6 +108,4 @@ class Console_vga : public Console
             write (START_ADDR_HI, static_cast<uint8>(page >> 8));
             write (START_ADDR_LO, static_cast<uint8>(page));
         }
-
-        unsigned init_spinner (Spinlock *lock);
 };

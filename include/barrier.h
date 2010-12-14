@@ -1,5 +1,5 @@
 /*
- * CPU Set
+ * Barriers
  *
  * Copyright (C) 2009-2010 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -18,28 +18,10 @@
 
 #pragma once
 
-#include "atomic.h"
 #include "compiler.h"
-#include "types.h"
 
-class Cpuset
+ALWAYS_INLINE
+inline void barrier()
 {
-    private:
-        mword val;
-
-    public:
-        ALWAYS_INLINE
-        inline explicit Cpuset() : val (0) {}
-
-        ALWAYS_INLINE
-        inline bool chk (unsigned cpu) const { return val & 1UL << cpu; }
-
-        ALWAYS_INLINE
-        inline bool set (unsigned cpu) { return !Atomic::test_set_bit (val, cpu); }
-
-        ALWAYS_INLINE
-        inline void clr (unsigned cpu) { Atomic::clr_mask (val, 1UL << cpu); }
-
-        ALWAYS_INLINE
-        inline void merge (Cpuset &s) { Atomic::set_mask (val, s.val); }
-};
+    asm volatile ("" : : : "memory");
+}

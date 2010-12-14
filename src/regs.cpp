@@ -16,103 +16,188 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "hip.h"
 #include "regs.h"
+#include "svm.h"
 #include "vmx.h"
+#include "vpid.h"
 #include "vtlb.h"
 
+template <> mword Exc_regs::get_g_cr0<Vmcb>() const { return static_cast<mword>(vmcb->cr0); }
+template <> mword Exc_regs::get_g_cr2<Vmcb>() const { return static_cast<mword>(vmcb->cr2); }
+template <> mword Exc_regs::get_g_cr3<Vmcb>() const { return static_cast<mword>(vmcb->cr3); }
+template <> mword Exc_regs::get_g_cr4<Vmcb>() const { return static_cast<mword>(vmcb->cr4); }
+template <> mword Exc_regs::get_g_cr0<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR0); }
+template <> mword Exc_regs::get_g_cr2<Vmcs>() const { return cr2; }
+template <> mword Exc_regs::get_g_cr3<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR3); }
+template <> mword Exc_regs::get_g_cr4<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR4); }
+
+template <> void Exc_regs::set_g_cr0<Vmcb> (mword v)  const { vmcb->cr0 = v; }
+template <> void Exc_regs::set_g_cr2<Vmcb> (mword v)        { vmcb->cr2 = v; }
+template <> void Exc_regs::set_g_cr3<Vmcb> (mword v)  const { vmcb->cr3 = v; }
+template <> void Exc_regs::set_g_cr4<Vmcb> (mword v)  const { vmcb->cr4 = v; }
+template <> void Exc_regs::set_g_cr0<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR0, v); }
+template <> void Exc_regs::set_g_cr2<Vmcs> (mword v)        { cr2 = v; }
+template <> void Exc_regs::set_g_cr3<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR3, v); }
+template <> void Exc_regs::set_g_cr4<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR4, v); }
+
+template <> void Exc_regs::set_e_bmp<Vmcb> (uint32 v) const { vmcb->intercept_exc = v; }
+template <> void Exc_regs::set_s_cr0<Vmcb> (mword v)        { cr0_shadow = v; }
+template <> void Exc_regs::set_s_cr4<Vmcb> (mword v)        { cr4_shadow = v; }
+template <> void Exc_regs::set_e_bmp<Vmcs> (uint32 v) const { Vmcs::write (Vmcs::EXC_BITMAP, v); }
+template <> void Exc_regs::set_s_cr0<Vmcs> (mword v)        { Vmcs::write (Vmcs::CR0_READ_SHADOW, cr0_shadow = v); }
+template <> void Exc_regs::set_s_cr4<Vmcs> (mword v)        { Vmcs::write (Vmcs::CR4_READ_SHADOW, cr4_shadow = v); }
+
+template <> void Exc_regs::tlb_flush<Vmcb>(bool full) const
+{
+    vtlb->flush (full);
+
+    if (vmcb->asid)
+        vmcb->tlb_control = 1;
+}
+
+template <> void Exc_regs::tlb_flush<Vmcs>(bool full) const
+{
+    vtlb->flush (full);
+
+    mword vpid = Vmcs::vpid();
+
+    if (vpid)
+        Vpid::flush (full ? Vpid::CONTEXT_GLOBAL : Vpid::CONTEXT_NOGLOBAL, vpid);
+}
+
+template <> void Exc_regs::tlb_flush<Vmcs>(mword addr) const
+{
+    vtlb->flush (addr);
+
+    mword vpid = Vmcs::vpid();
+
+    if (vpid)
+        Vpid::flush (Vpid::ADDRESS, vpid, addr);
+}
+
+template <typename T>
 mword Exc_regs::cr0_set() const
 {
     mword msk = 0;
 
-    if (!ept_on)
+    if (!nst_on)
         msk |= Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_PE;
     if (!fpu_on)
         msk |= Cpu::CR0_TS;
 
-    return Vmcs::fix_cr0.set | msk;
+    return T::fix_cr0_set | msk;
 }
 
+template <typename T>
+mword Exc_regs::cr0_msk() const
+{
+    return T::fix_cr0_clr | cr0_set<T>();
+}
+
+template <typename T>
 mword Exc_regs::cr4_set() const
 {
     mword msk = 0;
 
-    if (!ept_on)
+    if (!nst_on)
         msk |= Cpu::CR4_PSE;
 
-    return Vmcs::fix_cr4.set | msk;
+    return T::fix_cr4_set | msk;
 }
 
-mword Exc_regs::cr0_msk() const
-{
-    return Vmcs::fix_cr0.clr | cr0_set();
-}
-
+template <typename T>
 mword Exc_regs::cr4_msk() const
 {
     mword msk = 0;
 
-    if (!ept_on)
+    if (!nst_on)
         msk |= Cpu::CR4_PGE | Cpu::CR4_PAE;
 
-    return Vmcs::fix_cr4.clr | cr4_set() | msk;
+    return T::fix_cr4_clr | cr4_set<T>() | msk;
 }
 
+template <typename T>
 mword Exc_regs::get_cr0() const
 {
-    mword msk = cr0_msk();
+    mword msk = cr0_msk<T>();
 
-    return (Vmcs::read (Vmcs::GUEST_CR0) & ~msk) | (cr0_shadow & msk);
+    return (get_g_cr0<T>() & ~msk) | (cr0_shadow & msk);
 }
 
+template <typename T>
 mword Exc_regs::get_cr3() const
 {
-    return ept_on ? Vmcs::read (Vmcs::GUEST_CR3) : cr3_shadow;
+    return nst_on ? get_g_cr3<T>() : cr3_shadow;
 }
 
+template <typename T>
 mword Exc_regs::get_cr4() const
 {
-    mword msk = cr4_msk();
+    mword msk = cr4_msk<T>();
 
-    return (Vmcs::read (Vmcs::GUEST_CR4) & ~msk) | (cr4_shadow & msk);
+    return (get_g_cr4<T>() & ~msk) | (cr4_shadow & msk);
 }
 
-void Exc_regs::set_cr0 (mword val)
+template <typename T>
+void Exc_regs::set_cr0 (mword v)
 {
-    Vmcs::write (Vmcs::GUEST_CR0, (val & (~cr0_msk() | Cpu::CR0_PE)) | (cr0_set() & ~Cpu::CR0_PE));
-    Vmcs::write (Vmcs::CR0_READ_SHADOW, cr0_shadow = val);
+    set_g_cr0<T> ((v & (~cr0_msk<T>() | Cpu::CR0_PE)) | (cr0_set<T>() & ~Cpu::CR0_PE));
+    set_s_cr0<T> (v);
 }
 
-void Exc_regs::set_cr3 (mword val)
+template <typename T>
+void Exc_regs::set_cr3 (mword v)
 {
-    if (ept_on)
-        Vmcs::write (Vmcs::GUEST_CR3, val);
+    if (nst_on)
+        set_g_cr3<T> (v);
     else
-        cr3_shadow = val;
+        cr3_shadow = v;
 }
 
-void Exc_regs::set_cr4 (mword val)
+template <typename T>
+void Exc_regs::set_cr4 (mword v)
 {
-    Vmcs::write (Vmcs::GUEST_CR4, (val & ~cr4_msk()) | cr4_set());
-    Vmcs::write (Vmcs::CR4_READ_SHADOW, cr4_shadow = val);
+    set_g_cr4<T> ((v & ~cr4_msk<T>()) | cr4_set<T>());
+    set_s_cr4<T> (v);
 }
 
-void Exc_regs::set_exc_bitmap() const
+template <typename T>
+void Exc_regs::set_exc() const
 {
-    unsigned msk = 1ul << Cpu::EXC_AC;
+    unsigned msk = 1UL << Cpu::EXC_AC;
 
-    if (!ept_on)
-        msk |= 1ul << Cpu::EXC_PF;
+    if (!nst_on)
+        msk |= 1UL << Cpu::EXC_PF;
     if (!fpu_on)
-        msk |= 1ul << Cpu::EXC_NM;
+        msk |= 1UL << Cpu::EXC_NM;
 
-    Vmcs::write (Vmcs::EXC_BITMAP, msk);
+    set_e_bmp<T> (msk);
 }
 
-void Exc_regs::set_cpu_ctrl0 (mword val)
+void Exc_regs::svm_set_cpu_ctrl0 (mword val)
+{
+    unsigned const msk = !!cr0_msk<Vmcb>() << 0 | !nst_on << 3 | !!cr4_msk<Vmcb>() << 4;
+
+    vmcb->npt_control  = nst_on;
+    vmcb->intercept_cr = (msk << 16) | msk;
+
+    if (nst_on)
+        vmcb->intercept_cpu[0] = static_cast<uint32>((val & ~Vmcb::CPU_INVLPG) | Vmcb::force_ctrl0);
+    else
+        vmcb->intercept_cpu[0] = static_cast<uint32>((val |  Vmcb::CPU_INVLPG) | Vmcb::force_ctrl0);
+}
+
+void Exc_regs::svm_set_cpu_ctrl1 (mword val)
+{
+    vmcb->intercept_cpu[1] = static_cast<uint32>(val | Vmcb::force_ctrl1);
+}
+
+void Exc_regs::vmx_set_cpu_ctrl0 (mword val)
 {
     unsigned const msk = Vmcs::CPU_INVLPG | Vmcs::CPU_CR3_LOAD | Vmcs::CPU_CR3_STORE;
 
-    if (ept_on)
+    if (nst_on)
         val &= ~msk;
     else
         val |= msk;
@@ -123,11 +208,11 @@ void Exc_regs::set_cpu_ctrl0 (mword val)
     Vmcs::write (Vmcs::CPU_EXEC_CTRL0, val);
 }
 
-void Exc_regs::set_cpu_ctrl1 (mword val)
+void Exc_regs::vmx_set_cpu_ctrl1 (mword val)
 {
     unsigned const msk = Vmcs::CPU_EPT;
 
-    if (ept_on)
+    if (nst_on)
         val |= msk;
     else
         val &= ~msk;
@@ -138,55 +223,99 @@ void Exc_regs::set_cpu_ctrl1 (mword val)
     Vmcs::write (Vmcs::CPU_EXEC_CTRL1, val);
 }
 
-void Exc_regs::ept_ctrl (bool on)
+template <> void Exc_regs::nst_ctrl<Vmcb>(bool on)
+{
+    mword cr0 = get_cr0<Vmcb>();
+    mword cr3 = get_cr3<Vmcb>();
+    mword cr4 = get_cr4<Vmcb>();
+    nst_on = Vmcb::has_npt() && on;
+    set_cr0<Vmcb> (cr0);
+    set_cr3<Vmcb> (cr3);
+    set_cr4<Vmcb> (cr4);
+
+    svm_set_cpu_ctrl0 (vmcb->intercept_cpu[0]);
+    svm_set_cpu_ctrl1 (vmcb->intercept_cpu[1]);
+    set_exc<Vmcb>();
+
+    if (!nst_on)
+        set_g_cr3<Vmcb> (Buddy::ptr_to_phys (vtlb));
+}
+
+template <> void Exc_regs::nst_ctrl<Vmcs>(bool on)
 {
     assert (Vmcs::current == vmcs);
 
-    mword cr0 = get_cr0();
-    mword cr3 = get_cr3();
-    mword cr4 = get_cr4();
-    ept_on = Vmcs::has_ept() && (Vmcs::has_urg() || on);
-    set_cr0 (cr0);
-    set_cr3 (cr3);
-    set_cr4 (cr4);
+    mword cr0 = get_cr0<Vmcs>();
+    mword cr3 = get_cr3<Vmcs>();
+    mword cr4 = get_cr4<Vmcs>();
+    nst_on = Vmcs::has_ept() && on;
+    set_cr0<Vmcs> (cr0);
+    set_cr3<Vmcs> (cr3);
+    set_cr4<Vmcs> (cr4);
 
-    set_cpu_ctrl0 (Vmcs::read (Vmcs::CPU_EXEC_CTRL0));
-    set_cpu_ctrl1 (Vmcs::read (Vmcs::CPU_EXEC_CTRL1));
+    vmx_set_cpu_ctrl0 (Vmcs::read (Vmcs::CPU_EXEC_CTRL0));
+    vmx_set_cpu_ctrl1 (Vmcs::read (Vmcs::CPU_EXEC_CTRL1));
+    set_exc<Vmcs>();
 
-    set_exc_bitmap();
-    Vmcs::write (Vmcs::CR0_MASK, cr0_msk());
-    Vmcs::write (Vmcs::CR4_MASK, cr4_msk());
+    Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
+    Vmcs::write (Vmcs::CR4_MASK, cr4_msk<Vmcs>());
 
-    if (!ept_on)
-        Vmcs::write (Vmcs::GUEST_CR3, Buddy::ptr_to_phys (vtlb));
+    if (!nst_on)
+        set_g_cr3<Vmcs> (Buddy::ptr_to_phys (vtlb));
 }
 
 void Exc_regs::fpu_ctrl (bool on)
 {
-    // Can be called on the VMCS of the FPU owner while it's not loaded
-    vmcs->make_current();
+    if (Hip::feature() & Hip::FEAT_VMX) {
 
-    mword cr0 = get_cr0();
-    fpu_on = on;
-    set_cr0 (cr0);
+        vmcs->make_current();
 
-    set_exc_bitmap();
-    Vmcs::write (Vmcs::CR0_MASK, cr0_msk());
-}
+        mword cr0 = get_cr0<Vmcs>();
+        fpu_on = on;
+        set_cr0<Vmcs> (cr0);
 
-void Exc_regs::load_pdpte()
-{
-    uint64 pdpte[4];
+        set_exc<Vmcs>();
 
-    if (vtlb->load_pdpte (this, pdpte)) {
-        for (unsigned i = 0; i < 4; i++) {
-            Vmcs::write (Vmcs::Encoding (Vmcs::GUEST_PDPTE + 2 * i),     static_cast<mword>(pdpte[i]));
-            Vmcs::write (Vmcs::Encoding (Vmcs::GUEST_PDPTE + 2 * i + 1), static_cast<mword>(pdpte[i] >> 32));
-        }
+        Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
+
+    } else {
+
+        mword cr0 = get_cr0<Vmcb>();
+        fpu_on = on;
+        set_cr0<Vmcb> (cr0);
+
+        set_exc<Vmcb>();
+
+        svm_set_cpu_ctrl0 (vmcb->intercept_cpu[0]);
     }
 }
 
-mword Exc_regs::read_gpr (unsigned reg)
+void Exc_regs::svm_update_shadows()
+{
+    cr0_shadow = get_cr0<Vmcb>();
+    cr3_shadow = get_cr3<Vmcb>();
+    cr4_shadow = get_cr4<Vmcb>();
+}
+
+mword Exc_regs::svm_read_gpr (unsigned reg)
+{
+    switch (reg) {
+        case 0:     return static_cast<mword>(vmcb->rax);
+        case 4:     return static_cast<mword>(vmcb->rsp);
+        default:    return gpr[7 - reg];
+    }
+}
+
+void Exc_regs::svm_write_gpr (unsigned reg, mword val)
+{
+    switch (reg) {
+        case 0:     vmcb->rax = val; return;
+        case 4:     vmcb->rsp = val; return;
+        default:    gpr[7 - reg] = val; return;
+    }
+}
+
+mword Exc_regs::vmx_read_gpr (unsigned reg)
 {
     if (EXPECT_FALSE (reg == 4))
         return Vmcs::read (Vmcs::GUEST_RSP);
@@ -194,7 +323,7 @@ mword Exc_regs::read_gpr (unsigned reg)
         return gpr[7 - reg];
 }
 
-void Exc_regs::write_gpr (unsigned reg, mword val)
+void Exc_regs::vmx_write_gpr (unsigned reg, mword val)
 {
     if (EXPECT_FALSE (reg == 4))
         Vmcs::write (Vmcs::GUEST_RSP, val);
@@ -202,22 +331,19 @@ void Exc_regs::write_gpr (unsigned reg, mword val)
         gpr[7 - reg] = val;
 }
 
-mword Exc_regs::read_cr (unsigned cr)
+template <typename T>
+mword Exc_regs::read_cr (unsigned cr) const
 {
     switch (cr) {
-        case 2:
-            return cr2;
-        case 3:
-            return get_cr3();
-        case 0:
-            return get_cr0();
-        case 4:
-            return get_cr4();
-        default:
-            UNREACHED;
+        case 0: return get_cr0<T>();
+        case 2: return get_g_cr2<T>();
+        case 3: return get_cr3<T>();
+        case 4: return get_cr4<T>();
+        default: UNREACHED;
     }
 }
 
+template <typename T>
 void Exc_regs::write_cr (unsigned cr, mword val)
 {
     mword toggled;
@@ -225,48 +351,39 @@ void Exc_regs::write_cr (unsigned cr, mword val)
     switch (cr) {
 
         case 2:
-            cr2 = val;
+            set_g_cr2<T> (val);
             break;
 
         case 3:
-            if (!ept_on) {
-                vtlb->flush (false, Vmcs::vpid());
-                if ((cr0_shadow & Cpu::CR0_PG) && (cr4_shadow & Cpu::CR4_PAE))
-                    load_pdpte();
-            }
+            if (!nst_on)
+                tlb_flush<T> (false);
 
-            set_cr3 (val);
+            set_cr3<T> (val);
 
             break;
 
         case 0:
-            toggled = get_cr0() ^ val;
+            toggled = get_cr0<T>() ^ val;
 
-            if (!ept_on) {
+            if (!nst_on)
                 if (toggled & (Cpu::CR0_PG | Cpu::CR0_PE))
-                    vtlb->flush (true, Vmcs::vpid());
-                if ((toggled & Cpu::CR0_PG) && (cr4_shadow & Cpu::CR4_PAE))
-                    load_pdpte();
-            }
+                    tlb_flush<T> (true);
 
-            set_cr0 (val);
+            set_cr0<T> (val);
 
-            if (toggled & Cpu::CR0_PG)
-                ept_ctrl (val & Cpu::CR0_PG);
+            if (!T::has_urg() && (toggled & Cpu::CR0_PG))
+                nst_ctrl<T> (val & Cpu::CR0_PG);
 
             break;
 
         case 4:
-            toggled = get_cr4() ^ val;
+            toggled = get_cr4<T>() ^ val;
 
-            if (!ept_on) {
+            if (!nst_on)
                 if (toggled & (Cpu::CR4_PGE | Cpu::CR4_PAE | Cpu::CR4_PSE))
-                    vtlb->flush (true, Vmcs::vpid());
-                if ((toggled & Cpu::CR4_PAE) && (cr0_shadow & Cpu::CR0_PG))
-                    load_pdpte();
-            }
+                    tlb_flush<T> (true);
 
-            set_cr4 (val);
+            set_cr4<T> (val);
 
             break;
 
@@ -274,3 +391,8 @@ void Exc_regs::write_cr (unsigned cr, mword val)
             UNREACHED;
     }
 }
+
+template mword Exc_regs::read_cr<Vmcb> (unsigned) const;
+template mword Exc_regs::read_cr<Vmcs> (unsigned) const;
+template void Exc_regs::write_cr<Vmcb> (unsigned, mword);
+template void Exc_regs::write_cr<Vmcs> (unsigned, mword);

@@ -20,19 +20,9 @@
 
 #include "compiler.h"
 #include "pte.h"
-#include "x86.h"
 
-class Dpt : public Pte<Dpt, uint64, 4, 9>
+class Dpt : public Pte<Dpt, uint64, 4, 9, true>
 {
-    friend class Pte<Dpt, uint64, 4, 9>;
-
-    private:
-        ALWAYS_INLINE
-        inline void set (uint64 v) { val = v; flush (this); }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
-
     public:
         static mword ord;
 

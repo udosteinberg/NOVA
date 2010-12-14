@@ -30,7 +30,7 @@ You need the following tools to compile the source code.
 * make 3.81
   available from http://www.gnu.org/software/make/
 
-* gcc 3.4 or higher 
+* gcc 4.2 or higher 
   available from http://gcc.gnu.org/
 
 * binutils 2.18.50.0.7 or higher
@@ -70,7 +70,7 @@ The virtualization features are available on:
   regardless of whether the CPU supports nested paging (EPT) or not.
 
 * AMD CPUs with SVM
-  only when the CPU supports nested paging (NPT).
+  regardless of whether the CPU supports nested paging (NPT) or not.
 
 Issues
 ======
@@ -80,10 +80,6 @@ The following is a list of issues you may encounter.
 * The code fails to compile.
   Make sure your gcc and binutils meet the minimum requirements listed
   above. If the problem persists, then let us know.
-
-* Virtualization is not supported when running under QEMU.
-  QEMU implements SVM, but does not support NPT. Therefore, it does not meet
-  the platform requirements.
 
 * The roottask fails to start and prints a "bad elf" message.
   Ensure the roottask is linked such that it does not use a BSS. When

@@ -16,13 +16,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
 #include "counter.h"
 #include "hazards.h"
 #include "hip.h"
 #include "lapic.h"
 #include "mtrr.h"
 #include "pd.h"
+#include "svm.h"
 
 unsigned Space_mem::did_ctr;
 
@@ -58,19 +58,17 @@ void Space_mem::update (Mdb *mdb, mword r)
     }
 
     if (s & 2) {
-        if (Hip::feature() & Hip::FEAT_VMX) {
-            mword ord = min (o, Ept::ord);
-            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Ept::ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r);
-            if (r && Ept::ord != ~0UL)
-                gtlb.merge (cpus);
-        } else {
+        if (Vmcb::has_npt()) {
             mword ord = min (o, Hpt::ord);
             for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Hpt::ord + PAGE_BITS)), Hpt::hw_attr (a), r);
-            if (r)
-                gtlb.merge (cpus);
+                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r);
+        } else {
+            mword ord = min (o, Ept::ord);
+            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
+                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r);
         }
+        if (r)
+            gtlb.merge (cpus);
     }
 
     if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
@@ -98,7 +96,7 @@ void Space_mem::shootdown()
 
         Pd *pd = Pd::remote (cpu);
 
-        if (!pd->htlb.chk (cpu))
+        if (!pd->htlb.chk (cpu) && !pd->gtlb.chk (cpu))
             continue;
 
         if (Cpu::id == cpu) {
@@ -117,18 +115,15 @@ void Space_mem::shootdown()
 
 void Space_mem::insert_root (mword base, size_t size, mword attr)
 {
-    for (size_t frag; size; size -= frag) {
+    for (size_t frag; size; base += frag, size -= frag) {
 
-        unsigned type = Mtrr::memtype (base);
+        unsigned type = Mtrr::memtype (static_cast<uint64>(base) << PAGE_BITS);
 
-        for (frag = 0; frag < size; frag += PAGE_SIZE)
-            if (Mtrr::memtype (base + frag) != type)
+        for (frag = 1; frag < size; frag++)
+            if (Mtrr::memtype (static_cast<uint64>(base + frag) << PAGE_BITS) != type)
                 break;
 
-        size_t s = frag;
-
-        for (unsigned long o; s; s -= 1UL << o, base += 1UL << o)
-            insert_node (new Mdb (&Pd::kern, base >> PAGE_BITS, base >> PAGE_BITS, (o = max_order (base, s)) - PAGE_BITS, attr, type));
+        addreg (base, frag, attr, type);
     }
 }
 

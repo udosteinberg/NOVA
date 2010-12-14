@@ -18,17 +18,18 @@
 
 #pragma once
 
+#include "atomic.h"
 #include "buddy.h"
 #include "compiler.h"
+#include "x86.h"
 
-template <typename P, typename E, unsigned L, unsigned B>
+template <typename P, typename E, unsigned L, unsigned B, bool F>
 class Pte
 {
     protected:
         E val;
 
-        ALWAYS_INLINE
-        inline void set (E v) { val = v; }
+        P *walk (E, unsigned long, bool = false);
 
         ALWAYS_INLINE
         inline bool present() const { return val & P::PTE_P; }
@@ -42,10 +43,27 @@ class Pte
         ALWAYS_INLINE
         inline Paddr addr() const { return static_cast<Paddr>(val) & ~PAGE_MASK; }
 
-        P *walk (E, unsigned long, bool = false);
+        ALWAYS_INLINE
+        inline bool set (E o, E v)
+        {
+            bool b = Atomic::cmp_swap (val, o, v);
+
+            if (F && b)
+                flush (this);
+
+            return b;
+        }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+        static inline void *operator new (size_t)
+        {
+            void *p = Buddy::allocator.alloc (0, Buddy::FILL_0);
+
+            if (F)
+                flush (p, PAGE_SIZE);
+
+            return p;
+        }
 
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }

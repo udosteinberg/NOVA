@@ -24,9 +24,9 @@
 
 void Acpi_table_madt::parse() const
 {
-    parse_entry (Acpi_apic::LAPIC, &Acpi_table_madt::parse_lapic);
-    parse_entry (Acpi_apic::IOAPIC, &Acpi_table_madt::parse_ioapic);
-    parse_entry (Acpi_apic::INTR_OVERRIDE, &Acpi_table_madt::parse_intr_override);
+    parse_entry (Acpi_apic::LAPIC,  &parse_lapic);
+    parse_entry (Acpi_apic::IOAPIC, &parse_ioapic);
+    parse_entry (Acpi_apic::INTR,   &parse_intr);
 
     if (flags & 1) {
         Io::out<uint8>(0x20, 0x11);
@@ -48,7 +48,7 @@ void Acpi_table_madt::parse_lapic (Acpi_apic const *ptr)
 {
     Acpi_lapic const *p = static_cast<Acpi_lapic const *>(ptr);
 
-    if (p->enabled && Cpu::online < NUM_CPU)
+    if (p->flags & 1 && Cpu::online < NUM_CPU)
         Lapic::apic_id[Cpu::online++] = p->id;
 }
 
@@ -65,9 +65,9 @@ void Acpi_table_madt::parse_ioapic (Acpi_apic const *ptr)
         Gsi::gsi_table[gsi].ioapic = ioapic;
 }
 
-void Acpi_table_madt::parse_intr_override (Acpi_apic const *ptr)
+void Acpi_table_madt::parse_intr (Acpi_apic const *ptr)
 {
-    Acpi_intr_override const *p = static_cast<Acpi_intr_override const *>(ptr);
+    Acpi_intr const *p = static_cast<Acpi_intr const *>(ptr);
 
     unsigned irq = p->irq;
     unsigned gsi = p->gsi;

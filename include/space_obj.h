@@ -49,9 +49,11 @@ class Space_obj : public Space
 
         size_t lookup (mword, Capability &);
 
+        Paddr walk (mword = 0);
+
         void update (Mdb *, mword = 0);
 
-        static bool insert_root (Kobject *);
-
         static void page_fault (mword, mword);
+
+        static bool insert_root (Kobject *);
 };

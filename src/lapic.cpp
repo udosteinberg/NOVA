@@ -30,8 +30,7 @@ void Lapic::init()
 {
     Paddr apic_base = Msr::read<Paddr>(Msr::IA32_APIC_BASE);
 
-    Cpu::bsp = apic_base & 0x100;
-
+    Pd::kern.Space_mem::delreg (apic_base & ~PAGE_MASK);
     Hptp (Hpt::current() | Hpt::HPT_P).update (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
@@ -52,29 +51,21 @@ void Lapic::init()
         case 1:
             set_lvt (LAPIC_LVT_LINT0, 0, DLV_EXTINT, MASKED);
         case 0:
-            set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED, UNMASKED);
+            set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED);
     }
 
     write (LAPIC_TPR, 0x10);
-    write (LAPIC_TMR_DCR, DIVIDE_BY_1);
-    write (LAPIC_TMR_ICR, ~0u);
+    write (LAPIC_TMR_DCR, 0xb);
+    write (LAPIC_TMR_ICR, ~0U);
 
-    set_ldr (1u << Cpu::id);
-    set_dfr (LAPIC_FLAT);
+    Cpu::id = find_cpu (id());
 
-    for (unsigned i = id(), n = 0; n < NUM_CPU; n++)
-        if (apic_id[n] == i) {
-            Cpu::id = n;
-            break;
-        }
-
-    if (Cpu::bsp)
+    if ((Cpu::bsp = apic_base & 0x100))
         calibrate();
 
     write (LAPIC_TMR_ICR, 0);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x",
-           apic_base & ~PAGE_MASK, id(), version(), lvt_max());
+    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x", apic_base & ~PAGE_MASK, id(), version(), lvt_max());
 }
 
 void Lapic::calibrate()
@@ -127,8 +118,7 @@ void Lapic::timer_handler()
     if (!read (LAPIC_TMR_CCR))
         Cpu::hazard |= HZD_SCHED;
 
-    if (Rcu::process_callbacks())
-        Cpu::hazard |= HZD_SCHED;
+    Rcu::update();
 }
 
 void Lapic::lvt_vector (unsigned vector)

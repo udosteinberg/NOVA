@@ -38,7 +38,7 @@ bool Mdb::insert_node (Mdb *p, mword a)
 
     prev = prnt = p;
     next = p->next;
-    dpth = p->dpth + 1;
+    dpth = static_cast<uint16>(p->dpth + 1);
     p->next = p->next->prev = this;
 
     return true;

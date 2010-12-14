@@ -59,13 +59,13 @@ void Acpi::setup_sci()
     gsi = Gsi::irq_to_gsi (irq);
 
     if (!Acpi_table_madt::sci_overridden) {
-        Acpi_intr_override sci_override;
+        Acpi_intr sci_override;
         sci_override.bus = 0;
         sci_override.irq = static_cast<uint8>(irq);
         sci_override.gsi = gsi;
         sci_override.flags.pol = Acpi_inti::POL_CONFORMING;
         sci_override.flags.trg = Acpi_inti::TRG_CONFORMING;
-        Acpi_table_madt::parse_intr_override (&sci_override);
+        Acpi_table_madt::parse_intr (&sci_override);
     }
 
     Gsi::set (gsi);

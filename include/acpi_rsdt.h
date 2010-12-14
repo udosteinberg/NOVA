@@ -28,6 +28,12 @@
 class Acpi_table_rsdt : public Acpi_table
 {
     private:
+        static struct table_map
+        {
+            uint32  const sig;
+            Paddr * const ptr;
+        } map[];
+
         unsigned long entries (size_t size) const
         {
             return (length - sizeof (Acpi_table)) / size;

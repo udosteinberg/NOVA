@@ -26,6 +26,7 @@ class Rcu_elem
         Rcu_elem *next;
         void (*func)(Rcu_elem *);
 
+        ALWAYS_INLINE
         explicit Rcu_elem (void (*f)(Rcu_elem *)) : func (f) {}
 };
 
@@ -35,6 +36,7 @@ class Rcu_list
         Rcu_elem *  head;
         Rcu_elem ** tail;
 
+        ALWAYS_INLINE
         explicit Rcu_list() { clear(); }
 
         ALWAYS_INLINE
@@ -60,28 +62,35 @@ class Rcu_list
 class Rcu
 {
     private:
-        static unsigned batch;
-        static unsigned count;
+        static mword count;
+        static mword state;
 
-        static unsigned q_batch     CPULOCAL;
-        static unsigned c_batch     CPULOCAL;
+        static mword l_batch    CPULOCAL;
+        static mword c_batch    CPULOCAL;
 
-        static bool     q_passed    CPULOCAL;
-        static bool     q_pending   CPULOCAL;
+        static Rcu_list next    CPULOCAL;
+        static Rcu_list curr    CPULOCAL;
+        static Rcu_list done    CPULOCAL;
 
-        static Rcu_list next        CPULOCAL;
-        static Rcu_list curr        CPULOCAL;
-        static Rcu_list done        CPULOCAL;
+        enum State
+        {
+            RCU_PND = 1UL << 0,
+            RCU_CMP = 1UL << 1,
+        };
+
+        ALWAYS_INLINE
+        static inline mword batch() { return state >> 2; }
+
+        ALWAYS_INLINE
+        static inline bool complete (mword b) { return static_cast<signed long>(l_batch - b) > 0; }
+
+        static void start_batch (State);
+        static void invoke_batch();
 
     public:
         ALWAYS_INLINE
-        static inline void submit (Rcu_elem *e) { next.enqueue (e); }
+        static inline void call (Rcu_elem *e) { next.enqueue (e); }
 
-        ALWAYS_INLINE
-        static inline void quiet() { q_passed = true; }
-
-        static void invoke_batch();
-        static void start_batch();
-        static void check_quiescent_state();
-        static bool process_callbacks();
+        static void quiet();
+        static void update();
 };

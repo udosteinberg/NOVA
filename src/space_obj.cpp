@@ -23,21 +23,26 @@ Space_mem *Space_obj::space_mem()
     return static_cast<Pd *>(this);
 }
 
-void Space_obj::update (mword idx, Capability cap)
+Paddr Space_obj::walk (mword idx)
 {
-    mword virt = idx_to_virt (idx);
+    mword virt = idx_to_virt (idx); Paddr phys; void *ptr;
 
-    Paddr phys;
     if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
-        phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0));
-        space_mem()->insert (virt & ~PAGE_MASK, 0,
-                             Hpt::HPT_NX | Hpt::HPT_W | Hpt::HPT_P,
-                             phys);
+
+        Paddr p = Buddy::ptr_to_phys (ptr = Buddy::allocator.alloc (0, Buddy::FILL_0));
+
+        if ((phys = space_mem()->replace (virt, p | Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P)) != p)
+            Buddy::allocator.free (reinterpret_cast<mword>(ptr));
 
         phys |= virt & PAGE_MASK;
     }
 
-    *static_cast<Capability *>(Buddy::phys_to_ptr (phys)) = cap;
+    return phys;
+}
+
+void Space_obj::update (mword idx, Capability cap)
+{
+    *static_cast<Capability *>(Buddy::phys_to_ptr (walk (idx))) = cap;
 }
 
 size_t Space_obj::lookup (mword idx, Capability &cap)
@@ -70,15 +75,8 @@ bool Space_obj::insert_root (Kobject *obj)
 
 void Space_obj::page_fault (mword addr, mword error)
 {
-    // Should never get a write fault during lookup
     assert (!(error & 2));
 
-    // First try to sync with PD master page table
-    if (Pd::current->Space_mem::sync_mst (addr))
-        return;
-
-    // If that didn't work, back the region with a r/o 0-page
-    Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
-                                    Hpt::HPT_NX | Hpt::HPT_P,
-                                    reinterpret_cast<Paddr>(&FRAME_0));
+    if (!Pd::current->Space_mem::sync_mst (addr))
+        Pd::current->Space_mem::replace (addr, reinterpret_cast<Paddr>(&FRAME_0) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
 }

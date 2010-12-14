@@ -31,9 +31,9 @@ class Ioapic : public Apic
         mword    const  reg_base;
         unsigned const  gsi_base;
         unsigned const  id;
-        uint16          rid;
         Ioapic *        next;
         Dmar *          dmar;
+        uint16          rid;
         Spinlock        lock;
 
         static Slab_cache cache;

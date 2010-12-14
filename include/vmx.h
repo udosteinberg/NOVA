@@ -86,13 +86,10 @@ class Vmcs
             };
         } ctrl_ent CPULOCAL;
 
-        static struct vmx_fix_cr0 {
-            mword   set, clr;
-        } fix_cr0 CPULOCAL;
-
-        static struct vmx_fix_cr4 {
-            mword   set, clr;
-        } fix_cr4 CPULOCAL;
+        static mword fix_cr0_set CPULOCAL;
+        static mword fix_cr0_clr CPULOCAL;
+        static mword fix_cr4_set CPULOCAL;
+        static mword fix_cr4_clr CPULOCAL;
 
         enum Encoding
         {
@@ -401,7 +398,6 @@ class Vmcs
         {
             write (GUEST_RIP, read (GUEST_RIP) + read (EXI_INST_LEN));
 
-            // Undo any STI or MOV SS blocking
             uint32 intr = static_cast<uint32>(read (GUEST_INTR_STATE));
             if (EXPECT_FALSE (intr & 3))
                 write (GUEST_INTR_STATE, intr & ~3);

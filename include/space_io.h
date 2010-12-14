@@ -51,7 +51,4 @@ class Space_io : public Space
         void update (Mdb *, mword = 0);
 
         static void page_fault (mword, mword);
-
-        INIT
-        void insert_root (mword, unsigned);
 };

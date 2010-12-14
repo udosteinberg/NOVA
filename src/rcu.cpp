@@ -16,20 +16,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
 #include "atomic.h"
+#include "barrier.h"
 #include "counter.h"
 #include "cpu.h"
+#include "hazards.h"
 #include "initprio.h"
 #include "rcu.h"
 
-unsigned    Rcu::batch;
-unsigned    Rcu::count;
+mword   Rcu::state = RCU_CMP;
+mword   Rcu::count;
 
-unsigned    Rcu::q_batch;
-unsigned    Rcu::c_batch;
-bool        Rcu::q_passed;
-bool        Rcu::q_pending;
+mword   Rcu::l_batch;
+mword   Rcu::c_batch;
 
 INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::next;
 INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::curr;
@@ -45,49 +44,49 @@ void Rcu::invoke_batch()
     done.clear();
 }
 
-void Rcu::start_batch()
+void Rcu::start_batch (State s)
 {
+    mword v, m = RCU_CMP | RCU_PND;
+
+    do v = state; while (!(v & s) && !Atomic::cmp_swap (state, v, v | s));
+
+    if ((v ^ ~s) & m)
+        return;
+
     count = Cpu::online;
 
-    batch++;
+    barrier();
+
+    state++;
 }
 
-void Rcu::check_quiescent_state()
+void Rcu::quiet()
 {
-    if (q_batch != batch) {
-        q_batch = batch;
-        q_pending = true;
-        q_passed = false;
-        Counter::print (q_batch, Console_vga::COLOR_LIGHT_GREEN, SPN_RCU);
-        return;
+    Cpu::hazard &= ~HZD_RCU;
+
+    if (Atomic::sub (count, 1UL) == 0)
+        start_batch (RCU_CMP);
+}
+
+void Rcu::update()
+{
+    if (l_batch != batch()) {
+        l_batch = batch();
+        Cpu::hazard |= HZD_RCU;
+        Counter::print (l_batch, Console_vga::COLOR_LIGHT_GREEN, SPN_RCU);
     }
 
-    if (!q_pending || !q_passed)
-        return;
-
-    q_pending = false;
-
-    assert (q_batch == batch);
-
-    if (Atomic::sub (count, 1U))
-        start_batch();
-}
-
-bool Rcu::process_callbacks()
-{
-    if (curr.head && batch > c_batch)
+    if (curr.head && complete (c_batch))
         done.append (&curr);
 
     if (!curr.head && next.head) {
         curr.append (&next);
 
-        c_batch = batch + 1;
-    }
+        c_batch = l_batch + 1;
 
-    check_quiescent_state();
+        start_batch (RCU_PND);
+    }
 
     if (done.head)
         invoke_batch();
-
-    return false;
 }

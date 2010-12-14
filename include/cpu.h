@@ -188,6 +188,7 @@ class Cpu
         static unsigned stepping            CPULOCAL;
         static unsigned brand               CPULOCAL;
         static unsigned patch               CPULOCAL;
+        static unsigned row                 CPULOCAL;
 
         static uint32 name[12]              CPULOCAL;
         static uint32 features[4]           CPULOCAL;

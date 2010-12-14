@@ -27,10 +27,10 @@ class Kobject : public Mdb
 {
     private:
         uint8       objtype;
+        uint8       refcount;
 
     protected:
         Spinlock    lock;
-        uint16      refcount;
 
         enum Type
         {
@@ -52,13 +52,13 @@ class Kobject : public Mdb
         ALWAYS_INLINE
         inline bool add_ref()
         {
-            for (uint16 r; (r = refcount); )
-                if (Atomic::cmp_swap<true>(&refcount, r, static_cast<typeof refcount>(r + 1)))
+            for (uint8 r; (r = refcount); )
+                if (Atomic::cmp_swap (refcount, r, static_cast<typeof refcount>(r + 1)))
                     return true;
 
             return false;
         }
 
         ALWAYS_INLINE
-        inline bool del_ref() { return Atomic::sub (refcount, static_cast<typeof refcount>(1)); }
+        inline bool del_ref() { return Atomic::sub (refcount, static_cast<typeof refcount>(1)) == 0; }
 };

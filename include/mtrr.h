@@ -44,5 +44,5 @@ class Mtrr
         static void init();
 
         INIT
-        static unsigned memtype (Paddr);
+        static unsigned memtype (uint64);
 };

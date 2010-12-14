@@ -20,6 +20,14 @@
 #include "acpi_rsdt.h"
 #include "hpt.h"
 
+struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] INITDATA =
+{
+    { SIG ('A','P','I','C'),    &Acpi::madt },
+    { SIG ('D','M','A','R'),    &Acpi::dmar },
+    { SIG ('F','A','C','P'),    &Acpi::fadt },
+    { SIG ('M','C','F','G'),    &Acpi::mcfg },
+};
+
 void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
 {
     if (!good_checksum (addr))
@@ -35,15 +43,9 @@ void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
 
         Acpi_table *acpi = static_cast<Acpi_table *>(Hpt::remap (table[i]));
 
-        if (!acpi->good_checksum (table[i]))
-            continue;
-        else if (acpi->signature == SIG ('A','P','I','C'))
-            Acpi::madt = table[i];
-        else if (acpi->signature == SIG ('D','M','A','R'))
-            Acpi::dmar = table[i];
-        else if (acpi->signature == SIG ('F','A','C','P'))
-            Acpi::fadt = table[i];
-        else if (acpi->signature == SIG ('M','C','F','G'))
-            Acpi::mcfg = table[i];
+        if (acpi->good_checksum (table[i]))
+            for (unsigned j = 0; j < sizeof map / sizeof *map; j++)
+                if (acpi->signature == map[j].sig)
+                    *map[j].ptr = table[i];
     }
 }

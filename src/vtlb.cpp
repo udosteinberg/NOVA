@@ -19,20 +19,7 @@
 #include "counter.h"
 #include "pd.h"
 #include "regs.h"
-#include "vpid.h"
 #include "vtlb.h"
-
-bool Vtlb::load_pdpte (Exc_regs *regs, uint64 (&v)[4])
-{
-    mword *pte = reinterpret_cast<mword *>(regs->cr3_shadow);
-    mword *val = reinterpret_cast<mword *>(&v);
-
-    for (unsigned i = 0; i < sizeof (v) / sizeof (mword); i++, pte++, val++)
-        if (User::peek (pte, *val) != ~0UL)
-            return false;
-
-    return true;
-}
 
 size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &type)
 {
@@ -99,16 +86,17 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
 
     size_t gsize = walk (regs, virt, phys, attr, error);
+
     if (EXPECT_FALSE (!gsize)) {
-        regs->cr2 = virt;
         Counter::vtlb_gpf++;
         return GLA_GPA;
     }
 
     size_t hsize = Pd::current->ept.lookup (phys, host);
+
     if (EXPECT_FALSE (!hsize)) {
-        regs->ept_fault = phys;
-        regs->ept_error = 1UL << !!(error & ERR_W);
+        regs->nst_fault = phys;
+        regs->nst_error = 1UL << !!(error & ERR_W);
         Counter::vtlb_hpf++;
         return GPA_HPA;
     }
@@ -157,55 +145,50 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
     }
 }
 
-void Vtlb::flush_ptab (unsigned full)
+void Vtlb::flush_ptab (bool full)
 {
-    for (Vtlb *tlb = this; tlb < this + (1UL << bpl()); tlb++) {
+    for (Vtlb *e = this; e < this + (1UL << bpl()); e++) {
 
-        if (EXPECT_TRUE (!tlb->present()))
+        if (EXPECT_TRUE (!e->present()))
             continue;
 
         if (EXPECT_FALSE (full))
-            tlb->val |= TLB_G;
+            e->val |= TLB_G;
 
-        else if (EXPECT_FALSE (tlb->global()))
+        else if (EXPECT_FALSE (e->global()))
             continue;
 
-        tlb->val &= ~TLB_P;
+        e->val &= ~TLB_P;
     }
 }
 
-void Vtlb::flush_addr (mword virt, unsigned long vpid)
+void Vtlb::flush (mword virt)
 {
-    unsigned lev = max();
+    unsigned l = max();
 
-    for (Vtlb *tlb = this;; tlb = static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))) {
+    for (Vtlb *e = this;; e = static_cast<Vtlb *>(Buddy::phys_to_ptr (e->addr()))) {
 
-        unsigned shift = --lev * bpl() + PAGE_BITS;
-        tlb += virt >> shift & ((1UL << bpl()) - 1);
+        unsigned shift = --l * bpl() + PAGE_BITS;
+        e += virt >> shift & ((1UL << bpl()) - 1);
 
-        if (!tlb->present())
+        if (!e->present())
             return;
 
-        if (!lev || tlb->frag()) {
-            tlb->val |=  TLB_G;
-            tlb->val &= ~TLB_P;
+        if (l && !e->super() && !e->frag())
+            continue;
 
-            if (vpid)
-                Vpid::flush (Vpid::ADDRESS, vpid, virt);
+        e->val |=  TLB_G;
+        e->val &= ~TLB_P;
 
-            Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
+        Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 
-            return;
-        }
+        return;
     }
 }
 
-void Vtlb::flush (unsigned full, unsigned long vpid)
+void Vtlb::flush (bool full)
 {
     flush_ptab (full);
-
-    if (vpid)
-        Vpid::flush (full ? Vpid::CONTEXT_GLOBAL : Vpid::CONTEXT_NOGLOBAL, vpid);
 
     Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 }

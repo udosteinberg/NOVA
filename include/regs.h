@@ -97,64 +97,69 @@ class Exc_regs : public Sys_regs
                 mword   cr3_shadow;
                 mword   cr4_shadow;
                 mword   dst_portal;
-                mword   ept_fault;
-                mword   ept_error;
-                uint8   ept_on;
+                mword   nst_fault;
+                mword   nst_error;
+                uint8   nst_on;
                 uint8   fpu_on;
             };
         };
 
     private:
-        ALWAYS_INLINE
-        inline mword cr0_set() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_cr0() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_cr2() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_cr3() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_cr4() const;
 
-        ALWAYS_INLINE
-        inline mword cr0_msk() const;
+        template <typename T> ALWAYS_INLINE inline void set_g_cr0 (mword) const;
+        template <typename T> ALWAYS_INLINE inline void set_g_cr2 (mword);
+        template <typename T> ALWAYS_INLINE inline void set_g_cr3 (mword) const;
+        template <typename T> ALWAYS_INLINE inline void set_g_cr4 (mword) const;
 
-        ALWAYS_INLINE
-        inline mword cr4_set() const;
+        template <typename T> ALWAYS_INLINE inline void set_e_bmp (uint32) const;
+        template <typename T> ALWAYS_INLINE inline void set_s_cr0 (mword);
+        template <typename T> ALWAYS_INLINE inline void set_s_cr4 (mword);
 
-        ALWAYS_INLINE
-        inline mword cr4_msk() const;
+        template <typename T> ALWAYS_INLINE inline mword cr0_set() const;
+        template <typename T> ALWAYS_INLINE inline mword cr0_msk() const;
+        template <typename T> ALWAYS_INLINE inline mword cr4_set() const;
+        template <typename T> ALWAYS_INLINE inline mword cr4_msk() const;
 
-        ALWAYS_INLINE
-        inline mword get_cr0() const;
+        template <typename T> ALWAYS_INLINE inline mword get_cr0() const;
+        template <typename T> ALWAYS_INLINE inline mword get_cr3() const;
+        template <typename T> ALWAYS_INLINE inline mword get_cr4() const;
 
-        ALWAYS_INLINE
-        inline mword get_cr3() const;
+        template <typename T> ALWAYS_INLINE inline void set_cr0 (mword);
+        template <typename T> ALWAYS_INLINE inline void set_cr3 (mword);
+        template <typename T> ALWAYS_INLINE inline void set_cr4 (mword);
 
-        ALWAYS_INLINE
-        inline mword get_cr4() const;
-
-        ALWAYS_INLINE
-        inline void set_cr0 (mword);
-
-        ALWAYS_INLINE
-        inline void set_cr3 (mword);
-
-        ALWAYS_INLINE
-        inline void set_cr4 (mword);
-
-        ALWAYS_INLINE
-        inline void set_exc_bitmap() const;
+        template <typename T> ALWAYS_INLINE inline void set_exc() const;
 
     public:
         ALWAYS_INLINE
         inline bool user() const { return cs & 3; }
 
-        void ept_ctrl (bool);
         void fpu_ctrl (bool);
 
-        void set_cpu_ctrl0 (mword);
-        void set_cpu_ctrl1 (mword);
+        void svm_update_shadows();
 
-        void load_pdpte();
+        void svm_set_cpu_ctrl0 (mword);
+        void svm_set_cpu_ctrl1 (mword);
+        void vmx_set_cpu_ctrl0 (mword);
+        void vmx_set_cpu_ctrl1 (mword);
 
-        mword read_gpr (unsigned);
-        void write_gpr (unsigned, mword);
+        mword svm_read_gpr (unsigned);
+        mword vmx_read_gpr (unsigned);
 
-        mword read_cr (unsigned);
-        void write_cr (unsigned, mword);
+        void svm_write_gpr (unsigned, mword);
+        void vmx_write_gpr (unsigned, mword);
+
+        template <typename T> void nst_ctrl (bool = T::has_urg());
+
+        template <typename T> void tlb_flush (bool) const;
+        template <typename T> void tlb_flush (mword) const;
+
+        template <typename T> mword read_cr (unsigned) const;
+        template <typename T> void write_cr (unsigned, mword);
 };
 
 class Cpu_regs : public Exc_regs
@@ -170,10 +175,10 @@ class Cpu_regs : public Exc_regs
         inline mword hazard() const { return hzd; }
 
         ALWAYS_INLINE
-        inline void set_hazard (mword h) { Atomic::set_mask<true>(hzd, h); }
+        inline void set_hazard (mword h) { Atomic::set_mask (hzd, h); }
 
         ALWAYS_INLINE
-        inline void clr_hazard (mword h) { Atomic::clr_mask<true>(hzd, h); }
+        inline void clr_hazard (mword h) { Atomic::clr_mask (hzd, h); }
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)

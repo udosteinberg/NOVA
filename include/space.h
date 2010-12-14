@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "bits.h"
 #include "compiler.h"
 #include "lock_guard.h"
 #include "mdb.h"
@@ -48,5 +49,33 @@ class Space
         {
             Lock_guard <Spinlock> guard (lock);
             return Mdb::remove (&tree, node);
+        }
+
+        void addreg (mword addr, size_t size, mword attr, mword type = 0)
+        {
+            Lock_guard <Spinlock> guard (lock);
+
+            for (mword o; size; size -= 1UL << o, addr += 1UL << o)
+                Mdb::insert (&tree, new Mdb (0, addr, addr, (o = max_order (addr, size)), attr, type));
+        }
+
+        void delreg (mword addr)
+        {
+            Mdb *node;
+
+            {   Lock_guard <Spinlock> guard (lock);
+
+                if (!(node = Mdb::lookup (tree, addr >>= PAGE_BITS, false)))
+                    return;
+
+                Mdb::remove (&tree, node);
+            }
+
+            mword next = addr + 1, base = node->node_base, last = base + (1UL << node->node_order);
+
+            addreg (base, addr - base, node->node_attr, node->node_type);
+            addreg (next, last - next, node->node_attr, node->node_type);
+
+            delete node;
         }
 };

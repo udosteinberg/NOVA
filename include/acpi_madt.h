@@ -58,15 +58,9 @@ class Acpi_apic
 
         enum Type
         {
-            LAPIC               = 0,
-            IOAPIC              = 1,
-            INTR_OVERRIDE       = 2,
-            IOAPIC_NMI          = 3,
-            LAPIC_NMI           = 4,
-            LAPIC_ADDR_OVERRIDE = 5,
-            IOSAPIC             = 6,
-            LSAPIC              = 7,
-            PLAT_INTR_SOURCES   = 8
+            LAPIC   = 0,
+            IOAPIC  = 1,
+            INTR    = 2,
         };
 };
 
@@ -78,8 +72,7 @@ class Acpi_lapic : public Acpi_apic
     public:
         uint8   cpu;
         uint8   id;
-        uint32  enabled     :  1,
-                            : 31;
+        uint32  flags;
 };
 
 /*
@@ -97,7 +90,7 @@ class Acpi_ioapic : public Acpi_apic
 /*
  * Interrupt Source Override (5.2.11.8)
  */
-class Acpi_intr_override : public Acpi_apic
+class Acpi_intr : public Acpi_apic
 {
     public:
         uint8       bus;
@@ -107,21 +100,20 @@ class Acpi_intr_override : public Acpi_apic
 };
 
 /*
- * Local APIC NMI (5.2.11.10)
- */
-class Acpi_lapic_nmi : public Acpi_apic
-{
-    public:
-        uint8       cpu_id;
-        Acpi_inti   flags;
-        uint8       lint;
-};
-
-/*
  * Multiple APIC Description Table
  */
 class Acpi_table_madt : public Acpi_table
 {
+    private:
+        INIT
+        static void parse_lapic (Acpi_apic const *);
+
+        INIT
+        static void parse_ioapic (Acpi_apic const *);
+
+        INIT
+        void parse_entry (Acpi_apic::Type, void (*)(Acpi_apic const *)) const;
+
     public:
         uint32      apic_addr;
         uint32      flags;
@@ -133,16 +125,7 @@ class Acpi_table_madt : public Acpi_table
         void parse() const;
 
         INIT
-        void parse_entry (Acpi_apic::Type, void (*)(Acpi_apic const *)) const;
-
-        INIT
-        static void parse_lapic (Acpi_apic const *);
-
-        INIT
-        static void parse_ioapic (Acpi_apic const *);
-
-        INIT
-        static void parse_intr_override (Acpi_apic const *);
+        static void parse_intr (Acpi_apic const *);
 };
 
 #pragma pack()

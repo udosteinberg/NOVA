@@ -36,8 +36,8 @@ Vmcs::vmx_ctrl_pin  Vmcs::ctrl_pin;
 Vmcs::vmx_ctrl_cpu  Vmcs::ctrl_cpu[2];
 Vmcs::vmx_ctrl_exi  Vmcs::ctrl_exi;
 Vmcs::vmx_ctrl_ent  Vmcs::ctrl_ent;
-Vmcs::vmx_fix_cr0   Vmcs::fix_cr0;
-Vmcs::vmx_fix_cr4   Vmcs::fix_cr4;
+mword               Vmcs::fix_cr0_set, Vmcs::fix_cr0_clr;
+mword               Vmcs::fix_cr4_set, Vmcs::fix_cr4_clr;
 
 Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 {
@@ -104,10 +104,10 @@ void Vmcs::init()
         return;
     }
 
-    fix_cr0.set =  Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED0);
-    fix_cr0.clr = ~Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED1);
-    fix_cr4.set =  Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED0);
-    fix_cr4.clr = ~Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED1);
+    fix_cr0_set =  Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED0);
+    fix_cr0_clr = ~Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED1);
+    fix_cr4_set =  Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED0);
+    fix_cr4_clr = ~Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED1);
 
     basic.val       = Msr::read<uint64>(Msr::IA32_VMX_BASIC);
     ctrl_exi.val    = Msr::read<uint64>(basic.ctrl ? Msr::IA32_VMX_TRUE_EXIT  : Msr::IA32_VMX_CTRL_EXIT);
@@ -122,20 +122,20 @@ void Vmcs::init()
     if (has_ept())
         Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
     if (has_urg())
-        fix_cr0.set &= ~(Cpu::CR0_PG | Cpu::CR0_PE);
+        fix_cr0_set &= ~(Cpu::CR0_PG | Cpu::CR0_PE);
 
     ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_IO_BITMAP | CPU_SECONDARY;
     ctrl_cpu[1].set |= CPU_VPID | CPU_URG;
 
-    if (Cmdline::noept || !ept_vpid.invept)
+    if (Cmdline::vtlb || !ept_vpid.invept)
         ctrl_cpu[1].clr &= ~(CPU_EPT | CPU_URG);
     if (Cmdline::novpid || !ept_vpid.invvpid)
         ctrl_cpu[1].clr &= ~CPU_VPID;
 
-    set_cr0 ((get_cr0() & ~fix_cr0.clr) | fix_cr0.set);
-    set_cr4 ((get_cr4() & ~fix_cr4.clr) | fix_cr4.set);
+    set_cr0 ((get_cr0() & ~fix_cr0_clr) | fix_cr0_set);
+    set_cr4 ((get_cr4() & ~fix_cr4_clr) | fix_cr4_set);
 
     Vmcs *root = new Vmcs;
 
-    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x VPID:%u EPT:%u UG:%u", Buddy::ptr_to_phys (root), basic.revision, has_vpid(), has_ept(), has_urg());
+    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x EPT:%u VPID:%u UG:%u", Buddy::ptr_to_phys (root), basic.revision, has_ept(), has_vpid(), has_urg());
 }

@@ -76,6 +76,17 @@ class Ec : public Kobject, public Queue<Sc>
         static bool handle_exc_gp (Exc_regs *);
         static bool handle_exc_pf (Exc_regs *);
 
+        static inline uint8 ifetch (mword);
+
+        NORETURN
+        static inline void svm_exception (mword);
+
+        NORETURN
+        static inline void svm_cr();
+
+        NORETURN
+        static inline void svm_invlpg();
+
         NORETURN
         static inline void vmx_exception();
 
@@ -126,7 +137,7 @@ class Ec : public Kobject, public Queue<Sc>
         ALWAYS_INLINE
         inline bool set_sc (Sc *s)
         {
-            return Atomic::cmp_swap<true>(&sc, static_cast<Sc *>(0), s);
+            return Atomic::cmp_swap (sc, static_cast<Sc *>(0), s);
         }
 
         ALWAYS_INLINE

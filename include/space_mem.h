@@ -56,6 +56,9 @@ class Space_mem : public Space
             hpt.update (virt, o, phys, attr);
         }
 
+        ALWAYS_INLINE
+        inline Paddr replace (mword v, Paddr p) { return hpt.replace (v, p); }
+
         INIT
         void insert_root (mword, size_t, mword);
 

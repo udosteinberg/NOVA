@@ -25,48 +25,50 @@
 
 void Ec::vmx_exception()
 {
-    mword intr_info  = Vmcs::read (Vmcs::EXI_INTR_INFO);
-    assert (intr_info & 0x80000000);
-
-    // Handle event during IDT vectoring
-    mword vect_info  = Vmcs::read (Vmcs::IDT_VECT_INFO);
-    mword vect_error = Vmcs::read (Vmcs::IDT_VECT_ERROR);
+    mword vect_info = Vmcs::read (Vmcs::IDT_VECT_INFO);
 
     if (vect_info & 0x80000000) {
-        Vmcs::write (Vmcs::ENT_INTR_INFO,  vect_info);
-        Vmcs::write (Vmcs::ENT_INTR_ERROR, vect_error);
-        switch (vect_info >> 8 & 0x7) {
-            case 4 ... 6:
-                Vmcs::write (Vmcs::ENT_INST_LEN, Vmcs::read (Vmcs::EXI_INST_LEN));
-                break;
-        }
+
+        Vmcs::write (Vmcs::ENT_INTR_INFO, vect_info & ~0x1000);
+
+        if (vect_info & 0x800)
+            Vmcs::write (Vmcs::ENT_INTR_ERROR, Vmcs::read (Vmcs::IDT_VECT_ERROR));
+
+        if ((vect_info >> 8 & 0x7) >= 4 && (vect_info >> 8 & 0x7) <= 6)
+            Vmcs::write (Vmcs::ENT_INST_LEN, Vmcs::read (Vmcs::EXI_INST_LEN));
     };
 
-    if (EXPECT_TRUE ((intr_info & 0x7ff) == 0x30e)) {
+    mword intr_info = Vmcs::read (Vmcs::EXI_INTR_INFO);
 
-        mword intr_error = Vmcs::read (Vmcs::EXI_INTR_ERROR);
+    switch (intr_info & 0x7ff) {
 
-        switch (Vtlb::miss (&current->regs, Vmcs::read (Vmcs::EXI_QUALIFICATION), intr_error)) {
+        default:
+            current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
+            break;
 
-            case Vtlb::GPA_HPA:
-                current->regs.dst_portal = Vmcs::VMX_EPT_VIOLATION;
-                break;
+        case 0x307:         // #NM
+            handle_exc_nm();
+            ret_user_vmresume();
 
-            case Vtlb::GLA_GPA:
-                Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info);
-                Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
+        case 0x30e:         // #PF
+            mword err = Vmcs::read (Vmcs::EXI_INTR_ERROR);
+            mword cr2 = Vmcs::read (Vmcs::EXI_QUALIFICATION);
 
-            case Vtlb::SUCCESS:
-                ret_user_vmresume();
-        }
+            switch (Vtlb::miss (&current->regs, cr2, err)) {
 
-    } else if (EXPECT_TRUE ((intr_info & 0x7ff) == 0x307)) {
+                case Vtlb::GPA_HPA:
+                    current->regs.dst_portal = Vmcs::VMX_EPT_VIOLATION;
+                    break;
 
-        handle_exc_nm();
-        ret_user_vmresume();
+                case Vtlb::GLA_GPA:
+                    current->regs.cr2 = cr2;
+                    Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info);
+                    Vmcs::write (Vmcs::ENT_INTR_ERROR, err);
 
-    } else
-        current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
+                case Vtlb::SUCCESS:
+                    ret_user_vmresume();
+            }
+    }
 
     send_msg<ret_user_vmresume>();
 }
@@ -89,8 +91,7 @@ void Ec::vmx_extint()
 
 void Ec::vmx_invlpg()
 {
-    current->regs.vtlb->flush_addr (Vmcs::read (Vmcs::EXI_QUALIFICATION), Vmcs::vpid());
-
+    current->regs.tlb_flush<Vmcs>(Vmcs::read (Vmcs::EXI_QUALIFICATION));
     Vmcs::adjust_rip();
     ret_user_vmresume();
 }
@@ -105,14 +106,14 @@ void Ec::vmx_cr()
 
     switch (acc) {
         case 0:     // MOV to CR
-            current->regs.write_cr (cr, current->regs.read_gpr (gpr));
+            current->regs.write_cr<Vmcs> (cr, current->regs.vmx_read_gpr (gpr));
             break;
         case 1:     // MOV from CR
             assert (cr != 0 && cr != 4);
-            current->regs.write_gpr (gpr, current->regs.read_cr (cr));
+            current->regs.vmx_write_gpr (gpr, current->regs.read_cr<Vmcs> (cr));
             break;
         case 2:     // CLTS
-            current->regs.write_cr (cr, current->regs.read_cr (cr) & ~Cpu::CR0_TS);
+            current->regs.write_cr<Vmcs> (cr, current->regs.read_cr<Vmcs> (cr) & ~Cpu::CR0_TS);
             break;
         default:
             UNREACHED;

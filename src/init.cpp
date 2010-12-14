@@ -24,7 +24,7 @@
 #include "idt.h"
 #include "keyb.h"
 
-char const *version = "NOVA 0.3 (Cleetwood Cove)";
+char const *version = "NOVA Microhypervisor 0.3 (Cleetwood Cove)";
 
 extern "C" INIT
 mword kern_ptab_setup()
@@ -68,6 +68,8 @@ void init (mword mbi)
     Idt::build();
     Gsi::setup();
     Acpi::setup();
+
+    screen.setup();
 
     Keyb::init();
 }

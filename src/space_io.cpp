@@ -27,7 +27,7 @@ Paddr Space_io::walk (mword idx)
 {
     if (!bmp)
         space_mem()->insert (IOBMP_SADDR, 1,
-                             Hpt::HPT_NX | Hpt::HPT_W | Hpt::HPT_P,
+                             Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P,
                              bmp = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1)));
 
     return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
@@ -38,9 +38,9 @@ void Space_io::update (mword idx, mword attr)
     mword *m = static_cast<mword *>(Buddy::phys_to_ptr (walk (idx)));
 
     if (attr)
-        Atomic::clr_mask<true>(*m, idx_to_mask (idx));
+        Atomic::clr_mask (*m, idx_to_mask (idx));
     else
-        Atomic::set_mask<true>(*m, idx_to_mask (idx));
+        Atomic::set_mask (*m, idx_to_mask (idx));
 }
 
 void Space_io::update (Mdb *mdb, mword r)
@@ -51,22 +51,10 @@ void Space_io::update (Mdb *mdb, mword r)
         update (mdb->node_base + i, mdb->node_attr & ~r);
 }
 
-void Space_io::insert_root (mword b, unsigned o)
-{
-    insert_node (new Mdb (&Pd::kern, b, b, o, 7));
-}
-
 void Space_io::page_fault (mword addr, mword error)
 {
-    // Should never get a write fault during lookup
     assert (!(error & 2));
 
-    // First try to sync with PD master page table
-    if (Pd::current->Space_mem::sync_mst (addr))
-        return;
-
-    // If that didn't work, back the region with a r/o 1-page
-    Pd::current->Space_mem::insert (addr & ~PAGE_MASK, 0,
-                                    Hpt::HPT_NX | Hpt::HPT_P,
-                                    reinterpret_cast<Paddr>(&FRAME_1));
+    if (!Pd::current->Space_mem::sync_mst (addr))
+        Pd::current->Space_mem::replace (addr, reinterpret_cast<Paddr>(&FRAME_1) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
 }

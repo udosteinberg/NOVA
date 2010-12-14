@@ -23,7 +23,7 @@
 #include "pte.h"
 #include "user.h"
 
-class Hpt : public Pte<Hpt, mword, 2, 10>
+class Hpt : public Pte<Hpt, mword, 2, 10, false>
 {
     friend class Vtlb;
 
@@ -33,6 +33,12 @@ class Hpt : public Pte<Hpt, mword, 2, 10>
         {
             mword cr3;
             asm volatile ("mov %%cr3, %0; mov %0, %%cr3" : "=&r" (cr3));
+        }
+
+        ALWAYS_INLINE
+        static inline void flush (mword addr)
+        {
+            asm volatile ("invlpg %0" : : "m" (*reinterpret_cast<mword *>(addr)));
         }
 
     public:
@@ -56,7 +62,7 @@ class Hpt : public Pte<Hpt, mword, 2, 10>
         };
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & ~0xfff; }
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~PAGE_MASK; }
 
         ALWAYS_INLINE
         static inline mword hw_attr (mword a) { return a ? a | HPT_D | HPT_A | HPT_U | HPT_P : 0; }
@@ -85,6 +91,8 @@ class Hpt : public Pte<Hpt, mword, 2, 10>
 
         size_t sync_master (mword virt);
         void sync_master_range (mword s_addr, mword e_addr);
+
+        Paddr replace (mword, mword);
 
         static void *remap (Paddr phys);
 };

@@ -68,6 +68,7 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : 
     } else {
 
         regs.dst_portal = NUM_VMI - 2;
+        regs.vtlb = new Vtlb;
 
         if (Hip::feature() & Hip::FEAT_VMX) {
 
@@ -75,18 +76,17 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : 
                                   pd->Space_io::walk(),
                                   pd->loc[c].root(),
                                   pd->ept.root());
-            regs.vtlb = new Vtlb;
-            regs.ept_ctrl (false);
-            cont = send_msg<ret_user_vmresume>;
 
+            regs.nst_ctrl<Vmcs>();
+            cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, own, regs.vmcs, regs.vtlb);
 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
-            regs.vmcb = new Vmcb (pd->Space_io::walk(),
-                                  pd->npt.root());
-            cont = send_msg<ret_user_vmrun>;
+            regs.eax = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_io::walk(), pd->npt.root()));
 
+            regs.nst_ctrl<Vmcb>();
+            cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, own, regs.vmcb, regs.vtlb);
         }
     }
@@ -94,6 +94,9 @@ Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : 
 
 void Ec::handle_hazard (mword hzd, void (*func)())
 {
+    if (hzd & HZD_RCU)
+        Rcu::quiet();
+
     if (hzd & HZD_SCHED) {
         current->cont = func;
         Sc::schedule();
@@ -149,7 +152,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_FPU | HZD_DS_ES | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
@@ -165,11 +168,9 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     // No need to check HZD_DS_ES because IRET will reload both anyway
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
-
-    Rcu::quiet();
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
@@ -186,17 +187,18 @@ void Ec::ret_user_iret()
 
 void Ec::ret_user_vmresume()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmresume);
-
-    Rcu::quiet();
 
     current->regs.vmcs->make_current();
 
     if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
-        Pd::current->ept.flush();
+        if (current->regs.nst_on)
+            Pd::current->ept.flush();
+        else
+            current->regs.vtlb->flush (true);
     }
 
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
@@ -217,17 +219,16 @@ void Ec::ret_user_vmresume()
 
 void Ec::ret_user_vmrun()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmrun);
 
-    Rcu::quiet();
-
-    current->regs.eax = Buddy::ptr_to_phys (current->regs.vmcb);
-
     if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
-        current->regs.vmcb->tlb_control = 1;
+        if (current->regs.nst_on)
+            current->regs.vmcb->tlb_control = 1;
+        else
+            current->regs.vtlb->flush (true);
     }
 
     asm volatile ("lea %0, %%esp;"
@@ -244,15 +245,18 @@ void Ec::ret_user_vmrun()
 
 void Ec::idle()
 {
-    Rcu::quiet();
+    for (;;) {
 
-    uint64 t1 = rdtsc();
-    asm volatile ("sti; hlt; cli" : : : "memory");
-    uint64 t2 = rdtsc();
+        mword hzd = Cpu::hazard & (HZD_RCU | HZD_SCHED);
+        if (EXPECT_FALSE (hzd))
+            handle_hazard (hzd, idle);
 
-    Counter::cycles_idle += t2 - t1;
+        uint64 t1 = rdtsc();
+        asm volatile ("sti; hlt; cli" : : : "memory");
+        uint64 t2 = rdtsc();
 
-    Sc::schedule();
+        Counter::cycles_idle += t2 - t1;
+    }
 }
 
 void Ec::root_invoke()

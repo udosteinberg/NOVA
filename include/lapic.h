@@ -54,24 +54,6 @@ class Lapic : public Apic
             LAPIC_IPI_SELF  = 0x3f,
         };
 
-        enum Model
-        {
-            LAPIC_CLUSTER   = 0x0,
-            LAPIC_FLAT      = 0xf
-        };
-
-        enum Divider
-        {
-            DIVIDE_BY_2     = 0,
-            DIVIDE_BY_4     = 1,
-            DIVIDE_BY_8     = 2,
-            DIVIDE_BY_16    = 3,
-            DIVIDE_BY_32    = 8,
-            DIVIDE_BY_64    = 9,
-            DIVIDE_BY_128   = 10,
-            DIVIDE_BY_1     = 11
-        };
-
         ALWAYS_INLINE
         static inline uint32 read (Register reg)
         {
@@ -82,18 +64,6 @@ class Lapic : public Apic
         static inline void write (Register reg, uint32 val)
         {
             *reinterpret_cast<uint32 volatile *>(LAPIC_ADDR + (reg << 4)) = val;
-        }
-
-        ALWAYS_INLINE
-        static inline void set_ldr (unsigned id)
-        {
-            write (LAPIC_LDR, id << 24);
-        }
-
-        ALWAYS_INLINE
-        static inline void set_dfr (Model model)
-        {
-            write (LAPIC_DFR, model << 28);
         }
 
         ALWAYS_INLINE
@@ -118,6 +88,16 @@ class Lapic : public Apic
         static unsigned freq_tsc;
         static unsigned freq_bus;
         static uint8    apic_id[NUM_CPU];
+
+        ALWAYS_INLINE
+        static unsigned find_cpu (unsigned apic)
+        {
+            for (unsigned i = 0; i < NUM_CPU; i++)
+                if (apic_id[i] == apic)
+                    return i;
+
+            return ~0U;
+        }
 
         ALWAYS_INLINE
         static inline unsigned id()

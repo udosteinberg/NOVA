@@ -24,6 +24,12 @@
 class Cmdline
 {
     private:
+        static struct param_map
+        {
+            char   const *arg;
+            bool * const  ptr;
+        } map[];
+
         INIT
         static char *get_arg (char **line);
 
@@ -31,8 +37,8 @@ class Cmdline
         static bool dmar;
         static bool keyb;
         static bool serial;
-        static bool noept;
-        static bool nospinner;
+        static bool spinner;
+        static bool vtlb;
         static bool novga;
         static bool novpid;
 

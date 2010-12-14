@@ -22,5 +22,6 @@
 #define HZD_DS_ES       0x2
 #define HZD_TR          0x4
 #define HZD_FPU         0x8
+#define HZD_RCU         0x10
 #define HZD_TSC         0x40000000
 #define HZD_RECALL      0x80000000

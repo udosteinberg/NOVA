@@ -32,23 +32,17 @@ Pd::Pd (Pd *own) : Kobject (PD, own, 0)
 {
     hpt = Hptp (reinterpret_cast<mword>(&PDBR) | Hpt::HPT_P);
 
-    // XXX: Do not include HV regions (APIC, IOAPIC, DMAR)
-
     Mtrr::init();
 
-    Space_mem::insert_root (0, LOAD_ADDR, 7);
-
-    mword base = reinterpret_cast<mword>(&LOAD_E);
-    Space_mem::insert_root (base, reinterpret_cast<mword>(&LINK_P) - base, 7);
-
-    base = reinterpret_cast<mword>(&LINK_E);
-    Space_mem::insert_root (base, 0 - base, 7);
+    mword base = reinterpret_cast<mword>(&LINK_E) >> PAGE_BITS;
+    Space_mem::insert_root (0, reinterpret_cast<mword>(&LINK_P) >> PAGE_BITS, 7);
+    Space_mem::insert_root (base, (1UL << 20) - base, 7);
 
     // HIP
-    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), PAGE_SIZE, 1);
+    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H) >> PAGE_BITS, 1, 1);
 
     // I/O Ports
-    Space_io::insert_root (0, 16);
+    Space_io::addreg (0, 1UL << 16, 7);
 }
 
 template <typename S>
@@ -111,7 +105,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
         for (Mdb *ptr;; node = ptr) {
 
             if (node->remove_node() && node->node_pd->S::remove_node (node))
-                Rcu::submit (node);
+                Rcu::call (node);
 
             ptr = ACCESS_ONCE (node->prev);
 
