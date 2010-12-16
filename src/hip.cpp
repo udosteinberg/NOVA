@@ -97,7 +97,6 @@ void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
     }
 
     for (unsigned i = 0; i < count; i++, mod++, mem++) {
-
         mem->addr = mod->s_addr;
         mem->size = mod->e_addr - mod->s_addr;
         mem->type = Hip_mem::MB_MODULE;
@@ -107,11 +106,6 @@ void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
 
 void Hip::add_mhv (Hip_mem *&mem)
 {
-    mem->addr = LOAD_ADDR;
-    mem->size = reinterpret_cast<mword>(&LOAD_E) - mem->addr;
-    mem->type = Hip_mem::HYPERVISOR;
-    mem++;
-
     mem->addr = reinterpret_cast<mword>(&LINK_P);
     mem->size = reinterpret_cast<mword>(&LINK_E) - mem->addr;
     mem->type = Hip_mem::HYPERVISOR;
