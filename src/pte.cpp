@@ -59,7 +59,7 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
         if (EXPECT_FALSE (l && !e->super()))
             continue;
 
-        size_t s = 1UL << (l * B + PAGE_BITS);
+        size_t s = 1UL << (l * B + e->order());
 
         p = static_cast<Paddr>(e->addr() | (v & (s - 1)));
 
@@ -74,7 +74,7 @@ bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool d)
 
     P *e = walk (v, l, d);
 
-    p |= a | (l ? P::PTE_S : 0);
+    p |= P::order (o % B) | (l ? P::PTE_S : 0) | a;
 
     for (unsigned long i = 0; i < n; i++, p += s)
         e[i].val = p;

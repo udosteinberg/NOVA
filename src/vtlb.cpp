@@ -80,7 +80,7 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
 
 Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 {
-    mword phys, attr = Hpt::HPT_U | Hpt::HPT_W | Hpt::HPT_P;
+    mword phys, attr = TLB_U | TLB_W | TLB_P;
     Paddr host;
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
@@ -124,7 +124,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 
                 else if (!tlb->present()) {
                     static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))->flush_ptab (tlb->global());
-                    tlb->val = tlb->addr() | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P;
+                    tlb->val |= TLB_G | TLB_P;
                 }
 
                 tlb->val &= attr | ~TLB_G;

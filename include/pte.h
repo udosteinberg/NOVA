@@ -41,7 +41,13 @@ class Pte
         inline mword attr() const { return static_cast<mword>(val) & PAGE_MASK; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & ~PAGE_MASK; }
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~((1UL << order()) - 1); }
+
+        ALWAYS_INLINE
+        inline mword order() const { return PAGE_BITS; }
+
+        ALWAYS_INLINE
+        static inline mword order (mword) { return 0; }
 
         ALWAYS_INLINE
         inline bool set (E o, E v)
