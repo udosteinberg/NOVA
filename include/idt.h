@@ -1,7 +1,7 @@
 /*
  * Interrupt Descriptor Table (IDT)
  *
- * Copyright (C) 2009-2010 Udo Steinberg <udo@hypervisor.org>
+ * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * This file is part of the NOVA microhypervisor.
