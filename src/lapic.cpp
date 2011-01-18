@@ -31,7 +31,7 @@ void Lapic::init()
     Paddr apic_base = Msr::read<Paddr>(Msr::IA32_APIC_BASE);
 
     Pd::kern.Space_mem::delreg (apic_base & ~PAGE_MASK);
-    Hptp (Hpt::current() | Hpt::HPT_P).update (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
+    Hptp (Hpt::current()).update (LAPIC_ADDR, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
 

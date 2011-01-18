@@ -84,7 +84,7 @@ Paddr Hpt::replace (mword v, mword p)
 
 void *Hpt::remap (Paddr phys)
 {
-    Hptp hpt (current() | HPT_P);
+    Hptp hpt (current());
 
     size_t size = 1UL << (bpl() + PAGE_BITS);
 

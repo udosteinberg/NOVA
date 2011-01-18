@@ -83,10 +83,11 @@ class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
         template <typename>
         void revoke (mword, mword, mword, bool);
 
-        void xfer_items (Pd *, Crd, Xfer *, Xfer *, unsigned long);
+        void xfer_items (Pd *, Crd, Crd, Xfer *, Xfer *, unsigned long);
 
-        void delegate_crd (Pd *, Crd, Crd &, mword = 0, mword = 0);
-        void revoke_crd (Crd, bool);
+        void xlt_crd (Pd *, Crd, Crd &);
+        void del_crd (Pd *, Crd, Crd &, mword = 0, mword = 0);
+        void rev_crd (Crd, bool);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

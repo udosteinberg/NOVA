@@ -30,7 +30,7 @@ ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC, perm);
 
 Pd::Pd (Pd *own) : Kobject (PD, own, 0)
 {
-    hpt = Hptp (reinterpret_cast<mword>(&PDBR) | Hpt::HPT_P);
+    hpt = Hptp (reinterpret_cast<mword>(&PDBR));
 
     Mtrr::init();
 
@@ -147,16 +147,44 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
     }
 }
 
-void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword sub, mword hot)
+void Pd::xlt_crd (Pd *pd, Crd xlt, Crd &crd)
 {
-    Crd::Type st = snd.type(), rt = rcv.type();
+    if (crd.type() == xlt.type()) {
+
+        Mdb *mdb, *node;
+
+        mword sb = crd.base(), so = crd.order(), rb = xlt.base(), ro = xlt.order();
+
+        for (node = mdb = pd->lookup_crd (crd); node; node = node->prnt)
+            if (node->node_pd == this && node != mdb)
+                if ((ro = clamp (node->node_base, rb, node->node_order, ro)) != ~0UL)
+                    break;
+
+        if (node) {
+
+            so = clamp (mdb->node_base, sb, mdb->node_order, so);
+            sb = (sb - mdb->node_base) + (mdb->node_phys - node->node_phys) + node->node_base;
+
+            if ((ro = clamp (sb, rb, so, ro)) != ~0UL) {
+                crd = Crd (crd.type(), rb, ro, mdb->node_attr);
+                return;
+            }
+        }
+    }
+
+    crd = Crd (0);
+}
+
+void Pd::del_crd (Pd *pd, Crd del, Crd &crd, mword sub, mword hot)
+{
+    Crd::Type st = crd.type(), rt = del.type();
 
     if (rt != st) {
-        snd = Crd (0);
+        crd = Crd (0);
         return;
     }
 
-    mword sb = snd.base(), rb = rcv.base(), so = snd.order(), ro = rcv.order(), a = snd.attr(), o = 0;
+    mword sb = crd.base(), so = crd.order(), rb = del.base(), ro = del.order(), a = crd.attr(), o = 0;
 
     switch (rt) {
 
@@ -179,10 +207,10 @@ void Pd::delegate_crd (Pd *pd, Crd rcv, Crd &snd, mword sub, mword hot)
             break;
     }
 
-    snd = Crd (rt, rb, o, a);
+    crd = Crd (rt, rb, o, a);
 }
 
-void Pd::revoke_crd (Crd crd, bool self)
+void Pd::rev_crd (Crd crd, bool self)
 {
     Cpu::preempt_enable();
 
@@ -208,28 +236,20 @@ void Pd::revoke_crd (Crd crd, bool self)
     Cpu::preempt_disable();
 }
 
-void Pd::xfer_items (Pd *src, Crd rcv, Xfer *s, Xfer *d, unsigned long ti)
+void Pd::xfer_items (Pd *src, Crd xlt, Crd del, Xfer *s, Xfer *d, unsigned long ti)
 {
     for (Crd crd; ti--; s--) {
 
+        crd = *s;
+
         switch (s->flags() & 1) {
 
-            case 0:     // Translate
-                Mdb *mdb, *node;
-                for (node = mdb = src->lookup_crd (*s); node; node = node->prnt)
-                    if (node->node_pd == this && node != mdb)
-                        break;
-
-                if (node) {
-                    mword b = s->base(), o = clamp (mdb->node_base, b, mdb->node_order, s->order());
-                    crd = Crd (s->type(), (b - mdb->node_base) + (mdb->node_phys - node->node_phys) + node->node_base, o, mdb->node_attr);
-                } else
-                    crd = Crd (0);
-
+            case 0:
+                xlt_crd (src, xlt, crd);
                 break;
 
-            case 1:     // Delegate
-                delegate_crd (src == &root && s->flags() & 0x800 ? &kern : src, rcv, crd = *s, s->flags() >> 9 & 3, s->hotspot());
+            case 1:
+                del_crd (src == &root && s->flags() & 0x800 ? &kern : src, del, crd, s->flags() >> 9 & 3, s->hotspot());
                 break;
         };
 

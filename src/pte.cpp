@@ -35,12 +35,12 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool d)
         if (l == n)
             return e;
 
-        if (!e->present()) {
+        if (!e->val) {
 
             if (d)
                 return 0;
 
-            if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? P::PTE_P : P::PTE_N)))
+            if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? 0 : P::PTE_N)))
                 delete p;
         }
     }
@@ -53,7 +53,7 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
 
     for (P *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
 
-        if (EXPECT_FALSE (!e->present()))
+        if (EXPECT_FALSE (!e->val))
             return 0;
 
         if (EXPECT_FALSE (l && !e->super()))
@@ -68,16 +68,26 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
 }
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
-bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool d)
+bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool r)
 {
-    unsigned long l = o / B, n = 1UL << o % B, s = 1UL << (l * B + PAGE_BITS);
+    unsigned long l = o / B, n = 1UL << o % B, s;
 
-    P *e = walk (v, l, d);
+    P *e = walk (v, l, r);
 
-    p |= P::order (o % B) | (l ? P::PTE_S : 0) | a;
+    if (a) {
+        p |= P::order (o % B) | (l ? P::PTE_S : 0) | a;
+        s = 1UL << (l * B + PAGE_BITS);
+    } else
+        p = s = 0;
 
-    for (unsigned long i = 0; i < n; i++, p += s)
-        e[i].val = p;
+    for (unsigned long i = 0; i < n; e[i].val = p, i++, p += s) {
+
+        if (!e[i].val)
+            continue;
+
+        if (l && !e[i].super())
+            delete static_cast<P *>(Buddy::phys_to_ptr (e[i].addr()));
+    }
 
     if (F)
         flush (e, n * sizeof (E));

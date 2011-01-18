@@ -57,7 +57,8 @@ void Ec::delegate()
     bool user = C || dst->cont == ret_user_sysexit;
 
     dst->pd->xfer_items (src->pd,
-                         user ? dst->utcb->crd : Crd (Crd::MEM, 0, Crd::whole, 0),
+                         user ? dst->utcb->xlt : Crd (0),
+                         user ? dst->utcb->del : Crd (Crd::MEM, 0, Crd::whole, 0),
                          src->utcb->xfer(),
                          user ? dst->utcb->xfer() : 0,
                          src->utcb->ti);
@@ -203,7 +204,7 @@ void Ec::sys_create_pd()
     }
 
     Crd crd = r->crd();
-    pd->delegate_crd (dst, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
+    pd->del_crd (dst, Crd (Crd::OBJ, 0, Crd::whole, 0), crd);
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -350,7 +351,7 @@ void Ec::sys_revoke()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_REVOKE", current);
 
-    Pd::current->revoke_crd (r->crd(), r->flags());
+    Pd::current->rev_crd (r->crd(), r->flags());
 
     sys_finish<Sys_regs::SUCCESS>();
 }

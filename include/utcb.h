@@ -54,9 +54,8 @@ class Utcb_head
             };
             mword items;
         };
-        Crd     crd;
+        Crd     xlt, del;
         mword   tls;
-        mword   res;
 };
 
 class Utcb_data
