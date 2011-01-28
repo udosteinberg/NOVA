@@ -236,9 +236,6 @@ class Dmar
         static inline void *operator new (size_t) { return cache.alloc(); }
 
         ALWAYS_INLINE INIT
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
-
-        ALWAYS_INLINE INIT
         static inline void enable (unsigned flags)
         {
             if (!(flags & 1))

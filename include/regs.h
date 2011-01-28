@@ -48,8 +48,9 @@ class Sys_regs
         enum Status
         {
             SUCCESS,
-            TIMEOUT,
-            BAD_SYS,
+            IPC_TIM,
+            IPC_ABT,
+            BAD_HYP,
             BAD_CAP,
             BAD_MEM,
             BAD_FTR,

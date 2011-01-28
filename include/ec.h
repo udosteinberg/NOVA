@@ -39,7 +39,7 @@ class Ec : public Kobject, public Queue<Sc>
     private:
         void        (*cont)();
         Cpu_regs    regs;
-        Ec *        reply;
+        Ec *        rcap;
         Utcb *      utcb;
         Refptr<Pd>  pd;
         Sc *        sc;
@@ -56,7 +56,6 @@ class Ec : public Kobject, public Queue<Sc>
         };
         unsigned const evt;
 
-        // EC Cache
         static Slab_cache cache;
 
         REGPARM (1)
@@ -114,7 +113,7 @@ class Ec : public Kobject, public Queue<Sc>
         inline void set_partner (Ec *p)
         {
             partner = p;
-            partner->reply = this;
+            partner->rcap = this;
             Sc::ctr_link++;
         }
 
@@ -122,7 +121,7 @@ class Ec : public Kobject, public Queue<Sc>
         inline unsigned clr_partner()
         {
             assert (partner == current);
-            partner->reply = 0;
+            partner->rcap = 0;
             partner = 0;
             return Sc::ctr_link--;
         }
@@ -175,18 +174,19 @@ class Ec : public Kobject, public Queue<Sc>
             cont = c;
         }
 
-        NOINLINE NORETURN
+        NOINLINE
         void help (void (*c)())
         {
-            Counter::print (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, SPN_HLP);
-            current->cont = c;
+            if (EXPECT_TRUE (cont != dead)) {
 
-            if (++Sc::ctr_loop >= 100) {
-                trace (0, "Helping livelock detected on SC:%p", Sc::current);
-                Sc::schedule (true);
+                Counter::print (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, SPN_HLP);
+                current->cont = c;
+
+                if (EXPECT_TRUE (++Sc::ctr_loop < 100))
+                    activate (this);
+
+                die ("Livelock");
             }
-
-            activate (this);
         }
 
         NOINLINE
@@ -197,7 +197,6 @@ class Ec : public Kobject, public Queue<Sc>
                 if (!blocked())
                     return;
 
-                // Block SC on EC
                 enqueue (Sc::current);
             }
 
@@ -236,10 +235,13 @@ class Ec : public Kobject, public Queue<Sc>
         static void send_msg();
 
         HOT NORETURN
-        static void recv_msg();
+        static void recv_kern();
 
         HOT NORETURN
-        static void wait_msg();
+        static void recv_user();
+
+        HOT NORETURN
+        static void reply (void (*)() = 0);
 
         HOT NORETURN
         static void sys_call();
@@ -291,7 +293,7 @@ class Ec : public Kobject, public Queue<Sc>
         static void delegate();
 
         NORETURN
-        static void die() { die ("Dead EC"); }
+        static void dead() { die ("IPC Abort"); }
 
         NORETURN
         static void die (char const *, Exc_regs * = &current->regs);

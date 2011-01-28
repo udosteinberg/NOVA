@@ -48,7 +48,7 @@ void Ec::activate (Ec *ec)
 template <bool C>
 void Ec::delegate()
 {
-    Ec *ec = current->reply;
+    Ec *ec = current->rcap;
     assert (ec);
 
     Ec *src = C ? ec : current;
@@ -63,7 +63,7 @@ void Ec::delegate()
                          user ? dst->utcb->xfer() : 0,
                          src->utcb->ti);
 
-    (C ? ret_user_sysexit : wait_msg)();
+    C ? ret_user_sysexit() : reply();
 }
 
 template <void (*C)()>
@@ -85,13 +85,15 @@ void Ec::send_msg()
         current->cont = C;
         current->set_partner (ec);
         current->regs.mtd = pt->mtd.val;
-        ec->cont = recv_msg;
+        ec->cont = recv_kern;
         ec->regs.set_pt (pt->node_base);
         ec->regs.set_ip (pt->ip);
         ec->make_current();
     }
 
     ec->help (send_msg<C>);
+
+    die ("IPC Timeout");
 }
 
 void Ec::sys_call()
@@ -111,29 +113,23 @@ void Ec::sys_call()
     if (EXPECT_TRUE (!ec->cont)) {
         current->cont = ret_user_sysexit;
         current->set_partner (ec);
-        ec->cont = recv_msg;
+        ec->cont = recv_user;
         ec->regs.set_ip (pt->ip);
         ec->regs.set_pt (pt->node_base);
         ec->make_current();
     }
 
-    if (EXPECT_FALSE (s->flags() & Sys_call::DISABLE_BLOCKING))
-        sys_finish<Sys_regs::TIMEOUT>();
+    if (EXPECT_TRUE (!(s->flags() & Sys_call::DISABLE_BLOCKING)))
+        ec->help (sys_call);
 
-    ec->help (sys_call);
+    sys_finish<Sys_regs::IPC_TIM>();
 }
 
-void Ec::recv_msg()
+void Ec::recv_kern()
 {
-    Ec *ec = current->reply;
+    Ec *ec = current->rcap;
 
-    if (EXPECT_TRUE (ec->cont == ret_user_sysexit)) {
-        ec->utcb->save (current->utcb);
-        if (EXPECT_FALSE (ec->utcb->ti))
-            delegate<true>();
-    }
-
-    else if (ec->cont == ret_user_iret)
+    if (ec->cont == ret_user_iret)
         current->utcb->load_exc (&ec->regs);
     else if (ec->cont == ret_user_vmresume)
         current->utcb->load_vmx (&ec->regs);
@@ -143,17 +139,30 @@ void Ec::recv_msg()
     ret_user_sysexit();
 }
 
-void Ec::wait_msg()
+void Ec::recv_user()
 {
-    Ec *ec = current->reply;
+    Ec *ec = current->rcap;
 
-    current->cont = static_cast<void (*)()>(0);
+    ec->utcb->save (current->utcb);
+
+    if (EXPECT_FALSE (ec->utcb->ti))
+        delegate<true>();
+
+    ret_user_sysexit();
+}
+
+void Ec::reply (void (*c)())
+{
+    current->cont = c;
+
+    Ec *ec = current->rcap;
 
     if (EXPECT_TRUE (ec)) {
-        if (ec->clr_partner())
+
+        if (EXPECT_TRUE (ec->clr_partner()))
             ec->make_current();
-        else
-            Ec::activate (Sc::current->ec());
+
+        Ec::activate (Sc::current->ec());
     }
 
     Sc::schedule (true);
@@ -161,7 +170,7 @@ void Ec::wait_msg()
 
 void Ec::sys_reply()
 {
-    Ec *ec = current->reply;
+    Ec *ec = current->rcap;
 
     if (EXPECT_TRUE (ec)) {
 
@@ -180,7 +189,7 @@ void Ec::sys_reply()
             delegate<false>();
     }
 
-    wait_msg();
+    reply();
 }
 
 void Ec::sys_create_pd()
@@ -486,11 +495,12 @@ void (*const syscall[])() =
     &Ec::sys_semctl,
     &Ec::sys_assign_pci,
     &Ec::sys_assign_gsi,
-    &Ec::sys_finish<Sys_regs::BAD_SYS>,
-    &Ec::sys_finish<Sys_regs::BAD_SYS>,
-    &Ec::sys_finish<Sys_regs::BAD_SYS>,
+    &Ec::sys_finish<Sys_regs::BAD_HYP>,
+    &Ec::sys_finish<Sys_regs::BAD_HYP>,
+    &Ec::sys_finish<Sys_regs::BAD_HYP>,
 };
 
+template void Ec::sys_finish<Sys_regs::IPC_ABT>();
 template void Ec::send_msg<Ec::ret_user_vmresume>();
 template void Ec::send_msg<Ec::ret_user_vmrun>();
 template void Ec::send_msg<Ec::ret_user_iret>();

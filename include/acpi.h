@@ -85,8 +85,6 @@ class Acpi
 
         static uint32   tmr_ovf;
         static uint32   feature;
-        static uint32   smi_cmd;
-        static uint8    enable_val;
         static uint8    reset_val;
 
         static unsigned hw_read (Acpi_gas *);
@@ -97,12 +95,6 @@ class Acpi
 
         ALWAYS_INLINE
         static inline mword tmr_msb() { return feature & 0x100 ? 31 : 23; }
-
-        INIT
-        static void enable();
-
-        INIT
-        static void setup_sci();
 
     public:
         static unsigned irq;

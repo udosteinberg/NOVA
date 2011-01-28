@@ -24,20 +24,17 @@
 
 unsigned Keyb::gsi = ~0u;
 
-/*
- * Keyboard Initialization
- */
 void Keyb::init()
 {
     if (!Cmdline::keyb)
         return;
 
-    // Disable scan code translation
-    send_ctrl (CMD_RD_CCB);
-    unsigned ccb = read_keyb();
+    while (status() & STS_OUTB)
+        output();
 
     gsi = Gsi::irq_to_gsi (irq);
-    trace (TRACE_KEYB, "KEYB: GSI:%#x CCB:%#x", gsi, ccb);
+
+    trace (TRACE_KEYB, "KEYB: GSI:%#x", gsi);
 
     Gsi::set (gsi);
 }
@@ -48,26 +45,24 @@ void Keyb::interrupt()
 
     while ((sts = status()) & STS_OUTB) {
 
-        unsigned inp = input();
+        unsigned out = output();
 
-        // Mouse data
         if (sts & STS_AUXB)
             continue;
 
-        if (inp & 0x80)
+        if (out & 0x80)
             continue;
 
-        switch (inp) {
+        switch (out) {
             case 0x1:               // esc
                 Acpi::reset();
-                send_ctrl (CMD_RESET);
                 Io::out<uint8>(0xcf9, 0x6);
                 break;
             case 0x2e:              // c
                 Counter::dump();
                 break;
             case 0x3b ... 0x42:     // f1-f8
-                screen.set_page (inp - 0x3b);
+                screen.set_page (out - 0x3b);
                 break;
         }
     }

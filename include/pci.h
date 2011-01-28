@@ -107,9 +107,6 @@ class Pci
         static inline void *operator new (size_t) { return cache.alloc(); }
 
         ALWAYS_INLINE INIT
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
-
-        ALWAYS_INLINE INIT
         static inline void claim_all (Dmar *d)
         {
             for (Pci *pci = list; pci; pci = pci->next)

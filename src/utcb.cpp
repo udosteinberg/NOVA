@@ -16,6 +16,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "barrier.h"
 #include "mtd.h"
 #include "regs.h"
 #include "svm.h"
@@ -23,36 +24,38 @@
 
 void Utcb::load_exc (Cpu_regs *regs)
 {
-    items = sizeof (Utcb_data) / sizeof (mword);
+    mword m = regs->mtd;
 
-    mtd = regs->mtd;
-
-    if (mtd & Mtd::GPR_ACDB) {
+    if (m & Mtd::GPR_ACDB) {
         rax = regs->eax;
         rcx = regs->ecx;
         rdx = regs->edx;
         rbx = regs->ebx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_BSD) {
         rbp = regs->ebp;
         rsi = regs->esi;
         rdi = regs->edi;
     }
 
-    if (mtd & Mtd::RSP)
+    if (m & Mtd::RSP)
         rsp = regs->esp;
 
-    if (mtd & Mtd::RIP_LEN)
+    if (m & Mtd::RIP_LEN)
         rip = regs->eip;
 
-    if (mtd & Mtd::RFLAGS)
+    if (m & Mtd::RFLAGS)
         rflags = regs->efl;
 
-    if (mtd & Mtd::QUAL) {
+    if (m & Mtd::QUAL) {
         qual[0] = regs->err;
         qual[1] = regs->cr2;
     }
+
+    barrier();
+    mtd = m;
+    items = sizeof (Utcb_data) / sizeof (mword);
 }
 
 void Utcb::save_exc (Cpu_regs *regs)
@@ -82,18 +85,16 @@ void Utcb::save_exc (Cpu_regs *regs)
 
 void Utcb::load_vmx (Cpu_regs *regs)
 {
-    items = sizeof (Utcb_data) / sizeof (mword);
+    mword m = regs->mtd;
 
-    mtd = regs->mtd;
-
-    if (mtd & Mtd::GPR_ACDB) {
+    if (m & Mtd::GPR_ACDB) {
         rax = regs->eax;
         rcx = regs->ecx;
         rdx = regs->edx;
         rbx = regs->ebx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_BSD) {
         rbp = regs->ebp;
         rsi = regs->esi;
         rdi = regs->edi;
@@ -101,61 +102,61 @@ void Utcb::load_vmx (Cpu_regs *regs)
 
     regs->vmcs->make_current();
 
-    if (mtd & Mtd::RSP)
+    if (m & Mtd::RSP)
         rsp = Vmcs::read (Vmcs::GUEST_RSP);
 
-    if (mtd & Mtd::RIP_LEN) {
+    if (m & Mtd::RIP_LEN) {
         rip      = Vmcs::read (Vmcs::GUEST_RIP);
         inst_len = Vmcs::read (Vmcs::EXI_INST_LEN);
     }
 
-    if (mtd & Mtd::RFLAGS)
+    if (m & Mtd::RFLAGS)
         rflags = Vmcs::read (Vmcs::GUEST_RFLAGS);
 
-    if (mtd & Mtd::DS_ES) {
+    if (m & Mtd::DS_ES) {
         ds.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_DS), Vmcs::read (Vmcs::GUEST_BASE_DS), Vmcs::read (Vmcs::GUEST_LIMIT_DS), Vmcs::read (Vmcs::GUEST_AR_DS));
         es.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_ES), Vmcs::read (Vmcs::GUEST_BASE_ES), Vmcs::read (Vmcs::GUEST_LIMIT_ES), Vmcs::read (Vmcs::GUEST_AR_ES));
     }
 
-    if (mtd & Mtd::FS_GS) {
+    if (m & Mtd::FS_GS) {
         fs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_FS), Vmcs::read (Vmcs::GUEST_BASE_FS), Vmcs::read (Vmcs::GUEST_LIMIT_FS), Vmcs::read (Vmcs::GUEST_AR_FS));
         gs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_GS), Vmcs::read (Vmcs::GUEST_BASE_GS), Vmcs::read (Vmcs::GUEST_LIMIT_GS), Vmcs::read (Vmcs::GUEST_AR_GS));
     }
 
-    if (mtd & Mtd::CS_SS) {
+    if (m & Mtd::CS_SS) {
         cs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_CS), Vmcs::read (Vmcs::GUEST_BASE_CS), Vmcs::read (Vmcs::GUEST_LIMIT_CS), Vmcs::read (Vmcs::GUEST_AR_CS));
         ss.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_SS), Vmcs::read (Vmcs::GUEST_BASE_SS), Vmcs::read (Vmcs::GUEST_LIMIT_SS), Vmcs::read (Vmcs::GUEST_AR_SS));
     }
 
-    if (mtd & Mtd::TR)
+    if (m & Mtd::TR)
         tr.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_TR), Vmcs::read (Vmcs::GUEST_BASE_TR), Vmcs::read (Vmcs::GUEST_LIMIT_TR), Vmcs::read (Vmcs::GUEST_AR_TR));
 
-    if (mtd & Mtd::LDTR)
+    if (m & Mtd::LDTR)
         ld.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_LDTR), Vmcs::read (Vmcs::GUEST_BASE_LDTR), Vmcs::read (Vmcs::GUEST_LIMIT_LDTR), Vmcs::read (Vmcs::GUEST_AR_LDTR));
 
-    if (mtd & Mtd::GDTR)
+    if (m & Mtd::GDTR)
         gd.set_vmx (0, Vmcs::read (Vmcs::GUEST_BASE_GDTR), Vmcs::read (Vmcs::GUEST_LIMIT_GDTR), 0);
 
-    if (mtd & Mtd::IDTR)
+    if (m & Mtd::IDTR)
         id.set_vmx (0, Vmcs::read (Vmcs::GUEST_BASE_IDTR), Vmcs::read (Vmcs::GUEST_LIMIT_IDTR), 0);
 
-    if (mtd & Mtd::CR) {
+    if (m & Mtd::CR) {
         cr0 = regs->read_cr<Vmcs> (0);
         cr2 = regs->read_cr<Vmcs> (2);
         cr3 = regs->read_cr<Vmcs> (3);
         cr4 = regs->read_cr<Vmcs> (4);
     }
 
-    if (mtd & Mtd::DR)
+    if (m & Mtd::DR)
         dr7 = Vmcs::read (Vmcs::GUEST_DR7);
 
-    if (mtd & Mtd::SYSENTER) {
+    if (m & Mtd::SYSENTER) {
         sysenter_cs  = Vmcs::read (Vmcs::GUEST_SYSENTER_CS);
         sysenter_rsp = Vmcs::read (Vmcs::GUEST_SYSENTER_ESP);
         sysenter_rip = Vmcs::read (Vmcs::GUEST_SYSENTER_EIP);
     }
 
-    if (mtd & Mtd::QUAL) {
+    if (m & Mtd::QUAL) {
         if (regs->dst_portal == 48 && !regs->nst_on) {
             qual[0] = regs->nst_error;
             qual[1] = regs->nst_fault;
@@ -165,7 +166,7 @@ void Utcb::load_vmx (Cpu_regs *regs)
         }
     }
 
-    if (mtd & Mtd::INJ) {
+    if (m & Mtd::INJ) {
         if (regs->dst_portal == 33 || regs->dst_portal == NUM_VMI - 1) {
             intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_INFO));
             intr_error = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_ERROR));
@@ -175,13 +176,17 @@ void Utcb::load_vmx (Cpu_regs *regs)
         }
     }
 
-    if (mtd & Mtd::STA) {
+    if (m & Mtd::STA) {
         intr_state = static_cast<uint32>(Vmcs::read (Vmcs::GUEST_INTR_STATE));
         actv_state = static_cast<uint32>(Vmcs::read (Vmcs::GUEST_ACTV_STATE));
     }
 
-    if (mtd & Mtd::TSC)
+    if (m & Mtd::TSC)
         tsc = regs->tsc_offset;
+
+    barrier();
+    mtd = m;
+    items = sizeof (Utcb_data) / sizeof (mword);
 }
 
 void Utcb::save_vmx (Cpu_regs *regs)
@@ -311,78 +316,76 @@ void Utcb::save_vmx (Cpu_regs *regs)
 
 void Utcb::load_svm (Cpu_regs *regs)
 {
-    items = sizeof (Utcb_data) / sizeof (mword);
-
-    mtd = regs->mtd;
-
     Vmcb *const vmcb = regs->vmcb;
 
-    if (mtd & Mtd::GPR_ACDB) {
+    mword m = regs->mtd;
+
+    if (m & Mtd::GPR_ACDB) {
         rax = static_cast<mword>(vmcb->rax);
         rcx = regs->ecx;
         rdx = regs->edx;
         rbx = regs->ebx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_BSD) {
         rbp = regs->ebp;
         rsi = regs->esi;
         rdi = regs->edi;
     }
 
-    if (mtd & Mtd::RSP)
+    if (m & Mtd::RSP)
         rsp = static_cast<mword>(vmcb->rsp);
 
-    if (mtd & Mtd::RIP_LEN)
+    if (m & Mtd::RIP_LEN)
         rip = static_cast<mword>(vmcb->rip);
 
-    if (mtd & Mtd::RFLAGS)
+    if (m & Mtd::RFLAGS)
         rflags = static_cast<mword>(vmcb->rflags);
 
-    if (mtd & Mtd::DS_ES) {
+    if (m & Mtd::DS_ES) {
         ds = vmcb->ds;
         es = vmcb->es;
     }
 
-    if (mtd & Mtd::FS_GS) {
+    if (m & Mtd::FS_GS) {
         fs = vmcb->fs;
         gs = vmcb->gs;
     }
 
-    if (mtd & Mtd::CS_SS) {
+    if (m & Mtd::CS_SS) {
         cs = vmcb->cs;
         ss = vmcb->ss;
     }
 
-    if (mtd & Mtd::TR)
+    if (m & Mtd::TR)
         tr = vmcb->tr;
 
-    if (mtd & Mtd::LDTR)
+    if (m & Mtd::LDTR)
         ld = vmcb->ldtr;
 
-    if (mtd & Mtd::GDTR)
+    if (m & Mtd::GDTR)
         gd = vmcb->gdtr;
 
-    if (mtd & Mtd::IDTR)
+    if (m & Mtd::IDTR)
         id = vmcb->idtr;
 
-    if (mtd & Mtd::CR) {
+    if (m & Mtd::CR) {
         cr0 = regs->read_cr<Vmcb> (0);
         cr2 = regs->read_cr<Vmcb> (2);
         cr3 = regs->read_cr<Vmcb> (3);
         cr4 = regs->read_cr<Vmcb> (4);
     }
 
-    if (mtd & Mtd::DR)
+    if (m & Mtd::DR)
         dr7 = static_cast<mword>(vmcb->dr7);
 
-    if (mtd & Mtd::SYSENTER) {
+    if (m & Mtd::SYSENTER) {
         sysenter_cs  = static_cast<mword>(vmcb->sysenter_cs);
         sysenter_rsp = static_cast<mword>(vmcb->sysenter_esp);
         sysenter_rip = static_cast<mword>(vmcb->sysenter_eip);
     }
 
-    if (mtd & Mtd::QUAL) {
+    if (m & Mtd::QUAL) {
         if (regs->dst_portal == NUM_VMI - 4 && !regs->nst_on) {
             qual[0] = regs->nst_error;
             qual[1] = regs->nst_fault;
@@ -392,20 +395,24 @@ void Utcb::load_svm (Cpu_regs *regs)
         }
     }
 
-    if (mtd & Mtd::INJ) {
+    if (m & Mtd::INJ) {
         if (regs->dst_portal == NUM_VMI - 3 || regs->dst_portal == NUM_VMI - 1)
             inj = vmcb->inj_control;
         else
             inj = vmcb->exitintinfo;
     }
 
-    if (mtd & Mtd::STA) {
+    if (m & Mtd::STA) {
         intr_state = static_cast<uint32>(vmcb->int_shadow);
         actv_state = 0;
     }
 
-    if (mtd & Mtd::TSC)
+    if (m & Mtd::TSC)
         tsc = regs->tsc_offset;
+
+    barrier();
+    mtd = m;
+    items = sizeof (Utcb_data) / sizeof (mword);
 }
 
 void Utcb::save_svm (Cpu_regs *regs)

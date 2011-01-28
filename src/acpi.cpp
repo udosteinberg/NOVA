@@ -31,62 +31,12 @@
 #include "stdio.h"
 #include "x86.h"
 
-Paddr Acpi::dmar, Acpi::fadt, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
-
-Acpi_gas Acpi::pm1a_sts;
-Acpi_gas Acpi::pm1b_sts;
-Acpi_gas Acpi::pm1a_ena;
-Acpi_gas Acpi::pm1b_ena;
-Acpi_gas Acpi::pm1a_cnt;
-Acpi_gas Acpi::pm1b_cnt;
-Acpi_gas Acpi::pm2_cnt;
-Acpi_gas Acpi::pm_tmr;
-Acpi_gas Acpi::reset_reg;
-
-uint32      Acpi::tmr_ovf;
-uint32      Acpi::feature;
-uint32      Acpi::smi_cmd;
-uint8       Acpi::enable_val;
+Paddr       Acpi::dmar, Acpi::fadt, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
+Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;
+uint32      Acpi::tmr_ovf, Acpi::feature;
 uint8       Acpi::reset_val;
-
-unsigned    Acpi::gsi;
-unsigned    Acpi::irq;
-
+unsigned    Acpi::irq, Acpi::gsi;
 bool        Acpi_table_madt::sci_overridden = false;
-
-void Acpi::setup_sci()
-{
-    gsi = Gsi::irq_to_gsi (irq);
-
-    if (!Acpi_table_madt::sci_overridden) {
-        Acpi_intr sci_override;
-        sci_override.bus = 0;
-        sci_override.irq = static_cast<uint8>(irq);
-        sci_override.gsi = gsi;
-        sci_override.flags.pol = Acpi_inti::POL_CONFORMING;
-        sci_override.flags.trg = Acpi_inti::TRG_CONFORMING;
-        Acpi_table_madt::parse_intr (&sci_override);
-    }
-
-    Gsi::set (gsi);
-
-    trace (TRACE_ACPI, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
-}
-
-void Acpi::enable()
-{
-    setup_sci();
-
-    if (smi_cmd && enable_val) {
-        Io::out (smi_cmd, enable_val);
-        while (!(read (PM1_CNT) & PM1_CNT_SCI_EN))
-            pause();
-    }
-
-    write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
-
-    for (; tmr_ovf = read (PM_TMR) >> tmr_msb(), read (PM1_STS) & PM1_STS_TMR; write (PM1_STS, PM1_STS_TMR)) ;
-}
 
 void Acpi::delay (unsigned ms)
 {
@@ -129,7 +79,23 @@ void Acpi::setup()
 
     Gsi::init();
 
-    enable();
+    if (!Acpi_table_madt::sci_overridden) {
+        Acpi_intr sci_override;
+        sci_override.bus = 0;
+        sci_override.irq = static_cast<uint8>(irq);
+        sci_override.gsi = irq;
+        sci_override.flags.pol = Acpi_inti::POL_CONFORMING;
+        sci_override.flags.trg = Acpi_inti::TRG_CONFORMING;
+        Acpi_table_madt::parse_intr (&sci_override);
+    }
+
+    Gsi::set (gsi = Gsi::irq_to_gsi (irq));
+
+    write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
+
+    for (; tmr_ovf = read (PM_TMR) >> tmr_msb(), read (PM1_STS) & PM1_STS_TMR; write (PM1_STS, PM1_STS_TMR)) ;
+
+    trace (TRACE_ACPI, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
 }
 
 unsigned Acpi::read (Register reg)

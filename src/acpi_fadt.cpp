@@ -18,13 +18,13 @@
 
 #include "acpi.h"
 #include "acpi_fadt.h"
+#include "io.h"
+#include "x86.h"
 
 void Acpi_table_fadt::parse() const
 {
-    Acpi::irq         = sci_irq;
-    Acpi::smi_cmd     = smi_cmd;
-    Acpi::enable_val  = acpi_enable;
-    Acpi::feature     = flags;
+    Acpi::irq     = sci_irq;
+    Acpi::feature = flags;
 
     // XXX: Use x_pm blocks if they exist
 
@@ -52,5 +52,11 @@ void Acpi_table_fadt::parse() const
     if (length >= 129) {
         Acpi::reset_reg = reset_reg;
         Acpi::reset_val = reset_value;
+    }
+
+    if (smi_cmd && acpi_enable) {
+        Io::out (smi_cmd, acpi_enable);
+        while (!(Acpi::read (Acpi::PM1_CNT) & Acpi::PM1_CNT_SCI_EN))
+            pause();
     }
 }

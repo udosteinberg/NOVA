@@ -319,8 +319,6 @@ bool Ec::fixup (mword &eip)
 
 void Ec::die (char const *reason, Exc_regs *r)
 {
-    current->cont = die;
-
     if (current->utcb || current->pd == &Pd::kern)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                current, Sc::current, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
@@ -328,5 +326,8 @@ void Ec::die (char const *reason, Exc_regs *r)
         trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
                current, Sc::current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
 
-    Sc::schedule (true);
+    if (current->rcap)
+        current->rcap->cont = current->rcap->cont == ret_user_sysexit ? sys_finish<Sys_regs::IPC_ABT> : dead;
+
+    reply (dead);
 }
