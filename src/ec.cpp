@@ -326,8 +326,14 @@ void Ec::die (char const *reason, Exc_regs *r)
         trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
                current, Sc::current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
 
-    if (current->rcap)
-        current->rcap->cont = current->rcap->cont == ret_user_sysexit ? sys_finish<Sys_regs::IPC_ABT> : dead;
+    Ec *ec = current->rcap;
+
+    if (ec) {
+        if (ec->cont == ret_user_sysexit)
+            ec->cont = sys_finish<Sys_regs::IPC_ABT>;
+        else
+            ec->cont = dead;
+    }
 
     reply (dead);
 }
