@@ -64,7 +64,7 @@ class Vmcb
         char                reserved7[24];
         uint64              g_pat;
 
-        static Vmcb *       root        CPULOCAL;
+        static Paddr        root        CPULOCAL;
         static unsigned     asid_ctr    CPULOCAL;
         static uint32       svm_version CPULOCAL;
         static uint32       svm_feature CPULOCAL;
@@ -121,7 +121,7 @@ class Vmcb
         ALWAYS_INLINE
         inline Vmcb()
         {
-            asm volatile ("vmsave" : : "a" (Buddy::ptr_to_phys (root = this)) : "memory");
+            asm volatile ("vmsave" : : "a" (Buddy::ptr_to_phys (this)) : "memory");
         }
 
         ALWAYS_INLINE

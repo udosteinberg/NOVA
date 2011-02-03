@@ -25,14 +25,13 @@
 #include "mtd.h"
 #include "pd.h"
 #include "queue.h"
-#include "refptr.h"
 #include "regs.h"
 #include "sc.h"
 #include "tss.h"
 
 class Utcb;
 
-class Ec : public Kobject, public Queue<Sc>
+class Ec : public Kobject, public Refcount, public Queue<Sc>
 {
     friend class Queue<Ec>;
 
@@ -42,7 +41,6 @@ class Ec : public Kobject, public Queue<Sc>
         Ec *        rcap;
         Utcb *      utcb;
         Refptr<Pd>  pd;
-        Sc *        sc;
         Ec *        partner;
         Ec *        prev;
         Ec *        next;
@@ -134,19 +132,13 @@ class Ec : public Kobject, public Queue<Sc>
         Ec (Pd *, mword, unsigned, mword, mword, unsigned, bool = true);
 
         ALWAYS_INLINE
-        inline bool set_sc (Sc *s)
-        {
-            return Atomic::cmp_swap (sc, static_cast<Sc *>(0), s);
-        }
-
-        ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
         {
             regs.add_tsc_offset (tsc);
         }
 
         ALWAYS_INLINE
-        inline bool blocked() const { return next; }
+        inline bool blocked() const { return next || !cont; }
 
         ALWAYS_INLINE NORETURN
         inline void make_current()
@@ -190,7 +182,7 @@ class Ec : public Kobject, public Queue<Sc>
         }
 
         NOINLINE
-        void block()
+        void block_sc()
         {
             {   Lock_guard <Spinlock> guard (lock);
 

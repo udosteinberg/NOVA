@@ -90,7 +90,7 @@ void Dmar::fault_handler()
         if (fsts & 0x2) {
             uint64 hi, lo;
             for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % nfr())
-                trace (TRACE_DMAR, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
+                trace (TRACE_IOMMU, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
                        this,
                        frr,
                        static_cast<uint32>(hi >> 32) & 0xff,

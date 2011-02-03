@@ -37,7 +37,7 @@ Ec::Ec (Pd *own, mword sel, unsigned c, unsigned e, void (*f)()) : Kobject (EC, 
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : Kobject (EC, own, sel), pd (own), sc (g ? 0 : reinterpret_cast<Sc *>(~0ul)), cpu (static_cast<uint16>(c)), glb (g), evt (e)
+Ec::Ec (Pd *own, mword sel, unsigned c, mword u, mword s, unsigned e, bool g) : Kobject (EC, own, sel), pd (own), cpu (static_cast<uint16>(c)), glb (g), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -233,12 +233,19 @@ void Ec::ret_user_vmrun()
 
     asm volatile ("lea %0, %%esp;"
                   "popa;"
-                  "vmload;"
+                  "clgi;"
                   "sti;"
+                  "vmload;"
                   "vmrun;"
                   "vmsave;"
-                  "jmp entry_svm;"
-                  : : "m" (current->regs) : "memory");
+                  "pusha;"
+                  "mov %1, %%eax;"
+                  "mov %2, %%esp;"
+                  "vmload;"
+                  "cli;"
+                  "stgi;"
+                  "jmp svm_handler;"
+                  : : "m" (current->regs), "m" (Vmcb::root), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
 
     UNREACHED;
 }

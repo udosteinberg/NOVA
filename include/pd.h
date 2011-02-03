@@ -25,7 +25,7 @@
 #include "space_mem.h"
 #include "space_obj.h"
 
-class Pd : public Kobject, public Space_mem, public Space_io, public Space_obj
+class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, public Space_obj
 {
     private:
         static Slab_cache cache;

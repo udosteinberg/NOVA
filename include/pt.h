@@ -21,7 +21,6 @@
 #include "compiler.h"
 #include "kobject.h"
 #include "mtd.h"
-#include "refptr.h"
 
 class Ec;
 

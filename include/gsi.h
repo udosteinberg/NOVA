@@ -30,8 +30,7 @@ class Gsi
         Ioapic *        ioapic;
         Sm *            sm;
         uint8           vec;
-        uint8           msk : 1,
-                        trg : 1,
+        uint8           trg : 1,
                         pol : 1;
 
         static Gsi      gsi_table[NUM_GSI];
@@ -39,9 +38,6 @@ class Gsi
 
         INIT
         static void setup();
-
-        INIT
-        static void init();
 
         static uint64 set (unsigned, unsigned = 0, unsigned = 0);
 

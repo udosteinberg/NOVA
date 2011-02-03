@@ -34,7 +34,7 @@ class Cmdline
         static char *get_arg (char **line);
 
     public:
-        static bool dmar;
+        static bool iommu;
         static bool keyb;
         static bool serial;
         static bool spinner;

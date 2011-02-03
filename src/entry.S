@@ -202,14 +202,3 @@ entry_vmx:              pusha
                         mov     %eax, 0xc(%esp)
                         mov     $(KSTCK_ADDR + PAGE_SIZE), %esp
                         jmp     vmx_handler
-
-/*
- * SVM Entry
- */
-.align                  4, 0x90
-.globl                  entry_svm
-entry_svm:              cli
-                        stgi
-                        pusha
-                        mov     $(KSTCK_ADDR + PAGE_SIZE), %esp
-                        jmp     svm_handler

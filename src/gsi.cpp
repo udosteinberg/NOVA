@@ -29,44 +29,32 @@ unsigned    Gsi::irq_table[NUM_IRQ];
 
 void Gsi::setup()
 {
-    for (unsigned i = 0; i < NUM_IRQ; i++) {
-        gsi_table[i].msk = 1;
-        gsi_table[i].trg = 0;  // edge
-        gsi_table[i].pol = 0;  // high
-        gsi_table[i].vec = static_cast<uint8>(VEC_GSI + i);
-        irq_table[i] = i;
-    }
-
-    for (unsigned i = NUM_IRQ; i < NUM_GSI; i++) {
-        gsi_table[i].msk = 1;
-        gsi_table[i].trg = 1;  // level
-        gsi_table[i].pol = 1;  // low
-        gsi_table[i].vec = static_cast<uint8>(VEC_GSI + i);
-    }
-}
-
-void Gsi::init()
-{
     for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
+
         Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, gsi));
-        mask (gsi);
+
+        gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
+
+        if (gsi < NUM_IRQ) {
+            irq_table[gsi] = gsi;
+            gsi_table[gsi].trg = 0;
+            gsi_table[gsi].pol = 0;
+        } else {
+            gsi_table[gsi].trg = 1;
+            gsi_table[gsi].pol = 1;
+        }
     }
 }
 
 uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
 {
-    assert (gsi < NUM_GSI);
-
-    gsi_table[gsi].msk = 0;
-    gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
-
     uint32 msi_addr = 0, msi_data = 0, aid = Lapic::apic_id[cpu];
 
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic) {
         ioapic->set_cpu (gsi, Dmar::ire() ? 0 : aid);
-        ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
+        ioapic->set_irt (gsi, gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
         rid = ioapic->get_rid();
     } else {
         msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
@@ -80,18 +68,18 @@ uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
 
 void Gsi::mask (unsigned gsi)
 {
-    if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
-        gsi_table[gsi].msk = 1;
-        gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
-    }
+    Ioapic *ioapic = gsi_table[gsi].ioapic;
+
+    if (ioapic)
+        ioapic->set_irt (gsi, 1U << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
 }
 
 void Gsi::unmask (unsigned gsi)
 {
-    if (EXPECT_TRUE (gsi < NUM_GSI && gsi_table[gsi].ioapic)) {
-        gsi_table[gsi].msk = 0;
-        gsi_table[gsi].ioapic->set_irt (gsi, gsi_table[gsi].msk << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
-    }
+    Ioapic *ioapic = gsi_table[gsi].ioapic;
+
+    if (ioapic)
+        ioapic->set_irt (gsi, 0U << 16 | gsi_table[gsi].trg << 15 | gsi_table[gsi].pol << 13 | gsi_table[gsi].vec);
 }
 
 void Gsi::vector (unsigned vector)

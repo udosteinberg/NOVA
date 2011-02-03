@@ -20,7 +20,7 @@
 #include "hpt.h"
 #include "string.h"
 
-bool Cmdline::dmar;
+bool Cmdline::iommu;
 bool Cmdline::keyb;
 bool Cmdline::serial;
 bool Cmdline::spinner;
@@ -30,7 +30,7 @@ bool Cmdline::novpid;
 
 struct Cmdline::param_map Cmdline::map[] INITDATA =
 {
-    { "dmar",       &Cmdline::dmar      },
+    { "iommu",      &Cmdline::iommu     },
     { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
     { "spinner",    &Cmdline::spinner   },

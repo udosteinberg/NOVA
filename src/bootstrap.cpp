@@ -43,7 +43,6 @@ void bootstrap()
         Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, Cpu::id, USER_ADDR - 2 * PAGE_SIZE, 0, 0);
         Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_ec->set_cont (Ec::root_invoke);
-        root_ec->set_sc (root_sc);
         root_sc->remote_enqueue();
     }
 

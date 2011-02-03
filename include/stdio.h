@@ -29,29 +29,30 @@ do {                                                        \
     if (EXPECT_FALSE ((trace_mask & (T)) == (T)))           \
         printf ("[%2d] " format "\n",                       \
                ((__esp - 1) & ~PAGE_MASK) == KSTCK_ADDR ?   \
-                Cpu::id : ~0u, ## __VA_ARGS__);             \
+                Cpu::id : ~0U, ## __VA_ARGS__);             \
 } while (0)
 
 /*
  * Definition of trace events
  */
 enum {
-    TRACE_CPU       = 1ul << 0,
-    TRACE_VMX       = 1ul << 1,
-    TRACE_APIC      = 1ul << 3,
-    TRACE_DMAR      = 1ul << 4,
-    TRACE_SVM       = 1ul << 5,
-    TRACE_ACPI      = 1ul << 8,
-    TRACE_KEYB      = 1ul << 9,
-    TRACE_ERROR     = 1ul << 10,
-    TRACE_SYSCALL   = 1ul << 12,
-    TRACE_MEMORY    = 1ul << 13,
-    TRACE_PCI       = 1ul << 14,
-    TRACE_SCHEDULE  = 1ul << 16,
-    TRACE_VTLB      = 1ul << 17,
-    TRACE_DEL       = 1ul << 18,
-    TRACE_REV       = 1ul << 19,
-    TRACE_FPU       = 1ul << 23,
+    TRACE_CPU       = 1UL << 0,
+    TRACE_IOMMU     = 1UL << 1,
+    TRACE_APIC      = 1UL << 2,
+    TRACE_KEYB      = 1UL << 3,
+    TRACE_VMX       = 1UL << 4,
+    TRACE_SVM       = 1UL << 5,
+    TRACE_ACPI      = 1UL << 8,
+    TRACE_MEMORY    = 1UL << 13,
+    TRACE_PCI       = 1UL << 14,
+    TRACE_SCHEDULE  = 1UL << 16,
+    TRACE_VTLB      = 1UL << 17,
+    TRACE_DEL       = 1UL << 18,
+    TRACE_REV       = 1UL << 19,
+    TRACE_RCU       = 1UL << 20,
+    TRACE_FPU       = 1UL << 23,
+    TRACE_SYSCALL   = 1UL << 30,
+    TRACE_ERROR     = 1UL << 31,
 };
 
 /*
@@ -59,22 +60,23 @@ enum {
  */
 unsigned const trace_mask =
                             TRACE_CPU       |
+                            TRACE_IOMMU     |
 #ifdef DEBUG
-                            TRACE_VMX       |
 //                            TRACE_APIC      |
-                            TRACE_DMAR      |
+//                            TRACE_KEYB      |
+                            TRACE_VMX       |
                             TRACE_SVM       |
 //                            TRACE_ACPI      |
-//                            TRACE_KEYB      |
-                            TRACE_ERROR     |
-//                            TRACE_SYSCALL   |
 //                            TRACE_MEMORY    |
 //                            TRACE_PCI       |
 //                            TRACE_SCHEDULE  |
 //                            TRACE_VTLB      |
 //                            TRACE_DEL       |
 //                            TRACE_REV       |
+//                            TRACE_RCU       |
 //                            TRACE_FPU       |
+//                            TRACE_SYSCALL   |
+                            TRACE_ERROR     |
 #endif
                             0;
 

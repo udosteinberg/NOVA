@@ -39,8 +39,8 @@ void Ec::activate (Ec *ec)
     for (Sc::ctr_link = 0; ec->partner; ec = ec->partner)
         Sc::ctr_link++;
 
-    if (ec->blocked())
-        ec->block();
+    if (EXPECT_FALSE (ec->blocked()))
+        ec->block_sc();
 
     ec->make_current();
 }
@@ -155,17 +155,15 @@ void Ec::reply (void (*c)())
 {
     current->cont = c;
 
+    if (EXPECT_FALSE (current->glb))
+        Sc::schedule (true);
+
     Ec *ec = current->rcap;
 
-    if (EXPECT_TRUE (ec)) {
+    if (EXPECT_TRUE (ec && ec->clr_partner()))
+        ec->make_current();
 
-        if (EXPECT_TRUE (ec->clr_partner()))
-            ec->make_current();
-
-        Ec::activate (Sc::current->ec());
-    }
-
-    Sc::schedule (true);
+    Ec::activate (Sc::current->ec());
 }
 
 void Ec::sys_reply()
@@ -277,14 +275,12 @@ void Ec::sys_create_sc()
     }
     Ec *ec = static_cast<Ec *>(e);
 
-    Sc *sc = new Sc (dst, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
-
-    if (!ec->set_sc (sc)) {
+    if (EXPECT_FALSE (!ec->glb)) {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
-        delete sc;
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
+    Sc *sc = new Sc (dst, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
     if (!dst->Space_obj::insert_root (sc)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete sc;
@@ -316,7 +312,7 @@ void Ec::sys_create_pt()
     }
     Ec *ec = static_cast<Ec *>(e);
 
-    if (ec->pd != dst) {
+    if (EXPECT_FALSE (ec->glb || ec->pd != dst)) {
         trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -422,8 +418,7 @@ void Ec::sys_semctl()
         case 1:
             if (sm->node_pd == &Pd::kern)
                 Gsi::unmask (static_cast<unsigned>(sm->node_base));
-            r->set_status (Sys_regs::SUCCESS);
-            current->cont = ret_user_sysexit;
+            current->cont = sys_finish<Sys_regs::SUCCESS>;
             sm->dn (r->zc());
             break;
     }

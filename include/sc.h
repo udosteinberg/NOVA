@@ -27,7 +27,7 @@ class Sc : public Kobject
     friend class Queue<Sc>;
 
     private:
-        Ec * const      owner;
+        Refptr<Ec>      owner;
         Sc *            prev;
         Sc *            next;
         unsigned        cpu;

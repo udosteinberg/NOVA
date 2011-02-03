@@ -77,8 +77,6 @@ void Acpi::setup()
     if (dmar)
         static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
 
-    Gsi::init();
-
     if (!Acpi_table_madt::sci_overridden) {
         Acpi_intr sci_override;
         sci_override.bus = 0;

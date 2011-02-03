@@ -43,11 +43,10 @@ class Sm : public Kobject, public Queue<Ec>
                     return;
                 }
 
-                // Block EC on SM
                 enqueue (e);
             }
 
-            e->block();
+            e->block_sc();
         }
 
         ALWAYS_INLINE

@@ -18,7 +18,34 @@
 
 #pragma once
 
+#include "atomic.h"
 #include "compiler.h"
+
+class Refcount
+{
+    private:
+        uint32 ref;
+
+    public:
+        ALWAYS_INLINE
+        inline Refcount() : ref (1) {}
+
+        ALWAYS_INLINE
+        inline bool add_ref()
+        {
+            for (uint32 r; (r = ref); )
+                if (Atomic::cmp_swap (ref, r, r + 1))
+                    return true;
+
+            return false;
+        }
+
+        ALWAYS_INLINE
+        inline bool del_ref()
+        {
+            return Atomic::sub (ref, 1U) == 0;
+        }
+};
 
 template <typename T>
 class Refptr

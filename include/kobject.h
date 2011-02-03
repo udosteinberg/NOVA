@@ -18,19 +18,18 @@
 
 #pragma once
 
-#include "atomic.h"
 #include "compiler.h"
 #include "mdb.h"
+#include "refptr.h"
 #include "spinlock.h"
 
 class Kobject : public Mdb
 {
     private:
-        uint8       objtype;
-        uint8       refcount;
+        uint8 objtype;
 
     protected:
-        Spinlock    lock;
+        Spinlock lock;
 
         enum Type
         {
@@ -42,23 +41,14 @@ class Kobject : public Mdb
             INVALID,
         };
 
-        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, a), objtype (t), refcount (1) {}
+        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, a), objtype (t) {}
 
     public:
         static mword const perm = 0x1f;
 
-        Type type() const { return EXPECT_TRUE (this) ? Type (objtype) : INVALID; }
-
         ALWAYS_INLINE
-        inline bool add_ref()
+        inline Type type() const
         {
-            for (uint8 r; (r = refcount); )
-                if (Atomic::cmp_swap (refcount, r, static_cast<typeof refcount>(r + 1)))
-                    return true;
-
-            return false;
+            return EXPECT_TRUE (this) ? Type (objtype) : INVALID;
         }
-
-        ALWAYS_INLINE
-        inline bool del_ref() { return Atomic::sub (refcount, static_cast<typeof refcount>(1)) == 0; }
 };

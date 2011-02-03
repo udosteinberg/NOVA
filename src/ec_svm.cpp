@@ -142,8 +142,6 @@ void Ec::svm_cr()
 
 void Ec::handle_svm()
 {
-    asm volatile ("vmload" : : "a" (Buddy::ptr_to_phys (Vmcb::root)));
-
     current->regs.vmcb->tlb_control = 0;
 
     mword reason = static_cast<mword>(current->regs.vmcb->exitcode);
