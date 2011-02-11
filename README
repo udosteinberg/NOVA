@@ -27,16 +27,16 @@ Building from source code
 
 You need the following tools to compile the source code.
 
-* make 3.81
+* make 3.81 or higher
   available from http://www.gnu.org/software/make/
 
-* gcc 4.2 or higher 
+* gcc 4.2 or higher
   available from http://gcc.gnu.org/
 
 * binutils 2.18.50.0.7 or higher
   available from http://www.kernel.org/pub/linux/devel/binutils/
 
-You can build the binary as follows:
+You can build the microhypervisor binary as follows:
 
 $ cd build; make
 
@@ -59,10 +59,24 @@ kernel	    (nd)/tftp/nova/hypervisor
 module      (nd)/...
 ...
 
+Command-Line Parameters
+=======================
+
+The following command-line parameters are supported for the microhypervisor.
+They must be separated by spaces.
+
+iommu		Enables DMA and interrupt remapping.
+keyb		Enables the microhypervisor to drive the keyboard.
+serial		Enables the microhypervisor to drive the serial console.
+spinner		Enables event spinners.
+vtlb		Forces use of vTLB instead of nested paging (EPT/NPT).
+novga		Disables VGA console.
+novpid		Disables TLB tags.
+
 Supported platforms
 ===================
 
-NOVA runs on 32-bit Intel and AMD machines that support ACPI.
+The NOVA microhypervisor runs on x86 machines that support ACPI.
 
 The virtualization features are available on:
 
@@ -81,12 +95,16 @@ The following is a list of issues you may encounter.
   Make sure your gcc and binutils meet the minimum requirements listed
   above. If the problem persists, then let us know.
 
+* The microhypervisor does not start under QEMU.
+  If this happens, the default CPU model in QEMU may not emulate all of the
+  required features. Try using a more advanced model: qemu -cpu core2duo
+
 * The roottask fails to start and prints a "bad elf" message.
   Ensure the roottask is linked such that it does not use a BSS. When
   running "objdump -p" on the roottask binary, filesz must be equal to memsz
-  for all loadable sections.
+  for all loadable segments.
 
-Feedback
-========
+Contact
+=======
 
-Feedback should be sent to <udo@hypervisor.org>.
+Feedback and comments should be sent to <udo@hypervisor.org>.

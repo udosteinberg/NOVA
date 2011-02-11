@@ -1,4 +1,15 @@
 
+0.3
+---
+* ACPI-based CPU numbering.
+* Additional capability permissions.
+* Capability translation.
+* TSC offsetting.
+* vTLB support for SVM (enables VM support under QEMU).
+* Improved vTLB fills.
+* Improved initialization, paging, and RCU.
+* Bug fixes.
+
 0.2
 ---
 * Number of supported CPUs increased to 32.
