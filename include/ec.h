@@ -128,8 +128,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, mword, unsigned, unsigned, void (*)());
-        Ec (Pd *, mword, unsigned, mword, mword, unsigned, bool = true);
+        Ec (Pd *, mword, void (*)(), unsigned);
+        Ec (Pd *, mword, void (*)(), unsigned, unsigned, mword, mword);
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
@@ -160,12 +160,6 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
 
-        ALWAYS_INLINE
-        inline void set_cont (void (*c)())
-        {
-            cont = c;
-        }
-
         NOINLINE
         void help (void (*c)())
         {
@@ -175,7 +169,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
                 current->cont = c;
 
                 if (EXPECT_TRUE (++Sc::ctr_loop < 100))
-                    activate (this);
+                    activate();
 
                 die ("Livelock");
             }
@@ -220,7 +214,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static void sys_finish();
 
         NORETURN
-        static void activate (Ec *);
+        void activate();
 
         template <void (*)()>
         NORETURN

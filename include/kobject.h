@@ -28,6 +28,8 @@ class Kobject : public Mdb
     private:
         uint8 objtype;
 
+        static void free (Rcu_elem *) {}
+
     protected:
         Spinlock lock;
 
@@ -41,7 +43,7 @@ class Kobject : public Mdb
             INVALID,
         };
 
-        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, 0, a), objtype (t) {}
+        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
 
     public:
         static mword const perm = 0x1f;

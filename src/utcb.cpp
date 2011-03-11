@@ -499,7 +499,7 @@ void Utcb::save_svm (Cpu_regs *regs)
             vmcb->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
         }
 
-        vmcb->inj_control = inj;
+        vmcb->inj_control = inj & ~0x1000;
     }
 
     if (mtd & Mtd::STA)

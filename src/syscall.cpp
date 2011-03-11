@@ -33,8 +33,10 @@ void Ec::sys_finish()
     ret_user_sysexit();
 }
 
-void Ec::activate (Ec *ec)
+void Ec::activate()
 {
+    Ec *ec = this;
+
     // XXX: Make the loop preemptible
     for (Sc::ctr_link = 0; ec->partner; ec = ec->partner)
         Sc::ctr_link++;
@@ -160,10 +162,10 @@ void Ec::reply (void (*c)())
 
     Ec *ec = current->rcap;
 
-    if (EXPECT_TRUE (ec && ec->clr_partner()))
-        ec->make_current();
+    if (EXPECT_FALSE (!ec || !ec->clr_partner()))
+        Sc::current->ec->activate();
 
-    Ec::activate (Sc::current->ec());
+    ec->make_current();
 }
 
 void Ec::sys_reply()
@@ -244,7 +246,7 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    Ec *ec = new Ec (dst, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt(), r->flags() & 1);
+    Ec *ec = new Ec (dst, r->sel(), r->flags() & 1 ? send_msg<ret_user_iret> : 0, r->cpu(), r->evt(), r->utcb(), r->esp());
 
     if (!dst->Space_obj::insert_root (ec)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
@@ -259,7 +261,7 @@ void Ec::sys_create_sc()
 {
     Sys_create_sc *r = static_cast<Sys_create_sc *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#lx Q:%#lx", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
+    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#x Q:%#x", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
     Capability cap = Space_obj::lookup (r->pd());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SC)) {

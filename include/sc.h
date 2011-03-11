@@ -26,15 +26,16 @@ class Sc : public Kobject
 {
     friend class Queue<Sc>;
 
+    public:
+        Refptr<Ec> const ec;
+        unsigned const cpu;
+        unsigned const prio;
+        unsigned const budget;
+
     private:
-        Refptr<Ec>      owner;
-        Sc *            prev;
-        Sc *            next;
-        unsigned        cpu;
-        unsigned long   prio;
-        unsigned long   full;
-        unsigned long   left;
-        uint64          tsc;
+        unsigned left;
+        Sc *prev, *next;
+        uint64 tsc;
 
         static unsigned const priorities = 256;
 
@@ -47,7 +48,7 @@ class Sc : public Kobject
 
         static Sc *list[priorities] CPULOCAL;
 
-        static unsigned long prio_top CPULOCAL;
+        static unsigned prio_top CPULOCAL;
 
         void ready_enqueue();
         void ready_dequeue();
@@ -57,13 +58,10 @@ class Sc : public Kobject
         static unsigned ctr_link    CPULOCAL;
         static unsigned ctr_loop    CPULOCAL;
 
-        static unsigned long const default_prio = 1;
-        static unsigned long const default_quantum = 10000;
+        static unsigned const default_prio = 1;
+        static unsigned const default_quantum = 10000;
 
-        Sc (Pd *, mword, Ec *, unsigned, mword, mword);
-
-        ALWAYS_INLINE
-        inline Ec *ec() const { return owner; }
+        Sc (Pd *, mword, Ec *, unsigned, unsigned, unsigned);
 
         ALWAYS_INLINE
         static inline Rq *remote (unsigned long c)

@@ -30,14 +30,14 @@ class Qpd
         inline explicit Qpd (mword v) : val (v) {}
 
         ALWAYS_INLINE
-        inline unsigned long quantum() const
+        inline unsigned quantum() const
         {
-            return val >> 12;
+            return static_cast<unsigned>(val >> 12);
         }
 
         ALWAYS_INLINE
-        inline unsigned long prio() const
+        inline unsigned prio() const
         {
-            return val & 0xff;
+            return static_cast<unsigned>(val & 0xff);
         }
 };

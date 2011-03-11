@@ -56,9 +56,6 @@ bool Mdb::remove_node()
     if (node_attr)
         return false;
 
-    if (!dpth)
-        return false;
-
     Lock_guard <Spinlock> guard (lock);
 
     if (!alive())

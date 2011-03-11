@@ -39,7 +39,8 @@ class Mdb : public Avl, public Rcu_elem
 
         static void free (Rcu_elem *e)
         {
-            delete static_cast<Mdb *>(e); (void) sizeof (e);
+            Mdb *m = static_cast<Mdb *>(e);
+            delete m;
         }
 
     public:
@@ -55,6 +56,9 @@ class Mdb : public Avl, public Rcu_elem
         mword       node_attr;
         mword const node_type;
         mword const node_sub;
+
+        NOINLINE
+        explicit Mdb (Pd *pd, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
 
         NOINLINE
         explicit Mdb (Pd *pd, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}

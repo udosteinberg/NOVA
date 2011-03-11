@@ -32,18 +32,17 @@ unsigned    Sc::ctr_loop;
 
 Sc *Sc::list[Sc::priorities];
 
-unsigned long Sc::prio_top;
+unsigned Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, Ec *o, unsigned c, mword p, mword q) : Kobject (SC, own, sel), owner (o), cpu (c), prio (p), full (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, own, sel), ec (e), cpu (c), prio (p), budget (Lapic::freq_bus / 1000 * q), left (0)
 {
-    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#lx Q:%#lx)", this, o, c, p, q);
+    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }
 
 void Sc::ready_enqueue()
 {
     assert (prio < priorities);
     assert (cpu == Cpu::id);
-    assert (this != reinterpret_cast<Sc *>(~0ul));
 
     if (prio > prio_top)
         prio_top = prio;
@@ -58,13 +57,13 @@ void Sc::ready_enqueue()
             list[prio] = this;
     }
 
-    trace (TRACE_SCHEDULE, "ENQ:%p (%02lu) PRIO:%#lx TOP:%#lx %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
+    trace (TRACE_SCHEDULE, "ENQ:%p (%02u) PRIO:%#x TOP:%#x %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
 
     if (prio > current->prio || (this != current && prio == current->prio && left))
         Cpu::hazard |= HZD_SCHED;
 
     if (!left)
-        left = full;
+        left = budget;
 
     tsc = rdtsc();
 }
@@ -85,9 +84,9 @@ void Sc::ready_dequeue()
     while (!list[prio_top] && prio_top)
         prio_top--;
 
-    owner->add_tsc_offset (tsc - rdtsc());
+    ec->add_tsc_offset (tsc - rdtsc());
 
-    trace (TRACE_SCHEDULE, "DEQ:%p (%02lu) PRIO:%#lx TOP:%#lx", this, left, prio, prio_top);
+    trace (TRACE_SCHEDULE, "DEQ:%p (%02u) PRIO:%#x TOP:%#x", this, left, prio, prio_top);
 }
 
 void Sc::schedule (bool suspend)
@@ -114,7 +113,7 @@ void Sc::schedule (bool suspend)
 
     ctr_loop = 0;
 
-    Ec::activate (sc->owner);
+    sc->ec->activate();
 }
 
 void Sc::remote_enqueue()

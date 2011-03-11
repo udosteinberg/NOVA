@@ -69,6 +69,9 @@ class Sys_regs
 
         ALWAYS_INLINE
         inline void set_ip (mword ip) { edx = ip; }
+
+        ALWAYS_INLINE
+        inline void set_sp (mword sp) { ecx = sp; }
 };
 
 class Exc_regs : public Sys_regs

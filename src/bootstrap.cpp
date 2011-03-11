@@ -29,7 +29,7 @@ void bootstrap()
     Cpu::init();
 
     // Create idle EC
-    Ec::current = new Ec (&Pd::kern, 0, Cpu::id, 0, Ec::idle);
+    Ec::current = new Ec (&Pd::kern, 0, Ec::idle, Cpu::id);
     Sc::current = new Sc (&Pd::kern, 0, Ec::current, Cpu::id, 0, 1000000);
 
     // Barrier: wait for all ECs to arrive here
@@ -40,9 +40,8 @@ void bootstrap()
     // Create root task
     if (Cpu::bsp) {
         Hip::add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, Cpu::id, USER_ADDR - 2 * PAGE_SIZE, 0, 0);
+        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
         Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
-        root_ec->set_cont (Ec::root_invoke);
         root_sc->remote_enqueue();
     }
 
