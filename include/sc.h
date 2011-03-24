@@ -31,6 +31,7 @@ class Sc : public Kobject
         unsigned const cpu;
         unsigned const prio;
         unsigned const budget;
+        uint64 time;
 
     private:
         unsigned left;
@@ -50,8 +51,8 @@ class Sc : public Kobject
 
         static unsigned prio_top CPULOCAL;
 
-        void ready_enqueue();
-        void ready_dequeue();
+        void ready_enqueue (uint64);
+        void ready_dequeue (uint64);
 
     public:
         static Sc *     current     CPULOCAL_HOT;

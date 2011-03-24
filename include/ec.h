@@ -257,10 +257,13 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static void sys_lookup();
 
         NORETURN
-        static void sys_recall();
+        static void sys_ec_ctrl();
 
         NORETURN
-        static void sys_semctl();
+        static void sys_sc_ctrl();
+
+        NORETURN
+        static void sys_sm_ctrl();
 
         NORETURN
         static void sys_assign_pci();

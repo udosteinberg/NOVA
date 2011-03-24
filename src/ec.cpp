@@ -269,9 +269,9 @@ void Ec::root_invoke()
     if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_data != 1 || e->type != 2)
         die ("No ELF");
 
-    unsigned count    = e->ph_count;
-    current->regs.eip = e->entry;
-    current->regs.esp = USER_ADDR - PAGE_SIZE;
+    unsigned count = e->ph_count;
+    current->regs.set_ip (e->entry);
+    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
 
     Ph *p = static_cast<Ph *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
@@ -302,7 +302,7 @@ void Ec::root_invoke()
     Space_obj::insert_root (Ec::current);
     Space_obj::insert_root (Sc::current);
 
-    ret_user_iret();
+    ret_user_sysexit();
 }
 
 void Ec::handle_tss()

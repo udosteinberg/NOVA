@@ -41,7 +41,6 @@ class Msr
             IA32_THERM_INTERRUPT    = 0x19b,
             IA32_THERM_STATUS       = 0x19c,
             IA32_MISC_ENABLE        = 0x1a0,
-            IA32_FLEX_BRVID_SEL     = 0x1a1,
             IA32_DEBUG_CTL          = 0x1d9,
             IA32_MTRR_PHYS_BASE     = 0x200,
             IA32_MTRR_PHYS_MASK     = 0x201,

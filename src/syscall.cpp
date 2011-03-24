@@ -277,7 +277,7 @@ void Ec::sys_create_sc()
     }
     Ec *ec = static_cast<Ec *>(e);
 
-    if (EXPECT_FALSE (!ec->glb)) {
+    if (EXPECT_FALSE (!ec->glb || !(cap.prm() & 1UL << Kobject::SC))) {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -314,7 +314,7 @@ void Ec::sys_create_pt()
     }
     Ec *ec = static_cast<Ec *>(e);
 
-    if (EXPECT_FALSE (ec->glb || ec->pd != dst)) {
+    if (EXPECT_FALSE (ec->glb || ec->pd != dst || !(cap.prm() & 1UL << Kobject::PT))) {
         trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -376,17 +376,17 @@ void Ec::sys_lookup()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
-void Ec::sys_recall()
+void Ec::sys_ec_ctrl()
 {
-    Sys_recall *r = static_cast<Sys_recall *>(current->sys_regs());
+    Sys_ec_ctrl *r = static_cast<Sys_ec_ctrl *>(current->sys_regs());
 
-    Kobject *obj = Space_obj::lookup (r->ec()).obj();
-    if (EXPECT_FALSE (obj->type() != Kobject::EC)) {
+    Capability cap = Space_obj::lookup (r->ec());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0))) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Ec *ec = static_cast<Ec *>(obj);
+    Ec *ec = static_cast<Ec *>(cap.obj());
 
     if (!(ec->regs.hazard() & HZD_RECALL)) {
 
@@ -399,9 +399,24 @@ void Ec::sys_recall()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
-void Ec::sys_semctl()
+void Ec::sys_sc_ctrl()
 {
-    Sys_semctl *r = static_cast<Sys_semctl *>(current->sys_regs());
+    Sys_sc_ctrl *r = static_cast<Sys_sc_ctrl *>(current->sys_regs());
+
+    Capability cap = Space_obj::lookup (r->sc());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0))) {
+        trace (TRACE_ERROR, "%s: Non-SC CAP (%#lx)", __func__, r->sc());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+
+    r->set_time (static_cast<Sc *>(cap.obj())->time);
+
+    sys_finish<Sys_regs::SUCCESS>();
+}
+
+void Ec::sys_sm_ctrl()
+{
+    Sys_sm_ctrl *r = static_cast<Sys_sm_ctrl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op()))) {
@@ -488,8 +503,9 @@ void (*const syscall[])() =
     &Ec::sys_create_sm,
     &Ec::sys_revoke,
     &Ec::sys_lookup,
-    &Ec::sys_recall,
-    &Ec::sys_semctl,
+    &Ec::sys_ec_ctrl,
+    &Ec::sys_sc_ctrl,
+    &Ec::sys_sm_ctrl,
     &Ec::sys_assign_pci,
     &Ec::sys_assign_gsi,
     &Ec::sys_finish<Sys_regs::BAD_HYP>,

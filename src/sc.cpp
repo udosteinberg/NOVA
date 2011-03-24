@@ -39,7 +39,7 @@ Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }
 
-void Sc::ready_enqueue()
+void Sc::ready_enqueue (uint64 t)
 {
     assert (prio < priorities);
     assert (cpu == Cpu::id);
@@ -65,10 +65,10 @@ void Sc::ready_enqueue()
     if (!left)
         left = budget;
 
-    tsc = rdtsc();
+    tsc = t;
 }
 
-void Sc::ready_dequeue()
+void Sc::ready_dequeue (uint64 t)
 {
     assert (prio < priorities);
     assert (cpu == Cpu::id);
@@ -84,9 +84,11 @@ void Sc::ready_dequeue()
     while (!list[prio_top] && prio_top)
         prio_top--;
 
-    ec->add_tsc_offset (tsc - rdtsc());
-
     trace (TRACE_SCHEDULE, "DEQ:%p (%02u) PRIO:%#x TOP:%#x", this, left, prio, prio_top);
+
+    ec->add_tsc_offset (tsc - t);
+
+    tsc = t;
 }
 
 void Sc::schedule (bool suspend)
@@ -96,30 +98,31 @@ void Sc::schedule (bool suspend)
     assert (current);
     assert (suspend || !current->prev);
 
+    uint64 t = rdtsc();
+    current->time += t - current->tsc;
     current->left = Lapic::get_timer();
 
     Cpu::hazard &= ~HZD_SCHED;
 
     if (EXPECT_TRUE (!suspend))
-        current->ready_enqueue();
+        current->ready_enqueue (t);
 
     Sc *sc = list[prio_top];
     assert (sc);
 
     Lapic::set_timer (static_cast<uint32>(sc->left));
 
-    current = sc;
-    sc->ready_dequeue();
-
     ctr_loop = 0;
 
+    current = sc;
+    sc->ready_dequeue (t);
     sc->ec->activate();
 }
 
 void Sc::remote_enqueue()
 {
     if (Cpu::id == cpu)
-        ready_enqueue();
+        ready_enqueue (rdtsc());
 
     else {
         Sc::Rq *r = remote (cpu);
@@ -139,6 +142,8 @@ void Sc::remote_enqueue()
 
 void Sc::rrq_handler()
 {
+    uint64 t = rdtsc();
+
     Lock_guard <Spinlock> guard (rq.lock);
 
     for (Sc *ptr = rq.queue; ptr; ) {
@@ -150,7 +155,7 @@ void Sc::rrq_handler()
 
         ptr = ptr->next == ptr ? 0 : ptr->next;
 
-        sc->ready_enqueue();
+        sc->ready_enqueue (t);
     }
 
     rq.queue = 0;

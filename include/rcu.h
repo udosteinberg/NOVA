@@ -74,15 +74,15 @@ class Rcu
 
         enum State
         {
-            RCU_PND = 1UL << 0,
-            RCU_CMP = 1UL << 1,
+            RCU_CMP = 1UL << 0,
+            RCU_PND = 1UL << 1,
         };
 
         ALWAYS_INLINE
         static inline mword batch() { return state >> 2; }
 
         ALWAYS_INLINE
-        static inline bool complete (mword b) { return static_cast<signed long>(l_batch - b) > 0; }
+        static inline bool complete (mword b) { return static_cast<signed long>((state & ~RCU_PND) - (b << 2)) > 0; }
 
         static void start_batch (State);
         static void invoke_batch();

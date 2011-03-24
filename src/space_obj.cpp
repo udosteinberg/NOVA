@@ -68,7 +68,8 @@ bool Space_obj::insert_root (Kobject *obj)
     if (!obj->node_pd->Space_obj::insert_node (obj))
         return false;
 
-    obj->node_pd->Space_obj::update (obj->node_base, Capability (obj, obj->node_attr));
+    if (obj->node_pd != &Pd::kern)
+        obj->node_pd->Space_obj::update (obj->node_base, Capability (obj, obj->node_attr));
 
     return true;
 }
