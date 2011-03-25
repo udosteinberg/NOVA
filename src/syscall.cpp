@@ -282,7 +282,7 @@ void Ec::sys_create_sc()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Sc *sc = new Sc (dst, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
+    Sc *sc = new Sc (dst, r->sel(), Kobject::perm, ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
     if (!dst->Space_obj::insert_root (sc)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
         delete sc;
@@ -409,7 +409,8 @@ void Ec::sys_sc_ctrl()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_time (static_cast<Sc *>(cap.obj())->time);
+    uint32 dummy;
+    r->set_time (div64 (static_cast<Sc *>(cap.obj())->time * 1000, Lapic::freq_tsc, &dummy));
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -434,7 +435,7 @@ void Ec::sys_sm_ctrl()
 
         case 1:
             if (sm->node_pd == &Pd::kern)
-                Gsi::unmask (static_cast<unsigned>(sm->node_base));
+                Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
             current->cont = sys_finish<Sys_regs::SUCCESS>;
             sm->dn (r->zc());
             break;
@@ -486,7 +487,7 @@ void Ec::sys_assign_gsi()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_msi (Gsi::set (static_cast<unsigned>(sm->node_base), r->cpu(), r->rid()));
+    r->set_msi (Gsi::set (static_cast<unsigned>(sm->node_base - NUM_CPU), r->cpu(), r->rid()));
 
     sys_finish<Sys_regs::SUCCESS>();
 }
