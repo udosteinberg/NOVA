@@ -34,7 +34,12 @@ Sc *Sc::list[Sc::priorities];
 
 unsigned Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, mword prm, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, own, sel, prm), ec (e), cpu (c), prio (p), budget (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *e) : Kobject (SC, own, sel, 1), ec (e), cpu (sel), prio (0), budget (Lapic::freq_bus * 1000), left (0)
+{
+    trace (TRACE_SYSCALL, "SC:%p created (PD:%p Kernel)", this, own);
+}
+
+Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, own, sel), ec (e), cpu (c), prio (p), budget (Lapic::freq_bus / 1000 * q), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }

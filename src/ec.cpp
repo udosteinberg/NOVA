@@ -37,7 +37,7 @@ Ec::Ec (Pd *own, mword sel, void (*f)(), unsigned c) : Kobject (EC, own, sel), c
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, void (*f)(), unsigned c, unsigned e, mword u, mword s) : Kobject (EC, own, sel), cont (f), pd (own), cpu (static_cast<uint16>(c)), glb (!!f), evt (e)
+Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword s) : Kobject (EC, own, sel), cont (f), pd (p), cpu (static_cast<uint16>(c)), glb (!!f), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -60,7 +60,7 @@ Ec::Ec (Pd *own, mword sel, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
         regs.dst_portal = NUM_EXC - 2;
 
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, own, c, u, s, e);
+        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
 
     } else {
 
@@ -76,7 +76,7 @@ Ec::Ec (Pd *own, mword sel, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
             regs.nst_ctrl<Vmcs>();
             cont = send_msg<ret_user_vmresume>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, own, regs.vmcs, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, p, regs.vmcs, regs.vtlb);
 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
@@ -84,7 +84,7 @@ Ec::Ec (Pd *own, mword sel, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, own, regs.vmcb, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
         }
     }
 }

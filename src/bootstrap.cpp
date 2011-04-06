@@ -30,7 +30,7 @@ void bootstrap()
 
     // Create idle EC
     Ec::current = new Ec (&Pd::kern, 0, Ec::idle, Cpu::id);
-    Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, 1, Ec::current, Cpu::id, 0, 1000000));
+    Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
 
     // Barrier: wait for all ECs to arrive here
     for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
@@ -40,8 +40,8 @@ void bootstrap()
     // Create root task
     if (Cpu::bsp) {
         Hip::add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
-        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, Kobject::perm, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
+        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
+        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_sc->remote_enqueue();
     }
 

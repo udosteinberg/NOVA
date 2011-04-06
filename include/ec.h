@@ -129,7 +129,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static Ec *fpowner CPULOCAL;
 
         Ec (Pd *, mword, void (*)(), unsigned);
-        Ec (Pd *, mword, void (*)(), unsigned, unsigned, mword, mword);
+        Ec (Pd *, mword, Pd *, void (*)(), unsigned, unsigned, mword, mword);
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)

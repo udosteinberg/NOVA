@@ -62,7 +62,8 @@ class Sc : public Kobject
         static unsigned const default_prio = 1;
         static unsigned const default_quantum = 10000;
 
-        Sc (Pd *, mword, mword, Ec *, unsigned, unsigned, unsigned);
+        Sc (Pd *, mword, Ec *);
+        Sc (Pd *, mword, Ec *, unsigned, unsigned, unsigned);
 
         ALWAYS_INLINE
         static inline Rq *remote (unsigned long c)
