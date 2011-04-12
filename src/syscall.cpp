@@ -245,7 +245,7 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_MEM>();
     }
 
-    Ec *ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? send_msg<ret_user_iret> : 0, r->cpu(), r->evt(), r->utcb(), r->esp());
+    Ec *ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : 0, r->cpu(), r->evt(), r->utcb(), r->esp());
 
     if (!Space_obj::insert_root (ec)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());

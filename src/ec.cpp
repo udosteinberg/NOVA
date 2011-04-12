@@ -332,12 +332,8 @@ void Ec::die (char const *reason, Exc_regs *r)
 
     Ec *ec = current->rcap;
 
-    if (ec) {
-        if (ec->cont == ret_user_sysexit)
-            ec->cont = sys_finish<Sys_regs::IPC_ABT>;
-        else
-            ec->cont = dead;
-    }
+    if (ec)
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::IPC_ABT>) : dead;
 
     reply (dead);
 }

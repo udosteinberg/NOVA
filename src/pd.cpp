@@ -78,17 +78,20 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
     Mdb *mdb;
     for (mword addr = base; (mdb = S::lookup_node (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
 
-        mword o, b = base;
+        mword o, p, b = base;
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
             break;
 
         Mdb *node = mdb;
 
-        unsigned d = node->dpth;
+        unsigned d = node->dpth; bool demote = false;
 
         for (Mdb *ptr;; node = ptr) {
 
-            if ((node->node_attr & attr) && (self || node != mdb)) {
+            if (node->dpth == d + !self)
+                demote = clamp (node->node_phys, p = b - mdb->node_base + mdb->node_phys, node->node_order, o) != ~0UL;
+
+            if (demote && node->node_attr & attr) {
                 node->node_pd->S::update (node, attr);
                 node->demote_node (attr);
             }
@@ -217,18 +220,18 @@ void Pd::rev_crd (Crd crd, bool self)
     switch (crd.type()) {
 
         case Crd::MEM:
-            trace (TRACE_REV, "REV MEM PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            trace (TRACE_REV, "REV MEM PD:%p B:%#010lx O:%#04x A:%#04x %s", this, crd.base(), crd.order(), crd.attr(), self ? "+" : "-");
             revoke<Space_mem>(crd.base(), crd.order(), crd.attr(), self);
             shootdown();
             break;
 
         case Crd::IO:
-            trace (TRACE_REV, "REV I/O PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            trace (TRACE_REV, "REV I/O PD:%p B:%#010lx O:%#04x A:%#04x %s", this, crd.base(), crd.order(), crd.attr(), self ? "+" : "-");
             revoke<Space_io>(crd.base(), crd.order(), crd.attr(), self);
             break;
 
         case Crd::OBJ:
-            trace (TRACE_REV, "REV OBJ PD:%p B:%#010lx O:%#04x A:%#x", this, crd.base(), crd.order(), crd.attr());
+            trace (TRACE_REV, "REV OBJ PD:%p B:%#010lx O:%#04x A:%#04x %s", this, crd.base(), crd.order(), crd.attr(), self ? "+" : "-");
             revoke<Space_obj>(crd.base(), crd.order(), crd.attr(), self);
             break;
     }
