@@ -48,11 +48,11 @@ class Sys_regs
         enum Status
         {
             SUCCESS,
-            IPC_TIM,
-            IPC_ABT,
+            COM_TIM,
+            COM_ABT,
             BAD_HYP,
             BAD_CAP,
-            BAD_MEM,
+            BAD_PAR,
             BAD_FTR,
             BAD_CPU,
             BAD_DEV,

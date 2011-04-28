@@ -270,6 +270,7 @@ void Ec::root_invoke()
         die ("No ELF");
 
     unsigned count = e->ph_count;
+    current->regs.set_pt (Cpu::id);
     current->regs.set_ip (e->entry);
     current->regs.set_sp (USER_ADDR - PAGE_SIZE);
 
@@ -333,7 +334,7 @@ void Ec::die (char const *reason, Exc_regs *r)
     Ec *ec = current->rcap;
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::IPC_ABT>) : dead;
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::COM_ABT>) : dead;
 
     reply (dead);
 }

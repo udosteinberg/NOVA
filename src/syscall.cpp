@@ -124,7 +124,7 @@ void Ec::sys_call()
     if (EXPECT_TRUE (!(s->flags() & Sys_call::DISABLE_BLOCKING)))
         ec->help (sys_call);
 
-    sys_finish<Sys_regs::IPC_TIM>();
+    sys_finish<Sys_regs::COM_TIM>();
 }
 
 void Ec::recv_kern()
@@ -242,7 +242,7 @@ void Ec::sys_create_ec()
 
     if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish<Sys_regs::BAD_MEM>();
+        sys_finish<Sys_regs::BAD_PAR>();
     }
 
     Ec *ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : 0, r->cpu(), r->evt(), r->utcb(), r->esp());
@@ -278,6 +278,11 @@ void Ec::sys_create_sc()
     if (EXPECT_FALSE (!ec->glb)) {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
         sys_finish<Sys_regs::BAD_CAP>();
+    }
+
+    if (EXPECT_FALSE (!r->qpd().prio() || !r->qpd().quantum())) {
+        trace (TRACE_ERROR, "%s: Invalid QPD", __func__);
+        sys_finish<Sys_regs::BAD_PAR>();
     }
 
     Sc *sc = new Sc (Pd::current, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
@@ -510,7 +515,7 @@ void (*const syscall[])() =
     &Ec::sys_finish<Sys_regs::BAD_HYP>,
 };
 
-template void Ec::sys_finish<Sys_regs::IPC_ABT>();
+template void Ec::sys_finish<Sys_regs::COM_ABT>();
 template void Ec::send_msg<Ec::ret_user_vmresume>();
 template void Ec::send_msg<Ec::ret_user_vmrun>();
 template void Ec::send_msg<Ec::ret_user_iret>();
