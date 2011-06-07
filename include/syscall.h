@@ -173,10 +173,10 @@ class Sys_assign_pci : public Sys_regs
         inline unsigned long pd() const { return eax >> 8; }
 
         ALWAYS_INLINE
-        inline unsigned long pf() const { return edi; }
+        inline mword dev() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned long vf() const { return esi; }
+        inline mword hnt() const { return esi; }
 };
 
 class Sys_assign_gsi : public Sys_regs
@@ -186,10 +186,10 @@ class Sys_assign_gsi : public Sys_regs
         inline unsigned long sm() const { return eax >> 8; }
 
         ALWAYS_INLINE
-        inline unsigned cpu() const { return static_cast<unsigned>(edi); }
+        inline mword dev() const { return edi; }
 
         ALWAYS_INLINE
-        inline unsigned rid() const { return static_cast<unsigned>(esi); }
+        inline unsigned cpu() const { return static_cast<unsigned>(esi); }
 
         ALWAYS_INLINE
         inline void set_msi (uint64 val)

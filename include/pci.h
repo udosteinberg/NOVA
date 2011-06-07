@@ -23,7 +23,6 @@
 #include "slab.h"
 
 class Dmar;
-class Pd;
 
 class Bdf
 {
@@ -71,9 +70,11 @@ class Pci
         Pci *           next;
         Dmar *          dmar;
 
-        static Slab_cache cache;
-        static Paddr cfg_base;
-        static Pci *list;
+        static Slab_cache   cache;
+        static unsigned     bus_base;
+        static Paddr        cfg_base;
+        static size_t       cfg_size;
+        static Pci *        list;
 
         template <typename T>
         ALWAYS_INLINE
@@ -130,6 +131,12 @@ class Pci
 
         INIT
         static unsigned init (unsigned, unsigned = 0);
+
+        ALWAYS_INLINE
+        static inline unsigned phys_to_rid (Paddr phys)
+        {
+            return phys - cfg_base < cfg_size ? (bus_base << 8) + (phys - cfg_base) / PAGE_SIZE : ~0UL;
+        }
 
         ALWAYS_INLINE
         static inline Dmar *find_dmar (unsigned long r)

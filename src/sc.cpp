@@ -17,7 +17,6 @@
  */
 
 #include "ec.h"
-#include "initprio.h"
 #include "lapic.h"
 
 INIT_PRIORITY (PRIO_SLAB)

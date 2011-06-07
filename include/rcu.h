@@ -19,6 +19,7 @@
 #pragma once
 
 #include "compiler.h"
+#include "types.h"
 
 class Rcu_elem
 {

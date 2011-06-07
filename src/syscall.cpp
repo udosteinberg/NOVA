@@ -455,13 +455,19 @@ void Ec::sys_assign_pci()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Dmar *dmar = Pci::find_dmar (r->pf());
-    if (EXPECT_FALSE (!dmar)) {
-        trace (TRACE_ERROR, "%s: RID not found (%#lx)", __func__, r->pf());
+    Paddr phys; unsigned rid;
+    if (EXPECT_FALSE (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0UL)) {
+        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Sys_regs::BAD_DEV>();
     }
 
-    dmar->assign (r->vf() ? r->vf() : r->pf(), static_cast<Pd *>(obj));
+    Dmar *dmar = Pci::find_dmar (r->hnt());
+    if (EXPECT_FALSE (!dmar)) {
+        trace (TRACE_ERROR, "%s: Invalid Hint (%#lx)", __func__, r->hnt());
+        sys_finish<Sys_regs::BAD_DEV>();
+    }
+
+    dmar->assign (rid, static_cast<Pd *>(obj));
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -484,11 +490,17 @@ void Ec::sys_assign_gsi()
     Sm *sm = static_cast<Sm *>(obj);
 
     if (EXPECT_FALSE (sm->node_pd != &Pd::kern)) {
-        trace (TRACE_ERROR, "%s: Non-VEC SM (%#lx)", __func__, r->sm());
+        trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    r->set_msi (Gsi::set (static_cast<unsigned>(sm->node_base - NUM_CPU), r->cpu(), r->rid()));
+    Paddr phys; unsigned rid = 0, gsi = sm->node_base - NUM_CPU;
+    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0UL))) {
+        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
+        sys_finish<Sys_regs::BAD_DEV>();
+    }
+
+    r->set_msi (Gsi::set (gsi, r->cpu(), rid));
 
     sys_finish<Sys_regs::SUCCESS>();
 }

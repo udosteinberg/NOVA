@@ -20,6 +20,7 @@
 
 #include "buddy.h"
 #include "compiler.h"
+#include "initprio.h"
 
 class Slab;
 

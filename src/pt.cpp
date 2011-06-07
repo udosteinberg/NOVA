@@ -17,7 +17,6 @@
  */
 
 #include "ec.h"
-#include "initprio.h"
 #include "pt.h"
 
 INIT_PRIORITY (PRIO_SLAB)

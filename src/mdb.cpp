@@ -17,7 +17,6 @@
  */
 
 #include "assert.h"
-#include "initprio.h"
 #include "lock_guard.h"
 #include "mdb.h"
 

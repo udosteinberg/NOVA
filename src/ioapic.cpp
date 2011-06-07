@@ -17,7 +17,6 @@
  */
 
 #include "ioapic.h"
-#include "initprio.h"
 #include "pd.h"
 
 INIT_PRIORITY (PRIO_SLAB)

@@ -54,6 +54,9 @@ void Hip::build (mword addr)
     uint32 mods_addr   = mbi->mods_addr;
     uint32 mods_count  = mbi->mods_count;
 
+    if (flags & Multiboot::CMDLINE)
+        Cmdline::init (cmdline);
+
     Hip_mem *mem = h->mem_desc;
 
     if (flags & Multiboot::MEMORY_MAP)
@@ -61,9 +64,6 @@ void Hip::build (mword addr)
 
     if (flags & Multiboot::MODULES)
         add_mod (mem, mods_addr, mods_count);
-
-    if (flags & Multiboot::CMDLINE)
-        Cmdline::init (cmdline);
 
     add_mhv (mem);
 

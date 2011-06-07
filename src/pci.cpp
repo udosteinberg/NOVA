@@ -16,15 +16,16 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "initprio.h"
 #include "pci.h"
 #include "pd.h"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pci::cache (sizeof (Pci), 8);
 
-Paddr Pci::cfg_base;
-Pci *Pci::list;
+unsigned    Pci::bus_base;
+Paddr       Pci::cfg_base;
+size_t      Pci::cfg_size;
+Pci *       Pci::list;
 
 Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(b << 8 | d << 3 | f)), level (static_cast<uint16>(l)), next (0)
 {

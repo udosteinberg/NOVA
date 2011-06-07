@@ -16,7 +16,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "initprio.h"
 #include "msr.h"
 #include "mtrr.h"
 

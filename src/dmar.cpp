@@ -18,7 +18,6 @@
 
 #include "bits.h"
 #include "dmar.h"
-#include "initprio.h"
 #include "lapic.h"
 #include "pd.h"
 

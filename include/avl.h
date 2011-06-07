@@ -22,24 +22,20 @@
 
 class Avl
 {
+    protected:
+        Avl *lnk[2];
+
+        explicit Avl() : bal (2) { lnk[0] = lnk[1] = 0; }
+
     private:
-        Avl *       lnk[2];
-        unsigned    bal;
+        unsigned bal;
 
         bool balanced() const { return bal == 2; }
 
         static Avl *rotate (Avl *&, bool);
         static Avl *rotate (Avl *&, bool, unsigned);
 
-    protected:
-        virtual bool larger (Avl *x) const = 0;
-        virtual bool equal  (Avl *x) const = 0;
-
-        Avl *link (bool d) const { return lnk[d]; }
-
-        explicit Avl() : bal (2) { lnk[0] = lnk[1] = 0; }
-
     public:
-        static bool insert (Avl **, Avl *);
-        static bool remove (Avl **, Avl *);
+        template <typename> static bool insert (Avl **, Avl *);
+        template <typename> static bool remove (Avl **, Avl *);
 };

@@ -20,7 +20,6 @@
 #include "ec.h"
 #include "elf.h"
 #include "hip.h"
-#include "initprio.h"
 #include "rcu.h"
 #include "svm.h"
 #include "vmx.h"

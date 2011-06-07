@@ -34,8 +34,6 @@ class Mdb : public Avl, public Rcu_elem
         static Spinlock     lock;
 
         bool alive() const { return prev->next == this && next->prev == this; }
-        bool larger (Avl *x) const { return  node_base > static_cast<Mdb *>(x)->node_base; }
-        bool equal  (Avl *x) const { return (node_base ^ static_cast<Mdb *>(x)->node_base) >> max (node_order, static_cast<Mdb *>(x)->node_order) == 0; }
 
         static void free (Rcu_elem *e)
         {
@@ -57,6 +55,12 @@ class Mdb : public Avl, public Rcu_elem
         mword const node_type;
         mword const node_sub;
 
+        ALWAYS_INLINE
+        inline bool larger (Mdb *x) const { return  node_base > x->node_base; }
+
+        ALWAYS_INLINE
+        inline bool equal  (Mdb *x) const { return (node_base ^ x->node_base) >> max (node_order, x->node_order) == 0; }
+
         NOINLINE
         explicit Mdb (Pd *pd, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
 
@@ -68,7 +72,7 @@ class Mdb : public Avl, public Rcu_elem
             Mdb *n = 0;
             bool d;
 
-            for (Mdb *m = static_cast<Mdb *>(tree); m; m = static_cast<Mdb *>(m->link (d))) {
+            for (Mdb *m = static_cast<Mdb *>(tree); m; m = static_cast<Mdb *>(m->lnk[d])) {
 
                 if ((m->node_base ^ base) >> m->node_order == 0)
                     return m;
