@@ -41,9 +41,9 @@ Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MAS
 
     Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
 
-    write<uint32>(REG_FECTL,  0);
+    write<uint32>(REG_FEADDR, 0xfee00000 | Lapic::apic_id[0] << 12);
     write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
-    write<uint32>(REG_FEADDR, 0xfee00000);
+    write<uint32>(REG_FECTL,  0);
 
     write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (ctx));
     command (GCMD_SRTP);
