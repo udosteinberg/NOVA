@@ -37,7 +37,7 @@ void Hip::build (mword addr)
     h->mem_offs   = reinterpret_cast<mword>(h->mem_desc) - reinterpret_cast<mword>(h);
     h->mem_size   = sizeof (Hip_mem);
     h->api_flg    = FEAT_VMX | FEAT_SVM;
-    h->api_ver    = 0x4;
+    h->api_ver    = 0x5;
     h->sel_num    = Space_obj::caps;
     h->sel_gsi    = NUM_GSI;
     h->sel_exc    = NUM_EXC;

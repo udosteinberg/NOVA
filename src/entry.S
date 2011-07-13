@@ -17,6 +17,7 @@
  *
  */
 
+#include "hazards.h"
 #include "memory.h"
 #include "selectors.h"
 #include "vectors.h"
@@ -59,6 +60,10 @@ handlers:
 
 .macro                  EXCEPTION VEC, DPL
 INTRGATE                \DPL
+.if                     \VEC == 1
+                        testb   $3, 4(%esp)
+                        jz      entry_sysenter_db
+.endif
                         push    $\VEC
                         jmp     entry_exc
 .endm
@@ -184,8 +189,12 @@ ret_from_interrupt:     testb   $3, 0x3c(%ebx)
  */
 .align                  4, 0x90
 .globl                  entry_sysenter
-entry_sysenter:         cld
-                        pop     %esp
+entry_sysenter_db:      mov     12(%esp), %esp
+                   lock orl     $HZD_STEP, (%esp)
+                        orl     $0x100, -12(%esp)
+                        jmp     1f
+entry_sysenter:         pop     %esp
+1:                      cld
                         lea     -44(%esp), %esp
                         pusha
                         mov     $(KSTCK_ADDR + PAGE_SIZE), %esp

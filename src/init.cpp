@@ -24,7 +24,7 @@
 #include "idt.h"
 #include "keyb.h"
 
-char const *version = "NOVA Microhypervisor 0.4 (Durdle Door)";
+char const *version = "NOVA Microhypervisor 0.5 (Eden Estuary)";
 
 extern "C" INIT
 mword kern_ptab_setup()

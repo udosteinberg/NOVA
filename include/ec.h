@@ -200,7 +200,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         HOT NORETURN
         static void ret_user_sysexit();
 
-        NORETURN
+        HOT NORETURN
         static void ret_user_iret() asm ("ret_user_iret");
 
         NORETURN

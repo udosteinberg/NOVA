@@ -112,6 +112,7 @@ class Cpu
 
         enum
         {
+            EXC_DB      = 1,
             EXC_NM      = 7,
             EXC_TS      = 10,
             EXC_GP      = 13,

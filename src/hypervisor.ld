@@ -34,7 +34,7 @@ SECTIONS
     {
         *(.init)
         *(.initdata)
-    } : init
+    } : init = 0x90909090
 
     . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
 
@@ -44,9 +44,9 @@ SECTIONS
 
     .text LINK_ADDR : AT (ADDR (.text) - OFFSET)
     {
-        *(.text.hot)
+        *(.text.hot .text.hot.*)
         *(.text .text.* .gnu.linkonce.t.*)
-    } : kern
+    } : kern = 0x90909090
 
     .rodata : AT (ADDR (.rodata) - OFFSET)
     {

@@ -111,17 +111,26 @@ void Ec::handle_hazard (mword hzd, void (*func)())
             send_msg<ret_user_vmrun>();
         }
 
-        // If the EC wanted to leave via SYSEXIT, redirect it to IRET instead.
         if (func == ret_user_sysexit) {
-            assert (current->regs.cs == SEL_USER_CODE);
-            assert (current->regs.ss == SEL_USER_DATA);
-            assert (current->regs.efl & Cpu::EFL_IF);
             current->regs.esp = current->regs.ecx;
             current->regs.eip = current->regs.edx;
             current->cont     = ret_user_iret;
         }
 
         current->regs.dst_portal = NUM_EXC - 1;
+        send_msg<ret_user_iret>();
+    }
+
+    if (hzd & HZD_STEP) {
+        current->regs.clr_hazard (HZD_STEP);
+
+        if (func == ret_user_sysexit) {
+            current->regs.esp  = current->regs.ecx;
+            current->regs.eip  = current->regs.edx;
+            current->cont      = ret_user_iret;
+        }
+
+        current->regs.dst_portal = Cpu::EXC_DB;
         send_msg<ret_user_iret>();
     }
 
@@ -148,7 +157,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
@@ -164,7 +173,7 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     // No need to check HZD_DS_ES because IRET will reload both anyway
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
