@@ -36,19 +36,19 @@ class Dmar_qi
 class Dmar_qi_ctx : public Dmar_qi
 {
     public:
-        Dmar_qi_ctx() : Dmar_qi (0x1 | 1ul << 4) {}
+        Dmar_qi_ctx() : Dmar_qi (0x1 | 1UL << 4) {}
 };
 
 class Dmar_qi_tlb : public Dmar_qi
 {
     public:
-        Dmar_qi_tlb() : Dmar_qi (0x2 | 1ul << 4) {}
+        Dmar_qi_tlb() : Dmar_qi (0x2 | 1UL << 4) {}
 };
 
 class Dmar_qi_iec : public Dmar_qi
 {
     public:
-        Dmar_qi_iec() : Dmar_qi (0x4 | 1ul << 4) {}
+        Dmar_qi_iec() : Dmar_qi (0x4 | 1UL << 4) {}
 };
 
 class Dmar_ctx
@@ -129,11 +129,11 @@ class Dmar
 
         enum Cmd
         {
-            GCMD_SIRTP  = 1ul << 24,
-            GCMD_IRE    = 1ul << 25,
-            GCMD_QIE    = 1ul << 26,
-            GCMD_SRTP   = 1ul << 30,
-            GCMD_TE     = 1ul << 31,
+            GCMD_SIRTP  = 1UL << 24,
+            GCMD_IRE    = 1UL << 25,
+            GCMD_QIE    = 1UL << 26,
+            GCMD_SRTP   = 1UL << 30,
+            GCMD_TE     = 1UL << 31,
         };
 
         ALWAYS_INLINE
@@ -184,7 +184,7 @@ class Dmar
         {
             lo = *reinterpret_cast<uint64 volatile *>(fro() + frr * 16);
             hi = *reinterpret_cast<uint64 volatile *>(fro() + frr * 16 + 8);
-            *reinterpret_cast<uint64 volatile *>(fro() + frr * 16 + 8) = 1ull << 63;
+            *reinterpret_cast<uint64 volatile *>(fro() + frr * 16 + 8) = 1ULL << 63;
         }
 
         ALWAYS_INLINE
@@ -217,11 +217,11 @@ class Dmar
                 qi_submit (Dmar_qi_tlb());
                 qi_wait();
             } else {
-                write<uint64>(REG_CCMD, 1ull << 63 | 1ull << 61);
-                while (read<uint64>(REG_CCMD) & (1ull << 63))
+                write<uint64>(REG_CCMD, 1ULL << 63 | 1ULL << 61);
+                while (read<uint64>(REG_CCMD) & (1ULL << 63))
                     pause();
-                write<uint64>(REG_IOTLB, 1ull << 63 | 1ull << 60);
-                while (read<uint64>(REG_IOTLB) & (1ull << 63))
+                write<uint64>(REG_IOTLB, 1ULL << 63 | 1ULL << 60);
+                while (read<uint64>(REG_IOTLB) & (1ULL << 63))
                     pause();
             }
         }
@@ -232,10 +232,10 @@ class Dmar
         INIT
         Dmar (Paddr);
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void enable (unsigned flags)
         {
             if (!(flags & 1))
@@ -245,10 +245,10 @@ class Dmar
                 dmar->command (gcmd);
         }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void set_irt (unsigned i, unsigned rid, unsigned cpu, unsigned vec, unsigned trg)
         {
-            irt[i].set (1ull << 18 | rid, static_cast<uint64>(cpu) << 40 |  vec << 16 | trg << 4 | 1);
+            irt[i].set (1ULL << 18 | rid, static_cast<uint64>(cpu) << 40 | vec << 16 | trg << 4 | 1);
         }
 
         ALWAYS_INLINE

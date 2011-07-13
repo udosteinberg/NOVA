@@ -21,6 +21,7 @@
 #include "buddy.h"
 #include "compiler.h"
 #include "crd.h"
+#include "util.h"
 
 class Cpu_regs;
 
@@ -47,13 +48,10 @@ class Utcb_segment
 
 class Utcb_head
 {
+    protected:
+        mword items;
+
     public:
-        union {
-            struct {
-                uint16  ui, ti;
-            };
-            mword items;
-        };
         Crd     xlt, del;
         mword   tls;
 };
@@ -87,6 +85,9 @@ class Utcb_data
 
 class Utcb : public Utcb_head, private Utcb_data
 {
+    private:
+        static mword const words = (PAGE_SIZE - sizeof (Utcb_head)) / sizeof (mword);
+
     public:
         void load_exc (Cpu_regs *);
         void load_vmx (Cpu_regs *);
@@ -95,15 +96,23 @@ class Utcb : public Utcb_head, private Utcb_data
         void save_vmx (Cpu_regs *);
         void save_svm (Cpu_regs *);
 
+        inline mword ucnt() const { return static_cast<uint16>(items); }
+        inline mword tcnt() const { return static_cast<uint16>(items >> 16); }
+
+        inline mword ui() const { return min (words / 1, ucnt()); }
+        inline mword ti() const { return min (words / 2, tcnt()); }
+
         ALWAYS_INLINE NONNULL
         inline void save (Utcb *dst)
         {
+            register mword n = ui();
+
             dst->items = items;
 #if 0
-            mword *d = dst->mr, *s = mr, u = ui;
-            asm volatile ("rep; movsl" : "+D" (d), "+S" (s), "+c" (u) : : "memory");
+            mword *d = dst->mr, *s = mr;
+            asm volatile ("rep; movsl" : "+D" (d), "+S" (s), "+c" (n) : : "memory");
 #else
-            for (unsigned long i = 0; i < ui; i++)
+            for (unsigned long i = 0; i < n; i++)
                 dst->mr[i] = mr[i];
 #endif
         }

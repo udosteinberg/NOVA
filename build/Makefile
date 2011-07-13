@@ -21,7 +21,6 @@ ECHO		:= echo
 INSTALL		:= install
 LD		:= ld
 RM		:= rm -f
-NM		:= nm
 SIZE		:= size
 
 SRC_DIR		:= ../src

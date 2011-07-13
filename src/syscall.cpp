@@ -63,7 +63,7 @@ void Ec::delegate()
                          user ? dst->utcb->del : Crd (Crd::MEM, 0, Crd::whole, 0),
                          src->utcb->xfer(),
                          user ? dst->utcb->xfer() : 0,
-                         src->utcb->ti);
+                         src->utcb->ti());
 
     C ? ret_user_sysexit() : reply();
 }
@@ -147,7 +147,7 @@ void Ec::recv_user()
 
     ec->utcb->save (current->utcb);
 
-    if (EXPECT_FALSE (ec->utcb->ti))
+    if (EXPECT_FALSE (ec->utcb->tcnt()))
         delegate<true>();
 
     ret_user_sysexit();
@@ -185,7 +185,7 @@ void Ec::sys_reply()
         else if (ec->cont == ret_user_vmrun)
             src->save_svm (&ec->regs);
 
-        if (EXPECT_FALSE (src->ti))
+        if (EXPECT_FALSE (src->tcnt()))
             delegate<false>();
     }
 
@@ -456,7 +456,7 @@ void Ec::sys_assign_pci()
     }
 
     Paddr phys; unsigned rid;
-    if (EXPECT_FALSE (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0UL)) {
+    if (EXPECT_FALSE (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Sys_regs::BAD_DEV>();
     }
@@ -494,8 +494,8 @@ void Ec::sys_assign_gsi()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    Paddr phys; unsigned rid = 0, gsi = sm->node_base - NUM_CPU;
-    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0UL))) {
+    Paddr phys; unsigned rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
+    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U))) {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Sys_regs::BAD_DEV>();
     }

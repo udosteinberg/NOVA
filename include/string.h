@@ -21,7 +21,7 @@
 #include "compiler.h"
 #include "types.h"
 
-extern "C" ALWAYS_INLINE NONNULL
+extern "C" NONNULL
 inline void *memcpy (void *d, void const *s, size_t n)
 {
     mword dummy;
@@ -32,7 +32,7 @@ inline void *memcpy (void *d, void const *s, size_t n)
     return d;
 }
 
-extern "C" ALWAYS_INLINE NONNULL
+extern "C" NONNULL
 inline void *memset (void *d, int c, size_t n)
 {
     mword dummy;
@@ -43,7 +43,7 @@ inline void *memset (void *d, int c, size_t n)
     return d;
 }
 
-extern "C" ALWAYS_INLINE NONNULL
+extern "C" NONNULL
 inline int strcmp (char const *s1, char const *s2)
 {
     while (*s1 && *s1 == *s2)

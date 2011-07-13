@@ -104,10 +104,10 @@ class Pci
         INIT
         Pci (unsigned, unsigned, unsigned, unsigned);
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void claim_all (Dmar *d)
         {
             for (Pci *pci = list; pci; pci = pci->next)
@@ -115,7 +115,7 @@ class Pci
                     pci->dmar = d;
         }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline bool claim_dev (Dmar *d, unsigned r)
         {
             Pci *pci = find_dev (r);
@@ -135,7 +135,7 @@ class Pci
         ALWAYS_INLINE
         static inline unsigned phys_to_rid (Paddr phys)
         {
-            return phys - cfg_base < cfg_size ? (bus_base << 8) + (phys - cfg_base) / PAGE_SIZE : ~0UL;
+            return phys - cfg_base < cfg_size ? static_cast<unsigned>((bus_base << 8) + (phys - cfg_base) / PAGE_SIZE) : ~0U;
         }
 
         ALWAYS_INLINE

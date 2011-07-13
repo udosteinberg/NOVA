@@ -1,3 +1,15 @@
+0.4
+---
+* IOMMU fault fixes.
+* Secure device and GSI assignment using capabilities.
+* BSP indicator passed to bootstrap EC and removed from HIP.
+* Added revoke filtering.
+* Root capability of newly created objects now stored in creator PD.
+* Added SC control hypercall.
+* Added SC execution time statistics.
+* Added capability permissions for EC bind and EC/SC control
+* Improved RCU grace period handling.
+* Bug fixes.
 
 0.3
 ---

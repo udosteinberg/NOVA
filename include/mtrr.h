@@ -37,7 +37,7 @@ class Mtrr
     public:
         explicit inline Mtrr (uint64, uint64);
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
 
         INIT

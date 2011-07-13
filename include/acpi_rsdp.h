@@ -37,14 +37,14 @@ class Acpi_rsdp
         uint64  xsdt_addr;
         uint8   extended_checksum;
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         bool good_signature() const
         {
             return signature[0] == SIG ('R','S','D',' ') &&
                    signature[1] == SIG ('P','T','R',' ');
         }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         bool good_checksum (unsigned len = 20) const
         {
             uint8 check = 0;

@@ -27,11 +27,15 @@ class Sm;
 class Gsi
 {
     public:
-        Ioapic *        ioapic;
         Sm *            sm;
-        uint8           vec;
-        uint8           trg : 1,
-                        pol : 1;
+        Ioapic *        ioapic;
+        union {
+            uint16      irt;
+            struct {
+                uint8   vec;
+                uint8   dlv:3, dst:1, sts:1, pol:1, irr:1, trg:1;
+            };
+        };
 
         static Gsi      gsi_table[NUM_GSI];
         static unsigned irq_table[NUM_IRQ];

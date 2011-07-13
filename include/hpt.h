@@ -89,12 +89,12 @@ class Hpt : public Pte<Hpt, mword, 2, 10, false>
 
         bool sync_from (Hpt, mword);
 
-        size_t sync_master (mword virt);
-        void sync_master_range (mword s_addr, mword e_addr);
+        size_t sync_master (mword);
+        void sync_master_range (mword, mword);
 
         Paddr replace (mword, mword);
 
-        static void *remap (Paddr phys);
+        static void *remap (Paddr);
 };
 
 class Hptp : public Hpt

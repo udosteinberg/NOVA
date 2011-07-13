@@ -82,10 +82,10 @@ class Ioapic : public Apic
         INIT
         Ioapic (Paddr, unsigned, unsigned);
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
 
-        ALWAYS_INLINE INIT
+        ALWAYS_INLINE
         static inline bool claim_dev (Dmar *d, unsigned r, unsigned i)
         {
             for (Ioapic *ioapic = list; ioapic; ioapic = ioapic->next)
