@@ -28,7 +28,7 @@ class Rcu_elem
         void (*func)(Rcu_elem *);
 
         ALWAYS_INLINE
-        explicit Rcu_elem (void (*f)(Rcu_elem *)) : func (f) {}
+        explicit Rcu_elem (void (*f)(Rcu_elem *)) : next (0), func (f) {}
 };
 
 class Rcu_list
@@ -46,17 +46,17 @@ class Rcu_list
         ALWAYS_INLINE
         inline void append (Rcu_list *l)
         {
-            *tail = l->head;
-             tail = l->tail;
-             l->clear();
+           *tail = l->head;
+            tail = l->tail;
+            l->clear();
         }
 
         ALWAYS_INLINE
         inline void enqueue (Rcu_elem *e)
         {
-             e->next = 0;
-            *tail = e;
-             tail = &e->next;
+            e->next = 0;
+           *tail = e;
+            tail = &e->next;
         }
 };
 

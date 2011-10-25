@@ -62,7 +62,7 @@ void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
         }
 
         if (!node->insert_node (mdb, attr)) {
-            //S::remove_node (a);
+            S::remove_node (node);
             delete node;
             continue;
         }
@@ -181,12 +181,12 @@ void Pd::del_crd (Pd *pd, Crd del, Crd &crd, mword sub, mword hot)
 {
     Crd::Type st = crd.type(), rt = del.type();
 
-    if (rt != st) {
+    mword a = crd.attr() & del.attr(), sb = crd.base(), so = crd.order(), rb = del.base(), ro = del.order(), o = 0;
+
+    if (EXPECT_FALSE (st != rt || !a)) {
         crd = Crd (0);
         return;
     }
-
-    mword sb = crd.base(), so = crd.order(), rb = del.base(), ro = del.order(), a = crd.attr(), o = 0;
 
     switch (rt) {
 
