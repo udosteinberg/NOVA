@@ -79,11 +79,11 @@ void Sc::ready_dequeue (uint64 t)
     assert (prev && next);
 
     if (list[prio] == this)
-        list[prio] = next == this ? 0 : next;
+        list[prio] = next == this ? nullptr : next;
 
     next->prev = prev;
     prev->next = next;
-    prev = 0;
+    prev = nullptr;
 
     while (!list[prio_top] && prio_top)
         prio_top--;
@@ -157,12 +157,12 @@ void Sc::rrq_handler()
 
         Sc *sc = ptr;
 
-        ptr = ptr->next == ptr ? 0 : ptr->next;
+        ptr = ptr->next == ptr ? nullptr : ptr->next;
 
         sc->ready_enqueue (t);
     }
 
-    rq.queue = 0;
+    rq.queue = nullptr;
 }
 
 void Sc::rke_handler()

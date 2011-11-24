@@ -62,7 +62,7 @@ void Ec::delegate()
                          user ? dst->utcb->xlt : Crd (0),
                          user ? dst->utcb->del : Crd (Crd::MEM, 0, Crd::whole, Crd::whole),
                          src->utcb->xfer(),
-                         user ? dst->utcb->xfer() : 0,
+                         user ? dst->utcb->xfer() : nullptr,
                          src->utcb->ti());
 
     C ? ret_user_sysexit() : reply();
@@ -245,7 +245,7 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_PAR>();
     }
 
-    Ec *ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : 0, r->cpu(), r->evt(), r->utcb(), r->esp());
+    Ec *ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : nullptr, r->cpu(), r->evt(), r->utcb(), r->esp());
 
     if (!Space_obj::insert_root (ec)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());

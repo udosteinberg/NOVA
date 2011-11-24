@@ -33,14 +33,14 @@ void Ec::handle_exc_nm()
     if (fpowner) {
 
         // For a vCPU, enable CR0.TS and #NM intercepts
-        if (fpowner->utcb == 0)
+        if (fpowner->utcb == nullptr)
             fpowner->regs.fpu_ctrl (false);
 
         fpowner->fpu->save();
     }
 
     // For a vCPU, disable CR0.TS and #NM intercepts
-    if (current->utcb == 0)
+    if (current->utcb == nullptr)
         current->regs.fpu_ctrl (true);
 
     if (current->fpu)

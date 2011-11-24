@@ -62,14 +62,14 @@ class Mdb : public Avl, public Rcu_elem
         inline bool equal  (Mdb *x) const { return (node_base ^ x->node_base) >> max (node_order, x->node_order) == 0; }
 
         NOINLINE
-        explicit Mdb (Pd *pd, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
+        explicit Mdb (Pd *pd, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), prev (this), next (this), prnt (nullptr), node_pd (pd), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
 
         NOINLINE
-        explicit Mdb (Pd *pd, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), prnt (0), node_pd (pd), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
+        explicit Mdb (Pd *pd, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), prev (this), next (this), prnt (nullptr), node_pd (pd), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
 
         static Mdb *lookup (Avl *tree, mword base, bool next)
         {
-            Mdb *n = 0;
+            Mdb *n = nullptr;
             bool d;
 
             for (Mdb *m = static_cast<Mdb *>(tree); m; m = static_cast<Mdb *>(m->lnk[d])) {

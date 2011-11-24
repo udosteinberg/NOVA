@@ -50,7 +50,7 @@ Avl *Avl::rotate (Avl *&tree, bool d, unsigned b)
     tree->bal = node[0]->bal = node[1]->bal = 2;
 
     if (b == 2)
-        return 0;
+        return nullptr;
 
     node[b != d]->bal = !b;
 
@@ -99,8 +99,8 @@ bool Avl::insert (Avl **tree, Avl *node)
 template <typename S>
 bool Avl::remove (Avl **tree, Avl *node)
 {
-    Avl **p = tree, **item = 0;
-    bool d;
+    Avl **p = tree, **item = nullptr;
+    bool d = false;
 
     for (Avl *n; (n = *tree); tree = n->lnk + d) {
 

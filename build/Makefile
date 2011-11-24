@@ -48,14 +48,14 @@ PFLAGS		:= $(addprefix -D, $(DEFINES)) $(addprefix -I, $(INC_DIR))
 # Optimization options
 DFLAGS		:= -MP -MMD -pipe
 OFLAGS		:= -Os
-AFLAGS		:= -march=i686 -mpreferred-stack-boundary=2 -mregparm=3
-DFLAGS		+= -m32
+AFLAGS		:= -m32 -march=i686 -mpreferred-stack-boundary=2 -mregparm=3
 
 # Language options
 FFLAGS		:= -fdata-sections -ffunction-sections -fomit-frame-pointer -freg-struct-return -freorder-blocks -funit-at-a-time
 FFLAGS		+= -fno-asynchronous-unwind-tables -fno-exceptions -fno-rtti
 FFLAGS		+= $(call check,-fno-stack-protector)
 FFLAGS		+= $(call check,-fvisibility-inlines-hidden)
+FFLAGS		+= $(or $(call check,-std=gnu++11), $(call check,-std=gnu++0x), $(call check,-std=gnu++98))
 
 # Warning options
 WFLAGS		:= -Wall -Wextra -Waggregate-return -Wcast-align -Wcast-qual -Wconversion -Wdisabled-optimization -Wformat=2 -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wwrite-strings
@@ -65,10 +65,11 @@ WFLAGS		+= $(call check,-Wlogical-op)
 WFLAGS		+= $(call check,-Wstrict-null-sentinel)
 WFLAGS		+= $(call check,-Wstrict-overflow=5)
 WFLAGS		+= $(call check,-Wvolatile-register-var)
+WFLAGS		+= $(call check,-Wzero-as-null-pointer-constant)
 
 # Compiler flags
-SFLAGS		:= $(PFLAGS) $(DFLAGS)
-CFLAGS		:= $(PFLAGS) $(DFLAGS) $(OFLAGS) $(AFLAGS) $(FFLAGS) $(WFLAGS)
+SFLAGS		:= $(PFLAGS) $(DFLAGS) $(AFLAGS)
+CFLAGS		:= $(PFLAGS) $(DFLAGS) $(AFLAGS) $(OFLAGS) $(FFLAGS) $(WFLAGS)
 
 # Linker flags
 LFLAGS		:= --gc-sections --warn-common -static -n -T

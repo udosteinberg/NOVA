@@ -74,7 +74,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, p
                 case Crd::OBJ:  return Space_obj::lookup_node (crd.base());
             }
 
-            return 0;
+            return nullptr;
         }
 
         template <typename>

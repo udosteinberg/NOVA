@@ -28,7 +28,7 @@ Acpi_rsdp *Acpi_rsdp::find (mword start, unsigned len)
             return rsdp;
     }
 
-    return 0;
+    return nullptr;
 }
 
 void Acpi_rsdp::parse()

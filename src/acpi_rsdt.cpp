@@ -33,7 +33,7 @@ void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
     if (!good_checksum (addr))
         return;
 
-    unsigned count = entries (size);
+    unsigned long count = entries (size);
 
     Paddr table[count];
     for (unsigned i = 0; i < count; i++)

@@ -44,7 +44,7 @@ char *Cmdline::get_arg (char **line)
     for (; **line == ' '; ++*line) ;
 
     if (!**line)
-        return 0;
+        return nullptr;
 
     char *arg = *line;
 

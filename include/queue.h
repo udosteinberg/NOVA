@@ -28,7 +28,7 @@ class Queue
 
     public:
         ALWAYS_INLINE
-        inline Queue() : queue (0) {}
+        inline Queue() : queue (nullptr) {}
 
         ALWAYS_INLINE
         inline T *head() const { return queue; }
@@ -51,17 +51,17 @@ class Queue
             T *t = queue;
 
             if (!t)
-                return 0;
+                return nullptr;
 
             if (t == t->next)
-                queue = 0;
+                queue = nullptr;
             else {
                 queue = t->next;
                 t->next->prev = t->prev;
                 t->prev->next = t->next;
             }
 
-            t->next = t->prev = 0;
+            t->next = t->prev = nullptr;
 
             return t;
         }

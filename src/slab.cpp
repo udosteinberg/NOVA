@@ -24,9 +24,9 @@
 Slab::Slab (Slab_cache *slab_cache)
     : avail (slab_cache->elem),
       cache (slab_cache),
-      prev  (0),
-      next  (0),
-      head  (0)
+      prev  (nullptr),
+      next  (nullptr),
+      head  (nullptr)
 {
     char *link = reinterpret_cast<char *>(this) + PAGE_SIZE - cache->buff + cache->size;
 
@@ -55,8 +55,8 @@ void Slab::free (void *ptr)
 }
 
 Slab_cache::Slab_cache (unsigned long elem_size, unsigned elem_align)
-          : curr (0),
-            head (0),
+          : curr (nullptr),
+            head (nullptr),
             size (align_up (elem_size, sizeof (mword))),
             buff (align_up (size + sizeof (mword), elem_align)),
             elem ((PAGE_SIZE - sizeof (Slab)) / buff)
@@ -126,7 +126,7 @@ void Slab_cache::free (void *ptr)
 
             // Enqueue as head
             else {
-                slab->prev = 0;
+                slab->prev = nullptr;
                 slab->next = head;
                 head = head->prev = slab;
             }
@@ -149,7 +149,7 @@ void Slab_cache::free (void *ptr)
                 slab->next->prev = slab->prev;
 
             // Enqueue as head
-            slab->prev = 0;
+            slab->prev = nullptr;
             slab->next = head;
             head = head->prev = slab;
         }

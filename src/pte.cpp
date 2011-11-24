@@ -38,7 +38,7 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool d)
         if (!e->val) {
 
             if (d)
-                return 0;
+                return nullptr;
 
             if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? 0 : P::PTE_N)))
                 delete p;

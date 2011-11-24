@@ -119,8 +119,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         inline unsigned clr_partner()
         {
             assert (partner == current);
-            partner->rcap = 0;
-            partner = 0;
+            partner->rcap = nullptr;
+            partner = nullptr;
             return Sc::ctr_link--;
         }
 
@@ -227,7 +227,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static void recv_user();
 
         HOT NORETURN
-        static void reply (void (*)() = 0);
+        static void reply (void (*)() = nullptr);
 
         HOT NORETURN
         static void sys_call();

@@ -25,7 +25,7 @@ class Avl
     protected:
         Avl *lnk[2];
 
-        explicit Avl() : bal (2) { lnk[0] = lnk[1] = 0; }
+        explicit Avl() : bal (2) { lnk[0] = lnk[1] = nullptr; }
 
     private:
         unsigned bal;

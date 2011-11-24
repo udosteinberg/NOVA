@@ -97,7 +97,7 @@ class Pci
                 if (pci->rid == r)
                     return pci;
 
-            return 0;
+            return nullptr;
         }
 
     public:
@@ -143,6 +143,6 @@ class Pci
         {
             Pci *pci = find_dev (r);
 
-            return pci ? pci->dmar : 0;
+            return pci ? pci->dmar : nullptr;
         }
 };

@@ -24,6 +24,7 @@
 #if defined(__GNUC__)
 
         #define COMPILER            "gcc "__VERSION__
+
     #if defined(__GNUC_PATCHLEVEL__)
         #define COMPILER_STRING     "gcc " EXPAND(__GNUC__) "." EXPAND(__GNUC_MINOR__) "." EXPAND(__GNUC_PATCHLEVEL__)
         #define COMPILER_VERSION    (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
@@ -38,6 +39,16 @@
     #else
         #define COLD                __attribute__((cold))
         #define HOT                 __attribute__((hot))
+    #endif
+
+    #if (COMPILER_VERSION < 450)
+        #define UNREACHED           __builtin_trap()
+    #else
+        #define UNREACHED           __builtin_unreachable()
+    #endif
+
+    #if (COMPILER_VERSION < 460) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
+        #define nullptr             0
     #endif
 
         #define ALIGNED(X)          __attribute__((aligned(X)))
@@ -56,12 +67,6 @@
 
         #define EXPECT_FALSE(X)     __builtin_expect(!!(X), 0)
         #define EXPECT_TRUE(X)      __builtin_expect(!!(X), 1)
-
-    #if (COMPILER_VERSION < 450)
-        #define UNREACHED           __builtin_trap()
-    #else
-        #define UNREACHED           __builtin_unreachable()
-    #endif
 
         #define ACCESS_ONCE(x)      (*static_cast<volatile typeof(x) *>(&(x)))
 
