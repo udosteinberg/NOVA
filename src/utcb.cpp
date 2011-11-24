@@ -300,8 +300,14 @@ void Utcb::save_vmx (Cpu_regs *regs)
         else
             val &= ~Vmcs::CPU_INTR_WINDOW;
 
-        Vmcs::write (Vmcs::CPU_EXEC_CTRL0, val);
-        Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x1000);
+        if (intr_info & 0x2000)
+            val |=  Vmcs::CPU_NMI_WINDOW;
+        else
+            val &= ~Vmcs::CPU_NMI_WINDOW;
+
+        regs->vmx_set_cpu_ctrl0 (val);
+
+        Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x3000);
         Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
     }
 
@@ -499,7 +505,7 @@ void Utcb::save_svm (Cpu_regs *regs)
             vmcb->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
         }
 
-        vmcb->inj_control = inj & ~0x1000;
+        vmcb->inj_control = inj & ~0x3000;
     }
 
     if (mtd & Mtd::STA)

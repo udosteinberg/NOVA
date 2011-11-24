@@ -45,7 +45,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
     make_current();
 
-    uint32 pin = PIN_EXTINT | PIN_NMI;
+    uint32 pin = PIN_EXTINT | PIN_NMI | PIN_VIRT_NMI;
     pin |= ctrl_pin.set;
     pin &= ctrl_pin.clr;
     write (PIN_EXEC_CTRL, pin);

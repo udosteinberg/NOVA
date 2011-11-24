@@ -261,7 +261,8 @@ class Vmcs
         enum Ctrl_pin
         {
             PIN_EXTINT              = 1ul << 0,
-            PIN_NMI                 = 1ul << 3
+            PIN_NMI                 = 1ul << 3,
+            PIN_VIRT_NMI            = 1ul << 5,
         };
 
         enum Ctrl0
@@ -271,6 +272,7 @@ class Vmcs
             CPU_INVLPG              = 1ul << 9,
             CPU_CR3_LOAD            = 1ul << 15,
             CPU_CR3_STORE           = 1ul << 16,
+            CPU_NMI_WINDOW          = 1ul << 22,
             CPU_IO                  = 1ul << 24,
             CPU_IO_BITMAP           = 1ul << 25,
             CPU_SECONDARY           = 1ul << 31,
@@ -285,7 +287,7 @@ class Vmcs
 
         enum Reason
         {
-            VMX_EXCEPTION           = 0,
+            VMX_EXC_NMI             = 0,
             VMX_EXTINT              = 1,
             VMX_TRIPLE_FAULT        = 2,
             VMX_INIT                = 3,

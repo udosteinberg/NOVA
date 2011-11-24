@@ -43,8 +43,12 @@ void Ec::vmx_exception()
     switch (intr_info & 0x7ff) {
 
         default:
-            current->regs.dst_portal = Vmcs::VMX_EXCEPTION;
+            current->regs.dst_portal = Vmcs::VMX_EXC_NMI;
             break;
+
+        case 0x202:         // NMI
+            asm volatile ("int $0x2" : : : "memory");
+            ret_user_vmresume();
 
         case 0x307:         // #NM
             handle_exc_nm();
@@ -132,7 +136,7 @@ void Ec::handle_vmx()
     Counter::vmi[reason]++;
 
     switch (reason) {
-        case Vmcs::VMX_EXCEPTION:   vmx_exception();
+        case Vmcs::VMX_EXC_NMI:     vmx_exception();
         case Vmcs::VMX_EXTINT:      vmx_extint();
         case Vmcs::VMX_INVLPG:      vmx_invlpg();
         case Vmcs::VMX_CR:          vmx_cr();
