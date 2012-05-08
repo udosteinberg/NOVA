@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,7 +21,6 @@
 #pragma once
 
 #include "assert.h"
-#include "compiler.h"
 #include "pte.h"
 
 class Ept : public Pte<Ept, uint64, 4, 9, false>

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -23,8 +25,10 @@
 #include "pci.h"
 #include "pt.h"
 #include "sm.h"
+#include "stdio.h"
 #include "syscall.h"
 #include "utcb.h"
+#include "vectors.h"
 
 template <Sys_regs::Status T>
 void Ec::sys_finish()
@@ -240,7 +244,7 @@ void Ec::sys_create_ec()
     }
     Pd *pd = static_cast<Pd *>(cap.obj());
 
-    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb()))) {
+    if (EXPECT_FALSE (r->utcb() >= LINK_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb()))) {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Sys_regs::BAD_PAR>();
     }

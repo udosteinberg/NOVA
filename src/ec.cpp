@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,6 +23,7 @@
 #include "elf.h"
 #include "hip.h"
 #include "rcu.h"
+#include "stdio.h"
 #include "svm.h"
 #include "vmx.h"
 #include "vtlb.h"
@@ -48,8 +51,8 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
             regs.ds  = SEL_USER_DATA;
             regs.es  = SEL_USER_DATA;
             regs.ss  = SEL_USER_DATA;
-            regs.efl = Cpu::EFL_IF;
-            regs.esp = s;
+            regs.REG(fl) = Cpu::EFL_IF;
+            regs.REG(sp) = s;
         } else
             regs.set_sp (s);
 
@@ -79,7 +82,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
-            regs.eax = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_io::walk(), pd->npt.root()));
+            regs.REG(ax) = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_io::walk(), pd->npt.root()));
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
@@ -112,9 +115,9 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         }
 
         if (func == ret_user_sysexit) {
-            current->regs.esp = current->regs.ecx;
-            current->regs.eip = current->regs.edx;
-            current->cont     = ret_user_iret;
+            current->regs.REG(sp) = current->regs.ARG_SP;
+            current->regs.REG(ip) = current->regs.ARG_IP;
+            current->cont         = ret_user_iret;
         }
 
         current->regs.dst_portal = NUM_EXC - 1;
@@ -125,9 +128,9 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->regs.clr_hazard (HZD_STEP);
 
         if (func == ret_user_sysexit) {
-            current->regs.esp  = current->regs.ecx;
-            current->regs.eip  = current->regs.edx;
-            current->cont      = ret_user_iret;
+            current->regs.REG(sp) = current->regs.ARG_SP;
+            current->regs.REG(ip) = current->regs.ARG_IP;
+            current->cont         = ret_user_iret;
         }
 
         current->regs.dst_portal = Cpu::EXC_DB;
@@ -161,11 +164,7 @@ void Ec::ret_user_sysexit()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
-    asm volatile ("lea %0, %%esp;"
-                  "popa;"
-                  "sti;"
-                  "sysexit"
-                  : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR RET_USER_HYP : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -177,15 +176,7 @@ void Ec::ret_user_iret()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
-    asm volatile ("lea %0, %%esp;"
-                  "popa;"
-                  "pop %%gs;"
-                  "pop %%fs;"
-                  "pop %%es;"
-                  "pop %%ds;"
-                  "add $8, %%esp;"
-                  "iret"
-                  : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR RESTORE_SEG RET_USER_EXC : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -209,6 +200,7 @@ void Ec::ret_user_vmresume()
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
+#ifdef __i386__
     asm volatile ("lea %0, %%esp;"
                   "popa;"
                   "vmresume;"
@@ -216,6 +208,7 @@ void Ec::ret_user_vmresume()
                   "pusha;"
                   "mov %1, %%esp;"
                   : : "m" (current->regs), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
+#endif
 
     trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
 
@@ -236,6 +229,7 @@ void Ec::ret_user_vmrun()
             current->regs.vtlb->flush (true);
     }
 
+#ifdef __i386__
     asm volatile ("lea %0, %%esp;"
                   "popa;"
                   "clgi;"
@@ -251,6 +245,7 @@ void Ec::ret_user_vmrun()
                   "stgi;"
                   "jmp svm_handler;"
                   : : "m" (current->regs), "m" (Vmcb::root), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
+#endif
 
     UNREACHED;
 }
@@ -280,9 +275,9 @@ void Ec::root_invoke()
     unsigned count = e->ph_count;
     current->regs.set_pt (Cpu::id);
     current->regs.set_ip (e->entry);
-    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
+    current->regs.set_sp (LINK_ADDR - PAGE_SIZE);
 
-    Ph *p = static_cast<Ph *>(Hpt::remap (Hip::root_addr + e->ph_offset));
+    PHDR *p = static_cast<PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
     for (unsigned i = 0; i < count; i++, p++) {
 
@@ -305,7 +300,7 @@ void Ec::root_invoke()
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (LINK_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);
@@ -316,7 +311,7 @@ void Ec::root_invoke()
 
 void Ec::handle_tss()
 {
-    panic ("Task gate invoked\n");
+    Console::panic ("Task gate invoked");
 }
 
 bool Ec::fixup (mword &eip)
@@ -334,7 +329,7 @@ void Ec::die (char const *reason, Exc_regs *r)
 {
     if (current->utcb || current->pd == &Pd::kern)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               current, Sc::current, r->vec, r->cs, r->eip, r->cr2, r->err, reason);
+               current, Sc::current, r->vec, r->cs, r->REG(ip), r->cr2, r->err, reason);
     else
         trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
                current, Sc::current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);

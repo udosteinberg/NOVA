@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,8 +21,6 @@
 #pragma once
 
 #include "assert.h"
-#include "buddy.h"
-#include "compiler.h"
 
 class Vmcs
 {
@@ -415,6 +415,7 @@ class Vmcs
         static bool has_ept()       { return ctrl_cpu[1].clr & CPU_EPT; }
         static bool has_vpid()      { return ctrl_cpu[1].clr & CPU_VPID; }
         static bool has_urg()       { return ctrl_cpu[1].clr & CPU_URG; }
+        static bool has_vnmi()      { return ctrl_pin.clr & PIN_VIRT_NMI; }
 
         static void init();
 };

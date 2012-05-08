@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -26,6 +28,7 @@ class Tss
     public:
         uint32  : 32;                   // 0x0
 
+#ifdef __i386__
         uint32  sp0;                    // 0x4
         uint16  ss0;  uint16 : 16;      // 0x8
         uint32  sp1;                    // 0xc
@@ -50,12 +53,21 @@ class Tss
         uint16  fs;   uint16 : 16;      // 0x58
         uint16  gs;   uint16 : 16;      // 0x5c
         uint16  ldt;  uint16 : 16;      // 0x60
+#endif
+
+#ifdef __x86_64__
+        uint64  sp0     PACKED;         // 0x4
+        uint64  sp1     PACKED;         // 0xc
+        uint64  sp2     PACKED;         // 0x14
+        uint64  ist[8]  PACKED;         // 0x1c
+        uint64  : 64    PACKED;
+#endif
 
         uint16  trap;                   // 0x64
         uint16  iobm;                   // 0x66
 
-        static Tss run CPULOCAL;
-        static Tss dbf CPULOCAL;
+        static Tss run asm ("tss_run")  CPULOCAL;
+        static Tss dbf asm ("tss_dbf")  CPULOCAL;
 
         static void build();
 

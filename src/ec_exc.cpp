@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,6 +20,7 @@
 
 #include "ec.h"
 #include "gdt.h"
+#include "stdio.h"
 
 void Ec::handle_exc_nm()
 {
@@ -59,7 +62,7 @@ bool Ec::handle_exc_ts (Exc_regs *r)
         return false;
 
     // SYSENTER with EFLAGS.NT=1 and IRET faulted
-    r->efl &= ~Cpu::EFL_NT;
+    r->REG(fl) &= ~Cpu::EFL_NT;
 
     return true;
 }
@@ -81,15 +84,15 @@ bool Ec::handle_exc_pf (Exc_regs *r)
     mword addr = r->cr2;
 
     if (r->err & 4)
-        return addr < USER_ADDR && Pd::current->Space_mem::sync_mst (addr);
+        return addr < LINK_ADDR && Pd::current->Space_mem::sync_mst (addr);
 
-    if (addr < USER_ADDR) {
+    if (addr < LINK_ADDR) {
 
         if (Pd::current->Space_mem::sync_mst (addr))
             return true;
 
-        if (fixup (r->eip)) {
-            r->eax = addr;
+        if (fixup (r->REG(ip))) {
+            r->REG(ax) = addr;
             return true;
         }
     }

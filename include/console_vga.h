@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -84,10 +86,8 @@ class Console_vga : public Console
             COLOR_LIGHT_WHITE   = 0xf
         };
 
-        Console_vga() : num (25), row (0), col (0) {}
-
         INIT
-        void init();
+        Console_vga();
 
         INIT
         void setup();
@@ -108,4 +108,6 @@ class Console_vga : public Console
             write (START_ADDR_HI, static_cast<uint8>(page >> 8));
             write (START_ADDR_LO, static_cast<uint8>(page));
         }
+
+        static Console_vga con;
 };

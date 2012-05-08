@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -26,10 +28,10 @@
         #define COMPILER            "gcc "__VERSION__
 
     #if defined(__GNUC_PATCHLEVEL__)
-        #define COMPILER_STRING     "gcc " EXPAND(__GNUC__) "." EXPAND(__GNUC_MINOR__) "." EXPAND(__GNUC_PATCHLEVEL__)
+        #define COMPILER_STRING     "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__) "." EXPAND (__GNUC_PATCHLEVEL__)
         #define COMPILER_VERSION    (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
     #else
-        #define COMPILER_STRING     "gcc " EXPAND(__GNUC__) "." EXPAND(__GNUC_MINOR__)
+        #define COMPILER_STRING     "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__)
         #define COMPILER_VERSION    (__GNUC__ * 100 + __GNUC_MINOR__ * 10)
     #endif
 
@@ -62,6 +64,7 @@
         #define NOINLINE            __attribute__((noinline))
         #define NONNULL             __attribute__((nonnull))
         #define NORETURN            __attribute__((noreturn))
+        #define PACKED              __attribute__((packed))
         #define REGPARM(X)          __attribute__((regparm(X)))
         #define WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
 

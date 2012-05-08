@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,18 +20,17 @@
 
 #pragma once
 
-#include "compiler.h"
-#include "console_serial.h"
-#include "console_vga.h"
+#include "console.h"
 #include "cpu.h"
+#include "memory.h"
 
 #define trace(T,format,...)                                 \
 do {                                                        \
     register mword __esp asm ("esp");                       \
     if (EXPECT_FALSE ((trace_mask & (T)) == (T)))           \
-        printf ("[%2d] " format "\n",                       \
+        Console::print ("[%2ld] " format,                   \
                ((__esp - 1) & ~PAGE_MASK) == KSTCK_ADDR ?   \
-                Cpu::id : ~0U, ## __VA_ARGS__);             \
+                Cpu::id : ~0UL, ## __VA_ARGS__);            \
 } while (0)
 
 /*
@@ -79,12 +80,3 @@ unsigned const trace_mask =
                             TRACE_ERROR     |
 #endif
                             0;
-
-FORMAT (1,2)
-void printf (char const *format, ...);
-
-FORMAT (1,2) NORETURN
-void panic (char const *format, ...);
-
-extern Console_serial serial;
-extern Console_vga    screen;

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -54,6 +56,11 @@ class Ph
         };
 
         uint32          type;
+};
+
+class Ph32 : public Ph
+{
+    public:
         uint32          f_offs;
         uint32          v_addr;
         uint32          p_addr;
@@ -61,4 +68,16 @@ class Ph
         uint32          m_size;
         uint32          flags;
         uint32          align;
+};
+
+class Ph64 : public Ph
+{
+    public:
+        uint32          flags;
+        uint64          f_offs;
+        uint64          v_addr;
+        uint64          p_addr;
+        uint64          f_size;
+        uint64          m_size;
+        uint64          align;
 };

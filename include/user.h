@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,6 +20,7 @@
 
 #pragma once
 
+#include "arch.h"
 #include "compiler.h"
 
 class User
@@ -29,8 +32,8 @@ class User
         {
             mword ret;
             asm volatile ("1: mov %2, %1; or $-1, %0; 2:"
-                          ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
-                          : "=a" (ret), "=r" (val) : "m" (*addr));
+                          ".section .fixup,\"a\"; .align 8;" EXPAND (WORD) " 1b,2b; .previous"
+                          : "=a" (ret), "=q" (val) : "m" (*addr));
             return ret;
         }
 
@@ -40,8 +43,8 @@ class User
         {
             mword ret;
             asm volatile ("1: lock; cmpxchg %3, %1; or $-1, %0; 2:"
-                          ".section .fixup,\"a\"; .align 8; .long 1b,2b; .previous"
-                          : "=a" (ret), "+m" (*addr) : "a" (o), "r" (n));
+                          ".section .fixup,\"a\"; .align 8;" EXPAND (WORD) " 1b,2b; .previous"
+                          : "=a" (ret), "+m" (*addr) : "a" (o), "q" (n));
             return ret;
         }
 };

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,8 +20,9 @@
 
 #pragma once
 
-#include "compiler.h"
-#include "stdio.h"
+#include "config.h"
+#include "console_vga.h"
+#include "cpu.h"
 
 class Counter
 {
@@ -45,9 +48,11 @@ class Counter
             return *reinterpret_cast<volatile unsigned *>(reinterpret_cast<mword>(ipi + i) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
         }
 
-        static void print (unsigned val, Console_vga::Color c, unsigned col)
+        template <unsigned D = 1, unsigned B = 16>
+        static void print (mword val, Console_vga::Color c, unsigned col)
         {
             if (EXPECT_FALSE (Cpu::row))
-                screen.put (Cpu::row, col, c, (val & 0xf)["0123456789ABCDEF"]);
+                for (unsigned i = 0; i < D; i++, val /= B)
+                    Console_vga::con.put (Cpu::row, col - i, c, !i || val ? (val % B)["0123456789ABCDEF"] : ' ');
         }
 };

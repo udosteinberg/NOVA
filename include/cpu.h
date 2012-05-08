@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -20,7 +22,6 @@
 
 #include "compiler.h"
 #include "types.h"
-#include "vectors.h"
 
 class Cpu
 {
@@ -213,13 +214,6 @@ class Cpu
         static inline void preempt_enable()
         {
             asm volatile ("sti" : : : "memory");
-        }
-
-        ALWAYS_INLINE NORETURN
-        static inline void shutdown()
-        {
-            for (;;)
-                asm volatile ("cli; hlt");
         }
 
         ALWAYS_INLINE

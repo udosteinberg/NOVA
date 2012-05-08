@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,6 +23,7 @@
 #include "cmdline.h"
 #include "gsi.h"
 #include "keyb.h"
+#include "stdio.h"
 
 unsigned Keyb::gsi = ~0u;
 
@@ -62,7 +65,7 @@ void Keyb::interrupt()
                 Counter::dump();
                 break;
             case 0x3b ... 0x42:     // f1-f8
-                screen.set_page (out - 0x3b);
+                Console_vga::con.set_page (out - 0x3b);
                 break;
         }
     }

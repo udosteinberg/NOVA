@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,10 +21,8 @@
 #pragma once
 
 #include "avl.h"
-#include "compiler.h"
 #include "rcu.h"
 #include "slab.h"
-#include "spinlock.h"
 #include "util.h"
 
 class Pd;

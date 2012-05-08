@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,6 +23,8 @@
 #include "buddy.h"
 #include "initprio.h"
 #include "lock_guard.h"
+#include "stdio.h"
+#include "string.h"
 
 extern char _mempool_p, _mempool_l, _mempool_f, _mempool_e;
 
@@ -108,7 +112,7 @@ void *Buddy::alloc (unsigned short ord, Fill fill)
         return reinterpret_cast<void *>(virt);
     }
 
-    panic ("Out of memory");
+    Console::panic ("Out of memory");
 }
 
 /*

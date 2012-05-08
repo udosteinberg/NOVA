@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -17,6 +19,8 @@
  */
 
 #include "barrier.h"
+#include "config.h"
+#include "cpu.h"
 #include "mtd.h"
 #include "regs.h"
 #include "svm.h"
@@ -27,26 +31,26 @@ void Utcb::load_exc (Cpu_regs *regs)
     mword m = regs->mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->eax;
-        rcx = regs->ecx;
-        rdx = regs->edx;
-        rbx = regs->ebx;
+        rax = regs->REG(ax);
+        rcx = regs->REG(cx);
+        rdx = regs->REG(dx);
+        rbx = regs->REG(bx);
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->ebp;
-        rsi = regs->esi;
-        rdi = regs->edi;
+        rbp = regs->REG(bp);
+        rsi = regs->REG(si);
+        rdi = regs->REG(di);
     }
 
     if (m & Mtd::RSP)
-        rsp = regs->esp;
+        rsp = regs->REG(sp);
 
     if (m & Mtd::RIP_LEN)
-        rip = regs->eip;
+        rip = regs->REG(ip);
 
     if (m & Mtd::RFLAGS)
-        rflags = regs->efl;
+        rflags = regs->REG(fl);
 
     if (m & Mtd::QUAL) {
         qual[0] = regs->err;
@@ -61,26 +65,26 @@ void Utcb::load_exc (Cpu_regs *regs)
 void Utcb::save_exc (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
-        regs->eax = rax;
-        regs->ecx = rcx;
-        regs->edx = rdx;
-        regs->ebx = rbx;
+        regs->REG(ax) = rax;
+        regs->REG(cx) = rcx;
+        regs->REG(dx) = rdx;
+        regs->REG(bx) = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->ebp = rbp;
-        regs->esi = rsi;
-        regs->edi = rdi;
+        regs->REG(bp) = rbp;
+        regs->REG(si) = rsi;
+        regs->REG(di) = rdi;
     }
 
     if (mtd & Mtd::RSP)
-        regs->esp = rsp;
+        regs->REG(sp) = rsp;
 
     if (mtd & Mtd::RIP_LEN)
-        regs->eip = rip;
+        regs->REG(ip) = rip;
 
     if (mtd & Mtd::RFLAGS)
-        regs->efl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+        regs->REG(fl) = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
 }
 
 void Utcb::load_vmx (Cpu_regs *regs)
@@ -88,16 +92,16 @@ void Utcb::load_vmx (Cpu_regs *regs)
     mword m = regs->mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->eax;
-        rcx = regs->ecx;
-        rdx = regs->edx;
-        rbx = regs->ebx;
+        rax = regs->REG(ax);
+        rcx = regs->REG(cx);
+        rdx = regs->REG(dx);
+        rbx = regs->REG(bx);
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->ebp;
-        rsi = regs->esi;
-        rdi = regs->edi;
+        rbp = regs->REG(bp);
+        rsi = regs->REG(si);
+        rdi = regs->REG(di);
     }
 
     regs->vmcs->make_current();
@@ -192,16 +196,16 @@ void Utcb::load_vmx (Cpu_regs *regs)
 void Utcb::save_vmx (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
-        regs->eax = rax;
-        regs->ecx = rcx;
-        regs->edx = rdx;
-        regs->ebx = rbx;
+        regs->REG(ax) = rax;
+        regs->REG(cx) = rcx;
+        regs->REG(dx) = rdx;
+        regs->REG(bx) = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->ebp = rbp;
-        regs->esi = rsi;
-        regs->edi = rdi;
+        regs->REG(bp) = rbp;
+        regs->REG(si) = rsi;
+        regs->REG(di) = rdi;
     }
 
     regs->vmcs->make_current();
@@ -328,15 +332,15 @@ void Utcb::load_svm (Cpu_regs *regs)
 
     if (m & Mtd::GPR_ACDB) {
         rax = static_cast<mword>(vmcb->rax);
-        rcx = regs->ecx;
-        rdx = regs->edx;
-        rbx = regs->ebx;
+        rcx = regs->REG(cx);
+        rdx = regs->REG(dx);
+        rbx = regs->REG(bx);
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->ebp;
-        rsi = regs->esi;
-        rdi = regs->edi;
+        rbp = regs->REG(bp);
+        rsi = regs->REG(si);
+        rdi = regs->REG(di);
     }
 
     if (m & Mtd::RSP)
@@ -427,15 +431,15 @@ void Utcb::save_svm (Cpu_regs *regs)
 
     if (mtd & Mtd::GPR_ACDB) {
         vmcb->rax = rax;
-        regs->ecx = rcx;
-        regs->edx = rdx;
-        regs->ebx = rbx;
+        regs->REG(cx) = rcx;
+        regs->REG(dx) = rdx;
+        regs->REG(bx) = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->ebp = rbp;
-        regs->esi = rsi;
-        regs->edi = rdi;
+        regs->REG(bp) = rbp;
+        regs->REG(si) = rsi;
+        regs->REG(di) = rdi;
     }
 
     if (mtd & Mtd::RSP)

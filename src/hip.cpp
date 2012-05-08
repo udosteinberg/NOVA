@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -37,7 +39,7 @@ void Hip::build (mword addr)
     h->mem_offs   = reinterpret_cast<mword>(h->mem_desc) - reinterpret_cast<mword>(h);
     h->mem_size   = sizeof (Hip_mem);
     h->api_flg    = FEAT_VMX | FEAT_SVM;
-    h->api_ver    = 0x5;
+    h->api_ver    = CFG_VER;
     h->sel_num    = Space_obj::caps;
     h->sel_gsi    = NUM_GSI;
     h->sel_exc    = NUM_EXC;

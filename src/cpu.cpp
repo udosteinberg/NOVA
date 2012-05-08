@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -24,6 +26,7 @@
 #include "lapic.h"
 #include "msr.h"
 #include "pd.h"
+#include "stdio.h"
 #include "svm.h"
 #include "tss.h"
 #include "vmx.h"
@@ -139,14 +142,20 @@ void Cpu::setup_thermal()
 
 void Cpu::setup_sysenter()
 {
+#ifdef __i386__
     Msr::write<mword>(Msr::IA32_SYSENTER_CS,  SEL_KERN_CODE);
     Msr::write<mword>(Msr::IA32_SYSENTER_ESP, reinterpret_cast<mword>(&Tss::run.sp0));
     Msr::write<mword>(Msr::IA32_SYSENTER_EIP, reinterpret_cast<mword>(&entry_sysenter));
+#else
+    Msr::write<mword>(Msr::IA32_STAR,  static_cast<mword>(SEL_USER_CODE) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
+    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sysenter));
+    Msr::write<mword>(Msr::IA32_FMASK, Cpu::EFL_DF | Cpu::EFL_IF);
+#endif
 }
 
 void Cpu::init()
 {
-    for (void (**func)() = &CTORS_G; func != &CTORS_L; (*--func)()) ;
+    for (void (**func)() = &CTORS_C; func != &CTORS_L; (*--func)()) ;
 
     Gdt::build();
     Tss::build();
@@ -161,7 +170,7 @@ void Cpu::init()
     // Initialize CPU number and check features
     check_features();
 
-    row = screen.spinner (id);
+    row = Console_vga::con.spinner (id);
 
     Paddr phys;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());

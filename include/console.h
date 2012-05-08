@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,24 +21,45 @@
 #pragma once
 
 #include <stdarg.h>
-#include "compiler.h"
-#include "types.h"
+#include "initprio.h"
+#include "spinlock.h"
 
 class Console
 {
     private:
-        virtual void putc (int c) = 0;
+        enum
+        {
+            MODE_FLAGS      = 0,
+            MODE_WIDTH      = 1,
+            MODE_PRECS      = 2,
+            FLAG_SIGNED     = 1UL << 0,
+            FLAG_ALT_FORM   = 1UL << 1,
+            FLAG_ZERO_PAD   = 1UL << 2,
+        };
 
-        void print_number (uint64 val, unsigned base, unsigned width, unsigned flags);
+        Console *next;
 
-        inline void print_str (char const *str, unsigned width, unsigned precs);
+        static Console *list;
+        static Spinlock lock;
 
-    protected:
-        bool initialized;
-
-    public:
-        Console() : initialized (false) {}
+        virtual void putc (int) = 0;
+        void print_num (uint64, unsigned, unsigned, unsigned);
+        void print_str (char const *, unsigned, unsigned);
 
         FORMAT (2,0)
-        void vprintf (char const *format, va_list args);
+        void vprintf (char const *, va_list);
+
+    protected:
+        NOINLINE
+        void enable()
+        {
+            Console **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
+        }
+
+    public:
+        FORMAT (1,2)
+        static void print (char const *, ...);
+
+        FORMAT (1,2) NORETURN
+        static void panic (char const *, ...);
 };

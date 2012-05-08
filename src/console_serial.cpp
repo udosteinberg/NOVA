@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,7 +23,9 @@
 #include "hpt.h"
 #include "x86.h"
 
-void Console_serial::init()
+INIT_PRIORITY (PRIO_CONSOLE) Console_serial Console_serial::con;
+
+Console_serial::Console_serial()
 {
     if (!Cmdline::serial)
         return;
@@ -39,7 +43,7 @@ void Console_serial::init()
     out (FCR, 7);
     out (MCR, 3);
 
-    initialized = true;
+    enable();
 }
 
 void Console_serial::putc (int c)

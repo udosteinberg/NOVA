@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -24,10 +26,8 @@ ALIGNED(8) Tss Tss::dbf;
 
 void Tss::build()
 {
-    // #NMI and #DF currently use CPU PT and CPU stack. If we use boot PT
-    // and boot stack instead we don't have the faulting TSS state mapped.
+#ifdef __i386__
     extern char tss_handler;
-
     dbf.cr3     = Hpt::current();
     dbf.eip     = reinterpret_cast<mword>(&tss_handler);
     dbf.esp     = KSTCK_ADDR + PAGE_SIZE;
@@ -36,9 +36,9 @@ void Tss::build()
     dbf.ds      = SEL_KERN_DATA;
     dbf.es      = SEL_KERN_DATA;
     dbf.ss      = SEL_KERN_DATA;
-
     run.ss0     = SEL_KERN_DATA;
-    run.sp0     = KSTCK_ADDR + PAGE_SIZE;
+#endif
 
+    run.sp0     = KSTCK_ADDR + PAGE_SIZE;
     run.iobm    = static_cast<uint16>(IOBMP_SADDR - reinterpret_cast<mword>(&run));
 }

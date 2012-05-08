@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,8 +20,8 @@
 
 #pragma once
 
+#include "arch.h"
 #include "atomic.h"
-#include "compiler.h"
 #include "hazards.h"
 #include "types.h"
 
@@ -32,14 +34,24 @@ class Sys_regs
     protected:
         union {
             struct {
-                mword   edi;
-                mword   esi;
-                mword   ebp;
+#ifdef __x86_64__
+                mword   r15;
+                mword   r14;
+                mword   r13;
+                mword   r12;
+                mword   r11;
+                mword   r10;
+                mword   r9;
+                mword   r8;
+#endif
+                mword   REG(di);
+                mword   REG(si);
+                mword   REG(bp);
                 mword   cr2;
-                mword   ebx;
-                mword   edx;
-                mword   ecx;
-                mword   eax;
+                mword   REG(bx);
+                mword   REG(dx);
+                mword   REG(cx);
+                mword   REG(ax);
             };
             mword gpr[];
         };
@@ -59,19 +71,19 @@ class Sys_regs
         };
 
         ALWAYS_INLINE
-        inline unsigned flags() const { return eax >> 4 & 0xf; }
+        inline unsigned flags() const { return ARG_1 >> 4 & 0xf; }
 
         ALWAYS_INLINE
-        inline void set_status (Status status) { eax = status; }
+        inline void set_status (Status status) { ARG_1 = status; }
 
         ALWAYS_INLINE
-        inline void set_pt (mword pt) { eax = pt; }
+        inline void set_pt (mword pt) { ARG_1 = pt; }
 
         ALWAYS_INLINE
-        inline void set_ip (mword ip) { edx = ip; }
+        inline void set_ip (mword ip) { ARG_IP = ip; }
 
         ALWAYS_INLINE
-        inline void set_sp (mword sp) { ecx = sp; }
+        inline void set_sp (mword sp) { ARG_SP = sp; }
 };
 
 class Exc_regs : public Sys_regs
@@ -85,10 +97,10 @@ class Exc_regs : public Sys_regs
                 mword   ds;
                 mword   err;
                 mword   vec;
-                mword   eip;
+                mword   REG(ip);
                 mword   cs;
-                mword   efl;
-                mword   esp;
+                mword   REG(fl);
+                mword   REG(sp);
                 mword   ss;
             };
             struct {

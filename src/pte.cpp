@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -97,4 +99,4 @@ bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool r)
 
 template class Pte<Dpt, uint64, 4, 9, true>;
 template class Pte<Ept, uint64, 4, 9, false>;
-template class Pte<Hpt, mword, 2, 10, false>;
+template class Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>;

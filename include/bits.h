@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,7 +20,6 @@
 
 #pragma once
 
-#include "compiler.h"
 #include "types.h"
 #include "util.h"
 
@@ -59,6 +60,8 @@ ALWAYS_INLINE
 inline uint64 div64 (uint64 n, uint32 d, uint32 *r)
 {
     uint64 q;
+
+#ifdef __i386__
     asm volatile ("divl %5;"
                   "xchg %1, %2;"
                   "divl %5;"
@@ -69,6 +72,11 @@ inline uint64 div64 (uint64 n, uint32 d, uint32 *r)
                     "d"  (0),
                     "1"  (static_cast<uint32>(n)),
                     "rm" (d));
+#else
+     q = n / d;
+    *r = static_cast<uint32>(n % d);
+#endif
+
     return q;
 }
 

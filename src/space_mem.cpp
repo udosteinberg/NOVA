@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -22,7 +24,9 @@
 #include "lapic.h"
 #include "mtrr.h"
 #include "pd.h"
+#include "stdio.h"
 #include "svm.h"
+#include "vectors.h"
 
 unsigned Space_mem::did_ctr;
 
@@ -34,8 +38,6 @@ void Space_mem::init (unsigned cpu)
 
         // Sync kernel code and data
         loc[cpu].sync_master_range (LINK_ADDR, LOCAL_SADDR);
-
-        trace (TRACE_MEMORY, "PD:%p PTAB[%u]:%#lx", static_cast<Pd *>(this), cpu, loc[cpu].addr());
     }
 }
 
@@ -71,7 +73,7 @@ void Space_mem::update (Mdb *mdb, mword r)
             gtlb.merge (cpus);
     }
 
-    if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
+    if (mdb->node_base + (1UL << o) > LINK_ADDR >> PAGE_BITS)
         return;
 
     bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r);

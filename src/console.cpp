@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,18 +20,13 @@
 
 #include "bits.h"
 #include "console.h"
+#include "lock_guard.h"
+#include "x86.h"
 
-enum
-{
-    MODE_FLAGS      = 0,
-    MODE_WIDTH      = 1,
-    MODE_PRECS      = 2,
-    FLAG_SIGNED     = 1u << 0,
-    FLAG_ALT_FORM   = 1u << 1,
-    FLAG_ZERO_PAD   = 1u << 2
-};
+Console *Console::list;
+Spinlock Console::lock;
 
-void Console::print_number (uint64 val, unsigned base, unsigned width, unsigned flags)
+void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned flags)
 {
     bool neg = false;
 
@@ -88,9 +85,6 @@ void Console::print_str (char const *s, unsigned width, unsigned precs)
 
 void Console::vprintf (char const *format, va_list args)
 {
-    if (EXPECT_FALSE (!initialized))
-        return;
-
     while (*format) {
 
         if (EXPECT_TRUE (*format != '%')) {
@@ -144,7 +138,7 @@ void Console::vprintf (char const *format, va_list args)
                         case 1:  u = va_arg (args, long);       break;
                         default: u = va_arg (args, long long);  break;
                     }
-                    print_number (u, 10, width, flags | FLAG_SIGNED);
+                    print_num (u, 10, width, flags | FLAG_SIGNED);
                     break;
 
                 case 'u':
@@ -154,11 +148,11 @@ void Console::vprintf (char const *format, va_list args)
                         case 1:  u = va_arg (args, unsigned long);       break;
                         default: u = va_arg (args, unsigned long long);  break;
                     }
-                    print_number (u, *format == 'x' ? 16 : 10, width, flags);
+                    print_num (u, *format == 'x' ? 16 : 10, width, flags);
                     break;
 
                 case 'p':
-                    print_number (reinterpret_cast<mword>(va_arg (args, void *)), 16, width, FLAG_ALT_FORM);
+                    print_num (reinterpret_cast<mword>(va_arg (args, void *)), 16, width, FLAG_ALT_FORM);
                     break;
 
                 case 0:
@@ -174,4 +168,34 @@ void Console::vprintf (char const *format, va_list args)
             break;
         }
     }
+
+    putc ('\n');
 }
+
+void Console::print (char const *format, ...)
+{
+    Lock_guard <Spinlock> guard (lock);
+
+    for (Console *c = list; c; c = c->next) {
+        va_list args;
+        va_start (args, format);
+        c->vprintf (format, args);
+        va_end (args);
+    }
+}
+
+void Console::panic (char const *format, ...)
+{
+    Lock_guard <Spinlock> guard (lock);
+
+    for (Console *c = list; c; c = c->next) {
+        va_list args;
+        va_start (args, format);
+        c->vprintf (format, args);
+        va_end (args);
+    }
+
+    shutdown();
+}
+
+extern "C" NORETURN void __cxa_pure_virtual() { UNREACHED; }

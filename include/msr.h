@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -72,6 +74,9 @@ class Msr
             IA32_DS_AREA            = 0x600,
             IA32_EXT_XAPIC          = 0x800,
             IA32_EFER               = 0xc0000080,
+            IA32_STAR               = 0xc0000081,
+            IA32_LSTAR              = 0xc0000082,
+            IA32_FMASK              = 0xc0000084,
 
             AMD_IPMR                = 0xc0010055,
             AMD_SVM_HSAVE_PA        = 0xc0010117,

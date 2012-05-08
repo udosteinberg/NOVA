@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,6 +23,8 @@
 #include "lapic.h"
 #include "msr.h"
 #include "rcu.h"
+#include "stdio.h"
+#include "vectors.h"
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;
@@ -70,25 +74,27 @@ void Lapic::init()
 
 void Lapic::calibrate()
 {
+    static unsigned const ms = 1;
+
     uint32 v1 = read (LAPIC_TMR_CCR);
     uint32 t1 = static_cast<uint32>(rdtsc());
-    Acpi::delay (250);
+    Acpi::delay (ms);
     uint32 v2 = read (LAPIC_TMR_CCR);
     uint32 t2 = static_cast<uint32>(rdtsc());
 
-    freq_tsc = (t2 - t1) / 250;
-    freq_bus = (v1 - v2) / 250;
+    freq_tsc = (t2 - t1) / ms;
+    freq_bus = (v1 - v2) / ms;
 
     trace (TRACE_CPU, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
 }
 
 void Lapic::send_ipi (unsigned cpu, Delivery_mode dlv, unsigned vector)
 {
-    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 0x1000))
+    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
         pause();
 
     write (LAPIC_ICR_HI, apic_id[cpu] << 24);
-    write (LAPIC_ICR_LO, dlv | vector);
+    write (LAPIC_ICR_LO, 1U << 14 | dlv | vector);
 }
 
 void Lapic::wake_ap()

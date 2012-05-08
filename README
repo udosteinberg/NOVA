@@ -4,6 +4,8 @@
 # Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
 # Economic rights: Technische Universitaet Dresden (Germany)
 #
+# Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+#
 # This file is part of the NOVA microhypervisor.
 #
 # NOVA is free software: you can redistribute it and/or modify it
@@ -30,15 +32,18 @@ You need the following tools to compile the source code.
 * make 3.81 or higher
   available from http://www.gnu.org/software/make/
 
-* gcc 4.2 or higher
+* for x86_32: gcc 4.2 or higher
+  for x86_64: gcc 4.5 or higher
   available from http://gcc.gnu.org/
 
 * binutils 2.18.50.0.7 or higher
   available from http://www.kernel.org/pub/linux/devel/binutils/
 
-You can build the microhypervisor binary as follows:
+You can build a 32-bit microhypervisor binary as follows:
+	cd build; make ARCH=x86_32
 
-$ cd build; make
+You can build a 64-bit microhypervisor binary as follows:
+	cd build; make ARCH=x86_64
 
 Booting
 =======

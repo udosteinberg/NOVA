@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,10 +20,8 @@
 
 #pragma once
 
-#include "compiler.h"
 #include "counter.h"
 #include "fpu.h"
-#include "lock_guard.h"
 #include "mtd.h"
 #include "pd.h"
 #include "queue.h"
@@ -36,7 +36,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
     friend class Queue<Ec>;
 
     private:
-        void        (*cont)();
+        void        (*cont)() ALIGNED (16);
         Cpu_regs    regs;
         Ec *        rcap;
         Utcb *      utcb;
@@ -149,9 +149,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
             pd->make_current();
 
-            asm volatile ("mov %0, %%esp;"
-                          "jmp *%1"
-                          : : "g" (KSTCK_ADDR + PAGE_SIZE), "rm" (cont) : "memory"); UNREACHED;
+            asm volatile ("mov %0," EXPAND (%%REG(sp);) "jmp *%1" : : "g" (KSTCK_ADDR + PAGE_SIZE), "rm" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,7 +21,6 @@
 #pragma once
 
 #include "buddy.h"
-#include "compiler.h"
 #include "crd.h"
 #include "util.h"
 
@@ -71,10 +72,16 @@ class Utcb_data
                 };
 
                 mword           rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
+#ifdef __x86_64__
+                mword           r8,  r9,  r10, r11, r12, r13, r14, r15;
+#endif
                 uint64          qual[2];
                 uint32          ctrl[2];
                 uint64          tsc;
                 mword           cr0, cr2, cr3, cr4;
+#ifdef __x86_64
+                mword           cr8, reserved;
+#endif
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
                 Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
             };

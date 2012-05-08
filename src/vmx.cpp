@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -23,6 +25,7 @@
 #include "hip.h"
 #include "idt.h"
 #include "msr.h"
+#include "stdio.h"
 #include "tss.h"
 #include "util.h"
 #include "vmx.h"
@@ -137,5 +140,5 @@ void Vmcs::init()
 
     Vmcs *root = new Vmcs;
 
-    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x EPT:%u VPID:%u UG:%u", Buddy::ptr_to_phys (root), basic.revision, has_ept(), has_vpid(), has_urg());
+    trace (TRACE_VMX, "VMCS:%#010lx REV:%#x EPT:%u URG:%u VNMI:%u VPID:%u", Buddy::ptr_to_phys (root), basic.revision, has_ept(), has_urg(), has_vnmi(), has_vpid());
 }

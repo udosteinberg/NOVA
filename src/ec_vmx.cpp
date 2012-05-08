@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -20,6 +22,7 @@
 #include "ec.h"
 #include "gsi.h"
 #include "lapic.h"
+#include "vectors.h"
 #include "vmx.h"
 #include "vtlb.h"
 
@@ -66,7 +69,7 @@ void Ec::vmx_exception()
 
                 case Vtlb::GLA_GPA:
                     current->regs.cr2 = cr2;
-                    Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info);
+                    Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x1000);
                     Vmcs::write (Vmcs::ENT_INTR_ERROR, err);
 
                 case Vtlb::SUCCESS:

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,13 +20,13 @@
 
 #include "acpi.h"
 #include "compiler.h"
+#include "console_serial.h"
+#include "console_vga.h"
 #include "gsi.h"
 #include "hip.h"
 #include "hpt.h"
 #include "idt.h"
 #include "keyb.h"
-
-char const *version = "NOVA Microhypervisor 0.5 (Eden Estuary)";
 
 extern "C" INIT
 mword kern_ptab_setup()
@@ -50,26 +52,24 @@ mword kern_ptab_setup()
 extern "C" INIT REGPARM (1)
 void init (mword mbi)
 {
-    for (void (**func)() = &CTORS_E; func != &CTORS_G; (*--func)()) ;
-
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
 
+    for (void (**func)() = &CTORS_E; func != &CTORS_G; (*--func)()) ;
+
     Hip::build (mbi);
 
-    // Setup consoles
-    serial.init();
-    screen.init();
+    for (void (**func)() = &CTORS_G; func != &CTORS_C; (*--func)()) ;
 
      // Now we're ready to talk to the world
-    printf ("\f%s: %s %s [%s]\n\n", version, __DATE__, __TIME__, COMPILER_STRING);
+    Console::print ("\fNOVA Microhypervisor v%u (%s): %s %s [%s]\n", CFG_VER, ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Idt::build();
     Gsi::setup();
     Acpi::setup();
 
-    screen.setup();
+    Console_vga::con.setup();
 
     Keyb::init();
 }

@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,8 +20,13 @@
 
 #include "memory.h"
 
+#ifdef __i386__
 OUTPUT_FORMAT("elf32-i386")
 OUTPUT_ARCH("i386")
+#else
+OUTPUT_FORMAT("elf64-x86-64")
+OUTPUT_ARCH("i386:x86-64")
+#endif
 ENTRY(__start_bsp)
 
 PHDRS
@@ -64,6 +71,8 @@ SECTIONS
     {
         PROVIDE (CTORS_L = .);
         KEEP (*(.ctors.00001));
+        PROVIDE (CTORS_C = .);
+        KEEP (*(.ctors.00002));
         PROVIDE (CTORS_G = .);
         KEEP (*(.ctors))
         KEEP (*(SORT(.ctors.*)))
@@ -86,7 +95,17 @@ SECTIONS
         PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = . - OFFSET); . += 4K;
         PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
 
-        PROVIDE (PDBR  = . - OFFSET); . += 4K;
+        PROVIDE (PDBR  = . - OFFSET);
+#ifdef __i386__
+        PROVIDE (LVL2L = . - OFFSET);
+        PROVIDE (LVL2H = . - OFFSET); . += 4K;
+#else
+        PROVIDE (LVL4  = . - OFFSET); . += 4K;
+        PROVIDE (LVL3L = . - OFFSET); . += 4K;
+        PROVIDE (LVL3H = . - OFFSET); . += 4K;
+        PROVIDE (LVL2L = . - OFFSET); . += 4K;
+        PROVIDE (LVL2H = . - OFFSET); . += 4K;
+#endif
         _mempool_f = .;
 
         . += 16M;

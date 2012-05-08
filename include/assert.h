@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,13 +20,12 @@
 
 #pragma once
 
-#include "compiler.h"
-#include "stdio.h"
+#include "console.h"
 
 #ifdef DEBUG
-#define assert(X)   do {                                                                            \
-                        if (EXPECT_FALSE (!(X)))                                                    \
-                            panic ("Assertion \"%s\" failed at %s:%d\n", #X, __FILE__, __LINE__);   \
+#define assert(X)   do {                                                                                    \
+                        if (EXPECT_FALSE (!(X)))                                                            \
+                            Console::panic ("Assertion \"%s\" failed at %s:%d", #X, __FILE__, __LINE__);    \
                     } while (0)
 #else
 #define assert(X)   do { (void) sizeof (X); } while (0)

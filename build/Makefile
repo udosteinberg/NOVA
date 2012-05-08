@@ -4,6 +4,8 @@
 # Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
 # Economic rights: Technische Universitaet Dresden (Germany)
 #
+# Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+#
 # This file is part of the NOVA microhypervisor.
 #
 # NOVA is free software: you can redistribute it and/or modify it
@@ -16,6 +18,7 @@
 # GNU General Public License version 2 for more details.
 #
 
+ARCH		?= x86_32
 CC		:= gcc
 ECHO		:= echo
 INSTALL		:= install
@@ -26,10 +29,10 @@ SIZE		:= size
 SRC_DIR		:= ../src
 INC_DIR		:= ../include
 INS_DIR		?= /boot/tftp/nova
-TARGET		:= hypervisor
+TARGET		:= hypervisor-$(ARCH)
 
 SRC		:= hypervisor.ld $(sort $(wildcard $(SRC_DIR)/*.S)) $(sort $(wildcard $(SRC_DIR)/*.cpp))
-OBJ		:= $(notdir $(patsubst %.ld,%.o, $(patsubst %.S,%.o, $(patsubst %.cpp,%.o, $(SRC)))))
+OBJ		:= $(notdir $(patsubst %.ld,%-$(ARCH).o, $(patsubst %.S,%-$(ARCH).o, $(patsubst %.cpp,%-$(ARCH).o, $(SRC)))))
 DEP		:= $(patsubst %.o,%.d, $(OBJ))
 
 # Messages
@@ -48,7 +51,13 @@ PFLAGS		:= $(addprefix -D, $(DEFINES)) $(addprefix -I, $(INC_DIR))
 # Optimization options
 DFLAGS		:= -MP -MMD -pipe
 OFLAGS		:= -Os
+ifeq ($(ARCH),x86_32)
 AFLAGS		:= -m32 -march=i686 -mpreferred-stack-boundary=2 -mregparm=3
+else ifeq ($(ARCH),x86_64)
+AFLAGS		:= -m64 -march=core2 -mpreferred-stack-boundary=4 -mcmodel=kernel -mno-red-zone
+else
+$(error $(ARCH) is not a valid architecture)
+endif
 
 # Language options
 FFLAGS		:= -fdata-sections -ffunction-sections -fomit-frame-pointer -freg-struct-return -freorder-blocks -funit-at-a-time
@@ -75,15 +84,15 @@ CFLAGS		:= $(PFLAGS) $(DFLAGS) $(AFLAGS) $(OFLAGS) $(FFLAGS) $(WFLAGS)
 LFLAGS		:= --gc-sections --warn-common -static -n -T
 
 # Rules
-%.o:		%.ld $(MAKEFILE_LIST)
+%-$(ARCH).o:	%.ld $(MAKEFILE_LIST)
 		$(call message,PRE,$@)
-		$(CC) $(SFLAGS) -xc -E -P $< -o $@
+		$(CC) $(SFLAGS) -xc -E -P -MT $@ $< -o $@
 
-%.o:		%.S $(MAKEFILE_LIST)
+%-$(ARCH).o:	%.S $(MAKEFILE_LIST)
 		$(call message,ASM,$@)
 		$(CC) $(SFLAGS) -c $< -o $@
 
-%.o:		%.cpp $(MAKEFILE_LIST)
+%-$(ARCH).o:	%.cpp $(MAKEFILE_LIST)
 		$(call message,CMP,$@)
 		$(CC) $(CFLAGS) -c $< -o $@
 
