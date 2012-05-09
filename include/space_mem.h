@@ -75,16 +75,4 @@ class Space_mem : public Space
         static void shootdown();
 
         void init (unsigned);
-
-        ALWAYS_INLINE
-        inline bool sync_mst (mword hla)
-        {
-            return loc[Cpu::id].sync_from (hpt, hla);
-        }
-
-        ALWAYS_INLINE
-        inline bool sync_glb (mword hla)
-        {
-            return loc[Cpu::id].sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), hla);
-        }
 };

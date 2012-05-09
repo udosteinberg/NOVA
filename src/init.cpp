@@ -34,17 +34,17 @@ mword kern_ptab_setup()
     Hptp hpt;
 
     // Allocate and map cpu page
-    hpt.update (CPULC_ADDR, 0,
+    hpt.update (CPU_LOCAL_DATA, 0,
                 Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map kernel stack
-    hpt.update (KSTCK_ADDR, 0,
+    hpt.update (CPU_LOCAL_STCK, 0,
                 Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
-    hpt.sync_master_range (LINK_ADDR, LOCAL_SADDR);
+    hpt.sync_master_range (LINK_ADDR, CPU_LOCAL);
 
     return hpt.addr();
 }

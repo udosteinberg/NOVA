@@ -174,8 +174,8 @@ void Cpu::init()
 
     Paddr phys;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
-    Pd::kern.Space_mem::loc[id].lookup (CPULC_ADDR, phys);
-    Pd::kern.Space_mem::insert (CPUGL_ADDR + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
+    Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys);
+    Pd::kern.Space_mem::insert (HV_GLOBAL_CPUS + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))
         setup_thermal();

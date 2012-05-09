@@ -62,7 +62,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, p
         ALWAYS_INLINE
         static inline Pd *remote (unsigned c)
         {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
+            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
         }
 
         ALWAYS_INLINE

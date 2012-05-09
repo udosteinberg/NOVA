@@ -32,7 +32,7 @@ class Space_io : public Space
         ALWAYS_INLINE
         static inline mword idx_to_virt (mword idx)
         {
-            return IOBMP_SADDR + (idx / 8 / sizeof (mword)) * sizeof (mword);
+            return SPC_LOCAL_IOP + (idx / 8 / sizeof (mword)) * sizeof (mword);
         }
 
         ALWAYS_INLINE

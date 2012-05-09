@@ -24,13 +24,13 @@
 #include "cpu.h"
 #include "memory.h"
 
-#define trace(T,format,...)                                 \
-do {                                                        \
-    register mword __esp asm ("esp");                       \
-    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))           \
-        Console::print ("[%2ld] " format,                   \
-               ((__esp - 1) & ~PAGE_MASK) == KSTCK_ADDR ?   \
-                Cpu::id : ~0UL, ## __VA_ARGS__);            \
+#define trace(T,format,...)                                     \
+do {                                                            \
+    register mword __esp asm ("esp");                           \
+    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))               \
+        Console::print ("[%2ld] " format,                       \
+               ((__esp - 1) & ~PAGE_MASK) == CPU_LOCAL_STCK ?   \
+                Cpu::id : ~0UL, ## __VA_ARGS__);                \
 } while (0)
 
 /*

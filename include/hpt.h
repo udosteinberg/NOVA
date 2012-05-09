@@ -88,9 +88,8 @@ class Hpt : public Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>
             return EXPECT_TRUE ((e->val & bits) == bits) || User::cmp_swap (&val, e->val, e->val | bits) == ~0UL;
         }
 
-        bool sync_from (Hpt, mword);
+        bool sync_from (Hpt, mword, mword);
 
-        size_t sync_master (mword);
         void sync_master_range (mword, mword);
 
         Paddr replace (mword, mword);

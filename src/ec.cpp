@@ -207,7 +207,7 @@ void Ec::ret_user_vmresume()
                   "vmlaunch;"
                   "pusha;"
                   "mov %1, %%esp;"
-                  : : "m" (current->regs), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 #endif
 
     trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
@@ -244,7 +244,7 @@ void Ec::ret_user_vmrun()
                   "cli;"
                   "stgi;"
                   "jmp svm_handler;"
-                  : : "m" (current->regs), "m" (Vmcb::root), "i" (KSTCK_ADDR + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "m" (Vmcb::root), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 #endif
 
     UNREACHED;
@@ -275,7 +275,7 @@ void Ec::root_invoke()
     unsigned count = e->ph_count;
     current->regs.set_pt (Cpu::id);
     current->regs.set_ip (e->entry);
-    current->regs.set_sp (LINK_ADDR - PAGE_SIZE);
+    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
 
     PHDR *p = static_cast<PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
@@ -300,7 +300,7 @@ void Ec::root_invoke()
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (LINK_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);

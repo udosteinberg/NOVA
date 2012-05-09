@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -17,11 +19,14 @@
  */
 
 #include "assert.h"
+#include "bits.h"
 #include "hpt.h"
 
-bool Hpt::sync_from (Hpt src, mword hla)
+bool Hpt::sync_from (Hpt src, mword v, mword o)
 {
-    Hpt *s = static_cast<Hpt *>(src.walk (hla, max() - 1, true)), *d = static_cast<Hpt *>(walk (hla, max() - 1));
+    mword l = (bit_scan_reverse (v ^ o) - PAGE_BITS) / bpl();
+
+    Hpt *s = static_cast<Hpt *>(src.walk (v, l, true)), *d = static_cast<Hpt *>(walk (v, l));
 
     assert (s);
     assert (d);
@@ -34,43 +39,10 @@ bool Hpt::sync_from (Hpt src, mword hla)
     return true;
 }
 
-size_t Hpt::sync_master (mword virt)
+void Hpt::sync_master_range (mword s, mword e)
 {
-    unsigned lev = max();
-    Hpt *pte, *mst;
-
-    for (pte = static_cast<Hpt *>(Buddy::phys_to_ptr (addr())),
-         mst = static_cast<Hpt *>(Buddy::phys_to_ptr (reinterpret_cast<mword>(&PDBR)));;
-         pte = static_cast<Hpt *>(Buddy::phys_to_ptr (pte->addr())),
-         mst = static_cast<Hpt *>(Buddy::phys_to_ptr (mst->addr()))) {
-
-        mword shift = --lev * bpl() + 12;
-        mword slot = virt >> shift & ((1UL << bpl()) - 1);
-        size_t size = 1UL << shift;
-
-        mst += slot;
-        pte += slot;
-
-        if (mst->present()) {
-
-            if (slot == (LOCAL_SADDR >> shift & ((1UL << bpl()) - 1))) {
-                assert (pte->present());
-                continue;
-            }
-
-            *pte = *mst;
-        }
-
-        return size;
-    }
-}
-
-void Hpt::sync_master_range (mword s_addr, mword e_addr)
-{
-    while (s_addr < e_addr) {
-        size_t size = sync_master (s_addr);
-        s_addr = (s_addr & ~(size - 1)) + size;
-    }
+    for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
+        sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), s, CPU_LOCAL);
 }
 
 Paddr Hpt::replace (mword v, mword p)
@@ -93,13 +65,13 @@ void *Hpt::remap (Paddr phys)
     phys &= ~offset;
 
     Paddr old;
-    if (hpt.lookup (REMAP_SADDR, old)) {
-        hpt.update (REMAP_SADDR,        bpl(), 0, 0, true); flush (REMAP_SADDR);
-        hpt.update (REMAP_SADDR + size, bpl(), 0, 0, true); flush (REMAP_SADDR + size);
+    if (hpt.lookup (SPC_LOCAL_REMAP, old)) {
+        hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, true); flush (SPC_LOCAL_REMAP);
+        hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, true); flush (SPC_LOCAL_REMAP + size);
     }
 
-    hpt.update (REMAP_SADDR,        bpl(), phys,        HPT_W | HPT_P);
-    hpt.update (REMAP_SADDR + size, bpl(), phys + size, HPT_W | HPT_P);
+    hpt.update (SPC_LOCAL_REMAP,        bpl(), phys,        HPT_W | HPT_P);
+    hpt.update (SPC_LOCAL_REMAP + size, bpl(), phys + size, HPT_W | HPT_P);
 
-    return reinterpret_cast<void *>(REMAP_SADDR + offset);
+    return reinterpret_cast<void *>(SPC_LOCAL_REMAP + offset);
 }

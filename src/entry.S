@@ -48,10 +48,10 @@ handlers:
                         SAVE_SEG
                         SAVE_GPR
                         mov     %REG(sp), %REG(bx)
-                        cmp     $KSTCK_ADDR, %REG(sp)
+                        cmp     $CPU_LOCAL_STCK, %REG(sp)
                         jae     1f
                         cld
-                        mov     $KSTCK_ADDR + PAGE_SIZE, %REG(sp)
+                        mov     $CPU_LOCAL_STCK + PAGE_SIZE, %REG(sp)
                         mov     $SEL_USER_DATA, %REG(ax)
                         mov     %REG(ax), %ds
                         mov     %REG(ax), %es
@@ -226,7 +226,7 @@ entry_sysenter_db:      mov     12(%esp), %esp
 entry_sysenter:         LOAD_KSP
                         lea     -11*SIZE(%REG(sp)), %REG(sp)
                         SAVE_GPR
-                        mov     $(KSTCK_ADDR + PAGE_SIZE), %REG(sp)
+                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
                         and     $0xf, %ARG_1
                         jmp     *syscall(,%ARG_1,SIZE)
 
@@ -238,5 +238,5 @@ entry_sysenter:         LOAD_KSP
 entry_vmx:              SAVE_GPR
                         mov     %cr2, %REG(ax)
                         mov     %REG(ax), OFS_CR2 (%REG(sp))
-                        mov     $(KSTCK_ADDR + PAGE_SIZE), %REG(sp)
+                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
                         jmp     vmx_handler

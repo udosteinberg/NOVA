@@ -53,14 +53,14 @@ class Console_vga : public Console
         ALWAYS_INLINE
         inline void clear_all()
         {
-            memset (reinterpret_cast<void *>(VGACN_ADDR), 0, 160 * num);
+            memset (reinterpret_cast<void *>(HV_GLOBAL_FBUF), 0, 160 * num);
         }
 
         ALWAYS_INLINE
         inline void clear_row (unsigned r)
         {
-            memcpy (reinterpret_cast<void *>(VGACN_ADDR), reinterpret_cast<void *>(VGACN_ADDR + 160), 160 * r);
-            memset (reinterpret_cast<void *>(VGACN_ADDR + 160 * r), 0, 160);
+            memcpy (reinterpret_cast<void *>(HV_GLOBAL_FBUF), reinterpret_cast<void *>(HV_GLOBAL_FBUF + 160), 160 * r);
+            memset (reinterpret_cast<void *>(HV_GLOBAL_FBUF + 160 * r), 0, 160);
         }
 
         void putc (int c);
@@ -98,7 +98,7 @@ class Console_vga : public Console
         ALWAYS_INLINE
         inline void put (unsigned long r, unsigned long c, Color color, int x)
         {
-            *reinterpret_cast<unsigned short volatile *>(VGACN_ADDR + r * 160 + c * 2) = static_cast<unsigned short>(color << 8 | x);
+            *reinterpret_cast<unsigned short volatile *>(HV_GLOBAL_FBUF + r * 160 + c * 2) = static_cast<unsigned short>(color << 8 | x);
         }
 
         ALWAYS_INLINE

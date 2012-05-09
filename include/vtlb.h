@@ -27,13 +27,6 @@ class Exc_regs;
 class Vtlb : public Pte<Vtlb, mword, 2, 10, false>
 {
     private:
-        enum
-        {
-            ERR_P   = 1UL << 0,
-            ERR_W   = 1UL << 1,
-            ERR_U   = 1UL << 2,
-        };
-
         ALWAYS_INLINE
         inline bool global() const { return val & TLB_G; }
 

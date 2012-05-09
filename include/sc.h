@@ -70,7 +70,7 @@ class Sc : public Kobject
         ALWAYS_INLINE
         static inline Rq *remote (unsigned long c)
         {
-            return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPULC_ADDR + CPUGL_ADDR + c * PAGE_SIZE);
+            return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
         }
 
         void remote_enqueue();

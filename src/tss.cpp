@@ -30,7 +30,7 @@ void Tss::build()
     extern char tss_handler;
     dbf.cr3     = Hpt::current();
     dbf.eip     = reinterpret_cast<mword>(&tss_handler);
-    dbf.esp     = KSTCK_ADDR + PAGE_SIZE;
+    dbf.esp     = CPU_LOCAL_STCK + PAGE_SIZE;
     dbf.eflags  = 2;
     dbf.cs      = SEL_KERN_CODE;
     dbf.ds      = SEL_KERN_DATA;
@@ -39,6 +39,6 @@ void Tss::build()
     run.ss0     = SEL_KERN_DATA;
 #endif
 
-    run.sp0     = KSTCK_ADDR + PAGE_SIZE;
-    run.iobm    = static_cast<uint16>(IOBMP_SADDR - reinterpret_cast<mword>(&run));
+    run.sp0     = CPU_LOCAL_STCK + PAGE_SIZE;
+    run.iobm    = static_cast<uint16>(SPC_LOCAL_IOP - reinterpret_cast<mword>(&run));
 }

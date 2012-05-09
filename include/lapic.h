@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -57,13 +59,13 @@ class Lapic : public Apic
         ALWAYS_INLINE
         static inline uint32 read (Register reg)
         {
-            return *reinterpret_cast<uint32 volatile *>(LAPIC_ADDR + (reg << 4));
+            return *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (reg << 4));
         }
 
         ALWAYS_INLINE
         static inline void write (Register reg, uint32 val)
         {
-            *reinterpret_cast<uint32 volatile *>(LAPIC_ADDR + (reg << 4)) = val;
+            *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (reg << 4)) = val;
         }
 
         ALWAYS_INLINE

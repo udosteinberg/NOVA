@@ -31,7 +31,7 @@ class Space_obj : public Space
         ALWAYS_INLINE
         static inline mword idx_to_virt (unsigned long idx)
         {
-            return OBJSP_SADDR + (idx % caps) * sizeof (Capability);
+            return SPC_LOCAL_OBJ + (idx % caps) * sizeof (Capability);
         }
 
         ALWAYS_INLINE
@@ -40,7 +40,7 @@ class Space_obj : public Space
         void update (mword, Capability);
 
     public:
-        static unsigned const caps = (OBJSP_EADDR - OBJSP_SADDR) / sizeof (Capability);
+        static unsigned const caps = (END_SPACE_LIM - SPC_LOCAL_OBJ) / sizeof (Capability);
 
         ALWAYS_INLINE
         static inline Capability lookup (unsigned long idx)

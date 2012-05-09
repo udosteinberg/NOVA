@@ -79,7 +79,7 @@ class Utcb_data
                 uint32          ctrl[2];
                 uint64          tsc;
                 mword           cr0, cr2, cr3, cr4;
-#ifdef __x86_64
+#ifdef __x86_64__
                 mword           cr8, reserved;
 #endif
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;

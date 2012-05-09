@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -26,7 +28,7 @@ Space_mem *Space_io::space_mem()
 Paddr Space_io::walk (mword idx)
 {
     if (!bmp)
-        space_mem()->insert (IOBMP_SADDR, 1,
+        space_mem()->insert (SPC_LOCAL_IOP, 1,
                              Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P,
                              bmp = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1)));
 
@@ -53,8 +55,8 @@ void Space_io::update (Mdb *mdb, mword r)
 
 void Space_io::page_fault (mword addr, mword error)
 {
-    assert (!(error & 2));
+    assert (!(error & Hpt::ERR_W));
 
-    if (!Pd::current->Space_mem::sync_mst (addr))
+    if (!Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, CPU_LOCAL))
         Pd::current->Space_mem::replace (addr, reinterpret_cast<Paddr>(&FRAME_1) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
 }

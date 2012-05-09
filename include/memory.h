@@ -26,40 +26,28 @@
 
 #define LOAD_ADDR       0x200000
 
-#ifdef __i386__
-
+#if     defined(__i386__)
+#define USER_ADDR       0xc0000000
 #define LINK_ADDR       0xc0000000
-#define CPUGL_ADDR      0xcc000000
-#define HWDEV_EADDR     0xcfbff000
-#define VGACN_ADDR      0xcfbff000
-
-#define LOCAL_SADDR     0xcfc00000
-#define LAPIC_ADDR      0xcfffc000
-#define KSTCK_ADDR      0xcfffe000
-#define CPULC_ADDR      0xcffff000
-
-#define IOBMP_SADDR     0xd0000000
-#define IOBMP_EADDR     (IOBMP_SADDR + PAGE_SIZE * 2)
-#define REMAP_SADDR     0xdf000000
-#define OBJSP_SADDR     0xe0000000
-#define OBJSP_EADDR     (OBJSP_SADDR + 0x20000000)
-
-#else
-
-#define LINK_ADDR       0xffffffffc0000000
-#define CPUGL_ADDR      0xffffffffcc000000
-#define HWDEV_EADDR     0xffffffffcfbff000
-#define VGACN_ADDR      0xffffffffcfbff000
-
-#define LOCAL_SADDR     0xffffffffcfc00000
-#define LAPIC_ADDR      0xffffffffcfffc000
-#define KSTCK_ADDR      0xffffffffcfffe000
-#define CPULC_ADDR      0xffffffffcffff000
-
-#define IOBMP_SADDR     0xffffff0000000000
-#define IOBMP_EADDR     (IOBMP_SADDR + PAGE_SIZE * 2)
-#define REMAP_SADDR     0xffffff1000000000
-#define OBJSP_SADDR     0xffffff2000000000
-#define OBJSP_EADDR     (OBJSP_SADDR + 0x20000000)
-
+#define CPU_LOCAL       0xcfc00000
+#define SPC_LOCAL       0xd0000000
+#elif   defined(__x86_64__)
+#define USER_ADDR       0x0000800000000000
+#define LINK_ADDR       0xffffffff81000000
+#define CPU_LOCAL       0xffffffffbfe00000
+#define SPC_LOCAL       0xffffffffc0000000
 #endif
+
+#define HV_GLOBAL_CPUS  (CPU_LOCAL - 0x1000000)
+#define HV_GLOBAL_FBUF  (CPU_LOCAL - PAGE_SIZE * 1)
+
+#define CPU_LOCAL_STCK  (SPC_LOCAL - PAGE_SIZE * 3)
+#define CPU_LOCAL_APIC  (SPC_LOCAL - PAGE_SIZE * 2)
+#define CPU_LOCAL_DATA  (SPC_LOCAL - PAGE_SIZE * 1)
+
+#define SPC_LOCAL_IOP   (SPC_LOCAL)
+#define SPC_LOCAL_IOP_E (SPC_LOCAL_IOP + PAGE_SIZE * 2)
+#define SPC_LOCAL_REMAP (SPC_LOCAL_OBJ - 0x1000000)
+#define SPC_LOCAL_OBJ   (END_SPACE_LIM - 0x20000000)
+
+#define END_SPACE_LIM   (~0UL + 1)

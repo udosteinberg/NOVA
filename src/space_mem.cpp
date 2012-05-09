@@ -33,11 +33,8 @@ unsigned Space_mem::did_ctr;
 void Space_mem::init (unsigned cpu)
 {
     if (cpus.set (cpu)) {
-
-        loc[cpu].sync_from (Pd::kern.loc[cpu], LOCAL_SADDR);
-
-        // Sync kernel code and data
-        loc[cpu].sync_master_range (LINK_ADDR, LOCAL_SADDR);
+        loc[cpu].sync_from (Pd::kern.loc[cpu], CPU_LOCAL, SPC_LOCAL);
+        loc[cpu].sync_master_range (LINK_ADDR, CPU_LOCAL);
     }
 }
 
@@ -73,7 +70,7 @@ void Space_mem::update (Mdb *mdb, mword r)
             gtlb.merge (cpus);
     }
 
-    if (mdb->node_base + (1UL << o) > LINK_ADDR >> PAGE_BITS)
+    if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
         return;
 
     bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r);

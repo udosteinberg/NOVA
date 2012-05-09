@@ -162,5 +162,5 @@ __start_all:            INIT_STATE
 .text
 
 1:                      mov     %REG(ax), %cr3
-                        mov     $(KSTCK_ADDR + PAGE_SIZE), %REG(sp)
+                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
                         jmp     bootstrap

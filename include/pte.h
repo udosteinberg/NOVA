@@ -76,6 +76,13 @@ class Pte
         static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
 
     public:
+        enum
+        {
+            ERR_P   = 1UL << 0,
+            ERR_W   = 1UL << 1,
+            ERR_U   = 1UL << 2,
+        };
+
         ALWAYS_INLINE
         static inline unsigned bpl() { return B; }
 
