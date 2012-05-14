@@ -269,7 +269,7 @@ void Ec::idle()
 void Ec::root_invoke()
 {
     Eh *e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_data != 1 || e->type != 2)
+    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_class != ELF_CLASS || e->ei_data != 1 || e->type != 2 || e->machine != ELF_MACHINE)
         die ("No ELF");
 
     unsigned count = e->ph_count;
@@ -277,15 +277,15 @@ void Ec::root_invoke()
     current->regs.set_ip (e->entry);
     current->regs.set_sp (USER_ADDR - PAGE_SIZE);
 
-    PHDR *p = static_cast<PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
+    ELF_PHDR *p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
     for (unsigned i = 0; i < count; i++, p++) {
 
-        if (p->type == Ph::PT_LOAD) {
+        if (p->type == 1) {
 
-            unsigned attr = !!(p->flags & Ph::PF_R) << 0 |
-                            !!(p->flags & Ph::PF_W) << 1 |
-                            !!(p->flags & Ph::PF_X) << 2;
+            unsigned attr = !!(p->flags & 0x4) << 0 |   // R
+                            !!(p->flags & 0x2) << 1 |   // W
+                            !!(p->flags & 0x1) << 2;    // X
 
             if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
                 die ("Bad ELF");

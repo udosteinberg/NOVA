@@ -20,8 +20,10 @@
 #ifdef __i386__
 #define ARCH            "x86_32"
 #define WORD            .long
-#define PHDR            Ph32
 #define SIZE            4
+#define ELF_PHDR        Ph32
+#define ELF_CLASS       1
+#define ELF_MACHINE     3
 #define PTE_BPL         10
 #define PTE_LEV         2
 #define REG(X)          e##X
@@ -61,8 +63,10 @@
 #ifdef __x86_64__
 #define ARCH            "x86_64"
 #define WORD            .quad
-#define PHDR            Ph64
 #define SIZE            8
+#define ELF_PHDR        Ph64
+#define ELF_CLASS       2
+#define ELF_MACHINE     62
 #define PTE_BPL         9
 #define PTE_LEV         4
 #define REG(X)          r##X
