@@ -60,53 +60,43 @@ void Lapic::init()
 
     write (LAPIC_TPR, 0x10);
     write (LAPIC_TMR_DCR, 0xb);
-    write (LAPIC_TMR_ICR, ~0U);
 
     Cpu::id = find_cpu (id());
 
-    if ((Cpu::bsp = apic_base & 0x100))
-        calibrate();
+    if ((Cpu::bsp = apic_base & 0x100)) {
+
+        send_ipi (0, 0, DLV_INIT, DSH_EXC_SELF);
+
+        write (LAPIC_TMR_ICR, ~0U);
+
+        uint32 v1 = read (LAPIC_TMR_CCR);
+        uint32 t1 = static_cast<uint32>(rdtsc());
+        Acpi::delay (10);
+        uint32 v2 = read (LAPIC_TMR_CCR);
+        uint32 t2 = static_cast<uint32>(rdtsc());
+
+        freq_tsc = (t2 - t1) / 10;
+        freq_bus = (v1 - v2) / 10;
+
+        trace (TRACE_APIC, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
+
+        send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
+        Acpi::delay (1);
+        send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
+    }
 
     write (LAPIC_TMR_ICR, 0);
 
     trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x", apic_base & ~PAGE_MASK, id(), version(), lvt_max());
 }
 
-void Lapic::calibrate()
-{
-    static unsigned const ms = 1;
-
-    uint32 v1 = read (LAPIC_TMR_CCR);
-    uint32 t1 = static_cast<uint32>(rdtsc());
-    Acpi::delay (ms);
-    uint32 v2 = read (LAPIC_TMR_CCR);
-    uint32 t2 = static_cast<uint32>(rdtsc());
-
-    freq_tsc = (t2 - t1) / ms;
-    freq_bus = (v1 - v2) / ms;
-
-    trace (TRACE_CPU, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
-}
-
-void Lapic::send_ipi (unsigned cpu, Delivery_mode dlv, unsigned vector)
+void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
 {
     while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
         pause();
 
     write (LAPIC_ICR_HI, apic_id[cpu] << 24);
-    write (LAPIC_ICR_LO, 1U << 14 | dlv | vector);
-}
-
-void Lapic::wake_ap()
-{
-    for (unsigned i = 0; i < Cpu::online; i++)
-        if (id() != apic_id[i]) {
-            send_ipi (i, DLV_INIT, 0);
-            Acpi::delay (10);
-            send_ipi (i, DLV_SIPI, 1);
-            Acpi::delay (1);
-            send_ipi (i, DLV_SIPI, 1);
-        }
+    write (LAPIC_ICR_LO, dsh | 1U << 14 | dlv | vector);
 }
 
 void Lapic::therm_handler() {}

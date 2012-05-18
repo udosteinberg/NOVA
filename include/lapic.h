@@ -138,10 +138,8 @@ class Lapic : public Apic
         }
 
         static void init();
-        static void calibrate();
-        static void wake_ap();
 
-        static void send_ipi (unsigned cpu, Delivery_mode dlv, unsigned vector);
+        static void send_ipi (unsigned, unsigned, Delivery_mode = DLV_FIXED, Shorthand = DSH_NONE);
 
         REGPARM (1)
         static void lvt_vector (unsigned) asm ("lvt_vector");

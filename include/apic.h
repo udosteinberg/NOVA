@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -24,9 +26,6 @@ class Apic
         enum Delivery_mode
         {
             DLV_FIXED       = 0U << 8,
-            DLV_LOWEST_PRIO = 1U << 8,
-            DLV_SMI         = 2U << 8,
-            DLV_REMOTE_READ = 3U << 8,
             DLV_NMI         = 4U << 8,
             DLV_INIT        = 5U << 8,
             DLV_SIPI        = 6U << 8,
@@ -37,5 +36,11 @@ class Apic
         {
             UNMASKED        = 0U << 16,
             MASKED          = 1U << 16      // 0x10000
+        };
+
+        enum Shorthand
+        {
+            DSH_NONE        = 0U << 18,
+            DSH_EXC_SELF    = 3U << 18,
         };
 };

@@ -190,8 +190,5 @@ void Cpu::init()
 
     Hip::add_cpu();
 
-    if (bsp)
-        Lapic::wake_ap();
-
     boot_lock++;
 }
