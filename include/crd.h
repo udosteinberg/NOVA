@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -34,8 +36,6 @@ class Crd
             OBJ = 3,
         };
 
-        static unsigned const whole = 0x1f;
-
         ALWAYS_INLINE
         inline explicit Crd() : val (0) {}
 
@@ -43,7 +43,7 @@ class Crd
         inline explicit Crd (mword v) : val (v) {}
 
         ALWAYS_INLINE
-        inline explicit Crd (Type t, mword b, mword o, mword a) : val (b << 12 | o << 7 | a << 2 | t) {}
+        inline explicit Crd (Type t, mword b = 0, mword o = 0x1f, mword a = 0x1f) : val (b << 12 | o << 7 | a << 2 | t) {}
 
         ALWAYS_INLINE
         inline Type type() const { return static_cast<Type>(val & 0x3); }

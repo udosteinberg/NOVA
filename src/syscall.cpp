@@ -64,7 +64,7 @@ void Ec::delegate()
 
     dst->pd->xfer_items (src->pd,
                          user ? dst->utcb->xlt : Crd (0),
-                         user ? dst->utcb->del : Crd (Crd::MEM, 0, Crd::whole, Crd::whole),
+                         user ? dst->utcb->del : Crd (Crd::MEM, dst->regs.cr2 >> PAGE_BITS),
                          src->utcb->xfer(),
                          user ? dst->utcb->xfer() : nullptr,
                          src->utcb->ti());
@@ -216,7 +216,7 @@ void Ec::sys_create_pd()
     }
 
     Crd crd = r->crd();
-    pd->del_crd (Pd::current, Crd (Crd::OBJ, 0, Crd::whole, Crd::whole), crd);
+    pd->del_crd (Pd::current, Crd (Crd::OBJ), crd);
 
     sys_finish<Sys_regs::SUCCESS>();
 }
