@@ -36,8 +36,8 @@ Console_serial::Console_serial()
         return;
 
     out (LCR, 0x80);
-    out (DLR_LO, 1);
-    out (DLR_HI, 0);
+    out (DLL, (freq / 115200) & 0xff);
+    out (DLM, (freq / 115200) >> 8);
     out (LCR, 3);
     out (IER, 0);
     out (FCR, 7);

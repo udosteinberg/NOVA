@@ -26,29 +26,27 @@
 class Console_serial : public Console
 {
     private:
-        enum Reg
+        enum Register
         {
-            RHR     = 0,    // Receive Holding Register     (read)
-            THR     = 0,    // Transmit Holding Register    (write)
-            IER     = 1,    // Interrupt Enable Register    (write)
-            ISR     = 2,    // Interrupt Status Register    (read)
-            FCR     = 2,    // FIFO Control Register        (write)
-            LCR     = 3,    // Line Control Register        (write)
-            MCR     = 4,    // Modem Control Register       (write)
-            LSR     = 5,    // Line Status Register         (read)
-            MSR     = 6,    // Modem Status Register        (read)
-            SPR     = 7,    // Scratchpad Register          (read/write)
-            DLR_LO  = 0,
-            DLR_HI  = 1,
+            THR = 0,                    // Transmit Holding Register
+            IER = 1,                    // Interrupt Enable Register
+            FCR = 2,                    // FIFO Control Register
+            LCR = 3,                    // Line Control Register
+            MCR = 4,                    // Modem Control Register
+            LSR = 5,                    // Line Status Register
+            DLL = 0,                    // Divisor Latch (LSB)
+            DLM = 1,                    // Divisor Latch (MSB)
         };
+
+        unsigned const freq = 115200;   // Internal UART clock frequency
 
         unsigned base;
 
         ALWAYS_INLINE
-        inline unsigned in (Reg reg) { return Io::in<uint8>(base + reg); }
+        inline unsigned in (Register r) { return Io::in<uint8>(base + r); }
 
         ALWAYS_INLINE
-        inline void out (Reg reg, unsigned val) { Io::out (base + reg, static_cast<uint8>(val)); }
+        inline void out (Register r, unsigned v) { Io::out (base + r, static_cast<uint8>(v)); }
 
         void putc (int c);
 
