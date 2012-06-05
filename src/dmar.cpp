@@ -33,12 +33,12 @@ Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
 Dmar_irt *  Dmar::irt = new Dmar_irt;
 uint32      Dmar::gcmd = GCMD_TE;
 
-Dmar::Dmar (Paddr phys) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), next (nullptr), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
+Dmar::Dmar (Paddr p) : reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), next (nullptr), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
 {
     Dmar **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
-    Pd::kern.Space_mem::delreg (phys & ~PAGE_MASK);
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, phys & ~PAGE_MASK);
+    Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
+    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
 
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);

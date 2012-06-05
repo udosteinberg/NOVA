@@ -1,5 +1,5 @@
 /*
- * I/O Advanced Programmable Interrupt Controller (I/O APIC)
+ * I/O Advanced Programmable Interrupt Controller (IOAPIC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -24,8 +24,6 @@
 #include "lock_guard.h"
 #include "slab.h"
 
-class Dmar;
-
 class Ioapic : public Apic
 {
     private:
@@ -33,7 +31,6 @@ class Ioapic : public Apic
         unsigned const  gsi_base;
         unsigned const  id;
         Ioapic *        next;
-        Dmar *          dmar;
         uint16          rid;
         Spinlock        lock;
 
@@ -87,12 +84,11 @@ class Ioapic : public Apic
         static inline void *operator new (size_t) { return cache.alloc(); }
 
         ALWAYS_INLINE
-        static inline bool claim_dev (Dmar *d, unsigned r, unsigned i)
+        static inline bool claim_dev (unsigned r, unsigned i)
         {
             for (Ioapic *ioapic = list; ioapic; ioapic = ioapic->next)
-                if (ioapic->id == i) {
+                if (ioapic->rid == 0 && ioapic->id == i) {
                     ioapic->rid  = static_cast<uint16>(r);
-                    ioapic->dmar = d;
                     return true;
                 }
 

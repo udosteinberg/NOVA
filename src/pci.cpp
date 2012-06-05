@@ -30,39 +30,28 @@ Paddr       Pci::cfg_base;
 size_t      Pci::cfg_size;
 Pci *       Pci::list;
 
-Pci::Pci (unsigned b, unsigned d, unsigned f, unsigned l) : reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(b << 8 | d << 3 | f)), level (static_cast<uint16>(l)), next (nullptr)
+Pci::Pci (unsigned r, unsigned l) : reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l)), next (nullptr)
 {
     Pci **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, cfg_base + (rid << PAGE_BITS));
 }
 
-unsigned Pci::init (unsigned b, unsigned l)
+void Pci::init (unsigned b, unsigned l)
 {
-    unsigned m = b;
+    for (unsigned r = b << 8; r < (b + 1) << 8; r++) {
 
-    for (unsigned d = 0; d < 32; d++) {
+        if (*static_cast<uint32 *>(Hpt::remap (cfg_base + (r << PAGE_BITS))) == ~0U)
+            continue;
 
-        for (unsigned f = 0; f < 8; f++) {
+        Pci *p = new Pci (r, l);
 
-            Bdf bdf (b, d, f);
+        unsigned h = p->read<uint8>(REG_HEADTYP);
 
-            if (bdf.read<uint32>(0x0) == 0xffffffff)
-                continue;
+        if ((h & 0x7f) == 1)
+            init (p->read<uint8>(REG_BNUM_SCBN), l + 1);
 
-            new Pci (b, d, f, l);
-
-            unsigned htype = bdf.read<uint8>(0xe);
-
-            // PCI bridge
-            if ((htype & 0x7f) == 1)
-                m = max (init (bdf.read<uint8>(0x19), l + 1), m);
-
-            // Multi-function device
-            if (!f && !(htype & 0x80))
-                break;
-        }
+        if (!(r & 0x7) && !(h & 0x80))
+            r += 7;
     }
-
-    return m;
 }

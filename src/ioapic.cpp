@@ -1,5 +1,5 @@
 /*
- * I/O Advanced Programmable Interrupt Controller (I/O APIC)
+ * I/O Advanced Programmable Interrupt Controller (IOAPIC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -27,13 +27,13 @@ Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
 
 Ioapic *Ioapic::list;
 
-Ioapic::Ioapic (Paddr phys, unsigned gsi, unsigned i) : reg_base ((hwdev_addr -= PAGE_SIZE) | (phys & PAGE_MASK)), gsi_base (gsi), id (i), next (nullptr)
+Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), gsi_base (g), id (i), next (nullptr), rid (0)
 {
     Ioapic **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
 
-    Pd::kern.Space_mem::delreg (phys & ~PAGE_MASK);
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, phys & ~PAGE_MASK);
+    Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
+    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
 
     trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
-           phys, i, version(), irt_max(), prq(), gsi_base);
+           p, i, version(), irt_max(), prq(), gsi_base);
 }

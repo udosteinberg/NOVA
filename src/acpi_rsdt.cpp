@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -25,6 +27,7 @@ struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] INITDATA =
     { SIG ('A','P','I','C'),    &Acpi::madt },
     { SIG ('D','M','A','R'),    &Acpi::dmar },
     { SIG ('F','A','C','P'),    &Acpi::fadt },
+    { SIG ('H','P','E','T'),    &Acpi::hpet },
     { SIG ('M','C','F','G'),    &Acpi::mcfg },
 };
 

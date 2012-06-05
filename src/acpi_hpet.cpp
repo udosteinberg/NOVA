@@ -1,9 +1,6 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
@@ -18,17 +15,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_mcfg.h"
-#include "pci.h"
+#include "acpi_hpet.h"
+#include "hpet.h"
 
-void Acpi_table_mcfg::parse() const
+void Acpi_table_hpet::parse() const
 {
-    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
-        if (!x->seg) {
-            Pci::bus_base = x->bus_s;
-            Pci::cfg_base = static_cast<Paddr>(x->addr);
-            Pci::cfg_size = ((x->bus_e - x->bus_s + 1) << 8) * PAGE_SIZE;
-        }
-
-    Pci::init();
+    if (hpet.asid == Acpi_gas::MEMORY)
+        new Hpet (static_cast<Paddr>(hpet.addr), id);
 }

@@ -61,7 +61,7 @@ void Acpi_table_madt::parse_ioapic (Acpi_apic const *ptr)
 {
     Acpi_ioapic const *p = static_cast<Acpi_ioapic const *>(ptr);
 
-    Ioapic *ioapic = new Ioapic (p->phys, p->gsi, p->id);
+    Ioapic *ioapic = new Ioapic (p->phys, p->id, p->gsi);
 
     unsigned gsi = p->gsi;
     unsigned max = ioapic->irt_max();

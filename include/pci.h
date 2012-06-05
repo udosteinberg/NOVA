@@ -25,51 +25,16 @@
 
 class Dmar;
 
-class Bdf
-{
-    private:
-        uint32 const bdf;
-
-        ALWAYS_INLINE
-        inline void index (unsigned reg)
-        {
-            Io::out<uint32>(0xcf8, bdf | reg);
-        }
-
-    public:
-        template <typename T>
-        ALWAYS_INLINE
-        inline unsigned read (unsigned reg)
-        {
-            index (reg);
-            return Io::in<T>(0xcfc + (reg & 3));
-        }
-
-        template <typename T>
-        ALWAYS_INLINE
-        inline void write (unsigned reg, T val)
-        {
-            index (reg);
-            Io::out<T>(0xcfc + (reg & 3), val);
-        }
-
-        ALWAYS_INLINE
-        bool operator == (Bdf const &b) const { return bdf == b.bdf; }
-
-        ALWAYS_INLINE
-        inline Bdf (unsigned b, unsigned d, unsigned f) : bdf (1ul << 31 | b << 16 | d << 11 | f << 8) {}
-};
-
 class Pci
 {
     friend class Acpi_table_mcfg;
 
     private:
-        mword  const    reg_base;
-        uint16 const    rid;
-        uint16 const    level;
-        Pci *           next;
-        Dmar *          dmar;
+        mword  const        reg_base;
+        uint16 const        rid;
+        uint16 const        lev;
+        Pci *               next;
+        Dmar *              dmar;
 
         static Slab_cache   cache;
         static unsigned     bus_base;
@@ -77,19 +42,21 @@ class Pci
         static size_t       cfg_size;
         static Pci *        list;
 
-        template <typename T>
-        ALWAYS_INLINE
-        inline unsigned read (unsigned reg)
+        enum Register
         {
-            return *reinterpret_cast<T volatile *>(reg_base + reg);
-        }
+            REG_VID         = 0x0,
+            REG_DID         = 0x2,
+            REG_HEADTYP     = 0xe,
+            REG_BNUM_SCBN   = 0x19,
+        };
 
         template <typename T>
         ALWAYS_INLINE
-        inline void write (unsigned reg, T val)
-        {
-            *reinterpret_cast<T volatile *>(reg_base + reg) = val;
-        }
+        inline unsigned read (Register r) { return *reinterpret_cast<T volatile *>(reg_base + r); }
+
+        template <typename T>
+        ALWAYS_INLINE
+        inline void write (Register r, T v) { *reinterpret_cast<T volatile *>(reg_base + r) = v; }
 
         ALWAYS_INLINE
         static inline Pci *find_dev (unsigned long r)
@@ -103,7 +70,7 @@ class Pci
 
     public:
         INIT
-        Pci (unsigned, unsigned, unsigned, unsigned);
+        Pci (unsigned, unsigned);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
@@ -124,19 +91,19 @@ class Pci
             if (!pci)
                 return false;
 
-            unsigned l = pci->level;
-            do pci->dmar = d; while ((pci = pci->next) && pci->level > l);
+            unsigned l = pci->lev;
+            do pci->dmar = d; while ((pci = pci->next) && pci->lev > l);
 
             return true;
         }
 
         INIT
-        static unsigned init (unsigned, unsigned = 0);
+        static void init (unsigned = 0, unsigned = 0);
 
         ALWAYS_INLINE
-        static inline unsigned phys_to_rid (Paddr phys)
+        static inline unsigned phys_to_rid (Paddr p)
         {
-            return phys - cfg_base < cfg_size ? static_cast<unsigned>((bus_base << 8) + (phys - cfg_base) / PAGE_SIZE) : ~0U;
+            return p - cfg_base < cfg_size ? static_cast<unsigned>((bus_base << 8) + (p - cfg_base) / PAGE_SIZE) : ~0U;
         }
 
         ALWAYS_INLINE
