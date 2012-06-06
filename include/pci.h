@@ -21,11 +21,12 @@
 #pragma once
 
 #include "io.h"
+#include "list.h"
 #include "slab.h"
 
 class Dmar;
 
-class Pci
+class Pci : public List<Pci>
 {
     friend class Acpi_table_mcfg;
 
@@ -33,21 +34,21 @@ class Pci
         mword  const        reg_base;
         uint16 const        rid;
         uint16 const        lev;
-        Pci *               next;
         Dmar *              dmar;
 
-        static Slab_cache   cache;
         static unsigned     bus_base;
         static Paddr        cfg_base;
         static size_t       cfg_size;
+
         static Pci *        list;
+        static Slab_cache   cache;
 
         enum Register
         {
             REG_VID         = 0x0,
             REG_DID         = 0x2,
-            REG_HEADTYP     = 0xe,
-            REG_BNUM_SCBN   = 0x19,
+            REG_HDR         = 0xe,
+            REG_SBUSN       = 0x19,
         };
 
         template <typename T>

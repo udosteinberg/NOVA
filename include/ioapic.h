@@ -20,22 +20,21 @@
 
 #pragma once
 
-#include "apic.h"
+#include "list.h"
 #include "lock_guard.h"
 #include "slab.h"
 
-class Ioapic : public Apic
+class Ioapic : public List<Ioapic>
 {
     private:
-        mword    const  reg_base;
-        unsigned const  gsi_base;
-        unsigned const  id;
-        Ioapic *        next;
-        uint16          rid;
-        Spinlock        lock;
+        mword    const      reg_base;
+        unsigned const      gsi_base;
+        unsigned const      id;
+        uint16              rid;
+        Spinlock            lock;
 
-        static Slab_cache cache;
-        static Ioapic *list;
+        static Ioapic *     list;
+        static Slab_cache   cache;
 
         enum
         {

@@ -20,12 +20,11 @@
 
 #pragma once
 
-#include "apic.h"
 #include "compiler.h"
 #include "config.h"
 #include "memory.h"
 
-class Lapic : public Apic
+class Lapic
 {
     private:
         enum Register
@@ -54,6 +53,27 @@ class Lapic : public Apic
             LAPIC_TMR_CCR   = 0x39,
             LAPIC_TMR_DCR   = 0x3e,
             LAPIC_IPI_SELF  = 0x3f,
+        };
+
+        enum Delivery_mode
+        {
+            DLV_FIXED       = 0U << 8,
+            DLV_NMI         = 4U << 8,
+            DLV_INIT        = 5U << 8,
+            DLV_SIPI        = 6U << 8,
+            DLV_EXTINT      = 7U << 8,
+        };
+
+        enum Mask
+        {
+            UNMASKED        = 0U << 16,
+            MASKED          = 1U << 16,
+        };
+
+        enum Shorthand
+        {
+            DSH_NONE        = 0U << 18,
+            DSH_EXC_SELF    = 3U << 18,
         };
 
         ALWAYS_INLINE

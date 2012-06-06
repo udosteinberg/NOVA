@@ -17,22 +17,22 @@
 
 #pragma once
 
+#include "list.h"
 #include "slab.h"
 
-class Hpet
+class Hpet : public List<Hpet>
 {
     private:
-        Paddr    const  phys;
-        unsigned const  id;
-        Hpet *          next;
-        uint16          rid;
+        Paddr    const      phys;
+        unsigned const      id;
+        uint16              rid;
 
-        static Slab_cache cache;
-        static Hpet *list;
+        static Hpet *       list;
+        static Slab_cache   cache;
 
     public:
         INIT
-        Hpet (Paddr, unsigned);
+        Hpet (Paddr p, unsigned i) : List (list), phys (p), id (i), rid (0) {}
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

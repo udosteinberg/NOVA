@@ -1,5 +1,5 @@
 /*
- * High Precision Event Timer (HPET)
+ * List Element
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
  *
@@ -15,9 +15,20 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "hpet.h"
+#pragma once
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Hpet::cache (sizeof (Hpet), 8);
+#include "compiler.h"
 
-Hpet *Hpet::list;
+template <typename T>
+class List
+{
+    protected:
+        T *next;
+
+    public:
+        ALWAYS_INLINE
+        List (T *&list) : next (nullptr)
+        {
+            T **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = static_cast<T *>(this);
+        }
+};

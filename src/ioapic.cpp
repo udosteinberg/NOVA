@@ -27,10 +27,8 @@ Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
 
 Ioapic *Ioapic::list;
 
-Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), gsi_base (g), id (i), next (nullptr), rid (0)
+Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), gsi_base (g), id (i), rid (0)
 {
-    Ioapic **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
-
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
 

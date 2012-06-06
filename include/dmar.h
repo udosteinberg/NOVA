@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "list.h"
 #include "slab.h"
 #include "x86.h"
 
@@ -84,21 +85,21 @@ class Dmar_irt
         static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
 };
 
-class Dmar
+class Dmar : public List<Dmar>
 {
     private:
-        mword const reg_base;
-        uint64      cap;
-        uint64      ecap;
-        Dmar *      next;
-        Dmar_qi *   invq;
-        unsigned    invq_idx;
+        mword const         reg_base;
+        uint64              cap;
+        uint64              ecap;
+        Dmar_qi *           invq;
+        unsigned            invq_idx;
 
-        static Slab_cache       cache;
-        static Dmar *           list;
-        static Dmar_ctx *       ctx;
-        static Dmar_irt *       irt;
-        static uint32           gcmd;
+        static Dmar_ctx *   ctx;
+        static Dmar_irt *   irt;
+        static uint32       gcmd;
+
+        static Dmar *       list;
+        static Slab_cache   cache;
 
         static unsigned const ord = 0;
         static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Dmar_qi);

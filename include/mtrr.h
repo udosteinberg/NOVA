@@ -20,22 +20,23 @@
 
 #pragma once
 
+#include "list.h"
 #include "slab.h"
 
-class Mtrr
+class Mtrr : public List<Mtrr>
 {
     private:
         uint64 const        base;
         uint64 const        mask;
-        Mtrr *              next;
 
         static unsigned     count;
         static unsigned     dtype;
+
         static Mtrr *       list;
         static Slab_cache   cache;
 
     public:
-        explicit inline Mtrr (uint64, uint64);
+        explicit inline Mtrr (uint64 b, uint64 m) : List (list), base (b), mask (m) {}
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

@@ -30,10 +30,8 @@ Paddr       Pci::cfg_base;
 size_t      Pci::cfg_size;
 Pci *       Pci::list;
 
-Pci::Pci (unsigned r, unsigned l) : reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l)), next (nullptr)
+Pci::Pci (unsigned r, unsigned l) : List (list), reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
 {
-    Pci **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
-
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, cfg_base + (rid << PAGE_BITS));
 }
 
@@ -46,10 +44,10 @@ void Pci::init (unsigned b, unsigned l)
 
         Pci *p = new Pci (r, l);
 
-        unsigned h = p->read<uint8>(REG_HEADTYP);
+        unsigned h = p->read<uint8>(REG_HDR);
 
         if ((h & 0x7f) == 1)
-            init (p->read<uint8>(REG_BNUM_SCBN), l + 1);
+            init (p->read<uint8>(REG_SBUSN), l + 1);
 
         if (!(r & 0x7) && !(h & 0x80))
             r += 7;
