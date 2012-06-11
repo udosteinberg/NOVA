@@ -27,7 +27,7 @@ class List
 
     public:
         ALWAYS_INLINE
-        List (T *&list) : next (nullptr)
+        explicit inline List (T *&list) : next (nullptr)
         {
             T **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = static_cast<T *>(this);
         }

@@ -38,7 +38,7 @@ class Console_serial : public Console
             DLM = 1,                    // Divisor Latch (MSB)
         };
 
-        unsigned const freq = 115200;   // Internal UART clock frequency
+        static unsigned const freq = 115200;
 
         unsigned base;
 

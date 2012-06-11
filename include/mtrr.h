@@ -36,7 +36,8 @@ class Mtrr : public List<Mtrr>
         static Slab_cache   cache;
 
     public:
-        explicit inline Mtrr (uint64 b, uint64 m) : List (list), base (b), mask (m) {}
+        ALWAYS_INLINE
+        explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

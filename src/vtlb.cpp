@@ -109,7 +109,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
     if (gsize > hsize)
         attr |= TLB_F;
 
-    Counter::print (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, SPN_VFI);
+    Counter::print<1,16> (++Counter::vtlb_fill, Console_vga::COLOR_LIGHT_MAGENTA, SPN_VFI);
 
     unsigned lev = max();
 
@@ -183,7 +183,7 @@ void Vtlb::flush (mword virt)
         e->val |=  TLB_G;
         e->val &= ~TLB_P;
 
-        Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
+        Counter::print<1,16> (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 
         return;
     }
@@ -193,5 +193,5 @@ void Vtlb::flush (bool full)
 {
     flush_ptab (full);
 
-    Counter::print (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
+    Counter::print<1,16> (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
 }

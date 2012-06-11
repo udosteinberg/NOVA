@@ -31,8 +31,8 @@ class Hpet : public List<Hpet>
         static Slab_cache   cache;
 
     public:
-        INIT
-        Hpet (Paddr p, unsigned i) : List (list), phys (p), id (i), rid (0) {}
+        ALWAYS_INLINE
+        explicit inline Hpet (Paddr p, unsigned i) : List<Hpet> (list), phys (p), id (i), rid (0) {}
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

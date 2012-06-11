@@ -48,7 +48,7 @@ class Counter
             return *reinterpret_cast<volatile unsigned *>(reinterpret_cast<mword>(ipi + i) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
         }
 
-        template <unsigned D = 1, unsigned B = 16>
+        template <unsigned D, unsigned B>
         static void print (mword val, Console_vga::Color c, unsigned col)
         {
             if (EXPECT_FALSE (Cpu::row))
