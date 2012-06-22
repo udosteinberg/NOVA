@@ -124,6 +124,13 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             return Sc::ctr_link--;
         }
 
+        ALWAYS_INLINE
+        inline void redirect_to_iret()
+        {
+            regs.REG(sp) = regs.ARG_SP;
+            regs.REG(ip) = regs.ARG_IP;
+        }
+
     public:
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;

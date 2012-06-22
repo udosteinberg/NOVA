@@ -32,7 +32,7 @@
 #define CPU_LOCAL       0xcfc00000
 #define SPC_LOCAL       0xd0000000
 #elif   defined(__x86_64__)
-#define USER_ADDR       0x0000800000000000
+#define USER_ADDR       0x00007ffffffff000
 #define LINK_ADDR       0xffffffff81000000
 #define CPU_LOCAL       0xffffffffbfe00000
 #define SPC_LOCAL       0xffffffffc0000000

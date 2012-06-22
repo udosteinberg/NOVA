@@ -114,11 +114,8 @@ void Ec::handle_hazard (mword hzd, void (*func)())
             send_msg<ret_user_vmrun>();
         }
 
-        if (func == ret_user_sysexit) {
-            current->regs.REG(sp) = current->regs.ARG_SP;
-            current->regs.REG(ip) = current->regs.ARG_IP;
-            current->cont         = ret_user_iret;
-        }
+        if (func == ret_user_sysexit)
+            current->redirect_to_iret();
 
         current->regs.dst_portal = NUM_EXC - 1;
         send_msg<ret_user_iret>();
@@ -127,11 +124,8 @@ void Ec::handle_hazard (mword hzd, void (*func)())
     if (hzd & HZD_STEP) {
         current->regs.clr_hazard (HZD_STEP);
 
-        if (func == ret_user_sysexit) {
-            current->regs.REG(sp) = current->regs.ARG_SP;
-            current->regs.REG(ip) = current->regs.ARG_IP;
-            current->cont         = ret_user_iret;
-        }
+        if (func == ret_user_sysexit)
+            current->redirect_to_iret();
 
         current->regs.dst_portal = Cpu::EXC_DB;
         send_msg<ret_user_iret>();
