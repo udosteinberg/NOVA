@@ -43,7 +43,7 @@ class Kobject : public Mdb
             INVALID,
         };
 
-        explicit Kobject (Type t, Pd *pd, mword b, mword a = perm) : Mdb (pd, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
+        explicit Kobject (Type t, Space *s, mword b, mword a = perm) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
 
     public:
         static mword const perm = 0x1f;

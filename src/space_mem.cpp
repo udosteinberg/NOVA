@@ -40,7 +40,7 @@ void Space_mem::init (unsigned cpu)
 
 void Space_mem::update (Mdb *mdb, mword r)
 {
-    assert (this == mdb->node_pd && this != &Pd::kern);
+    assert (this == mdb->space && this != &Pd::kern);
 
     Lock_guard <Spinlock> guard (mdb->node_lock);
 
@@ -131,9 +131,9 @@ bool Space_mem::insert_utcb (mword b)
     if (!b)
         return true;
 
-    Mdb *mdb = new Mdb (&Pd::kern, 0, b >> PAGE_BITS, 0);
+    Mdb *mdb = new Mdb (this, 0, b >> PAGE_BITS, 0);
 
-    if (insert_node (mdb))
+    if (tree_insert (mdb))
         return true;
 
     delete mdb;

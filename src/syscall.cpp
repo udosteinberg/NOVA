@@ -375,9 +375,11 @@ void Ec::sys_lookup()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%#x B:%#lx", current, s->crd().type(), s->crd().base());
 
-    Mdb *mdb = Pd::current->lookup_crd (s->crd());
-
-    s->crd() = mdb ? Crd (s->crd().type(), mdb->node_base, mdb->node_order, mdb->node_attr) : Crd (0);
+    Space *space; Mdb *mdb;
+    if ((space = Pd::current->subspace (s->crd().type())) && (mdb = space->tree_lookup (s->crd().base())))
+        s->crd() = Crd (s->crd().type(), mdb->node_base, mdb->node_order, mdb->node_attr);
+    else
+        s->crd() = Crd (0);
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -440,7 +442,7 @@ void Ec::sys_sm_ctrl()
             break;
 
         case 1:
-            if (sm->node_pd == &Pd::kern)
+            if (sm->space == static_cast<Space_obj *>(&Pd::kern))
                 Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
             current->cont = sys_finish<Sys_regs::SUCCESS>;
             sm->dn (r->zc());
@@ -494,7 +496,7 @@ void Ec::sys_assign_gsi()
 
     Sm *sm = static_cast<Sm *>(obj);
 
-    if (EXPECT_FALSE (sm->node_pd != &Pd::kern)) {
+    if (EXPECT_FALSE (sm->space != static_cast<Space_obj *>(&Pd::kern))) {
         trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }

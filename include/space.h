@@ -33,22 +33,22 @@ class Space
     public:
         Space() : tree (nullptr) {}
 
-        Mdb *lookup_node (mword idx, bool next = false)
+        Mdb *tree_lookup (mword idx, bool next = false)
         {
             Lock_guard <Spinlock> guard (lock);
             return Mdb::lookup (tree, idx, next);
         }
 
-        bool insert_node (Mdb *node)
+        static bool tree_insert (Mdb *node)
         {
-            Lock_guard <Spinlock> guard (lock);
-            return Mdb::insert<Mdb> (&tree, node);
+            Lock_guard <Spinlock> guard (node->space->lock);
+            return Mdb::insert<Mdb> (&node->space->tree, node);
         }
 
-        bool remove_node (Mdb *node)
+        static bool tree_remove (Mdb *node)
         {
-            Lock_guard <Spinlock> guard (lock);
-            return Mdb::remove<Mdb> (&tree, node);
+            Lock_guard <Spinlock> guard (node->space->lock);
+            return Mdb::remove<Mdb> (&node->space->tree, node);
         }
 
         void addreg (mword addr, size_t size, mword attr, mword type = 0)

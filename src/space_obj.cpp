@@ -60,18 +60,18 @@ size_t Space_obj::lookup (mword idx, Capability &cap)
 
 void Space_obj::update (Mdb *mdb, mword r)
 {
-    assert (this == mdb->node_pd && this != &Pd::kern);
+    assert (this == mdb->space && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);
     update (mdb->node_base, Capability (reinterpret_cast<Kobject *>(mdb->node_phys), mdb->node_attr & ~r));
 }
 
 bool Space_obj::insert_root (Kobject *obj)
 {
-    if (!obj->node_pd->Space_obj::insert_node (obj))
+    if (!obj->space->tree_insert (obj))
         return false;
 
-    if (obj->node_pd != &Pd::kern)
-        obj->node_pd->Space_obj::update (obj->node_base, Capability (obj, obj->node_attr));
+    if (obj->space != static_cast<Space_obj *>(&Pd::kern))
+        static_cast<Space_obj *>(obj->space)->update (obj->node_base, Capability (obj, obj->node_attr));
 
     return true;
 }

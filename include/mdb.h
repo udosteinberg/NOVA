@@ -25,7 +25,7 @@
 #include "slab.h"
 #include "util.h"
 
-class Pd;
+class Space;
 
 class Mdb : public Avl, public Rcu_elem
 {
@@ -42,18 +42,18 @@ class Mdb : public Avl, public Rcu_elem
         }
 
     public:
-        Spinlock    node_lock;
-        uint16      dpth;
-        Mdb *       prev;
-        Mdb *       next;
-        Mdb *       prnt;
-        Pd *  const node_pd;
-        mword const node_phys;
-        mword const node_base;
-        mword const node_order;
-        mword       node_attr;
-        mword const node_type;
-        mword const node_sub;
+        Spinlock        node_lock;
+        uint16          dpth;
+        Mdb *           prev;
+        Mdb *           next;
+        Mdb *           prnt;
+        Space *   const space;
+        mword     const node_phys;
+        mword     const node_base;
+        mword     const node_order;
+        mword           node_attr;
+        mword     const node_type;
+        mword     const node_sub;
 
         ALWAYS_INLINE
         inline bool larger (Mdb *x) const { return  node_base > x->node_base; }
@@ -62,10 +62,10 @@ class Mdb : public Avl, public Rcu_elem
         inline bool equal  (Mdb *x) const { return (node_base ^ x->node_base) >> max (node_order, x->node_order) == 0; }
 
         NOINLINE
-        explicit Mdb (Pd *pd, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), dpth (0), prev (this), next (this), prnt (nullptr), node_pd (pd), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
+        explicit Mdb (Space *s, mword p, mword b, mword a, void (*f)(Rcu_elem *)) : Rcu_elem (f), dpth (0), prev (this), next (this), prnt (nullptr), space (s), node_phys (p), node_base (b), node_order (0), node_attr (a), node_type (0), node_sub (0) {}
 
         NOINLINE
-        explicit Mdb (Pd *pd, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword s = 0) : Rcu_elem (free), dpth (0), prev (this), next (this), prnt (nullptr), node_pd (pd), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (s) {}
+        explicit Mdb (Space *s, mword p, mword b, mword o = 0, mword a = 0, mword t = 0, mword sub = 0) : Rcu_elem (free), dpth (0), prev (this), next (this), prnt (nullptr), space (s), node_phys (p), node_base (b), node_order (o), node_attr (a), node_type (t), node_sub (sub) {}
 
         static Mdb *lookup (Avl *tree, mword base, bool next)
         {

@@ -30,7 +30,7 @@ Pd *Pd::current;
 ALIGNED(32) Pd Pd::kern (&Pd::kern);
 ALIGNED(32) Pd Pd::root (&Pd::root, NUM_EXC, perm);
 
-Pd::Pd (Pd *own) : Kobject (PD, own, 0)
+Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own), 0)
 {
     hpt = Hptp (reinterpret_cast<mword>(&PDBR));
 
@@ -51,21 +51,21 @@ template <typename S>
 void Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword const ord, mword const attr, mword const sub)
 {
     Mdb *mdb;
-    for (mword addr = snd_base; (mdb = snd->S::lookup_node (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
+    for (mword addr = snd_base; (mdb = snd->S::tree_lookup (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
 
         mword o, b = snd_base;
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
             break;
 
-        Mdb *node = new Mdb (this, b - mdb->node_base + mdb->node_phys, b - snd_base + rcv_base, o, 0, mdb->node_type, sub);
+        Mdb *node = new Mdb (static_cast<S *>(this), b - mdb->node_base + mdb->node_phys, b - snd_base + rcv_base, o, 0, mdb->node_type, sub);
 
-        if (!S::insert_node (node)) {
+        if (!S::tree_insert (node)) {
             delete node;
             continue;
         }
 
         if (!node->insert_node (mdb, attr)) {
-            S::remove_node (node);
+            S::tree_remove (node);
             delete node;
             continue;
         }
@@ -78,7 +78,7 @@ template <typename S>
 void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
 {
     Mdb *mdb;
-    for (mword addr = base; (mdb = S::lookup_node (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
+    for (mword addr = base; (mdb = S::tree_lookup (addr, true)); addr = mdb->node_base + (1UL << mdb->node_order)) {
 
         mword o, p, b = base;
         if ((o = clamp (mdb->node_base, b, mdb->node_order, ord)) == ~0UL)
@@ -94,7 +94,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
                 demote = clamp (node->node_phys, p = b - mdb->node_base + mdb->node_phys, node->node_order, o) != ~0UL;
 
             if (demote && node->node_attr & attr) {
-                node->node_pd->S::update (node, attr);
+                static_cast<S *>(node->space)->update (node, attr);
                 node->demote_node (attr);
             }
 
@@ -109,7 +109,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
 
         for (Mdb *ptr;; node = ptr) {
 
-            if (node->remove_node() && node->node_pd->S::remove_node (node))
+            if (node->remove_node() && static_cast<S *>(node->space)->tree_remove (node))
                 Rcu::call (node);
 
             ptr = ACCESS_ONCE (node->prev);
@@ -154,14 +154,16 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
 
 void Pd::xlt_crd (Pd *pd, Crd xlt, Crd &crd)
 {
-    if (crd.type() == xlt.type()) {
+    Crd::Type t = xlt.type();
 
+    if (t && t == crd.type()) {
+
+        Space *snd = pd->subspace (t), *rcv = subspace (t);
+        mword sb = crd.base(), so = crd.order(), rb = xlt.base(), ro = xlt.order();
         Mdb *mdb, *node;
 
-        mword sb = crd.base(), so = crd.order(), rb = xlt.base(), ro = xlt.order();
-
-        for (node = mdb = pd->lookup_crd (crd); node; node = node->prnt)
-            if (node->node_pd == this && node != mdb)
+        for (node = mdb = snd->tree_lookup (sb); node; node = node->prnt)
+            if (node->space == rcv && node != mdb)
                 if ((ro = clamp (node->node_base, rb, node->node_order, ro)) != ~0UL)
                     break;
 

@@ -43,7 +43,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, p
         INIT
         Pd (Pd *);
 
-        Pd (Pd *own, mword sel, mword a) : Kobject (PD, own, sel, a) {}
+        Pd (Pd *own, mword sel, mword a) : Kobject (PD, static_cast<Space_obj *>(own), sel, a) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -66,12 +66,12 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, p
         }
 
         ALWAYS_INLINE
-        inline Mdb *lookup_crd (Crd crd)
+        inline Space *subspace (Crd::Type t)
         {
-            switch (crd.type()) {
-                case Crd::MEM:  return Space_mem::lookup_node (crd.base());
-                case Crd::IO:   return Space_io::lookup_node (crd.base());
-                case Crd::OBJ:  return Space_obj::lookup_node (crd.base());
+            switch (t) {
+                case Crd::MEM:  return static_cast<Space_mem *>(this);
+                case Crd::IO:   return static_cast<Space_io *>(this);
+                case Crd::OBJ:  return static_cast<Space_obj *>(this);
             }
 
             return nullptr;
