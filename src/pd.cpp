@@ -44,7 +44,7 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own), 0)
     Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H) >> PAGE_BITS, 1, 1);
 
     // I/O Ports
-    Space_io::addreg (0, 1UL << 16, 7);
+    Space_pio::addreg (0, 1UL << 16, 7);
 }
 
 template <typename S>
@@ -201,10 +201,10 @@ void Pd::del_crd (Pd *pd, Crd del, Crd &crd, mword sub, mword hot)
             delegate<Space_mem>(pd, sb, rb, o, a, sub);
             break;
 
-        case Crd::IO:
+        case Crd::PIO:
             o = clamp (sb, rb, so, ro);
             trace (TRACE_DEL, "DEL I/O PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, rb, rb, o, a);
-            delegate<Space_io>(pd, rb, rb, o, a);
+            delegate<Space_pio>(pd, rb, rb, o, a);
             break;
 
         case Crd::OBJ:
@@ -229,9 +229,9 @@ void Pd::rev_crd (Crd crd, bool self)
             shootdown();
             break;
 
-        case Crd::IO:
+        case Crd::PIO:
             trace (TRACE_REV, "REV I/O PD:%p B:%#010lx O:%#04x A:%#04x %s", this, crd.base(), crd.order(), crd.attr(), self ? "+" : "-");
-            revoke<Space_io>(crd.base(), crd.order(), crd.attr(), self);
+            revoke<Space_pio>(crd.base(), crd.order(), crd.attr(), self);
             break;
 
         case Crd::OBJ:

@@ -21,11 +21,11 @@
 #pragma once
 
 #include "crd.h"
-#include "space_io.h"
 #include "space_mem.h"
 #include "space_obj.h"
+#include "space_pio.h"
 
-class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, public Space_obj
+class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, public Space_obj
 {
     private:
         static Slab_cache cache;
@@ -70,7 +70,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_io, p
         {
             switch (t) {
                 case Crd::MEM:  return static_cast<Space_mem *>(this);
-                case Crd::IO:   return static_cast<Space_io *>(this);
+                case Crd::PIO:  return static_cast<Space_pio *>(this);
                 case Crd::OBJ:  return static_cast<Space_obj *>(this);
             }
 

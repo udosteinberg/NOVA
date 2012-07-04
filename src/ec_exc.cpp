@@ -102,7 +102,7 @@ bool Ec::handle_exc_pf (Exc_regs *r)
 
     // Kernel fault in I/O space
     if (addr >= SPC_LOCAL_IOP && addr <= SPC_LOCAL_IOP_E) {
-        Space_io::page_fault (addr, r->err);
+        Space_pio::page_fault (addr, r->err);
         return true;
     }
 

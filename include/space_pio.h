@@ -1,5 +1,5 @@
 /*
- * I/O Space
+ * Port I/O Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -24,7 +24,7 @@
 
 class Space_mem;
 
-class Space_io : public Space
+class Space_pio : public Space
 {
     private:
         Paddr bmp;

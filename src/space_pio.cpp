@@ -1,5 +1,5 @@
 /*
- * I/O Space
+ * Port I/O Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -20,12 +20,12 @@
 
 #include "pd.h"
 
-Space_mem *Space_io::space_mem()
+Space_mem *Space_pio::space_mem()
 {
     return static_cast<Pd *>(this);
 }
 
-Paddr Space_io::walk (mword idx)
+Paddr Space_pio::walk (mword idx)
 {
     if (!bmp)
         space_mem()->insert (SPC_LOCAL_IOP, 1,
@@ -35,7 +35,7 @@ Paddr Space_io::walk (mword idx)
     return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
 }
 
-void Space_io::update (mword idx, mword attr)
+void Space_pio::update (mword idx, mword attr)
 {
     mword *m = static_cast<mword *>(Buddy::phys_to_ptr (walk (idx)));
 
@@ -45,7 +45,7 @@ void Space_io::update (mword idx, mword attr)
         Atomic::set_mask (*m, idx_to_mask (idx));
 }
 
-void Space_io::update (Mdb *mdb, mword r)
+void Space_pio::update (Mdb *mdb, mword r)
 {
     assert (this == mdb->space && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);
@@ -53,7 +53,7 @@ void Space_io::update (Mdb *mdb, mword r)
         update (mdb->node_base + i, mdb->node_attr & ~r);
 }
 
-void Space_io::page_fault (mword addr, mword error)
+void Space_pio::page_fault (mword addr, mword error)
 {
     assert (!(error & Hpt::ERR_W));
 

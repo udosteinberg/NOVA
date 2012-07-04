@@ -32,7 +32,7 @@ class Crd
         enum Type
         {
             MEM = 1,
-            IO  = 2,
+            PIO = 2,
             OBJ = 3,
         };
 
