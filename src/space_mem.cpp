@@ -112,17 +112,23 @@ void Space_mem::shootdown()
     }
 }
 
-void Space_mem::insert_root (mword base, size_t size, mword attr)
+void Space_mem::insert_root (uint64 s, uint64 e, mword a)
 {
-    for (size_t frag; size; base += frag, size -= frag) {
+    for (uint64 p = s; p < e; s = p) {
 
-        unsigned type = Mtrr::memtype (static_cast<uint64>(base) << PAGE_BITS);
+        unsigned t = Mtrr::memtype (s, p);
 
-        for (frag = 1; frag < size; frag++)
-            if (Mtrr::memtype (static_cast<uint64>(base + frag) << PAGE_BITS) != type)
+        for (uint64 n; p < e; p = n)
+            if (Mtrr::memtype (p, n) != t)
                 break;
 
-        addreg (base, frag, attr, type);
+        if (s > ~0UL)
+            break;
+
+        if ((p = min (p, e)) > ~0UL)
+            p = static_cast<uint64>(~0UL) + 1;
+
+        addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
     }
 }
 

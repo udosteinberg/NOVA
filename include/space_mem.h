@@ -66,7 +66,7 @@ class Space_mem : public Space
         }
 
         INIT
-        void insert_root (mword, size_t, mword);
+        void insert_root (uint64, uint64, mword = 0x7);
 
         bool insert_utcb (mword);
 

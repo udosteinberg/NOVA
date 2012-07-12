@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "bits.h"
 #include "list.h"
 #include "slab.h"
 
@@ -35,6 +36,12 @@ class Mtrr : public List<Mtrr>
         static Mtrr *       list;
         static Slab_cache   cache;
 
+        uint64 size() const
+        {
+            return 1ULL << (static_cast<mword>(mask) ? bit_scan_forward (static_cast<mword>(mask >> 12)) + 12 :
+                                                       bit_scan_forward (static_cast<mword>(mask >> 32)) + 32);
+        }
+
     public:
         ALWAYS_INLINE
         explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
@@ -46,5 +53,5 @@ class Mtrr : public List<Mtrr>
         static void init();
 
         INIT
-        static unsigned memtype (uint64);
+        static unsigned memtype (uint64, uint64 &);
 };

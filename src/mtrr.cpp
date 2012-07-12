@@ -38,21 +38,43 @@ void Mtrr::init()
                   Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_MASK + 2 * i)));
 }
 
-unsigned Mtrr::memtype (uint64 phys)
+unsigned Mtrr::memtype (uint64 phys, uint64 &next)
 {
-    if (phys < 0x80000)
+    if (phys < 0x80000) {
+        next = 1 + (phys | 0xffff);
         return static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>
                                     (phys >> 13 & 0x38)) & 0xff;
-    if (phys < 0xc0000)
+    }
+
+    if (phys < 0xc0000) {
+        next = 1 + (phys | 0x3fff);
         return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
                                     (phys >> 11 & 0x38)) & 0xff;
-    if (phys < 0x100000)
+    }
+
+    if (phys < 0x100000) {
+        next = 1 + (phys | 0xfff);
         return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
                                     (phys >>  9 & 0x38)) & 0xff;
+    }
 
-    for (Mtrr *mtrr = list; mtrr; mtrr = mtrr->next)
-        if ((mtrr->mask & 0x800) && ((phys ^ mtrr->base) & mtrr->mask) >> 12 == 0)
-            return static_cast<unsigned>(mtrr->base) & 0xff;
+    unsigned type = ~0U; next = ~0ULL;
 
-    return dtype;
+    for (Mtrr *mtrr = list; mtrr; mtrr = mtrr->next) {
+
+        if (!(mtrr->mask & 0x800))
+            continue;
+
+        uint64 base = mtrr->base & ~PAGE_MASK;
+
+        if (phys < base)
+            next = min (next, base);
+
+        else if (((phys ^ mtrr->base) & mtrr->mask) >> PAGE_BITS == 0) {
+            next = min (next, base + mtrr->size());
+            type = min (type, static_cast<unsigned>(mtrr->base) & 0xff);
+        }
+    }
+
+    return type == ~0U ? dtype : type;
 }

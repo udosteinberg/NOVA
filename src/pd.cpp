@@ -36,12 +36,11 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own), 0)
 
     Mtrr::init();
 
-    mword base = reinterpret_cast<mword>(&LINK_E) >> PAGE_BITS;
-    Space_mem::insert_root (0, reinterpret_cast<mword>(&LINK_P) >> PAGE_BITS, 7);
-    Space_mem::insert_root (base, (1UL << 20) - base, 7);
+    Space_mem::insert_root (0, reinterpret_cast<mword>(&LINK_P));
+    Space_mem::insert_root (reinterpret_cast<mword>(&LINK_E), 1ULL << 52);
 
     // HIP
-    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H) >> PAGE_BITS, 1, 1);
+    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), reinterpret_cast<mword>(&FRAME_H) + PAGE_SIZE, 1);
 
     // I/O Ports
     Space_pio::addreg (0, 1UL << 16, 7);
