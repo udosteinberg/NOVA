@@ -255,7 +255,8 @@ class Vmcs
 
         enum Ctrl_exi
         {
-            EXI_INTA                = 1ul << 15
+            EXI_HOST_SIZE           = 1UL << 9,
+            EXI_INTA                = 1UL << 15,
         };
 
         enum Ctrl_pin

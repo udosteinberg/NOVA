@@ -53,7 +53,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     pin &= ctrl_pin.clr;
     write (PIN_EXEC_CTRL, pin);
 
-    uint32 exi = EXI_INTA;
+    uint32 exi = EXI_INTA | (sizeof (mword) == 8 ? EXI_HOST_SIZE : 0);
     exi |= ctrl_exi.set;
     exi &= ctrl_exi.clr;
     write (EXI_CONTROLS, exi);

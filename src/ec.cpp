@@ -194,15 +194,11 @@ void Ec::ret_user_vmresume()
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
-#ifdef __i386__
-    asm volatile ("lea %0, %%esp;"
-                  "popa;"
+    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR
                   "vmresume;"
                   "vmlaunch;"
-                  "pusha;"
-                  "mov %1, %%esp;"
+                  "mov %1," EXPAND (%%REG(sp);)
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
-#endif
 
     trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
 
