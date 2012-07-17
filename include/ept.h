@@ -53,10 +53,10 @@ class Ept : public Pte<Ept, uint64, 4, 9, false>
         ALWAYS_INLINE
         inline void flush()
         {
-            uint64 eptp = addr() | (max() - 1) << 3 | 6;
+            struct { uint64 eptp, rsvd; } desc = { addr() | (max() - 1) << 3 | 6, 0 };
 
             bool ret;
-            asm volatile ("invept %1, %2; seta %0" : "=q" (ret) : "m" (eptp), "r" (1UL) : "cc");
+            asm volatile ("invept %1, %2; seta %0" : "=q" (ret) : "m" (desc), "r" (1UL) : "cc", "memory");
             assert (ret);
         }
 };
