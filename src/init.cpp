@@ -63,7 +63,7 @@ void init (mword mbi)
     for (void (**func)() = &CTORS_G; func != &CTORS_C; (*--func)()) ;
 
      // Now we're ready to talk to the world
-    Console::print ("\fNOVA Microhypervisor v%u (%s): %s %s [%s]\n", CFG_VER, ARCH, __DATE__, __TIME__, COMPILER_STRING);
+    Console::print ("\fNOVA Microhypervisor v%u-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Idt::build();
     Gsi::setup();

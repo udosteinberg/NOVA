@@ -43,6 +43,8 @@ endif
 # Feature check
 check = $(shell if $(CC) $(1) -c -xc++ /dev/null -o /dev/null >/dev/null 2>&1; then echo "$(1)"; fi)
 
+gitrv = $(shell (git rev-parse HEAD 2>/dev/null || echo 0) | cut -c1-7)
+
 # Preprocessor options
 DEFINES		:=
 VPATH		:= $(SRC_DIR)
@@ -81,7 +83,7 @@ SFLAGS		:= $(PFLAGS) $(DFLAGS) $(AFLAGS)
 CFLAGS		:= $(PFLAGS) $(DFLAGS) $(AFLAGS) $(OFLAGS) $(FFLAGS) $(WFLAGS)
 
 # Linker flags
-LFLAGS		:= --gc-sections --warn-common -static -n -T
+LFLAGS		:= --defsym=GIT_VER=0x$(call gitrv) --gc-sections --warn-common -static -n -T
 
 # Rules
 %-$(ARCH).o:	%.ld $(MAKEFILE_LIST)
