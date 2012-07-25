@@ -155,7 +155,7 @@ void Cpu::setup_sysenter()
 
 void Cpu::init()
 {
-    for (void (**func)() = &CTORS_C; func != &CTORS_L; (*--func)()) ;
+    for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
 
     Gdt::build();
     Tss::build();

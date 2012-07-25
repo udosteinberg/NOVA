@@ -36,7 +36,7 @@ You need the following tools to compile the source code.
   for x86_64: gcc 4.5 or higher
   available from http://gcc.gnu.org/
 
-* binutils 2.18.50.0.7 or higher
+* binutils 2.21.51.0.3 or higher
   available from http://www.kernel.org/pub/linux/devel/binutils/
 
 You can build a 32-bit microhypervisor binary as follows:
