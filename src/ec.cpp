@@ -158,7 +158,7 @@ void Ec::ret_user_sysexit()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
-    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR RET_USER_HYP : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR RET_USER_HYP) : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -170,7 +170,7 @@ void Ec::ret_user_iret()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
-    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR RESTORE_SEG RET_USER_EXC : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR LOAD_SEG RET_USER_EXC) : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -194,10 +194,10 @@ void Ec::ret_user_vmresume()
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
-    asm volatile ("lea %0," EXPAND (%%REG(sp);) RESTORE_GPR
+    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
-                  "mov %1," EXPAND (%%REG(sp);)
+                  "mov %1," EXPAND (PREG(sp);)
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 
     trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
@@ -219,23 +219,20 @@ void Ec::ret_user_vmrun()
             current->regs.vtlb->flush (true);
     }
 
-#ifdef __i386__
-    asm volatile ("lea %0, %%esp;"
-                  "popa;"
+    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
                   "clgi;"
                   "sti;"
                   "vmload;"
                   "vmrun;"
                   "vmsave;"
-                  "pusha;"
-                  "mov %1, %%eax;"
-                  "mov %2, %%esp;"
+                  EXPAND (SAVE_GPR)
+                  "mov %1," EXPAND (PREG(ax);)
+                  "mov %2," EXPAND (PREG(sp);)
                   "vmload;"
                   "cli;"
                   "stgi;"
                   "jmp svm_handler;"
                   : : "m" (current->regs), "m" (Vmcb::root), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
-#endif
 
     UNREACHED;
 }

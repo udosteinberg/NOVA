@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define STRING(x) #x
+#define STRING(x...) #x
 #define EXPAND(x) STRING(x)
 
 #if defined(__GNUC__)

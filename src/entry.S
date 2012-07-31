@@ -186,30 +186,9 @@ entry_ipi:              push    $0
  */
 ret_from_interrupt:     testb   $3, OFS_CS (%REG(bx))
                         jnz     ret_user_iret
-#ifdef __i386__
-                        popa
-                        add     $24, %esp
-                        iret
-#else
-                        pop     %r15
-                        pop     %r14
-                        pop     %r13
-                        pop     %r12
-                        pop     %r11
-                        pop     %r10
-                        pop     %r9
-                        pop     %r8
-                        pop     %rdi
-                        pop     %rsi
-                        pop     %rbp
-                        add     $8, %rsp
-                        pop     %rbx
-                        pop     %rdx
-                        pop     %rcx
-                        pop     %rax
-                        add     $48, %rsp
-                        iretq
-#endif
+                        LOAD_GPR
+                        add     $(6 * SIZE), %REG(sp)
+                        RET_USER_EXC
 
 #ifdef __i386__
 entry_sysenter_db:      mov     12(%esp), %esp
