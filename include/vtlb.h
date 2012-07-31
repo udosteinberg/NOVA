@@ -24,7 +24,7 @@
 
 class Exc_regs;
 
-class Vtlb : public Pte<Vtlb, mword, 2, 10, false>
+class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
 {
     private:
         ALWAYS_INLINE

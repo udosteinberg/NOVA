@@ -123,15 +123,15 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
             if (size < 1UL << shift) {
 
                 if (tlb->super())
-                    tlb->val = Buddy::ptr_to_phys (new Vtlb) | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P;
+                    tlb->val = static_cast<typeof tlb->val>(Buddy::ptr_to_phys (new Vtlb) | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P);
 
                 else if (!tlb->present()) {
                     static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))->flush_ptab (tlb->global());
                     tlb->val |= TLB_G | TLB_P;
                 }
 
-                tlb->val &= attr | ~TLB_G;
-                tlb->val |= attr & TLB_F;
+                tlb->val &= static_cast<typeof tlb->val>(attr | ~TLB_G);
+                tlb->val |= static_cast<typeof tlb->val>(attr & TLB_F);
 
                 continue;
             }
@@ -142,7 +142,7 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
             attr |= TLB_S;
         }
 
-        tlb->val = (host & ~((1UL << shift) - 1)) | attr | TLB_D | TLB_A;
+        tlb->val = static_cast<typeof tlb->val>((host & ~((1UL << shift) - 1)) | attr | TLB_D | TLB_A);
 
         return SUCCESS;
     }
