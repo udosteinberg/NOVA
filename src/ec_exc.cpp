@@ -20,6 +20,7 @@
 
 #include "ec.h"
 #include "gdt.h"
+#include "mca.h"
 #include "stdio.h"
 
 void Ec::handle_exc_nm()
@@ -138,6 +139,10 @@ void Ec::handle_exc (Exc_regs *r)
         case Cpu::EXC_PF:
             if (handle_exc_pf (r))
                 return;
+            break;
+
+        case Cpu::EXC_MC:
+            Mca::vector();
             break;
     }
 

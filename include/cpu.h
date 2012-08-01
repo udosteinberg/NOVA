@@ -122,12 +122,13 @@ class Cpu
 
         enum
         {
-            EXC_DB      = 1,
-            EXC_NM      = 7,
-            EXC_TS      = 10,
-            EXC_GP      = 13,
-            EXC_PF      = 14,
-            EXC_AC      = 17
+            EXC_DB          = 1,
+            EXC_NM          = 7,
+            EXC_TS          = 10,
+            EXC_GP          = 13,
+            EXC_PF          = 14,
+            EXC_AC          = 17,
+            EXC_MC          = 18,
         };
 
         enum
@@ -147,14 +148,15 @@ class Cpu
 
         enum
         {
-            CR4_DE          = 1ul << 3,         // 0x8
-            CR4_PSE         = 1ul << 4,         // 0x10
-            CR4_PAE         = 1ul << 5,         // 0x20
-            CR4_PGE         = 1ul << 7,         // 0x80
-            CR4_OSFXSR      = 1ul << 9,         // 0x200
-            CR4_OSXMMEXCPT  = 1ul << 10,        // 0x400
-            CR4_VMXE        = 1ul << 13,        // 0x2000
-            CR4_SMXE        = 1ul << 14         // 0x4000
+            CR4_DE          = 1UL << 3,         // 0x8
+            CR4_PSE         = 1UL << 4,         // 0x10
+            CR4_PAE         = 1UL << 5,         // 0x20
+            CR4_MCE         = 1UL << 6,         // 0x40
+            CR4_PGE         = 1UL << 7,         // 0x80
+            CR4_OSFXSR      = 1UL << 9,         // 0x200
+            CR4_OSXMMEXCPT  = 1UL << 10,        // 0x400
+            CR4_VMXE        = 1UL << 13,        // 0x2000
+            CR4_SMXE        = 1UL << 14,        // 0x4000
         };
 
         enum

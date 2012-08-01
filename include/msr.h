@@ -40,6 +40,9 @@ class Msr
             IA32_SYSENTER_CS        = 0x174,
             IA32_SYSENTER_ESP       = 0x175,
             IA32_SYSENTER_EIP       = 0x176,
+            IA32_MCG_CAP            = 0x179,
+            IA32_MCG_STATUS         = 0x17a,
+            IA32_MCG_CTL            = 0x17b,
             IA32_THERM_INTERRUPT    = 0x19b,
             IA32_THERM_STATUS       = 0x19c,
             IA32_MISC_ENABLE        = 0x1a0,
@@ -51,6 +54,9 @@ class Msr
             IA32_MTRR_FIX4K_BASE    = 0x268,
             IA32_CR_PAT             = 0x277,
             IA32_MTRR_DEF_TYPE      = 0x2ff,
+
+            IA32_MCI_CTL            = 0x400,
+            IA32_MCI_STATUS         = 0x401,
 
             IA32_VMX_BASIC          = 0x480,
             IA32_VMX_CTRL_PIN       = 0x481,

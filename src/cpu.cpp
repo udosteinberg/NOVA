@@ -24,6 +24,7 @@
 #include "hip.h"
 #include "idt.h"
 #include "lapic.h"
+#include "mca.h"
 #include "msr.h"
 #include "pd.h"
 #include "stdio.h"
@@ -185,6 +186,8 @@ void Cpu::init()
 
     Vmcs::init();
     Vmcb::init();
+
+    Mca::init();
 
     trace (TRACE_CPU, "CORE:%x:%x:%x %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
 

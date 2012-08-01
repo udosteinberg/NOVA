@@ -110,7 +110,7 @@ EXCEPTION_ERROR         0xe,    0
 TASKGATE
 EXCEPTION               0x10,   0
 EXCEPTION_ERROR         0x11,   0
-TASKGATE
+EXCEPTION               0x12,   0
 EXCEPTION               0x13,   0
 .rept                   NUM_EXC - 0x14
 TASKGATE
