@@ -21,6 +21,7 @@
 #pragma once
 
 #include "pte.h"
+#include "user.h"
 
 class Exc_regs;
 
@@ -33,6 +34,12 @@ class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
         ALWAYS_INLINE
         inline bool frag() const { return val & TLB_F; }
 
+        ALWAYS_INLINE
+        static inline bool mark_pte (uint32 *pte, uint32 old, uint32 bits)
+        {
+            return EXPECT_TRUE ((old & bits) == bits) || User::cmp_swap (pte, old, old | bits) == ~0UL;
+        }
+
         void flush_ptab (bool);
 
     public:
@@ -43,6 +50,7 @@ class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
             TLB_P   = 1UL << 0,
             TLB_W   = 1UL << 1,
             TLB_U   = 1UL << 2,
+            TLB_UC  = 1UL << 4,
             TLB_A   = 1UL << 5,
             TLB_D   = 1UL << 6,
             TLB_S   = 1UL << 7,

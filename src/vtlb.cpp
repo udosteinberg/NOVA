@@ -38,7 +38,7 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
 
     unsigned lev = max();
 
-    for (Hpt e, *pte = reinterpret_cast<Hpt *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<Hpt *>(e.addr())) {
+    for (uint32 e, *pte= reinterpret_cast<uint32 *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<uint32 *>(e & ~PAGE_MASK)) {
 
         unsigned shift = --lev * bpl() + PAGE_BITS;
         pte += virt >> shift & ((1UL << bpl()) - 1);
@@ -48,13 +48,13 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
             return ~0UL;
         }
 
-        if (EXPECT_FALSE (!e.present()))
+        if (EXPECT_FALSE (!(e & Vtlb::TLB_P)))
             return 0;
 
-        attr &= e.attr();
+        attr &= e & PAGE_MASK;
 
-        if (lev && (!pse || !e.super())) {
-            pte->mark (&e, Hpt::HPT_A);
+        if (lev && (!pse || !(e & Vtlb::TLB_S))) {
+            mark_pte (pte, e, Vtlb::TLB_A);
             continue;
         }
 
@@ -63,19 +63,19 @@ size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &
             return 0;
         }
 
-        if (!(type & ERR_W) && !(e.val & Hpt::HPT_D))
-            attr &= ~Hpt::HPT_W;
+        if (!(type & ERR_W) && !(e & Vtlb::TLB_D))
+            attr &= ~Vtlb::TLB_W;
 
-        pte->mark (&e, (attr & 3) << 5);
+        mark_pte (pte, e, static_cast<uint32>((attr & 3) << 5));
 
-        attr |= e.val & Hpt::HPT_UC;
+        attr |= e & Vtlb::TLB_UC;
 
         if (EXPECT_TRUE (pge))
-            attr |= e.val & Hpt::HPT_G;
+            attr |= e & Vtlb::TLB_G;
 
         size_t size = 1UL << shift;
 
-        phys = e.addr() | (virt & (size - 1));
+        phys = (e & ~PAGE_MASK) | (virt & (size - 1));
 
         return size;
     }

@@ -20,14 +20,11 @@
 
 #pragma once
 
-#include "assert.h"
+#include "arch.h"
 #include "pte.h"
-#include "user.h"
 
 class Hpt : public Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>
 {
-    friend class Vtlb;
-
     private:
         ALWAYS_INLINE
         static inline void flush()
@@ -80,12 +77,6 @@ class Hpt : public Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>
         inline void make_current()
         {
             asm volatile ("mov %0, %%cr3" : : "r" (val) : "memory");
-        }
-
-        ALWAYS_INLINE
-        inline bool mark (Hpt *e, mword bits)
-        {
-            return EXPECT_TRUE ((e->val & bits) == bits) || User::cmp_swap (&val, e->val, e->val | bits) == ~0UL;
         }
 
         bool sync_from (Hpt, mword, mword);

@@ -305,7 +305,7 @@ mword Exc_regs::svm_read_gpr (unsigned reg)
     switch (reg) {
         case 0:     return static_cast<mword>(vmcb->rax);
         case 4:     return static_cast<mword>(vmcb->rsp);
-        default:    return gpr[7 - reg];
+        default:    return gpr[sizeof (Sys_regs) / sizeof (mword) - 1 - reg];
     }
 }
 
@@ -314,7 +314,7 @@ void Exc_regs::svm_write_gpr (unsigned reg, mword val)
     switch (reg) {
         case 0:     vmcb->rax = val; return;
         case 4:     vmcb->rsp = val; return;
-        default:    gpr[7 - reg] = val; return;
+        default:    gpr[sizeof (Sys_regs) / sizeof (mword) - 1 - reg] = val; return;
     }
 }
 
@@ -323,7 +323,7 @@ mword Exc_regs::vmx_read_gpr (unsigned reg)
     if (EXPECT_FALSE (reg == 4))
         return Vmcs::read (Vmcs::GUEST_RSP);
     else
-        return gpr[7 - reg];
+        return gpr[sizeof (Sys_regs) / sizeof (mword) - 1 - reg];
 }
 
 void Exc_regs::vmx_write_gpr (unsigned reg, mword val)
@@ -331,7 +331,7 @@ void Exc_regs::vmx_write_gpr (unsigned reg, mword val)
     if (EXPECT_FALSE (reg == 4))
         Vmcs::write (Vmcs::GUEST_RSP, val);
     else
-        gpr[7 - reg] = val;
+        gpr[sizeof (Sys_regs) / sizeof (mword) - 1 - reg] = val;
 }
 
 template <typename T>
