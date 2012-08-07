@@ -27,7 +27,7 @@ class Space_mem;
 class Space_pio : public Space
 {
     private:
-        Paddr bmp;
+        Paddr hbmp, gbmp;
 
         ALWAYS_INLINE
         static inline mword idx_to_virt (mword idx)
@@ -44,10 +44,10 @@ class Space_pio : public Space
         ALWAYS_INLINE
         inline Space_mem *space_mem();
 
-        void update (mword, mword);
+        void update (bool, mword, mword);
 
     public:
-        Paddr walk (mword = 0);
+        Paddr walk (bool = false, mword = 0);
 
         void update (Mdb *, mword = 0);
 

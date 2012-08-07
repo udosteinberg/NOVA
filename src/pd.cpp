@@ -203,7 +203,7 @@ void Pd::del_crd (Pd *pd, Crd del, Crd &crd, mword sub, mword hot)
         case Crd::PIO:
             o = clamp (sb, rb, so, ro);
             trace (TRACE_DEL, "DEL I/O PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx", pd, this, rb, rb, o, a);
-            delegate<Space_pio>(pd, rb, rb, o, a);
+            delegate<Space_pio>(pd, rb, rb, o, a, sub);
             break;
 
         case Crd::OBJ:
