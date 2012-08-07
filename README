@@ -104,6 +104,10 @@ The following is a list of issues you may encounter.
   If this happens, the default CPU model in QEMU may not emulate all of the
   required features. Try using a more advanced model: qemu -cpu core2duo
 
+* Your bootloader is unable to load the hypervisor-x86_64 binary.
+  In this case you can convert the binary from 64bit to 32bit ELF format as
+  follows: objcopy -O elf32-i386 hypervisor-x86_64 hypervisor-x86_64.boot
+
 * The roottask fails to start and prints a "bad elf" message.
   Ensure the roottask is linked such that it does not use a BSS. When
   running "objdump -p" on the roottask binary, filesz must be equal to memsz
