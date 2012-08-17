@@ -59,7 +59,7 @@ unsigned    Cpu::patch;
 unsigned    Cpu::row;
 
 uint32      Cpu::name[12];
-uint32      Cpu::features[4];
+uint32      Cpu::features[6];
 bool        Cpu::bsp;
 
 void Cpu::check_features()
@@ -86,6 +86,10 @@ void Cpu::check_features()
 
     switch (static_cast<uint8>(eax)) {
         default:
+            cpuid (0x7, 0, eax, features[3], ecx, edx);
+        case 0x6:
+            cpuid (0x6, features[2], ebx, ecx, edx);
+        case 0x4 ... 0x5:
             cpuid (0x4, 0, eax, ebx, ecx, edx);
             cpp = (eax >> 26 & 0x3f) + 1;
         case 0x1 ... 0x3:
@@ -113,7 +117,7 @@ void Cpu::check_features()
             case 0x2:
                 cpuid (0x80000002, name[0], name[1], name[2], name[3]);
             case 0x1:
-                cpuid (0x80000001, eax, ebx, features[3], features[2]);
+                cpuid (0x80000001, eax, ebx, features[5], features[4]);
         }
     }
 
@@ -183,6 +187,9 @@ void Cpu::init()
 
     if (EXPECT_TRUE (feature (FEAT_SEP)))
         setup_sysenter();
+
+    if (EXPECT_TRUE (feature (FEAT_SMEP)))
+        set_cr4 (get_cr4() | Cpu::CR4_SMEP);
 
     Vmcs::init();
     Vmcb::init();

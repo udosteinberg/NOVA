@@ -47,77 +47,15 @@ class Cpu
 
         enum Feature
         {
-            FEAT_FPU          =  0,
-            FEAT_VME          =  1,
-            FEAT_DE           =  2,
-            FEAT_PSE          =  3,
-            FEAT_TSC          =  4,
-            FEAT_MSR          =  5,
-            FEAT_PAE          =  6,
-            FEAT_MCE          =  7,
-            FEAT_CX8          =  8,
-            FEAT_APIC         =  9,
-            FEAT_SEP          = 11,
-            FEAT_MTRR         = 12,
-            FEAT_PGE          = 13,
-            FEAT_MCA          = 14,
-            FEAT_CMOV         = 15,
-            FEAT_PAT          = 16,
-            FEAT_PSE36        = 17,
-            FEAT_PSN          = 18,
-            FEAT_CLFSH        = 19,
-            FEAT_DS           = 21,
-            FEAT_ACPI         = 22,
-            FEAT_MMX          = 23,
-            FEAT_FXSR         = 24,
-            FEAT_SSE          = 25,
-            FEAT_SSE2         = 26,
-            FEAT_SS           = 27,
-            FEAT_HTT          = 28,
-            FEAT_TM           = 29,
-            FEAT_PBE          = 31,
-            FEAT_SSE3         = 32,
-            FEAT_PCLMULDQ     = 33,
-            FEAT_DTES64       = 34,
-            FEAT_MONITOR      = 35,
-            FEAT_DSCPL        = 36,
-            FEAT_VMX          = 37,
-            FEAT_SMX          = 38,
-            FEAT_EST          = 39,
-            FEAT_TM2          = 40,
-            FEAT_SSSE3        = 41,
-            FEAT_CNXTID       = 42,
-            FEAT_FMA          = 44,
-            FEAT_CX16         = 45,
-            FEAT_XTPR         = 46,
-            FEAT_PDCM         = 47,
-            FEAT_PCID         = 49,
-            FEAT_DCA          = 50,
-            FEAT_SSE4_1       = 51,
-            FEAT_SSE4_2       = 52,
-            FEAT_X2APIC       = 53,
-            FEAT_MOVBE        = 54,
-            FEAT_POPCNT       = 55,
-            FEAT_TSC_DEADLINE = 56,
-            FEAT_AES          = 57,
-            FEAT_XSAVE        = 58,
-            FEAT_OSXSAVE      = 59,
-            FEAT_AVX          = 60,
-            FEAT_F16C         = 61,
-            FEAT_RDRAND       = 62,
-            FEAT_SYSCALL      = 75,
-            FEAT_XD           = 84,
-            FEAT_MMX_EXT      = 86,
-            FEAT_FFXSR        = 89,
-            FEAT_RDTSCP       = 91,
-            FEAT_EM64T        = 93,
-            FEAT_3DNOW_EXT    = 94,
-            FEAT_3DNOW        = 95,
-            FEAT_LAHF_SAHF    = 96,
-            FEAT_CMP_LEGACY   = 97,
-            FEAT_SVM          = 98,
-            FEAT_EXT_APIC     = 99,
-            FEAT_LOCK_MOV_CR0 = 100
+            FEAT_MCE            =  7,
+            FEAT_SEP            = 11,
+            FEAT_MCA            = 14,
+            FEAT_ACPI           = 22,
+            FEAT_HTT            = 28,
+            FEAT_VMX            = 37,
+            FEAT_SMEP           = 103,
+            FEAT_CMP_LEGACY     = 161,
+            FEAT_SVM            = 162,
         };
 
         enum
@@ -157,6 +95,7 @@ class Cpu
             CR4_OSXMMEXCPT  = 1UL << 10,        // 0x400
             CR4_VMXE        = 1UL << 13,        // 0x2000
             CR4_SMXE        = 1UL << 14,        // 0x4000
+            CR4_SMEP        = 1UL << 20,        // 0x100000
         };
 
         enum
@@ -204,7 +143,7 @@ class Cpu
         static unsigned row                 CPULOCAL;
 
         static uint32 name[12]              CPULOCAL;
-        static uint32 features[4]           CPULOCAL;
+        static uint32 features[6]           CPULOCAL;
         static bool bsp                     CPULOCAL;
 
         static void init();
