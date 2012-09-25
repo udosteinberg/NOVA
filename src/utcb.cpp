@@ -188,6 +188,11 @@ void Utcb::load_vmx (Cpu_regs *regs)
     if (m & Mtd::TSC)
         tsc = regs->tsc_offset;
 
+#ifdef __x86_64__
+    if (m & Mtd::EFER)
+        efer = Vmcs::read (Vmcs::GUEST_EFER);
+#endif
+
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
@@ -322,6 +327,11 @@ void Utcb::save_vmx (Cpu_regs *regs)
 
     if (mtd & Mtd::TSC)
         regs->add_tsc_offset (tsc);
+
+#ifdef __x86_64__
+    if (mtd & Mtd::EFER)
+        regs->write_efer<Vmcs> (efer);
+#endif
 }
 
 void Utcb::load_svm (Cpu_regs *regs)
@@ -420,6 +430,11 @@ void Utcb::load_svm (Cpu_regs *regs)
     if (m & Mtd::TSC)
         tsc = regs->tsc_offset;
 
+#ifdef __x86_64__
+    if (m & Mtd::EFER)
+        efer = vmcb->efer;
+#endif
+
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
@@ -517,4 +532,9 @@ void Utcb::save_svm (Cpu_regs *regs)
 
     if (mtd & Mtd::TSC)
         regs->add_tsc_offset (tsc);
+
+#ifdef __x86_64__
+    if (mtd & Mtd::EFER)
+        regs->write_efer<Vmcb> (efer);
+#endif
 }

@@ -30,10 +30,13 @@ template <> mword Exc_regs::get_g_cr0<Vmcb>() const { return static_cast<mword>(
 template <> mword Exc_regs::get_g_cr2<Vmcb>() const { return static_cast<mword>(vmcb->cr2); }
 template <> mword Exc_regs::get_g_cr3<Vmcb>() const { return static_cast<mword>(vmcb->cr3); }
 template <> mword Exc_regs::get_g_cr4<Vmcb>() const { return static_cast<mword>(vmcb->cr4); }
+template <> mword Exc_regs::get_g_efer<Vmcb>() const { return static_cast<mword>(vmcb->efer); }
+
 template <> mword Exc_regs::get_g_cr0<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR0); }
 template <> mword Exc_regs::get_g_cr2<Vmcs>() const { return cr2; }
 template <> mword Exc_regs::get_g_cr3<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR3); }
 template <> mword Exc_regs::get_g_cr4<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_CR4); }
+template <> mword Exc_regs::get_g_efer<Vmcs>() const { return Vmcs::read (Vmcs::GUEST_EFER); }
 
 template <> void Exc_regs::set_g_cr0<Vmcb> (mword v)  const { vmcb->cr0 = v; }
 template <> void Exc_regs::set_g_cr2<Vmcb> (mword v)        { vmcb->cr2 = v; }
@@ -374,8 +377,19 @@ void Exc_regs::write_cr (unsigned cr, mword val)
 
             set_cr0<T> (val);
 
-            if (!T::has_urg() && (toggled & Cpu::CR0_PG))
-                nst_ctrl<T> (val & Cpu::CR0_PG);
+            if (toggled & Cpu::CR0_PG) {
+
+                if (!T::has_urg())
+                    nst_ctrl<T> (val & Cpu::CR0_PG);
+
+#ifdef __x86_64__
+                mword efer = get_g_efer<T>();
+                if ((val & Cpu::CR0_PG) && (efer & Cpu::EFER_LME))
+                    write_efer<T> (efer |  Cpu::EFER_LMA);
+                else
+                    write_efer<T> (efer & ~Cpu::EFER_LMA);
+#endif
+            }
 
             break;
 
@@ -393,6 +407,21 @@ void Exc_regs::write_cr (unsigned cr, mword val)
         default:
             UNREACHED;
     }
+}
+
+template <> void Exc_regs::write_efer<Vmcb> (mword val)
+{
+    vmcb->efer = val;
+}
+
+template <> void Exc_regs::write_efer<Vmcs> (mword val)
+{
+    Vmcs::write (Vmcs::GUEST_EFER, val);
+
+    if (val & Cpu::EFER_LMA)
+        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read (Vmcs::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
+    else
+        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read (Vmcs::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
 }
 
 template mword Exc_regs::read_cr<Vmcb> (unsigned) const;

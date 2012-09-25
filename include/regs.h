@@ -125,6 +125,7 @@ class Exc_regs : public Sys_regs
         template <typename T> ALWAYS_INLINE inline mword get_g_cr2() const;
         template <typename T> ALWAYS_INLINE inline mword get_g_cr3() const;
         template <typename T> ALWAYS_INLINE inline mword get_g_cr4() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_efer() const;
 
         template <typename T> ALWAYS_INLINE inline void set_g_cr0 (mword) const;
         template <typename T> ALWAYS_INLINE inline void set_g_cr2 (mword);
@@ -176,6 +177,8 @@ class Exc_regs : public Sys_regs
 
         template <typename T> mword read_cr (unsigned) const;
         template <typename T> void write_cr (unsigned, mword);
+
+        template <typename T> void write_efer (mword);
 };
 
 class Cpu_regs : public Exc_regs

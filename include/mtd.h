@@ -49,6 +49,7 @@ class Mtd
             INJ             = 1ul << 17,
             STA             = 1ul << 18,
             TSC             = 1ul << 19,
+            EFER            = 1ul << 20,
         };
 
         ALWAYS_INLINE

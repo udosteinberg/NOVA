@@ -100,7 +100,9 @@ class Cpu
 
         enum
         {
-            EFER_SVME       = 1ul << 12,        // 0x1000
+            EFER_LME        = 1UL << 8,         // 0x100
+            EFER_LMA        = 1UL << 10,        // 0x400
+            EFER_SVME       = 1UL << 12,        // 0x1000
         };
 
         enum

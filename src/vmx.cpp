@@ -49,19 +49,8 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     make_current();
 
     uint32 pin = PIN_EXTINT | PIN_NMI | PIN_VIRT_NMI;
-    pin |= ctrl_pin.set;
-    pin &= ctrl_pin.clr;
-    write (PIN_EXEC_CTRL, pin);
-
-    uint32 exi = EXI_INTA | (sizeof (mword) == 8 ? EXI_HOST_SIZE : 0);
-    exi |= ctrl_exi.set;
-    exi &= ctrl_exi.clr;
-    write (EXI_CONTROLS, exi);
-
+    uint32 exi = EXI_INTA;
     uint32 ent = 0;
-    ent |= ctrl_ent.set;
-    ent &= ctrl_ent.clr;
-    write (ENT_CONTROLS, ent);
 
     write (PF_ERROR_MASK, 0);
     write (PF_ERROR_MATCH, 0);
@@ -83,6 +72,16 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (HOST_SEL_DS, SEL_KERN_DATA);
     write (HOST_SEL_ES, SEL_KERN_DATA);
     write (HOST_SEL_TR, SEL_TSS_RUN);
+
+#ifdef __x86_64__
+    write (HOST_EFER, Msr::read<uint64>(Msr::IA32_EFER));
+    exi |= EXI_LOAD_EFER | EXI_HOST_64;
+    ent |= ENT_LOAD_EFER;
+#endif
+
+    write (PIN_CONTROLS, (pin | ctrl_pin.set) & ctrl_pin.clr);
+    write (EXI_CONTROLS, (exi | ctrl_exi.set) & ctrl_exi.clr);
+    write (ENT_CONTROLS, (ent | ctrl_ent.set) & ctrl_ent.clr);
 
     write (HOST_CR3, cr3);
     write (HOST_CR0, get_cr0() | Cpu::CR0_TS);

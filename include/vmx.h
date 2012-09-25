@@ -137,14 +137,16 @@ class Vmcs
             VMCS_LINK_PTR_HI        = 0x2801ul,
             GUEST_DEBUGCTL          = 0x2802ul,
             GUEST_DEBUGCTL_HI       = 0x2803ul,
+            GUEST_EFER              = 0x2806ul,
             GUEST_PERF_GLOBAL_CTRL  = 0x2808ul,
             GUEST_PDPTE             = 0x280aul,
 
             // 64-Bit Host State
+            HOST_EFER               = 0x2c02ul,
             HOST_PERF_GLOBAL_CTRL   = 0x2c04ul,
 
             // 32-Bit Control Fields
-            PIN_EXEC_CTRL           = 0x4000ul,
+            PIN_CONTROLS            = 0x4000ul,
             CPU_EXEC_CTRL0          = 0x4002ul,
             EXC_BITMAP              = 0x4004ul,
             PF_ERROR_MASK           = 0x4006ul,
@@ -255,8 +257,15 @@ class Vmcs
 
         enum Ctrl_exi
         {
-            EXI_HOST_SIZE           = 1UL << 9,
+            EXI_HOST_64             = 1UL << 9,
             EXI_INTA                = 1UL << 15,
+            EXI_LOAD_EFER           = 1UL << 21,
+        };
+
+        enum Ctrl_ent
+        {
+            ENT_GUEST_64            = 1UL << 9,
+            ENT_LOAD_EFER           = 1UL << 15,
         };
 
         enum Ctrl_pin
