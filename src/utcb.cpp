@@ -161,7 +161,7 @@ void Utcb::load_vmx (Cpu_regs *regs)
     }
 
     if (m & Mtd::QUAL) {
-        if (regs->dst_portal == 48 && !regs->nst_on) {
+        if (regs->dst_portal == 48) {
             qual[0] = regs->nst_error;
             qual[1] = regs->nst_fault;
         } else {
@@ -406,7 +406,7 @@ void Utcb::load_svm (Cpu_regs *regs)
     }
 
     if (m & Mtd::QUAL) {
-        if (regs->dst_portal == NUM_VMI - 4 && !regs->nst_on) {
+        if (regs->dst_portal == NUM_VMI - 4) {
             qual[0] = regs->nst_error;
             qual[1] = regs->nst_fault;
         } else {

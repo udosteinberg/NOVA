@@ -65,7 +65,7 @@ void Ec::delegate()
 
     dst->pd->xfer_items (src->pd,
                          user ? dst->utcb->xlt : Crd (0),
-                         user ? dst->utcb->del : Crd (Crd::MEM, dst->regs.cr2 >> PAGE_BITS),
+                         user ? dst->utcb->del : Crd (Crd::MEM, (dst->cont == ret_user_iret ? dst->regs.cr2 : dst->regs.nst_fault) >> PAGE_BITS),
                          src->utcb->xfer(),
                          user ? dst->utcb->xfer() : nullptr,
                          src->utcb->ti());

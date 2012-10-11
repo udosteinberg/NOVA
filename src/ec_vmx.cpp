@@ -143,6 +143,10 @@ void Ec::handle_vmx()
         case Vmcs::VMX_EXTINT:      vmx_extint();
         case Vmcs::VMX_INVLPG:      vmx_invlpg();
         case Vmcs::VMX_CR:          vmx_cr();
+        case Vmcs::VMX_EPT_VIOLATION:
+            current->regs.nst_error = Vmcs::read (Vmcs::EXI_QUALIFICATION);
+            current->regs.nst_fault = Vmcs::read (Vmcs::INFO_PHYS_ADDR);
+            break;
     }
 
     current->regs.dst_portal = reason;
