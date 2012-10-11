@@ -121,11 +121,25 @@ class Exc_regs : public Sys_regs
         };
 
     private:
+        enum Mode
+        {
+            MODE_REAL       = 0,
+            MODE_VM86       = 1,
+            MODE_PROT_16    = 2,
+            MODE_PROT_32    = 4,
+            MODE_PROT_64    = 8,
+        };
+
+        template <typename T> ALWAYS_INLINE inline Mode mode() const;
+
+        template <typename T> ALWAYS_INLINE inline mword get_g_cs_dl() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_flags() const;
+        template <typename T> ALWAYS_INLINE inline mword get_g_efer() const;
+
         template <typename T> ALWAYS_INLINE inline mword get_g_cr0() const;
         template <typename T> ALWAYS_INLINE inline mword get_g_cr2() const;
         template <typename T> ALWAYS_INLINE inline mword get_g_cr3() const;
         template <typename T> ALWAYS_INLINE inline mword get_g_cr4() const;
-        template <typename T> ALWAYS_INLINE inline mword get_g_efer() const;
 
         template <typename T> ALWAYS_INLINE inline void set_g_cr0 (mword) const;
         template <typename T> ALWAYS_INLINE inline void set_g_cr2 (mword);
@@ -179,6 +193,8 @@ class Exc_regs : public Sys_regs
         template <typename T> void write_cr (unsigned, mword);
 
         template <typename T> void write_efer (mword);
+
+        template <typename T> mword linear_address (mword) const;
 };
 
 class Cpu_regs : public Exc_regs

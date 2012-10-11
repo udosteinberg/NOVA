@@ -82,9 +82,9 @@ void Ec::svm_exception (mword reason)
 
 void Ec::svm_invlpg()
 {
-    mword virt = static_cast<mword>(current->regs.vmcb->cs.base + current->regs.vmcb->rip);
-
     current->regs.svm_update_shadows();
+
+    mword virt = current->regs.linear_address<Vmcb>(static_cast<mword>(current->regs.vmcb->cs.base) + static_cast<mword>(current->regs.vmcb->rip));
 
     assert (ifetch (virt) == 0xf && ifetch (virt + 1) == 0x1);
 
@@ -106,9 +106,9 @@ void Ec::svm_invlpg()
 
 void Ec::svm_cr()
 {
-    mword virt = static_cast<mword>(current->regs.vmcb->cs.base + current->regs.vmcb->rip);
-
     current->regs.svm_update_shadows();
+
+    mword virt = current->regs.linear_address<Vmcb>(static_cast<mword>(current->regs.vmcb->cs.base) + static_cast<mword>(current->regs.vmcb->rip));
 
     assert (ifetch (virt) == 0xf);
 

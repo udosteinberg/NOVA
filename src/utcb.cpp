@@ -224,58 +224,58 @@ void Utcb::save_vmx (Cpu_regs *regs)
 
     if (mtd & Mtd::DS_ES) {
         Vmcs::write (Vmcs::GUEST_SEL_DS,   ds.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_DS,  ds.base);
+        Vmcs::write (Vmcs::GUEST_BASE_DS,  static_cast<mword>(ds.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_DS, ds.limit);
         Vmcs::write (Vmcs::GUEST_AR_DS,   (ds.ar << 4 & 0x1f000) | (ds.ar & 0xff));
         Vmcs::write (Vmcs::GUEST_SEL_ES,   es.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_ES,  es.base);
+        Vmcs::write (Vmcs::GUEST_BASE_ES,  static_cast<mword>(es.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_ES, es.limit);
         Vmcs::write (Vmcs::GUEST_AR_ES,   (es.ar << 4 & 0x1f000) | (es.ar & 0xff));
     }
 
     if (mtd & Mtd::FS_GS) {
         Vmcs::write (Vmcs::GUEST_SEL_FS,   fs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_FS,  fs.base);
+        Vmcs::write (Vmcs::GUEST_BASE_FS,  static_cast<mword>(fs.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_FS, fs.limit);
         Vmcs::write (Vmcs::GUEST_AR_FS,   (fs.ar << 4 & 0x1f000) | (fs.ar & 0xff));
         Vmcs::write (Vmcs::GUEST_SEL_GS,   gs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_GS,  gs.base);
+        Vmcs::write (Vmcs::GUEST_BASE_GS,  static_cast<mword>(gs.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_GS, gs.limit);
         Vmcs::write (Vmcs::GUEST_AR_GS,   (gs.ar << 4 & 0x1f000) | (gs.ar & 0xff));
     }
 
     if (mtd & Mtd::CS_SS) {
         Vmcs::write (Vmcs::GUEST_SEL_CS,   cs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_CS,  cs.base);
+        Vmcs::write (Vmcs::GUEST_BASE_CS,  static_cast<mword>(cs.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_CS, cs.limit);
         Vmcs::write (Vmcs::GUEST_AR_CS,   (cs.ar << 4 & 0x1f000) | (cs.ar & 0xff));
         Vmcs::write (Vmcs::GUEST_SEL_SS,   ss.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_SS,  ss.base);
+        Vmcs::write (Vmcs::GUEST_BASE_SS,  static_cast<mword>(ss.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_SS, ss.limit);
         Vmcs::write (Vmcs::GUEST_AR_SS,   (ss.ar << 4 & 0x1f000) | (ss.ar & 0xff));
     }
 
     if (mtd & Mtd::TR) {
         Vmcs::write (Vmcs::GUEST_SEL_TR,     tr.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_TR,    tr.base);
+        Vmcs::write (Vmcs::GUEST_BASE_TR,    static_cast<mword>(tr.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_TR,   tr.limit);
         Vmcs::write (Vmcs::GUEST_AR_TR,     (tr.ar << 4 & 0x1f000) | (tr.ar & 0xff));
     }
 
     if (mtd & Mtd::LDTR) {
         Vmcs::write (Vmcs::GUEST_SEL_LDTR,   ld.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_LDTR,  ld.base);
+        Vmcs::write (Vmcs::GUEST_BASE_LDTR,  static_cast<mword>(ld.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_LDTR, ld.limit);
         Vmcs::write (Vmcs::GUEST_AR_LDTR,   (ld.ar << 4 & 0x1f000) | (ld.ar & 0xff));
     }
 
     if (mtd & Mtd::GDTR) {
-        Vmcs::write (Vmcs::GUEST_BASE_GDTR,  gd.base);
+        Vmcs::write (Vmcs::GUEST_BASE_GDTR,  static_cast<mword>(gd.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_GDTR, gd.limit);
     }
 
     if (mtd & Mtd::IDTR) {
-        Vmcs::write (Vmcs::GUEST_BASE_IDTR,  id.base);
+        Vmcs::write (Vmcs::GUEST_BASE_IDTR,  static_cast<mword>(id.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_IDTR, id.limit);
     }
 

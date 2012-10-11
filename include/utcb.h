@@ -29,13 +29,9 @@ class Cpu_regs;
 class Utcb_segment
 {
     public:
-        uint16  sel;
-        uint16  ar;
+        uint16  sel, ar;
         uint32  limit;
-        union {
-            uint64  : 64;
-            mword   base;
-        };
+        uint64  base;
 
         ALWAYS_INLINE
         inline void set_vmx (mword s, mword b, mword l, mword a)
@@ -43,7 +39,7 @@ class Utcb_segment
             sel   = static_cast<uint16>(s);
             ar    = static_cast<uint16>((a >> 4 & 0x1f00) | (a & 0xff));
             limit = static_cast<uint32>(l);
-            base  = static_cast<uint64>(b);
+            base  = b;
         }
 };
 
