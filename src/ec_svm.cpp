@@ -27,7 +27,7 @@ uint8 Ec::ifetch (mword virt)
     mword phys, attr = 0, type = 0;
     uint8 opcode;
 
-    if (!Vtlb::walk (&current->regs, virt, phys, attr, type))
+    if (!Vtlb::gwalk (&current->regs, virt, phys, attr, type))
         die ("SVM TLB failure");
 
     if (User::peek (reinterpret_cast<uint8 *>(phys), opcode) != ~0UL)

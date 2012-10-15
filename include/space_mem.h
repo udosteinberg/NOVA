@@ -50,7 +50,8 @@ class Space_mem : public Space
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
         {
-            return hpt.lookup (virt, phys);
+            mword attr;
+            return hpt.lookup (virt, phys, attr);
         }
 
         ALWAYS_INLINE

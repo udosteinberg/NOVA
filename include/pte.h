@@ -99,7 +99,7 @@ class Pte
         ALWAYS_INLINE
         inline E root (mword l = L - 1) { return Buddy::ptr_to_phys (walk (0, l)); }
 
-        size_t lookup (E, Paddr &);
+        size_t lookup (E, Paddr &, mword &);
 
         bool update (E, mword, E, mword, Type = TYPE_UP);
 };

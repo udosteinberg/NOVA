@@ -43,7 +43,8 @@ class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
         void flush_ptab (bool);
 
     public:
-        static size_t walk (Exc_regs *, mword, mword &, mword &, mword &);
+        static size_t gwalk (Exc_regs *, mword, mword &, mword &, mword &);
+        static size_t hwalk (mword, mword &, mword &, mword &);
 
         enum
         {

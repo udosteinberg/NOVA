@@ -49,7 +49,7 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool a)
 }
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
-size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
+size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p, mword &a)
 {
     unsigned long l = L;
 
@@ -64,6 +64,8 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
         size_t s = 1UL << (l * B + e->order());
 
         p = static_cast<Paddr>(e->addr() | (v & (s - 1)));
+
+        a = e->attr();
 
         return s;
     }

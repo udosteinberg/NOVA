@@ -177,9 +177,9 @@ void Cpu::init()
 
     row = Console_vga::con.spinner (id);
 
-    Paddr phys;
+    Paddr phys; mword attr;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
-    Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys);
+    Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys, attr);
     Pd::kern.Space_mem::insert (HV_GLOBAL_CPUS + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))

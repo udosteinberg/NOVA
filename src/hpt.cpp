@@ -64,8 +64,8 @@ void *Hpt::remap (Paddr phys)
 
     phys &= ~offset;
 
-    Paddr old;
-    if (hpt.lookup (SPC_LOCAL_REMAP, old)) {
+    Paddr old; mword attr;
+    if (hpt.lookup (SPC_LOCAL_REMAP, old, attr)) {
         hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP);
         hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP + size);
     }

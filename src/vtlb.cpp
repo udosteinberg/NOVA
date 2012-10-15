@@ -24,61 +24,79 @@
 #include "stdio.h"
 #include "vtlb.h"
 
-size_t Vtlb::walk (Exc_regs *regs, mword virt, mword &phys, mword &attr, mword &type)
+size_t Vtlb::gwalk (Exc_regs *regs, mword gla, mword &gpa, mword &attr, mword &error)
 {
     if (EXPECT_FALSE (!(regs->cr0_shadow & Cpu::CR0_PG))) {
-        phys = virt;
+        gpa = gla;
         return ~0UL;
     }
 
     bool pse = regs->cr4_shadow & (Cpu::CR4_PSE | Cpu::CR4_PAE);
     bool pge = regs->cr4_shadow &  Cpu::CR4_PGE;
 
-    type &= ERR_U | ERR_W;
-
     unsigned lev = max();
 
     for (uint32 e, *pte= reinterpret_cast<uint32 *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<uint32 *>(e & ~PAGE_MASK)) {
 
         unsigned shift = --lev * bpl() + PAGE_BITS;
-        pte += virt >> shift & ((1UL << bpl()) - 1);
+        pte += gla >> shift & ((1UL << bpl()) - 1);
 
         if (User::peek (pte, e) != ~0UL) {
-            phys = reinterpret_cast<Paddr>(pte);
+            gpa = reinterpret_cast<Paddr>(pte);
             return ~0UL;
         }
 
-        if (EXPECT_FALSE (!(e & Vtlb::TLB_P)))
+        if (EXPECT_FALSE (!(e & TLB_P)))
             return 0;
 
         attr &= e & PAGE_MASK;
 
-        if (lev && (!pse || !(e & Vtlb::TLB_S))) {
-            mark_pte (pte, e, Vtlb::TLB_A);
+        if (lev && (!pse || !(e & TLB_S))) {
+            mark_pte (pte, e, TLB_A);
             continue;
         }
 
-        if (EXPECT_FALSE ((attr & type) != type)) {
-            type |= ERR_P;
+        if (EXPECT_FALSE ((attr & error) != error)) {
+            error |= ERR_P;
             return 0;
         }
 
-        if (!(type & ERR_W) && !(e & Vtlb::TLB_D))
-            attr &= ~Vtlb::TLB_W;
+        if (!(error & ERR_W) && !(e & TLB_D))
+            attr &= ~TLB_W;
 
         mark_pte (pte, e, static_cast<uint32>((attr & 3) << 5));
 
-        attr |= e & Vtlb::TLB_UC;
+        attr |= e & TLB_UC;
 
         if (EXPECT_TRUE (pge))
-            attr |= e & Vtlb::TLB_G;
+            attr |= e & TLB_G;
 
         size_t size = 1UL << shift;
 
-        phys = (e & ~PAGE_MASK) | (virt & (size - 1));
+        gpa = (e & ~PAGE_MASK) | (gla & (size - 1));
 
         return size;
     }
+}
+
+size_t Vtlb::hwalk (mword gpa, mword &hpa, mword &attr, mword &error)
+{
+    mword ept_attr;
+
+    size_t size = Pd::current->ept.lookup (gpa, hpa, ept_attr);
+
+    if (size) {
+
+        if (EXPECT_FALSE (!(ept_attr & Ept::EPT_W)))
+            attr &= ~TLB_W;
+
+        if (EXPECT_FALSE ((attr & error) != error)) {
+            error = (ept_attr & 7) << 3 | 1UL << !!(error & ERR_W);
+            return 0;
+        }
+    }
+
+    return size;
 }
 
 Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
@@ -88,18 +106,20 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 
     trace (TRACE_VTLB, "VTLB Miss CR3:%#010lx A:%#010lx E:%#lx", regs->cr3_shadow, virt, error);
 
-    size_t gsize = walk (regs, virt, phys, attr, error);
+    error &= ERR_U | ERR_W;
+
+    size_t gsize = gwalk (regs, virt, phys, attr, error);
 
     if (EXPECT_FALSE (!gsize)) {
         Counter::vtlb_gpf++;
         return GLA_GPA;
     }
 
-    size_t hsize = Pd::current->ept.lookup (phys, host);
+    size_t hsize = hwalk (phys, host, attr, error);
 
     if (EXPECT_FALSE (!hsize)) {
         regs->nst_fault = phys;
-        regs->nst_error = 1UL << !!(error & ERR_W);
+        regs->nst_error = error;
         Counter::vtlb_hpf++;
         return GPA_HPA;
     }
