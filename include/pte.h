@@ -30,7 +30,7 @@ class Pte
     protected:
         E val;
 
-        P *walk (E, unsigned long, bool = false);
+        P *walk (E, unsigned long, bool = true);
 
         ALWAYS_INLINE
         inline bool present() const { return val & P::PTE_P; }
@@ -83,6 +83,13 @@ class Pte
             ERR_U   = 1UL << 2,
         };
 
+        enum Type
+        {
+            TYPE_UP,
+            TYPE_DN,
+            TYPE_DF,
+        };
+
         ALWAYS_INLINE
         static inline unsigned bpl() { return B; }
 
@@ -94,5 +101,5 @@ class Pte
 
         size_t lookup (E, Paddr &);
 
-        bool update (E, mword, E, mword, bool = false);
+        bool update (E, mword, E, mword, Type = TYPE_UP);
 };

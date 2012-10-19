@@ -26,7 +26,7 @@ bool Hpt::sync_from (Hpt src, mword v, mword o)
 {
     mword l = (bit_scan_reverse (v ^ o) - PAGE_BITS) / bpl();
 
-    Hpt *s = static_cast<Hpt *>(src.walk (v, l, true)), *d = static_cast<Hpt *>(walk (v, l));
+    Hpt *s = static_cast<Hpt *>(src.walk (v, l, false)), *d = static_cast<Hpt *>(walk (v, l));
 
     assert (s);
     assert (d);
@@ -66,8 +66,8 @@ void *Hpt::remap (Paddr phys)
 
     Paddr old;
     if (hpt.lookup (SPC_LOCAL_REMAP, old)) {
-        hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, true); flush (SPC_LOCAL_REMAP);
-        hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, true); flush (SPC_LOCAL_REMAP + size);
+        hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP);
+        hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP + size);
     }
 
     hpt.update (SPC_LOCAL_REMAP,        bpl(), phys,        HPT_W | HPT_P);

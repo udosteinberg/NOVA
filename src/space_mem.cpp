@@ -53,18 +53,18 @@ void Space_mem::update (Mdb *mdb, mword r)
     if (s & 1 && Dpt::ord != ~0UL) {
         mword ord = min (o, Dpt::ord);
         for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            dpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r);
+            dpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r ? Dpt::TYPE_DN : Dpt::TYPE_UP);
     }
 
     if (s & 2) {
         if (Vmcb::has_npt()) {
             mword ord = min (o, Hpt::ord);
             for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r);
+                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
         } else {
             mword ord = min (o, Ept::ord);
             for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r);
+                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r ? Ept::TYPE_DN : Ept::TYPE_UP);
         }
         if (r)
             gtlb.merge (cpus);
@@ -73,14 +73,14 @@ void Space_mem::update (Mdb *mdb, mword r)
     if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
         return;
 
-    bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r);
+    bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
 
     if (r) {
 
         if (l)
             for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
                 if (loc[i].addr())
-                    loc[i].update (b, o, p, Hpt::hw_attr (a), r);
+                    loc[i].update (b, o, p, Hpt::hw_attr (a), Hpt::TYPE_DF);
 
         htlb.merge (cpus);
     }

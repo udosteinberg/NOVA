@@ -28,7 +28,7 @@ mword Ept::ord = ~0UL;
 mword Hpt::ord = ~0UL;
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
-P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool d)
+P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool a)
 {
     unsigned long l = L;
 
@@ -39,7 +39,7 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool d)
 
         if (!e->val) {
 
-            if (d)
+            if (!a)
                 return nullptr;
 
             if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? 0 : P::PTE_N)))
@@ -70,11 +70,14 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p)
 }
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
-bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, bool r)
+bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
 {
     unsigned long l = o / B, n = 1UL << o % B, s;
 
-    P *e = walk (v, l, r);
+    P *e = walk (v, l, t == TYPE_UP);
+
+    if (!e)
+        return 0;
 
     if (a) {
         p |= P::order (o % B) | (l ? P::PTE_S : 0) | a;
