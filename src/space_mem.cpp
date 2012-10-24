@@ -73,14 +73,15 @@ void Space_mem::update (Mdb *mdb, mword r)
     if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
         return;
 
-    bool l = hpt.update (b, o, p, Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
+    mword ord = min (o, Hpt::ord);
+    for (unsigned long i = 0; i < 1UL << (o - ord); i++)
+        hpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
 
     if (r) {
 
-        if (l)
-            for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
-                if (loc[i].addr())
-                    loc[i].update (b, o, p, Hpt::hw_attr (a), Hpt::TYPE_DF);
+        for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
+            if (loc[i].addr())
+                loc[i].update (b, o, p, Hpt::hw_attr (a), Hpt::TYPE_DF);
 
         htlb.merge (cpus);
     }

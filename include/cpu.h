@@ -54,6 +54,7 @@ class Cpu
             FEAT_HTT            = 28,
             FEAT_VMX            = 37,
             FEAT_SMEP           = 103,
+            FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,
             FEAT_SVM            = 162,
         };

@@ -70,7 +70,7 @@ void Cpu::check_features()
 
     cpuid (0, eax, ebx, ecx, edx);
 
-    unsigned v;
+    size_t v;
     for (v = sizeof (vendor_string) / sizeof (*vendor_string); --v;)
         if (*reinterpret_cast<uint32 const *>(vendor_string[v] + 0) == ebx &&
             *reinterpret_cast<uint32 const *>(vendor_string[v] + 4) == edx &&
@@ -181,6 +181,7 @@ void Cpu::init()
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
     Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys, attr);
     Pd::kern.Space_mem::insert (HV_GLOBAL_CPUS + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
+    Hpt::ord = min (Hpt::ord, feature (FEAT_1GB_PAGES) ? 26UL : 17UL);
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))
         setup_thermal();

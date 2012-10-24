@@ -101,5 +101,5 @@ class Pte
 
         size_t lookup (E, Paddr &, mword &);
 
-        bool update (E, mword, E, mword, Type = TYPE_UP);
+        void update (E, mword, E, mword, Type = TYPE_UP);
 };

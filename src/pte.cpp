@@ -72,14 +72,14 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p, mword &a)
 }
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
-bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
+void Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
 {
     unsigned long l = o / B, n = 1UL << o % B, s;
 
     P *e = walk (v, l, t == TYPE_UP);
 
     if (!e)
-        return 0;
+        return;
 
     if (a) {
         p |= P::order (o % B) | (l ? P::PTE_S : 0) | a;
@@ -98,8 +98,6 @@ bool Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
 
     if (F)
         flush (e, n * sizeof (E));
-
-    return l;
 }
 
 template class Pte<Dpt, uint64, 4, 9, true>;
