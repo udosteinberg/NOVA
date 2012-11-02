@@ -398,7 +398,7 @@ void Exc_regs::write_cr (unsigned cr, mword val)
             toggled = get_cr0<T>() ^ val;
 
             if (!nst_on)
-                if (toggled & (Cpu::CR0_PG | Cpu::CR0_PE))
+                if (toggled & (Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_PE))
                     tlb_flush<T> (true);
 
             set_cr0<T> (val);
