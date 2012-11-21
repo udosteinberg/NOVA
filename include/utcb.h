@@ -73,13 +73,14 @@ class Utcb_data
 #endif
                 uint64          qual[2];
                 uint32          ctrl[2];
-                uint64          tsc;
+                uint64          reserved;
                 mword           cr0, cr2, cr3, cr4;
 #ifdef __x86_64__
                 mword           cr8, efer;
 #endif
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
                 Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
+                uint64          tsc_val, tsc_off;
             };
 
             mword mr[];
