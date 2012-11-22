@@ -27,14 +27,16 @@ class Capability
     private:
         mword val;
 
+        static mword const perm = 0x1f;
+
     public:
         Capability() : val (0) {}
 
-        Capability (Kobject *o, mword a) : val (a ? reinterpret_cast<mword>(o) | (a & Kobject::perm) : 0) {}
+        Capability (Kobject *o, mword a) : val (a ? reinterpret_cast<mword>(o) | (a & perm) : 0) {}
 
         ALWAYS_INLINE
-        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~Kobject::perm); }
+        inline Kobject *obj() const { return reinterpret_cast<Kobject *>(val & ~perm); }
 
         ALWAYS_INLINE
-        inline unsigned prm() const { return val & Kobject::perm; }
+        inline unsigned prm() const { return val & perm; }
 };
