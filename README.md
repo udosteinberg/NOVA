@@ -106,7 +106,7 @@ The NOVA source code is licensed under the GPL version 2.
 Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
 Economic rights: Technische Universitaet Dresden (Germany)
 
-Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
 
 NOVA is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License version 2 as
