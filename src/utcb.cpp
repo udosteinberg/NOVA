@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -220,8 +220,12 @@ void Utcb::save_vmx (Cpu_regs *regs)
 
     if (mtd & Mtd::RSP)
         Vmcs::write (Vmcs::GUEST_RSP, rsp);
-    if (mtd & Mtd::RIP_LEN)
+
+    if (mtd & Mtd::RIP_LEN) {
         Vmcs::write (Vmcs::GUEST_RIP, rip);
+        Vmcs::write (Vmcs::ENT_INST_LEN, inst_len);
+    }
+
     if (mtd & Mtd::RFLAGS)
         Vmcs::write (Vmcs::GUEST_RFLAGS, rflags);
 
