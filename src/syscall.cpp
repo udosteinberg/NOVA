@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -93,7 +93,7 @@ void Ec::send_msg()
         current->set_partner (ec);
         current->regs.mtd = pt->mtd.val;
         ec->cont = recv_kern;
-        ec->regs.set_pt (pt->node_base);
+        ec->regs.set_pt (pt->id);
         ec->regs.set_ip (pt->ip);
         ec->make_current();
     }
@@ -121,8 +121,8 @@ void Ec::sys_call()
         current->cont = ret_user_sysexit;
         current->set_partner (ec);
         ec->cont = recv_user;
+        ec->regs.set_pt (pt->id);
         ec->regs.set_ip (pt->ip);
-        ec->regs.set_pt (pt->node_base);
         ec->make_current();
     }
 
@@ -390,7 +390,7 @@ void Ec::sys_ec_ctrl()
 
     Capability cap = Space_obj::lookup (r->ec());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0))) {
-        trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
+        trace (TRACE_ERROR, "%s: Bad EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
@@ -413,12 +413,29 @@ void Ec::sys_sc_ctrl()
 
     Capability cap = Space_obj::lookup (r->sc());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0))) {
-        trace (TRACE_ERROR, "%s: Non-SC CAP (%#lx)", __func__, r->sc());
+        trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r->sc());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
     uint32 dummy;
     r->set_time (div64 (static_cast<Sc *>(cap.obj())->time * 1000, Lapic::freq_tsc, &dummy));
+
+    sys_finish<Sys_regs::SUCCESS>();
+}
+
+void Ec::sys_pt_ctrl()
+{
+    Sys_pt_ctrl *r = static_cast<Sys_pt_ctrl *>(current->sys_regs());
+
+    Capability cap = Space_obj::lookup (r->pt());
+    if (EXPECT_FALSE (cap.obj()->type() != Kobject::PT || !(cap.prm() & 1UL << 0))) {
+        trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r->pt());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+
+    Pt *pt = static_cast<Pt *>(cap.obj());
+
+    pt->set_id (r->id());
 
     sys_finish<Sys_regs::SUCCESS>();
 }
@@ -429,7 +446,7 @@ void Ec::sys_sm_ctrl()
 
     Capability cap = Space_obj::lookup (r->sm());
     if (EXPECT_FALSE (cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op()))) {
-        trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
+        trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
@@ -526,11 +543,10 @@ void (*const syscall[])() =
     &Ec::sys_lookup,
     &Ec::sys_ec_ctrl,
     &Ec::sys_sc_ctrl,
+    &Ec::sys_pt_ctrl,
     &Ec::sys_sm_ctrl,
     &Ec::sys_assign_pci,
     &Ec::sys_assign_gsi,
-    &Ec::sys_finish<Sys_regs::BAD_HYP>,
-    &Ec::sys_finish<Sys_regs::BAD_HYP>,
     &Ec::sys_finish<Sys_regs::BAD_HYP>,
 };
 

@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -34,8 +34,12 @@ class Pt : public Kobject
         Refptr<Ec> const ec;
         Mtd        const mtd;
         mword      const ip;
+        mword      id;
 
         Pt (Pd *, mword, Ec *, Mtd, mword);
+
+        ALWAYS_INLINE
+        inline void set_id (mword i) { id = i; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

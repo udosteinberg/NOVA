@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -152,6 +152,16 @@ class Sys_sc_ctrl : public Sys_regs
             ARG_2 = static_cast<mword>(val >> 32);
             ARG_3 = static_cast<mword>(val);
         }
+};
+
+class Sys_pt_ctrl : public Sys_regs
+{
+    public:
+        ALWAYS_INLINE
+        inline unsigned long pt() const { return ARG_1 >> 8; }
+
+        ALWAYS_INLINE
+        inline mword id() const { return ARG_2; }
 };
 
 class Sys_sm_ctrl : public Sys_regs
