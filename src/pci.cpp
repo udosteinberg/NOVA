@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -30,9 +30,17 @@ Paddr       Pci::cfg_base;
 size_t      Pci::cfg_size;
 Pci *       Pci::list;
 
+struct Pci::quirk_map Pci::map[] INITDATA =
+{
+};
+
 Pci::Pci (unsigned r, unsigned l) : List<Pci> (list), reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
 {
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, cfg_base + (rid << PAGE_BITS));
+
+    for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
+        if (read<uint16>(REG_VID) == map[i].vid && read<uint16>(REG_DID) == map[i].did)
+            (this->*map[i].func)();
 }
 
 void Pci::init (unsigned b, unsigned l)

@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -43,12 +43,19 @@ class Pci : public List<Pci>
         static Pci *        list;
         static Slab_cache   cache;
 
+        static struct quirk_map
+        {
+            uint16 vid, did;
+            void (Pci::*func)();
+        } map[];
+
         enum Register
         {
             REG_VID         = 0x0,
             REG_DID         = 0x2,
             REG_HDR         = 0xe,
             REG_SBUSN       = 0x19,
+            REG_MAX         = 0xfff,
         };
 
         template <typename T>
