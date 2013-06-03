@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -186,13 +186,14 @@ void Console::print (char const *format, ...)
 
 void Console::panic (char const *format, ...)
 {
-    Lock_guard <Spinlock> guard (lock);
+    {   Lock_guard <Spinlock> guard (lock);
 
-    for (Console *c = list; c; c = c->next) {
-        va_list args;
-        va_start (args, format);
-        c->vprintf (format, args);
-        va_end (args);
+        for (Console *c = list; c; c = c->next) {
+            va_list args;
+            va_start (args, format);
+            c->vprintf (format, args);
+            va_end (args);
+        }
     }
 
     shutdown();
