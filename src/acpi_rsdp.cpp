@@ -16,9 +16,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "acpi_rsdp.h"
-#include "hpt.h"
+#include "acpi.hpp"
+#include "acpi_rsdp.hpp"
+#include "hpt.hpp"
 
 Acpi_rsdp *Acpi_rsdp::find (mword start, unsigned len)
 {

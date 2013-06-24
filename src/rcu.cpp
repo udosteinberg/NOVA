@@ -18,14 +18,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.h"
-#include "barrier.h"
-#include "counter.h"
-#include "cpu.h"
-#include "hazards.h"
-#include "initprio.h"
-#include "rcu.h"
-#include "stdio.h"
+#include "atomic.hpp"
+#include "barrier.hpp"
+#include "counter.hpp"
+#include "cpu.hpp"
+#include "hazards.hpp"
+#include "initprio.hpp"
+#include "rcu.hpp"
+#include "stdio.hpp"
 
 mword   Rcu::state = RCU_CMP;
 mword   Rcu::count;

@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.h"
-#include "lapic.h"
-#include "stdio.h"
-#include "vectors.h"
+#include "ec.hpp"
+#include "lapic.hpp"
+#include "stdio.hpp"
+#include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sc::cache (sizeof (Sc), 32);

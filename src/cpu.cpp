@@ -18,19 +18,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
-#include "counter.h"
-#include "gdt.h"
-#include "hip.h"
-#include "idt.h"
-#include "lapic.h"
-#include "mca.h"
-#include "msr.h"
-#include "pd.h"
-#include "stdio.h"
-#include "svm.h"
-#include "tss.h"
-#include "vmx.h"
+#include "bits.hpp"
+#include "counter.hpp"
+#include "gdt.hpp"
+#include "hip.hpp"
+#include "idt.hpp"
+#include "lapic.hpp"
+#include "mca.hpp"
+#include "msr.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
+#include "svm.hpp"
+#include "tss.hpp"
+#include "vmx.hpp"
 
 char const * const Cpu::vendor_string[] =
 {

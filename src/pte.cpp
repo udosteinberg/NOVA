@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dpt.h"
-#include "ept.h"
-#include "hpt.h"
-#include "pte.h"
+#include "dpt.hpp"
+#include "ept.hpp"
+#include "hpt.hpp"
+#include "pte.hpp"
 
 mword Dpt::ord = ~0UL;
 mword Ept::ord = ~0UL;

@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "pci.h"
-#include "pd.h"
-#include "stdio.h"
+#include "pci.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pci::cache (sizeof (Pci), 8);

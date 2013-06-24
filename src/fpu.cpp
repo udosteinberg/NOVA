@@ -16,7 +16,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "fpu.h"
+#include "fpu.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Fpu::cache (sizeof (Fpu), 16);

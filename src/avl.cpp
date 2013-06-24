@@ -16,8 +16,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "avl.h"
-#include "mdb.h"
+#include "avl.hpp"
+#include "mdb.hpp"
 
 Avl *Avl::rotate (Avl *&tree, bool d)
 {

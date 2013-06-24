@@ -18,8 +18,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "msr.h"
-#include "mtrr.h"
+#include "msr.hpp"
+#include "mtrr.hpp"
 
 unsigned Mtrr::count;
 unsigned Mtrr::dtype;

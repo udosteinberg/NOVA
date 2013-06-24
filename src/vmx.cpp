@@ -18,18 +18,18 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
-#include "cmdline.h"
-#include "ept.h"
-#include "gdt.h"
-#include "hip.h"
-#include "idt.h"
-#include "msr.h"
-#include "stdio.h"
-#include "tss.h"
-#include "util.h"
-#include "vmx.h"
-#include "x86.h"
+#include "bits.hpp"
+#include "cmdline.hpp"
+#include "ept.hpp"
+#include "gdt.hpp"
+#include "hip.hpp"
+#include "idt.hpp"
+#include "msr.hpp"
+#include "stdio.hpp"
+#include "tss.hpp"
+#include "util.hpp"
+#include "vmx.hpp"
+#include "x86.hpp"
 
 Vmcs *              Vmcs::current;
 unsigned            Vmcs::vpid_ctr;

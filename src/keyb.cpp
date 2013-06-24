@@ -18,12 +18,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "counter.h"
-#include "cmdline.h"
-#include "gsi.h"
-#include "keyb.h"
-#include "stdio.h"
+#include "acpi.hpp"
+#include "counter.hpp"
+#include "cmdline.hpp"
+#include "gsi.hpp"
+#include "keyb.hpp"
+#include "stdio.hpp"
 
 unsigned Keyb::gsi = ~0u;
 

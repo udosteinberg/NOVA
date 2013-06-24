@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
-#include "console_serial.h"
-#include "hpt.h"
-#include "x86.h"
+#include "cmdline.hpp"
+#include "console_serial.hpp"
+#include "hpt.hpp"
+#include "x86.hpp"
 
 INIT_PRIORITY (PRIO_CONSOLE) Console_serial Console_serial::con;
 

@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "compiler.h"
-#include "ec.h"
-#include "hip.h"
-#include "msr.h"
+#include "compiler.hpp"
+#include "ec.hpp"
+#include "hip.hpp"
+#include "msr.hpp"
 
 extern "C" NORETURN
 void bootstrap()

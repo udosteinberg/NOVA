@@ -18,7 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "memory.h"
+#include "memory.hpp"
 
 #ifdef __i386__
 OUTPUT_FORMAT("elf32-i386")

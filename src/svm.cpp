@@ -16,12 +16,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
-#include "cpu.h"
-#include "hip.h"
-#include "msr.h"
-#include "stdio.h"
-#include "svm.h"
+#include "cmdline.hpp"
+#include "cpu.hpp"
+#include "hip.hpp"
+#include "msr.hpp"
+#include "stdio.hpp"
+#include "svm.hpp"
 
 Paddr       Vmcb::root;
 unsigned    Vmcb::asid_ctr;

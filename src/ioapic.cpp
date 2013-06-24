@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ioapic.h"
-#include "pd.h"
-#include "stdio.h"
+#include "ioapic.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Ioapic::cache (sizeof (Ioapic), 8);

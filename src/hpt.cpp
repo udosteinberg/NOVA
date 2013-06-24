@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
-#include "bits.h"
-#include "hpt.h"
+#include "assert.hpp"
+#include "bits.hpp"
+#include "hpt.hpp"
 
 bool Hpt::sync_from (Hpt src, mword v, mword o)
 {

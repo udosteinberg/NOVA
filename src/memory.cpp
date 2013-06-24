@@ -18,7 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "memory.h"
-#include "types.h"
+#include "memory.hpp"
+#include "types.hpp"
 
 mword hwdev_addr = HV_GLOBAL_FBUF;

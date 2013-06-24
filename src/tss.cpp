@@ -18,8 +18,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "hpt.h"
-#include "tss.h"
+#include "hpt.hpp"
+#include "tss.hpp"
 
 ALIGNED(8) Tss Tss::run;
 ALIGNED(8) Tss Tss::dbf;

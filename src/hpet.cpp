@@ -15,7 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "hpet.h"
+#include "hpet.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Hpet::cache (sizeof (Hpet), 8);

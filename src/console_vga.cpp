@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
-#include "console_vga.h"
-#include "pd.h"
+#include "cmdline.hpp"
+#include "console_vga.hpp"
+#include "pd.hpp"
 
 INIT_PRIORITY (PRIO_CONSOLE) Console_vga Console_vga::con;
 

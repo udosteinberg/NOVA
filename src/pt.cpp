@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.h"
-#include "pt.h"
-#include "stdio.h"
+#include "ec.hpp"
+#include "pt.hpp"
+#include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pt::cache (sizeof (Pt), 32);

@@ -18,14 +18,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "barrier.h"
-#include "config.h"
-#include "cpu.h"
-#include "mtd.h"
-#include "regs.h"
-#include "svm.h"
-#include "vmx.h"
-#include "x86.h"
+#include "barrier.hpp"
+#include "config.hpp"
+#include "cpu.hpp"
+#include "mtd.hpp"
+#include "regs.hpp"
+#include "svm.hpp"
+#include "vmx.hpp"
+#include "x86.hpp"
 
 void Utcb::load_exc (Cpu_regs *regs)
 {

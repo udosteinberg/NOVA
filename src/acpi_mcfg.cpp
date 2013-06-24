@@ -18,8 +18,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_mcfg.h"
-#include "pci.h"
+#include "acpi_mcfg.hpp"
+#include "pci.hpp"
 
 void Acpi_table_mcfg::parse() const
 {

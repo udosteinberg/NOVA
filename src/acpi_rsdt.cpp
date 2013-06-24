@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "acpi_rsdt.h"
-#include "hpt.h"
+#include "acpi.hpp"
+#include "acpi_rsdt.hpp"
+#include "hpt.hpp"
 
 struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] INITDATA =
 {

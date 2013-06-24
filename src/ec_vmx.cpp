@@ -18,13 +18,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.h"
-#include "ec.h"
-#include "gsi.h"
-#include "lapic.h"
-#include "vectors.h"
-#include "vmx.h"
-#include "vtlb.h"
+#include "dmar.hpp"
+#include "ec.hpp"
+#include "gsi.hpp"
+#include "lapic.hpp"
+#include "vectors.hpp"
+#include "vmx.hpp"
+#include "vtlb.hpp"
 
 void Ec::vmx_exception()
 {

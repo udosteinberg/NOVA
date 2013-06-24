@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.h"
-#include "memory.h"
-#include "selectors.h"
+#include "arch.hpp"
+#include "memory.hpp"
+#include "selectors.hpp"
 
 /*
  * Initialization Code

@@ -18,11 +18,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
-#include "bits.h"
-#include "lock_guard.h"
-#include "slab.h"
-#include "stdio.h"
+#include "assert.hpp"
+#include "bits.hpp"
+#include "lock_guard.hpp"
+#include "slab.hpp"
+#include "stdio.hpp"
 
 Slab::Slab (Slab_cache *slab_cache)
     : avail (slab_cache->elem),

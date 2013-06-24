@@ -15,12 +15,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "compiler.h"
-#include "cpu.h"
-#include "mca.h"
-#include "msr.h"
-#include "stdio.h"
-#include "x86.h"
+#include "compiler.hpp"
+#include "cpu.hpp"
+#include "mca.hpp"
+#include "msr.hpp"
+#include "stdio.hpp"
+#include "x86.hpp"
 
 unsigned Mca::banks;
 

@@ -18,14 +18,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_dmar.h"
-#include "cmdline.h"
-#include "dmar.h"
-#include "dpt.h"
-#include "hpet.h"
-#include "ioapic.h"
-#include "pci.h"
-#include "pd.h"
+#include "acpi_dmar.hpp"
+#include "cmdline.hpp"
+#include "dmar.hpp"
+#include "dpt.hpp"
+#include "hpet.hpp"
+#include "ioapic.hpp"
+#include "pci.hpp"
+#include "pd.hpp"
 
 void Acpi_dmar::parse() const
 {

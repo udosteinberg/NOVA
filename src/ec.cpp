@@ -18,15 +18,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
-#include "ec.h"
-#include "elf.h"
-#include "hip.h"
-#include "rcu.h"
-#include "stdio.h"
-#include "svm.h"
-#include "vmx.h"
-#include "vtlb.h"
+#include "bits.hpp"
+#include "ec.hpp"
+#include "elf.hpp"
+#include "hip.hpp"
+#include "rcu.hpp"
+#include "stdio.hpp"
+#include "svm.hpp"
+#include "vmx.hpp"
+#include "vtlb.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Ec::cache (sizeof (Ec), 32);

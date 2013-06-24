@@ -16,9 +16,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
-#include "hpt.h"
-#include "string.h"
+#include "cmdline.hpp"
+#include "hpt.hpp"
+#include "string.hpp"
 
 bool Cmdline::iommu;
 bool Cmdline::keyb;

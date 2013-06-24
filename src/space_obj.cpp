@@ -18,7 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "pd.h"
+#include "pd.hpp"
 
 Space_mem *Space_obj::space_mem()
 {

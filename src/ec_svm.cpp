@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.h"
-#include "svm.h"
-#include "vtlb.h"
+#include "ec.hpp"
+#include "svm.hpp"
+#include "vtlb.hpp"
 
 uint8 Ec::ifetch (mword virt)
 {

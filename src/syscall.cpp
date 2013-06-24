@@ -18,18 +18,18 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.h"
-#include "gsi.h"
-#include "hip.h"
-#include "hpet.h"
-#include "lapic.h"
-#include "pci.h"
-#include "pt.h"
-#include "sm.h"
-#include "stdio.h"
-#include "syscall.h"
-#include "utcb.h"
-#include "vectors.h"
+#include "dmar.hpp"
+#include "gsi.hpp"
+#include "hip.hpp"
+#include "hpet.hpp"
+#include "lapic.hpp"
+#include "pci.hpp"
+#include "pt.hpp"
+#include "sm.hpp"
+#include "stdio.hpp"
+#include "syscall.hpp"
+#include "utcb.hpp"
+#include "vectors.hpp"
 
 template <Sys_regs::Status T>
 void Ec::sys_finish()

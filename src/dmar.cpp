@@ -18,12 +18,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
-#include "dmar.h"
-#include "lapic.h"
-#include "pd.h"
-#include "stdio.h"
-#include "vectors.h"
+#include "bits.hpp"
+#include "dmar.hpp"
+#include "lapic.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
+#include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache  Dmar::cache (sizeof (Dmar), 8);

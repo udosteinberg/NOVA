@@ -18,8 +18,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "sm.h"
-#include "stdio.h"
+#include "sm.hpp"
+#include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sm::cache (sizeof (Sm), 32);

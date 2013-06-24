@@ -19,11 +19,11 @@
  *
  */
 
-#include "arch.h"
-#include "hazards.h"
-#include "memory.h"
-#include "selectors.h"
-#include "vectors.h"
+#include "arch.hpp"
+#include "hazards.hpp"
+#include "memory.hpp"
+#include "selectors.hpp"
+#include "vectors.hpp"
 
 .data
 .global                 handlers

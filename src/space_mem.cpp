@@ -18,15 +18,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
-#include "hazards.h"
-#include "hip.h"
-#include "lapic.h"
-#include "mtrr.h"
-#include "pd.h"
-#include "stdio.h"
-#include "svm.h"
-#include "vectors.h"
+#include "counter.hpp"
+#include "hazards.hpp"
+#include "hip.hpp"
+#include "lapic.hpp"
+#include "mtrr.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
+#include "svm.hpp"
+#include "vectors.hpp"
 
 unsigned Space_mem::did_ctr;
 

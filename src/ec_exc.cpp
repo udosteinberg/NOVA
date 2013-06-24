@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.h"
-#include "gdt.h"
-#include "mca.h"
-#include "stdio.h"
+#include "ec.hpp"
+#include "gdt.hpp"
+#include "mca.hpp"
+#include "stdio.hpp"
 
 void Ec::handle_exc_nm()
 {

@@ -18,15 +18,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "compiler.h"
-#include "console_serial.h"
-#include "console_vga.h"
-#include "gsi.h"
-#include "hip.h"
-#include "hpt.h"
-#include "idt.h"
-#include "keyb.h"
+#include "acpi.hpp"
+#include "compiler.hpp"
+#include "console_serial.hpp"
+#include "console_vga.hpp"
+#include "gsi.hpp"
+#include "hip.hpp"
+#include "hpt.hpp"
+#include "idt.hpp"
+#include "keyb.hpp"
 
 extern "C" INIT
 mword kern_ptab_setup()

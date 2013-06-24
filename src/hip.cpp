@@ -18,13 +18,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.h"
-#include "cpu.h"
-#include "hip.h"
-#include "hpt.h"
-#include "lapic.h"
-#include "multiboot.h"
-#include "space_obj.h"
+#include "cmdline.hpp"
+#include "cpu.hpp"
+#include "hip.hpp"
+#include "hpt.hpp"
+#include "lapic.hpp"
+#include "multiboot.hpp"
+#include "space_obj.hpp"
 
 mword Hip::root_addr;
 mword Hip::root_size;

@@ -16,9 +16,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.h"
-#include "idt.h"
-#include "selectors.h"
+#include "extern.hpp"
+#include "idt.hpp"
+#include "selectors.hpp"
 
 ALIGNED(8) Idt Idt::idt[VEC_MAX];
 

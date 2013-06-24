@@ -18,21 +18,21 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "acpi_dmar.h"
-#include "acpi_fadt.h"
-#include "acpi_hpet.h"
-#include "acpi_madt.h"
-#include "acpi_mcfg.h"
-#include "acpi_rsdp.h"
-#include "acpi_rsdt.h"
-#include "assert.h"
-#include "bits.h"
-#include "gsi.h"
-#include "hpt.h"
-#include "io.h"
-#include "stdio.h"
-#include "x86.h"
+#include "acpi.hpp"
+#include "acpi_dmar.hpp"
+#include "acpi_fadt.hpp"
+#include "acpi_hpet.hpp"
+#include "acpi_madt.hpp"
+#include "acpi_mcfg.hpp"
+#include "acpi_rsdp.hpp"
+#include "acpi_rsdt.hpp"
+#include "assert.hpp"
+#include "bits.hpp"
+#include "gsi.hpp"
+#include "hpt.hpp"
+#include "io.hpp"
+#include "stdio.hpp"
+#include "x86.hpp"
 
 Paddr       Acpi::dmar, Acpi::fadt, Acpi::hpet, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
 Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;

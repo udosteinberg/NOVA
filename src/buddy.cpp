@@ -18,13 +18,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
-#include "bits.h"
-#include "buddy.h"
-#include "initprio.h"
-#include "lock_guard.h"
-#include "stdio.h"
-#include "string.h"
+#include "assert.hpp"
+#include "bits.hpp"
+#include "buddy.hpp"
+#include "initprio.hpp"
+#include "lock_guard.hpp"
+#include "stdio.hpp"
+#include "string.hpp"
 
 extern char _mempool_p, _mempool_l, _mempool_f, _mempool_e;
 

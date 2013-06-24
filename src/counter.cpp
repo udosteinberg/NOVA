@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
-#include "stdio.h"
-#include "x86.h"
+#include "counter.hpp"
+#include "stdio.hpp"
+#include "x86.hpp"
 
 unsigned    Counter::ipi[NUM_IPI];
 unsigned    Counter::lvt[NUM_LVT];

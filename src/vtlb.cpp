@@ -18,11 +18,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.h"
-#include "pd.h"
-#include "regs.h"
-#include "stdio.h"
-#include "vtlb.h"
+#include "counter.hpp"
+#include "pd.hpp"
+#include "regs.hpp"
+#include "stdio.hpp"
+#include "vtlb.hpp"
 
 size_t Vtlb::gwalk (Exc_regs *regs, mword gla, mword &gpa, mword &attr, mword &error)
 {

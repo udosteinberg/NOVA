@@ -18,14 +18,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "dmar.h"
-#include "gsi.h"
-#include "ioapic.h"
-#include "keyb.h"
-#include "lapic.h"
-#include "sm.h"
-#include "vectors.h"
+#include "acpi.hpp"
+#include "dmar.hpp"
+#include "gsi.hpp"
+#include "ioapic.hpp"
+#include "keyb.hpp"
+#include "lapic.hpp"
+#include "sm.hpp"
+#include "vectors.hpp"
 
 Gsi         Gsi::gsi_table[NUM_GSI];
 unsigned    Gsi::irq_table[NUM_IRQ];

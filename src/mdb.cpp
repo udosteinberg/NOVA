@@ -16,9 +16,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "assert.h"
-#include "lock_guard.h"
-#include "mdb.h"
+#include "assert.hpp"
+#include "lock_guard.hpp"
+#include "mdb.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Mdb::cache (sizeof (Mdb), 16);

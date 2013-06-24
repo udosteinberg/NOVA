@@ -18,13 +18,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "ec.h"
-#include "lapic.h"
-#include "msr.h"
-#include "rcu.h"
-#include "stdio.h"
-#include "vectors.h"
+#include "acpi.hpp"
+#include "ec.hpp"
+#include "lapic.hpp"
+#include "msr.hpp"
+#include "rcu.hpp"
+#include "stdio.hpp"
+#include "vectors.hpp"
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;

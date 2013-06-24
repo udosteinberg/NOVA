@@ -18,13 +18,13 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.h"
-#include "hip.h"
-#include "regs.h"
-#include "svm.h"
-#include "vmx.h"
-#include "vpid.h"
-#include "vtlb.h"
+#include "cpu.hpp"
+#include "hip.hpp"
+#include "regs.hpp"
+#include "svm.hpp"
+#include "vmx.hpp"
+#include "vpid.hpp"
+#include "vtlb.hpp"
 
 template <> mword Exc_regs::get_g_cs_dl<Vmcb>()         const { return static_cast<mword>(vmcb->cs.ar) >> 9 & 0x3; }
 template <> mword Exc_regs::get_g_flags<Vmcb>()         const { return static_cast<mword>(vmcb->rflags); }

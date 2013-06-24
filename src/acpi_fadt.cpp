@@ -16,10 +16,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "acpi_fadt.h"
-#include "io.h"
-#include "x86.h"
+#include "acpi.hpp"
+#include "acpi_fadt.hpp"
+#include "io.hpp"
+#include "x86.hpp"
 
 void Acpi_table_fadt::parse() const
 {

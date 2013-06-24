@@ -18,14 +18,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.h"
-#include "acpi_madt.h"
-#include "cpu.h"
-#include "gsi.h"
-#include "io.h"
-#include "ioapic.h"
-#include "lapic.h"
-#include "vectors.h"
+#include "acpi.hpp"
+#include "acpi_madt.hpp"
+#include "cpu.hpp"
+#include "gsi.hpp"
+#include "io.hpp"
+#include "ioapic.hpp"
+#include "lapic.hpp"
+#include "vectors.hpp"
 
 void Acpi_table_madt::parse() const
 {

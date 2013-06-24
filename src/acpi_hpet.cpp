@@ -15,8 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_hpet.h"
-#include "hpet.h"
+#include "acpi_hpet.hpp"
+#include "hpet.hpp"
 
 void Acpi_table_hpet::parse() const
 {

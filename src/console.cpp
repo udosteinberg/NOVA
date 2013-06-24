@@ -18,10 +18,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.h"
-#include "console.h"
-#include "lock_guard.h"
-#include "x86.h"
+#include "bits.hpp"
+#include "console.hpp"
+#include "lock_guard.hpp"
+#include "x86.hpp"
 
 Console *Console::list;
 Spinlock Console::lock;

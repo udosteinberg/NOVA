@@ -16,8 +16,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_table.h"
-#include "stdio.h"
+#include "acpi_table.hpp"
+#include "stdio.hpp"
 
 bool Acpi_table::good_checksum (Paddr addr) const
 {

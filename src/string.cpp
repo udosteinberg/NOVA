@@ -17,4 +17,4 @@
  */
 
 #define inline
-#include "string.h"
+#include "string.hpp"

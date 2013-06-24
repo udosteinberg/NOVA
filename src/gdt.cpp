@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "gdt.h"
-#include "memory.h"
-#include "tss.h"
+#include "gdt.hpp"
+#include "memory.hpp"
+#include "tss.hpp"
 
 ALIGNED(8) Gdt Gdt::gdt[SEL_MAX >> 3];
 

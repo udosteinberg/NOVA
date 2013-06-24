@@ -18,9 +18,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "mtrr.h"
-#include "pd.h"
-#include "stdio.h"
+#include "mtrr.hpp"
+#include "pd.hpp"
+#include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pd::cache (sizeof (Pd), 32);
