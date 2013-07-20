@@ -4,7 +4,7 @@
 # Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
 # Economic rights: Technische Universitaet Dresden (Germany)
 #
-# Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+# Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
 #
 # This file is part of the NOVA microhypervisor.
 #
@@ -66,6 +66,7 @@ FFLAGS		:= -fdata-sections -ffunction-sections -fomit-frame-pointer -freg-struct
 FFLAGS		+= -fno-asynchronous-unwind-tables -fno-exceptions -fno-rtti
 FFLAGS		+= $(call check,-fno-stack-protector)
 FFLAGS		+= $(call check,-fvisibility-inlines-hidden)
+FFLAGS		+= $(call check,-fdiagnostics-color=auto)
 FFLAGS		+= $(or $(call check,-std=gnu++11), $(call check,-std=gnu++0x), $(call check,-std=gnu++98))
 
 # Warning options
