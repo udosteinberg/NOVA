@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,11 +25,15 @@
 
 class Exc_regs;
 
+#ifdef __i386__
 class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
+#else
+class Vtlb : public Pte<Vtlb, uint64, 3,  9, false>
+#endif
 {
     private:
         ALWAYS_INLINE
-        inline bool global() const { return val & TLB_G; }
+        inline bool mark() const { return val & TLB_M; }
 
         ALWAYS_INLINE
         inline bool frag() const { return val & TLB_F; }
@@ -57,6 +61,7 @@ class Vtlb : public Pte<Vtlb, uint32, 2, 10, false>
             TLB_S   = 1UL << 7,
             TLB_G   = 1UL << 8,
             TLB_F   = 1UL << 9,
+            TLB_M   = 1UL << 10,
 
             PTE_P   = TLB_P,
             PTE_S   = TLB_S,

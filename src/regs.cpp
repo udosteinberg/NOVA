@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -111,14 +111,14 @@ mword Exc_regs::linear_address (mword val) const
 template <typename T>
 mword Exc_regs::cr0_set() const
 {
-    mword msk = 0;
+    mword set = 0;
 
     if (!nst_on)
-        msk |= Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_PE;
+        set |= Cpu::CR0_PG | Cpu::CR0_WP | Cpu::CR0_PE;
     if (!fpu_on)
-        msk |= Cpu::CR0_TS;
+        set |= Cpu::CR0_TS;
 
-    return T::fix_cr0_set | msk;
+    return T::fix_cr0_set | set;
 }
 
 template <typename T>
@@ -130,23 +130,27 @@ mword Exc_regs::cr0_msk() const
 template <typename T>
 mword Exc_regs::cr4_set() const
 {
-    mword msk = 0;
+    mword set = nst_on ? 0 :
+#ifdef __i386__
+                Cpu::CR4_PSE;
+#else
+                Cpu::CR4_PSE | Cpu::CR4_PAE;
+#endif
 
-    if (!nst_on)
-        msk |= Cpu::CR4_PSE;
-
-    return T::fix_cr4_set | msk;
+    return T::fix_cr4_set | set;
 }
 
 template <typename T>
 mword Exc_regs::cr4_msk() const
 {
-    mword msk = 0;
+    mword clr = nst_on ? 0 :
+#ifdef __i386__
+                Cpu::CR4_PGE | Cpu::CR4_PAE;
+#else
+                Cpu::CR4_PGE;
+#endif
 
-    if (!nst_on)
-        msk |= Cpu::CR4_PGE | Cpu::CR4_PAE;
-
-    return T::fix_cr4_clr | cr4_set<T>() | msk;
+    return T::fix_cr4_clr | clr | cr4_set<T>();
 }
 
 template <typename T>

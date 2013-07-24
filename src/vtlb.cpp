@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -35,12 +35,12 @@ size_t Vtlb::gwalk (Exc_regs *regs, mword gla, mword &gpa, mword &attr, mword &e
     bool pge = regs->cr4_shadow &  Cpu::CR4_PGE;
     bool wp  = regs->cr0_shadow &  Cpu::CR0_WP;
 
-    unsigned lev = max();
+    unsigned lev = 2;
 
     for (uint32 e, *pte= reinterpret_cast<uint32 *>(regs->cr3_shadow & ~PAGE_MASK);; pte = reinterpret_cast<uint32 *>(e & ~PAGE_MASK)) {
 
-        unsigned shift = --lev * bpl() + PAGE_BITS;
-        pte += gla >> shift & ((1UL << bpl()) - 1);
+        unsigned shift = --lev * 10 + PAGE_BITS;
+        pte += gla >> shift & ((1UL << 10) - 1);
 
         if (User::peek (pte, e) != ~0UL) {
             gpa = reinterpret_cast<Paddr>(pte);
@@ -72,8 +72,8 @@ size_t Vtlb::gwalk (Exc_regs *regs, mword gla, mword &gpa, mword &attr, mword &e
 
         attr |= e & TLB_UC;
 
-        if (EXPECT_TRUE (pge))
-            attr |= e & TLB_G;
+        if (EXPECT_TRUE (pge) && (e & TLB_G))
+            attr |= TLB_M;
 
         size_t size = 1UL << shift;
 
@@ -144,17 +144,17 @@ Vtlb::Reason Vtlb::miss (Exc_regs *regs, mword virt, mword &error)
 
         if (lev) {
 
-            if (size < 1UL << shift) {
+            if (lev == 2 || size < 1UL << shift) {
 
                 if (tlb->super())
-                    tlb->val = static_cast<typeof tlb->val>(Buddy::ptr_to_phys (new Vtlb) | TLB_G | TLB_A | TLB_U | TLB_W | TLB_P);
+                    tlb->val = static_cast<typeof tlb->val>(Buddy::ptr_to_phys (new Vtlb) | (lev == 2 ? 0 : TLB_A | TLB_U | TLB_W) | TLB_M | TLB_P);
 
                 else if (!tlb->present()) {
-                    static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))->flush_ptab (tlb->global());
-                    tlb->val |= TLB_G | TLB_P;
+                    static_cast<Vtlb *>(Buddy::phys_to_ptr (tlb->addr()))->flush_ptab (tlb->mark());
+                    tlb->val |= TLB_M | TLB_P;
                 }
 
-                tlb->val &= static_cast<typeof tlb->val>(attr | ~TLB_G);
+                tlb->val &= static_cast<typeof tlb->val>(attr | ~TLB_M);
                 tlb->val |= static_cast<typeof tlb->val>(attr & TLB_F);
 
                 continue;
@@ -180,9 +180,9 @@ void Vtlb::flush_ptab (bool full)
             continue;
 
         if (EXPECT_FALSE (full))
-            e->val |= TLB_G;
+            e->val |= TLB_M;
 
-        else if (EXPECT_FALSE (e->global()))
+        else if (EXPECT_FALSE (e->mark()))
             continue;
 
         e->val &= ~TLB_P;
@@ -204,7 +204,7 @@ void Vtlb::flush (mword virt)
         if (l && !e->super() && !e->frag())
             continue;
 
-        e->val |=  TLB_G;
+        e->val |=  TLB_M;
         e->val &= ~TLB_P;
 
         Counter::print<1,16> (++Counter::vtlb_flush, Console_vga::COLOR_LIGHT_RED, SPN_VFL);
