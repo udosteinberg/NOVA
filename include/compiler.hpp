@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,7 +25,7 @@
 
 #if defined(__GNUC__)
 
-        #define COMPILER            "gcc "__VERSION__
+        #define COMPILER            "gcc " __VERSION__
 
     #if defined(__GNUC_PATCHLEVEL__)
         #define COMPILER_STRING     "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__) "." EXPAND (__GNUC_PATCHLEVEL__)
