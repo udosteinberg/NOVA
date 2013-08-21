@@ -77,6 +77,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
                                   pd->ept.root());
 
             regs.nst_ctrl<Vmcs>();
+            regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, p, regs.vmcs, regs.vtlb);
 

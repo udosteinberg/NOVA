@@ -44,8 +44,6 @@ mword               Vmcs::fix_cr4_set, Vmcs::fix_cr4_clr;
 
 Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 {
-    clear();
-
     make_current();
 
     uint32 pin = PIN_EXTINT | PIN_NMI | PIN_VIRT_NMI;

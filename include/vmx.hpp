@@ -371,6 +371,9 @@ class Vmcs
         ALWAYS_INLINE
         inline void clear()
         {
+            if (EXPECT_TRUE (current == this))
+                current = nullptr;
+
             uint64 phys = Buddy::ptr_to_phys (this);
 
             bool ret;
