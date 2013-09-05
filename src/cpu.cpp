@@ -19,6 +19,7 @@
  */
 
 #include "bits.hpp"
+#include "cmdline.hpp"
 #include "counter.hpp"
 #include "gdt.hpp"
 #include "hip.hpp"
@@ -158,6 +159,19 @@ void Cpu::setup_sysenter()
 #endif
 }
 
+void Cpu::setup_pcid()
+{
+#ifdef __x86_64__
+    if (EXPECT_FALSE (Cmdline::nopcid))
+#endif
+        defeature (FEAT_PCID);
+
+    if (EXPECT_FALSE (!feature (FEAT_PCID)))
+        return;
+
+    set_cr4 (get_cr4() | Cpu::CR4_PCIDE);
+}
+
 void Cpu::init()
 {
     for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
@@ -188,6 +202,8 @@ void Cpu::init()
 
     if (EXPECT_TRUE (feature (FEAT_SEP)))
         setup_sysenter();
+
+    setup_pcid();
 
     if (EXPECT_TRUE (feature (FEAT_SMEP)))
         set_cr4 (get_cr4() | Cpu::CR4_SMEP);

@@ -37,6 +37,9 @@ class Cpu
         ALWAYS_INLINE
         static inline void setup_sysenter();
 
+        ALWAYS_INLINE
+        static inline void setup_pcid();
+
     public:
         enum Vendor
         {
@@ -53,6 +56,7 @@ class Cpu
             FEAT_ACPI           = 22,
             FEAT_HTT            = 28,
             FEAT_VMX            = 37,
+            FEAT_PCID           = 49,
             FEAT_SMEP           = 103,
             FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,
@@ -96,6 +100,7 @@ class Cpu
             CR4_OSXMMEXCPT  = 1UL << 10,        // 0x400
             CR4_VMXE        = 1UL << 13,        // 0x2000
             CR4_SMXE        = 1UL << 14,        // 0x4000
+            CR4_PCIDE       = 1UL << 17,        // 0x20000
             CR4_SMEP        = 1UL << 20,        // 0x100000
         };
 
@@ -152,9 +157,15 @@ class Cpu
         static void init();
 
         ALWAYS_INLINE
-        static inline bool feature (Feature feat)
+        static inline bool feature (Feature f)
         {
-            return features[feat / 32] & 1u << feat % 32;
+            return features[f / 32] & 1U << f % 32;
+        }
+
+        ALWAYS_INLINE
+        static inline void defeature (Feature f)
+        {
+            features[f / 32] &= ~(1U << f % 32);
         }
 
         ALWAYS_INLINE

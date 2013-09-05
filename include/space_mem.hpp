@@ -48,6 +48,9 @@ class Space_mem : public Space
         static unsigned did_ctr;
 
         ALWAYS_INLINE
+        inline Space_mem() : did (Atomic::add (did_ctr, 1U)) {}
+
+        ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
         {
             mword attr;

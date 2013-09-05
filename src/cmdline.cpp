@@ -25,6 +25,7 @@ bool Cmdline::keyb;
 bool Cmdline::serial;
 bool Cmdline::spinner;
 bool Cmdline::vtlb;
+bool Cmdline::nopcid;
 bool Cmdline::novga;
 bool Cmdline::novpid;
 
@@ -35,6 +36,7 @@ struct Cmdline::param_map Cmdline::map[] INITDATA =
     { "serial",     &Cmdline::serial    },
     { "spinner",    &Cmdline::spinner   },
     { "vtlb",       &Cmdline::vtlb      },
+    { "nopcid",     &Cmdline::nopcid    },
     { "novga",      &Cmdline::novga     },
     { "novpid",     &Cmdline::novpid    },
 };

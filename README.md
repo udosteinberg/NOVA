@@ -93,8 +93,9 @@ They must be separated by spaces.
 - *serial*	- Enables the microhypervisor to drive the serial console.
 - *spinner*	- Enables event spinners.
 - *vtlb*	- Forces use of vTLB instead of nested paging (EPT/NPT).
+- *nopcid*	- Disables TLB tags for address spaces.
 - *novga*  	- Disables VGA console.
-- *novpid* 	- Disables TLB tags.
+- *novpid* 	- Disables TLB tags for virtual machines.
 
 
 License

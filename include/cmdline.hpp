@@ -39,6 +39,7 @@ class Cmdline
         static bool serial;
         static bool spinner;
         static bool vtlb;
+        static bool nopcid;
         static bool novga;
         static bool novpid;
 

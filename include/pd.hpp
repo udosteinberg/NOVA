@@ -56,7 +56,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
 
             current = this;
 
-            loc[Cpu::id].make_current();
+            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? static_cast<mword>(1ULL << 63) | did : 0);
         }
 
         ALWAYS_INLINE

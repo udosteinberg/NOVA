@@ -74,9 +74,9 @@ class Hpt : public Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>
         }
 
         ALWAYS_INLINE
-        inline void make_current()
+        inline void make_current (mword pcid)
         {
-            asm volatile ("mov %0, %%cr3" : : "r" (val) : "memory");
+            asm volatile ("mov %0, %%cr3" : : "r" (val | pcid) : "memory");
         }
 
         bool sync_from (Hpt, mword, mword);
