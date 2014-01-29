@@ -136,12 +136,17 @@ void Ec::recv_kern()
 {
     Ec *ec = current->rcap;
 
+    bool fpu = false;
+
     if (ec->cont == ret_user_iret)
-        current->utcb->load_exc (&ec->regs);
+        fpu = current->utcb->load_exc (&ec->regs);
     else if (ec->cont == ret_user_vmresume)
-        current->utcb->load_vmx (&ec->regs);
+        fpu = current->utcb->load_vmx (&ec->regs);
     else if (ec->cont == ret_user_vmrun)
-        current->utcb->load_svm (&ec->regs);
+        fpu = current->utcb->load_svm (&ec->regs);
+
+    if (EXPECT_FALSE (fpu))
+        ec->transfer_fpu (current);
 
     ret_user_sysexit();
 }
@@ -181,14 +186,19 @@ void Ec::sys_reply()
 
         Utcb *src = current->utcb;
 
+        bool fpu = false;
+
         if (EXPECT_TRUE (ec->cont == ret_user_sysexit))
             src->save (ec->utcb);
         else if (ec->cont == ret_user_iret)
-            src->save_exc (&ec->regs);
+            fpu = src->save_exc (&ec->regs);
         else if (ec->cont == ret_user_vmresume)
-            src->save_vmx (&ec->regs);
+            fpu = src->save_vmx (&ec->regs);
         else if (ec->cont == ret_user_vmrun)
-            src->save_svm (&ec->regs);
+            fpu = src->save_svm (&ec->regs);
+
+        if (EXPECT_FALSE (fpu))
+            current->transfer_fpu (ec);
 
         if (EXPECT_FALSE (src->tcnt()))
             delegate<false>();

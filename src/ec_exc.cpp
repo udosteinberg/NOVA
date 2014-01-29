@@ -23,36 +23,55 @@
 #include "mca.hpp"
 #include "stdio.hpp"
 
+void Ec::load_fpu()
+{
+    if (!utcb)
+        regs.fpu_ctrl (true);
+
+    if (EXPECT_FALSE (!fpu))
+        Fpu::init();
+    else
+        fpu->load();
+}
+
+void Ec::save_fpu()
+{
+    if (EXPECT_FALSE (!this))
+        return;
+
+    if (!utcb)
+        regs.fpu_ctrl (false);
+
+    if (EXPECT_FALSE (!fpu))
+        fpu = new Fpu;
+
+    fpu->save();
+}
+
+void Ec::transfer_fpu (Ec *ec)
+{
+    if (!(Cpu::hazard & HZD_FPU)) {
+
+        Fpu::enable();
+
+        if (fpowner != this) {
+            fpowner->save_fpu();
+            load_fpu();
+        }
+    }
+
+    fpowner = ec;
+}
+
 void Ec::handle_exc_nm()
 {
-    trace (TRACE_FPU, "Switch FPU EC:%p (%c) -> EC:%p (%c)",
-           fpowner, fpowner && fpowner->utcb ? 'T' : 'V',
-           current,            current->utcb ? 'T' : 'V');
-
     Fpu::enable();
 
     if (current == fpowner)
         return;
 
-    if (fpowner) {
-
-        // For a vCPU, enable CR0.TS and #NM intercepts
-        if (fpowner->utcb == nullptr)
-            fpowner->regs.fpu_ctrl (false);
-
-        fpowner->fpu->save();
-    }
-
-    // For a vCPU, disable CR0.TS and #NM intercepts
-    if (current->utcb == nullptr)
-        current->regs.fpu_ctrl (true);
-
-    if (current->fpu)
-        current->fpu->load();
-    else {
-        current->fpu = new Fpu;
-        Fpu::init();
-    }
+    fpowner->save_fpu();
+    current->load_fpu();
 
     fpowner = current;
 }

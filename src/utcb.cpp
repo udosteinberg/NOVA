@@ -27,7 +27,7 @@
 #include "vmx.hpp"
 #include "x86.hpp"
 
-void Utcb::load_exc (Cpu_regs *regs)
+bool Utcb::load_exc (Cpu_regs *regs)
 {
     mword m = regs->mtd;
 
@@ -61,9 +61,11 @@ void Utcb::load_exc (Cpu_regs *regs)
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
+
+    return m & Mtd::FPU;
 }
 
-void Utcb::save_exc (Cpu_regs *regs)
+bool Utcb::save_exc (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
         regs->REG(ax) = rax;
@@ -86,9 +88,11 @@ void Utcb::save_exc (Cpu_regs *regs)
 
     if (mtd & Mtd::RFLAGS)
         regs->REG(fl) = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+
+    return mtd & Mtd::FPU;
 }
 
-void Utcb::load_vmx (Cpu_regs *regs)
+bool Utcb::load_vmx (Cpu_regs *regs)
 {
     mword m = regs->mtd;
 
@@ -199,9 +203,11 @@ void Utcb::load_vmx (Cpu_regs *regs)
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
+
+    return m & Mtd::FPU;
 }
 
-void Utcb::save_vmx (Cpu_regs *regs)
+bool Utcb::save_vmx (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
         regs->REG(ax) = rax;
@@ -339,9 +345,11 @@ void Utcb::save_vmx (Cpu_regs *regs)
     if (mtd & Mtd::EFER)
         regs->write_efer<Vmcs> (efer);
 #endif
+
+    return mtd & Mtd::FPU;
 }
 
-void Utcb::load_svm (Cpu_regs *regs)
+bool Utcb::load_svm (Cpu_regs *regs)
 {
     Vmcb *const vmcb = regs->vmcb;
 
@@ -447,9 +455,11 @@ void Utcb::load_svm (Cpu_regs *regs)
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
+
+    return m & Mtd::FPU;
 }
 
-void Utcb::save_svm (Cpu_regs *regs)
+bool Utcb::save_svm (Cpu_regs *regs)
 {
     Vmcb * const vmcb = regs->vmcb;
 
@@ -546,4 +556,6 @@ void Utcb::save_svm (Cpu_regs *regs)
     if (mtd & Mtd::EFER)
         regs->write_efer<Vmcb> (efer);
 #endif
+
+    return mtd & Mtd::FPU;
 }

@@ -31,7 +31,7 @@ class Vtlb;
 
 class Sys_regs
 {
-    protected:
+    public:
         union {
             struct {
 #ifdef __x86_64__
@@ -56,7 +56,6 @@ class Sys_regs
             mword gpr[];
         };
 
-    public:
         enum Status
         {
             SUCCESS,
@@ -88,7 +87,7 @@ class Sys_regs
 
 class Exc_regs : public Sys_regs
 {
-    protected:
+    public:
         union {
             struct {
                 mword   gs;

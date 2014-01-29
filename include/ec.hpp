@@ -131,6 +131,11 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             regs.REG(ip) = regs.ARG_IP;
         }
 
+        void load_fpu();
+        void save_fpu();
+
+        void transfer_fpu (Ec *);
+
     public:
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
