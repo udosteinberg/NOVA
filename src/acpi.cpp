@@ -165,7 +165,7 @@ unsigned Acpi::hw_read (Acpi_gas *gas)
         }
     }
 
-    Console::panic ("Unimplemented ASID %u", gas->asid);
+    Console::panic ("Unimplemented ASID %d", gas->asid);
 }
 
 void Acpi::hw_write (Acpi_gas *gas, unsigned val)
@@ -187,7 +187,7 @@ void Acpi::hw_write (Acpi_gas *gas, unsigned val)
         }
     }
 
-    Console::panic ("Unimplemented ASID %u", gas->asid);
+    Console::panic ("Unimplemented ASID %d", gas->asid);
 }
 
 void Acpi::interrupt()

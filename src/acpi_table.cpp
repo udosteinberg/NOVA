@@ -27,7 +27,7 @@ bool Acpi_table::good_checksum (Paddr addr) const
                       ptr < reinterpret_cast<uint8 const *>(this) + length;
                       check = static_cast<uint8>(check + *ptr++)) ;
 
-    trace (TRACE_ACPI, "%.4s:%#010llx REV:%2u TBL:%8.8s OEM:%6.6s LEN:%5u (%s %#04x)",
+    trace (TRACE_ACPI, "%.4s:%#010llx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%5u (%s %#04x)",
            reinterpret_cast<char const *>(&signature),
            static_cast<uint64>(addr),
            revision,
@@ -35,7 +35,7 @@ bool Acpi_table::good_checksum (Paddr addr) const
            oem_id,
            length,
            check ? "bad" : "ok",
-           checksum);
+           static_cast<unsigned int>(checksum));
 
     return !check;
 }

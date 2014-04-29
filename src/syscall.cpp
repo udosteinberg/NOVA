@@ -383,7 +383,7 @@ void Ec::sys_lookup()
 {
     Sys_lookup *s = static_cast<Sys_lookup *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%#x B:%#lx", current, s->crd().type(), s->crd().base());
+    trace (TRACE_SYSCALL, "EC:%p SYS_LOOKUP T:%d B:%#lx", current, s->crd().type(), s->crd().base());
 
     Space *space; Mdb *mdb;
     if ((space = Pd::current->subspace (s->crd().type())) && (mdb = space->tree_lookup (s->crd().base())))
