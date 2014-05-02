@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,6 +24,8 @@
 #include "compiler.hpp"
 #include "config.hpp"
 #include "memory.hpp"
+#include "msr.hpp"
+#include "x86.hpp"
 
 class Lapic
 {
@@ -64,12 +67,6 @@ class Lapic
             DLV_EXTINT      = 7U << 8,
         };
 
-        enum Mask
-        {
-            UNMASKED        = 0U << 16,
-            MASKED          = 1U << 16,
-        };
-
         enum Shorthand
         {
             DSH_NONE        = 0U << 18,
@@ -89,9 +86,9 @@ class Lapic
         }
 
         ALWAYS_INLINE
-        static inline void set_lvt (Register reg, unsigned vector, Delivery_mode dlv, Mask msk = UNMASKED)
+        static inline void set_lvt (Register reg, Delivery_mode dlv, unsigned vector, unsigned misc = 0)
         {
-            write (reg, msk | dlv | vector);
+            write (reg, misc | dlv | vector);
         }
 
         ALWAYS_INLINE
@@ -146,9 +143,14 @@ class Lapic
         }
 
         ALWAYS_INLINE
-        static inline void set_timer (unsigned val)
+        static inline void set_timer (uint64 tsc)
         {
-            write (LAPIC_TMR_ICR, val);
+            if (freq_bus) {
+                uint64 now = rdtsc();
+                uint32 icr;
+                write (LAPIC_TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / (freq_tsc / freq_bus)) > 0 ? icr : 1);
+            } else
+                Msr::write (Msr::IA32_TSC_DEADLINE, tsc);
         }
 
         ALWAYS_INLINE

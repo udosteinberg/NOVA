@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -175,6 +176,9 @@ class Sys_sm_ctrl : public Sys_regs
 
         ALWAYS_INLINE
         inline unsigned zc() const { return flags() & 0x2; }
+
+        ALWAYS_INLINE
+        inline uint64 time() const { return static_cast<uint64>(ARG_2) << 32 | ARG_3; }
 };
 
 class Sys_assign_pci : public Sys_regs

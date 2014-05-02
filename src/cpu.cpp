@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -122,9 +123,7 @@ void Cpu::check_features()
         }
     }
 
-    if (!feature (FEAT_HTT))
-        top = Lapic::id();
-    else if (feature (FEAT_CMP_LEGACY))
+    if (feature (FEAT_CMP_LEGACY))
         cpp = tpp;
 
     unsigned tpc = tpp / cpp;
@@ -184,10 +183,10 @@ void Cpu::init()
     Tss::load();
     Idt::load();
 
-    Lapic::init();
-
     // Initialize CPU number and check features
     check_features();
+
+    Lapic::init();
 
     row = Console_vga::con.spinner (id);
 

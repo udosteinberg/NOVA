@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -31,10 +32,13 @@
 #include "utcb.hpp"
 #include "vectors.hpp"
 
-template <Sys_regs::Status T>
+template <Sys_regs::Status S, bool T>
 void Ec::sys_finish()
 {
-    current->regs.set_status (T);
+    if (T)
+        current->clr_timeout();
+
+    current->regs.set_status (S);
     ret_user_sysexit();
 }
 
@@ -471,8 +475,7 @@ void Ec::sys_sm_ctrl()
         case 1:
             if (sm->space == static_cast<Space_obj *>(&Pd::kern))
                 Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
-            current->cont = sys_finish<Sys_regs::SUCCESS>;
-            sm->dn (r->zc());
+            sm->dn (r->zc(), r->time());
             break;
     }
 

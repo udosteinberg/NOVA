@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,6 +28,7 @@
 #include "queue.hpp"
 #include "regs.hpp"
 #include "sc.hpp"
+#include "timeout_hypercall.hpp"
 #include "tss.hpp"
 
 class Utcb;
@@ -53,6 +55,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             uint32  xcpu;
         };
         unsigned const evt;
+        Timeout_hypercall timeout;
 
         static Slab_cache cache;
 
@@ -152,6 +155,20 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         inline bool blocked() const { return next || !cont; }
 
+        ALWAYS_INLINE
+        inline void set_timeout (uint64 t, Sm *s)
+        {
+            if (EXPECT_FALSE (t))
+                timeout.enqueue (t, s);
+        }
+
+        ALWAYS_INLINE
+        inline void clr_timeout()
+        {
+            if (EXPECT_FALSE (timeout.active()))
+                timeout.dequeue();
+        }
+
         ALWAYS_INLINE NORETURN
         inline void make_current()
         {
@@ -200,11 +217,13 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         }
 
         ALWAYS_INLINE
-        inline void release()
+        inline void release (void (*c)())
         {
+            cont = c;
+
             Lock_guard <Spinlock> guard (lock);
 
-            for (Sc *s; (s = dequeue()); s->remote_enqueue()) ;
+            for (Sc *s; dequeue (s = head()); s->remote_enqueue()) ;
         }
 
         HOT NORETURN
@@ -219,7 +238,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         NORETURN
         static void ret_user_vmrun();
 
-        template <Sys_regs::Status T>
+        template <Sys_regs::Status S, bool T = false>
         NOINLINE NORETURN
         static void sys_finish();
 

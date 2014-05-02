@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -78,6 +79,7 @@ class Msr
             IA32_VMX_TRUE_ENTRY     = 0x490,
 
             IA32_DS_AREA            = 0x600,
+            IA32_TSC_DEADLINE       = 0x6e0,
             IA32_EXT_XAPIC          = 0x800,
             IA32_EFER               = 0xc0000080,
             IA32_STAR               = 0xc0000081,

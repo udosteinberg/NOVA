@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,6 +22,7 @@
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "stdio.hpp"
+#include "timeout_budget.hpp"
 #include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
@@ -37,12 +39,12 @@ Sc *Sc::list[Sc::priorities];
 
 unsigned Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, Ec *e) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Lapic::freq_bus * 1000), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *e) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Lapic::freq_tsc * 1000), left (0), prev (nullptr), next (nullptr)
 {
     trace (TRACE_SYSCALL, "SC:%p created (PD:%p Kernel)", this, own);
 }
 
-Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (c), prio (p), budget (Lapic::freq_bus / 1000 * q), left (0)
+Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (c), prio (p), budget (Lapic::freq_tsc / 1000 * q), left (0), prev (nullptr), next (nullptr)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }
@@ -65,7 +67,7 @@ void Sc::ready_enqueue (uint64 t)
             list[prio] = this;
     }
 
-    trace (TRACE_SCHEDULE, "ENQ:%p (%02u) PRIO:%#x TOP:%#x %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
+    trace (TRACE_SCHEDULE, "ENQ:%p (%llu) PRIO:%#x TOP:%#x %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
 
     if (prio > current->prio || (this != current && prio == current->prio && left))
         Cpu::hazard |= HZD_SCHED;
@@ -87,12 +89,12 @@ void Sc::ready_dequeue (uint64 t)
 
     next->prev = prev;
     prev->next = next;
-    prev = nullptr;
+    prev = next = nullptr;
 
     while (!list[prio_top] && prio_top)
         prio_top--;
 
-    trace (TRACE_SCHEDULE, "DEQ:%p (%02u) PRIO:%#x TOP:%#x", this, left, prio, prio_top);
+    trace (TRACE_SCHEDULE, "DEQ:%p (%llu) PRIO:%#x TOP:%#x", this, left, prio, prio_top);
 
     ec->add_tsc_offset (tsc - t);
 
@@ -107,8 +109,10 @@ void Sc::schedule (bool suspend)
     assert (suspend || !current->prev);
 
     uint64 t = rdtsc();
+    uint64 d = Timeout_budget::budget.dequeue();
+
     current->time += t - current->tsc;
-    current->left = Lapic::get_timer();
+    current->left = d > t ? d - t : 0;
 
     Cpu::hazard &= ~HZD_SCHED;
 
@@ -118,7 +122,7 @@ void Sc::schedule (bool suspend)
     Sc *sc = list[prio_top];
     assert (sc);
 
-    Lapic::set_timer (static_cast<uint32>(sc->left));
+    Timeout_budget::budget.enqueue (t + sc->left);
 
     ctr_loop = 0;
 

@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -57,6 +58,7 @@ class Cpu
             FEAT_HTT            = 28,
             FEAT_VMX            = 37,
             FEAT_PCID           = 49,
+            FEAT_TSC_DEADLINE   = 56,
             FEAT_SMEP           = 103,
             FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,

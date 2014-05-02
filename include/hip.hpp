@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -67,7 +68,7 @@ class Hip
         uint32  cfg_page;               // 0x28
         uint32  cfg_utcb;               // 0x2c
         uint32  freq_tsc;               // 0x30
-        uint32  freq_bus;               // 0x34
+        uint32  reserved;               // 0x34
         Hip_cpu cpu_desc[NUM_CPU];
         Hip_mem mem_desc[];
 

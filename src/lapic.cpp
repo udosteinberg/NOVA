@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,11 +20,13 @@
  */
 
 #include "acpi.hpp"
+#include "cmdline.hpp"
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
+#include "timeout.hpp"
 #include "vectors.hpp"
 
 unsigned    Lapic::freq_tsc;
@@ -43,19 +46,21 @@ void Lapic::init()
     if (!(svr & 0x100))
         write (LAPIC_SVR, svr | 0x100);
 
+    bool dl = Cpu::feature (Cpu::FEAT_TSC_DEADLINE) && !Cmdline::nodl;
+
     switch (lvt_max()) {
         default:
-            set_lvt (LAPIC_LVT_THERM, VEC_LVT_THERM, DLV_FIXED);
+            set_lvt (LAPIC_LVT_THERM, DLV_FIXED, VEC_LVT_THERM);
         case 4:
-            set_lvt (LAPIC_LVT_PERFM, VEC_LVT_PERFM, DLV_FIXED);
+            set_lvt (LAPIC_LVT_PERFM, DLV_FIXED, VEC_LVT_PERFM);
         case 3:
-            set_lvt (LAPIC_LVT_ERROR, VEC_LVT_ERROR, DLV_FIXED);
+            set_lvt (LAPIC_LVT_ERROR, DLV_FIXED, VEC_LVT_ERROR);
         case 2:
-            set_lvt (LAPIC_LVT_LINT1, 0, DLV_NMI);
+            set_lvt (LAPIC_LVT_LINT1, DLV_NMI, 0);
         case 1:
-            set_lvt (LAPIC_LVT_LINT0, 0, DLV_EXTINT, MASKED);
+            set_lvt (LAPIC_LVT_LINT0, DLV_EXTINT, 0, 1U << 16);
         case 0:
-            set_lvt (LAPIC_LVT_TIMER, VEC_LVT_TIMER, DLV_FIXED);
+            set_lvt (LAPIC_LVT_TIMER, DLV_FIXED, VEC_LVT_TIMER, dl ? 2U << 17 : 0);
     }
 
     write (LAPIC_TPR, 0x10);
@@ -87,7 +92,7 @@ void Lapic::init()
 
     write (LAPIC_TMR_ICR, 0);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x", apic_base & ~PAGE_MASK, id(), version(), lvt_max());
+    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~PAGE_MASK, id(), version(), lvt_max(), freq_bus ? "OS" : "DL");
 }
 
 void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
@@ -111,8 +116,9 @@ void Lapic::error_handler()
 
 void Lapic::timer_handler()
 {
-    if (!read (LAPIC_TMR_CCR))
-        Cpu::hazard |= HZD_SCHED;
+    bool expired = (freq_bus ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0;
+    if (expired)
+        Timeout::check();
 
     Rcu::update();
 }
