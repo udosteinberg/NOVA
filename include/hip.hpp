@@ -74,8 +74,9 @@ class Hip
 
     public:
         enum Feature {
-            FEAT_VMX    = 1u << 1,
-            FEAT_SVM    = 1u << 2,
+            FEAT_SMMU   = 1U << 0,
+            FEAT_VMX    = 1U << 1,
+            FEAT_SVM    = 1U << 2,
         };
 
         static mword root_addr;
@@ -92,7 +93,12 @@ class Hip
             return hip()->api_flg;
         }
 
-        static void remove (Feature f)
+        static void set_feature (Feature f)
+        {
+            Atomic::set_mask (hip()->api_flg, static_cast<typeof hip()->api_flg>(f));
+        }
+
+        static void clr_feature (Feature f)
         {
             Atomic::clr_mask (hip()->api_flg, static_cast<typeof hip()->api_flg>(f));
         }

@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,6 +23,7 @@
 #include "cmdline.hpp"
 #include "dmar.hpp"
 #include "dpt.hpp"
+#include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
@@ -87,4 +89,6 @@ void Acpi_table_dmar::parse() const
     }
 
     Dmar::enable (flags);
+
+    Hip::set_feature (Hip::FEAT_SMMU);
 }
