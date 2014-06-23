@@ -31,7 +31,6 @@
 
 unsigned    Lapic::freq_tsc;
 unsigned    Lapic::freq_bus;
-uint8       Lapic::apic_id[NUM_CPU];
 
 void Lapic::init()
 {
@@ -66,7 +65,7 @@ void Lapic::init()
     write (LAPIC_TPR, 0x10);
     write (LAPIC_TMR_DCR, 0xb);
 
-    Cpu::id = find_cpu (id());
+    Cpu::id = Cpu::find_by_apic_id (id());
 
     if ((Cpu::bsp = apic_base & 0x100)) {
 
@@ -100,7 +99,7 @@ void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthan
     while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
         pause();
 
-    write (LAPIC_ICR_HI, apic_id[cpu] << 24);
+    write (LAPIC_ICR_HI, Cpu::apic_id[cpu] << 24);
     write (LAPIC_ICR_LO, dsh | 1U << 14 | dlv | vector);
 }
 

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "config.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -137,6 +138,9 @@ class Cpu
         static mword    boot_lock           asm ("boot_lock");
 
         static unsigned online;
+        static uint8    acpi_id[NUM_CPU];
+        static uint8    apic_id[NUM_CPU];
+
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;
         static unsigned package             CPULOCAL;
@@ -192,5 +196,15 @@ class Cpu
         static inline void cpuid (unsigned leaf, unsigned subleaf, uint32 &eax, uint32 &ebx, uint32 &ecx, uint32 &edx)
         {
             asm volatile ("cpuid" : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx) : "a" (leaf), "c" (subleaf));
+        }
+
+        ALWAYS_INLINE
+        static unsigned find_by_apic_id (unsigned x)
+        {
+            for (unsigned i = 0; i < NUM_CPU; i++)
+                if (apic_id[i] == x)
+                    return i;
+
+            return ~0U;
         }
 };

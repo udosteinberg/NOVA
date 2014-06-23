@@ -22,7 +22,6 @@
 #pragma once
 
 #include "compiler.hpp"
-#include "config.hpp"
 #include "memory.hpp"
 #include "msr.hpp"
 #include "x86.hpp"
@@ -106,17 +105,6 @@ class Lapic
     public:
         static unsigned freq_tsc;
         static unsigned freq_bus;
-        static uint8    apic_id[NUM_CPU];
-
-        ALWAYS_INLINE
-        static unsigned find_cpu (unsigned apic)
-        {
-            for (unsigned i = 0; i < NUM_CPU; i++)
-                if (apic_id[i] == apic)
-                    return i;
-
-            return ~0U;
-        }
 
         ALWAYS_INLINE
         static inline unsigned id()
