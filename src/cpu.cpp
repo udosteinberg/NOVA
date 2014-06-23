@@ -45,6 +45,9 @@ mword       Cpu::boot_lock;
 
 // Order of these matters
 unsigned    Cpu::online;
+uint8       Cpu::acpi_id[NUM_CPU];
+uint8       Cpu::apic_id[NUM_CPU];
+
 unsigned    Cpu::id;
 unsigned    Cpu::hazard;
 unsigned    Cpu::package;

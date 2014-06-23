@@ -119,6 +119,7 @@ void Hip::add_cpu()
 {
     Hip_cpu *cpu = hip()->cpu_desc + Cpu::id;
 
+    cpu->acpi_id = Cpu::acpi_id[Cpu::id];
     cpu->package = static_cast<uint8>(Cpu::package);
     cpu->core    = static_cast<uint8>(Cpu::core);
     cpu->thread  = static_cast<uint8>(Cpu::thread);
