@@ -30,8 +30,8 @@
 #include "gsi.hpp"
 #include "hpt.hpp"
 #include "io.hpp"
+#include "lowlevel.hpp"
 #include "stdio.hpp"
-#include "x86.hpp"
 
 Paddr       Acpi::dmar, Acpi::fadt, Acpi::hpet, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
 Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;
