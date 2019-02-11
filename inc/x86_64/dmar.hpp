@@ -21,8 +21,8 @@
 #pragma once
 
 #include "list.hpp"
+#include "lowlevel.hpp"
 #include "slab.hpp"
-#include "x86.hpp"
 
 class Pd;
 
