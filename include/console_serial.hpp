@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,7 +24,7 @@
 #include "console.hpp"
 #include "io.hpp"
 
-class Console_serial : public Console
+class Console_serial final : public Console
 {
     private:
         enum Register
