@@ -94,12 +94,12 @@ class Utcb : public Utcb_head, private Utcb_data
         static mword const words = (PAGE_SIZE - sizeof (Utcb_head)) / sizeof (mword);
 
     public:
-        WARN_UNUSED_RESULT bool load_exc (Cpu_regs *);
-        WARN_UNUSED_RESULT bool load_vmx (Cpu_regs *);
-        WARN_UNUSED_RESULT bool load_svm (Cpu_regs *);
-        WARN_UNUSED_RESULT bool save_exc (Cpu_regs *);
-        WARN_UNUSED_RESULT bool save_vmx (Cpu_regs *);
-        WARN_UNUSED_RESULT bool save_svm (Cpu_regs *);
+        [[nodiscard]] bool load_exc (Cpu_regs *);
+        [[nodiscard]] bool load_vmx (Cpu_regs *);
+        [[nodiscard]] bool load_svm (Cpu_regs *);
+        [[nodiscard]] bool save_exc (Cpu_regs *);
+        [[nodiscard]] bool save_vmx (Cpu_regs *);
+        [[nodiscard]] bool save_svm (Cpu_regs *);
 
         inline mword ucnt() const { return static_cast<uint16>(items); }
         inline mword tcnt() const { return static_cast<uint16>(items >> 16); }

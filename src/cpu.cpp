@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -92,11 +93,14 @@ void Cpu::check_features()
     switch (static_cast<uint8>(eax)) {
         default:
             cpuid (0x7, 0, eax, features[3], ecx, edx);
+            [[fallthrough]];
         case 0x6:
             cpuid (0x6, features[2], ebx, ecx, edx);
+            [[fallthrough]];
         case 0x4 ... 0x5:
             cpuid (0x4, 0, eax, ebx, ecx, edx);
             cpp = (eax >> 26 & 0x3f) + 1;
+            [[fallthrough]];
         case 0x1 ... 0x3:
             cpuid (0x1, eax, ebx, features[1], features[0]);
             family   = (eax >> 8 & 0xf) + (eax >> 20 & 0xff);
@@ -115,12 +119,16 @@ void Cpu::check_features()
         switch (static_cast<uint8>(eax)) {
             default:
                 cpuid (0x8000000a, Vmcb::svm_version, ebx, ecx, Vmcb::svm_feature);
+                [[fallthrough]];
             case 0x4 ... 0x9:
                 cpuid (0x80000004, name[8], name[9], name[10], name[11]);
+                [[fallthrough]];
             case 0x3:
                 cpuid (0x80000003, name[4], name[5], name[6], name[7]);
+                [[fallthrough]];
             case 0x2:
                 cpuid (0x80000002, name[0], name[1], name[2], name[3]);
+                [[fallthrough]];
             case 0x1:
                 cpuid (0x80000001, eax, ebx, features[5], features[4]);
         }
