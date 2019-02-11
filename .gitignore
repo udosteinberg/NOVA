@@ -1,1 +1,5 @@
+Makefile.conf
+build-*
 *.patch
+*.md
+.*
