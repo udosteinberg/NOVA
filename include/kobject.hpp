@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -40,7 +41,6 @@ class Kobject : public Mdb
             SC,
             PT,
             SM,
-            INVALID,
         };
 
         explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
@@ -49,6 +49,6 @@ class Kobject : public Mdb
         ALWAYS_INLINE
         inline Type type() const
         {
-            return EXPECT_TRUE (this) ? Type (objtype) : INVALID;
+            return Type (objtype);
         }
 };
