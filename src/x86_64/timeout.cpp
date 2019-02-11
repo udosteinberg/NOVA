@@ -16,8 +16,8 @@
  */
 
 #include "lapic.hpp"
+#include "lowlevel.hpp"
 #include "timeout.hpp"
-#include "x86.hpp"
 
 Timeout *Timeout::list;
 
