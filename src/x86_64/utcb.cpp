@@ -22,11 +22,11 @@
 #include "barrier.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 #include "mtd.hpp"
 #include "regs.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
-#include "x86.hpp"
 
 bool Utcb::load_exc (Cpu_regs *regs)
 {
