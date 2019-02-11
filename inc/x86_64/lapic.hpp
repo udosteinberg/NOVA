@@ -22,9 +22,9 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "lowlevel.hpp"
 #include "memory.hpp"
 #include "msr.hpp"
-#include "x86.hpp"
 
 class Lapic
 {
