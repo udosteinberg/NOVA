@@ -203,7 +203,7 @@ class Dmar : public List<Dmar>
             invq[invq_idx] = q;
             invq_idx = (invq_idx + 1) % cnt;
             write<uint64>(REG_IQT, invq_idx << 4);
-        };
+        }
 
         ALWAYS_INLINE
         inline void qi_wait()
