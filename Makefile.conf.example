@@ -1,0 +1,46 @@
+#
+# Makefile.conf
+#
+# Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+#
+# This file is part of the NOVA microhypervisor.
+#
+# NOVA is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# NOVA is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License version 2 for more details.
+#
+
+# Configure target architecture
+# Permitted values are: aarch64, x86_64
+ARCH		?= aarch64
+
+# Configure compiler type
+# Permitted values are: gcc
+COMP		?= gcc
+
+# Configure build directory
+BLD_DIR		?= build-$(ARCH)
+
+# Configure install directory
+INS_DIR		?= /home/tftp/nova
+
+# Configure architecture-specific tools prefix
+PREFIX_aarch64	?= aarch64-linux-
+PREFIX_x86_64	?= x86_64-linux-
+
+# Configure architecture-specific ELF image tweaks
+H2E_aarch64	?= ln -frs
+H2E_x86_64	?= $(OC) -O elf32-i386
+
+# Configure architecture-specific BIN image tweaks
+H2B_aarch64	?= $(OC) -O binary
+H2B_x86_64	?= $(OC) -O binary
+
+# Configure architecture-specific run targets
+RUN_aarch64	?= qemu-system-aarch64 -m 512 -smp 4 -no-reboot -display none -serial mon:stdio -M virt -cpu cortex-a57 -kernel
+RUN_x86_64	?= qemu-system-x86_64  -m 512 -smp 4 -no-reboot -display none -serial mon:stdio -M q35 -append serial -kernel
