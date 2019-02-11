@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -62,13 +63,13 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         REGPARM (1)
         static void handle_exc (Exc_regs *) asm ("exc_handler");
 
-        NORETURN
+        [[noreturn]]
         static void handle_vmx() asm ("vmx_handler");
 
-        NORETURN
+        [[noreturn]]
         static void handle_svm() asm ("svm_handler");
 
-        NORETURN
+        [[noreturn]]
         static void handle_tss() asm ("tss_handler");
 
         static void handle_exc_nm();
@@ -78,25 +79,25 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         static inline uint8 ifetch (mword);
 
-        NORETURN
+        [[noreturn]]
         static inline void svm_exception (mword);
 
-        NORETURN
+        [[noreturn]]
         static inline void svm_cr();
 
-        NORETURN
+        [[noreturn]]
         static inline void svm_invlpg();
 
-        NORETURN
+        [[noreturn]]
         static inline void vmx_exception();
 
-        NORETURN
+        [[noreturn]]
         static inline void vmx_extint();
 
-        NORETURN
+        [[noreturn]]
         static inline void vmx_invlpg();
 
-        NORETURN
+        [[noreturn]]
         static inline void vmx_cr();
 
         static bool fixup (mword &);
@@ -169,7 +170,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
                 timeout.dequeue();
         }
 
-        ALWAYS_INLINE NORETURN
+        [[noreturn]] ALWAYS_INLINE
         inline void make_current()
         {
             current = this;
@@ -226,97 +227,97 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             for (Sc *s; dequeue (s = head()); s->remote_enqueue()) ;
         }
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void ret_user_sysexit();
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void ret_user_iret() asm ("ret_user_iret");
 
-        NORETURN
+        [[noreturn]]
         static void ret_user_vmresume();
 
-        NORETURN
+        [[noreturn]]
         static void ret_user_vmrun();
 
         template <Sys_regs::Status S, bool T = false>
-        NOINLINE NORETURN
+        [[noreturn]] NOINLINE
         static void sys_finish();
 
-        NORETURN
+        [[noreturn]]
         void activate();
 
         template <void (*)()>
-        NORETURN
+        [[noreturn]]
         static void send_msg();
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void recv_kern();
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void recv_user();
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void reply (void (*)() = nullptr);
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void sys_call();
 
-        HOT NORETURN
+        [[noreturn]] HOT
         static void sys_reply();
 
-        NORETURN
+        [[noreturn]]
         static void sys_create_pd();
 
-        NORETURN
+        [[noreturn]]
         static void sys_create_ec();
 
-        NORETURN
+        [[noreturn]]
         static void sys_create_sc();
 
-        NORETURN
+        [[noreturn]]
         static void sys_create_pt();
 
-        NORETURN
+        [[noreturn]]
         static void sys_create_sm();
 
-        NORETURN
+        [[noreturn]]
         static void sys_revoke();
 
-        NORETURN
+        [[noreturn]]
         static void sys_lookup();
 
-        NORETURN
+        [[noreturn]]
         static void sys_ec_ctrl();
 
-        NORETURN
+        [[noreturn]]
         static void sys_sc_ctrl();
 
-        NORETURN
+        [[noreturn]]
         static void sys_pt_ctrl();
 
-        NORETURN
+        [[noreturn]]
         static void sys_sm_ctrl();
 
-        NORETURN
+        [[noreturn]]
         static void sys_assign_pci();
 
-        NORETURN
+        [[noreturn]]
         static void sys_assign_gsi();
 
-        NORETURN
+        [[noreturn]]
         static void idle();
 
-        NORETURN
+        [[noreturn]]
         static void root_invoke();
 
         template <bool>
-        NORETURN
+        [[noreturn]]
         static void delegate();
 
-        NORETURN
+        [[noreturn]]
         static void dead() { die ("IPC Abort"); }
 
-        NORETURN
+        [[noreturn]]
         static void die (char const *, Exc_regs * = &current->regs);
 
         ALWAYS_INLINE

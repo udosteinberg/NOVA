@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -79,7 +80,7 @@ class Sc : public Kobject
         static void rrq_handler();
         static void rke_handler();
 
-        NORETURN
+        [[noreturn]]
         static void schedule (bool = false);
 
         ALWAYS_INLINE

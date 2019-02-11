@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -71,6 +72,7 @@ void Ec::svm_exception (mword reason)
                 case Vtlb::GLA_GPA:
                     current->regs.vmcb->cr2 = cr2;
                     current->regs.vmcb->inj_control = static_cast<uint64>(err) << 32 | 0x80000b0e;
+                    [[fallthrough]];
 
                 case Vtlb::SUCCESS:
                     ret_user_vmrun();
