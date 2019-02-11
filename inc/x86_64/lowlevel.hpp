@@ -23,6 +23,17 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
+ALWAYS_INLINE
+inline uint64 div64 (uint64 n, uint32 d, uint32 *r)
+{
+    uint64 q;
+
+     q = n / d;
+    *r = static_cast<uint32>(n % d);
+
+    return q;
+}
+
 template <typename T>
 ALWAYS_INLINE
 static inline void flush (T t)
