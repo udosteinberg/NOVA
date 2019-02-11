@@ -184,7 +184,7 @@ void Cpu::setup_pcid()
 
 void Cpu::init()
 {
-    for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+    for (auto func { CTORS_L }; func != CTORS_C; (*func++)()) ;
 
     Gdt::build();
     Tss::build();
