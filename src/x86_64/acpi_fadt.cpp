@@ -19,7 +19,7 @@
 #include "acpi.hpp"
 #include "acpi_fadt.hpp"
 #include "io.hpp"
-#include "x86.hpp"
+#include "lowlevel.hpp"
 
 void Acpi_table_fadt::parse() const
 {

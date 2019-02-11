@@ -22,8 +22,8 @@
 
 #include "cpu.hpp"
 #include "hazards.hpp"
+#include "lowlevel.hpp"
 #include "slab.hpp"
-#include "x86.hpp"
 
 class Fpu
 {
