@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -42,8 +44,8 @@ class Acpi_table_rsdt : public Acpi_table
     public:
         union
         {
-            uint32  rsdt[];
-            uint64  xsdt[];
+            uint32  rsdt[1];
+            uint64  xsdt[1];
         };
 
         INIT
