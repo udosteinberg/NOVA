@@ -19,8 +19,8 @@
  */
 
 #include "counter.hpp"
+#include "lowlevel.hpp"
 #include "stdio.hpp"
-#include "x86.hpp"
 
 unsigned    Counter::ipi[NUM_IPI];
 unsigned    Counter::lvt[NUM_LVT];
