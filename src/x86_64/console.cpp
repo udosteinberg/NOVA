@@ -21,7 +21,7 @@
 
 #include "console.hpp"
 #include "lock_guard.hpp"
-#include "x86.hpp"
+#include "lowlevel.hpp"
 
 void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned flags)
 {
