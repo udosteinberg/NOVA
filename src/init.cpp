@@ -57,11 +57,11 @@ void init (mword mbi)
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
 
-    for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
+    for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
 
     Hip::hip->build (mbi);
 
-    for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
+    for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
 
     // Now we're ready to talk to the world
     Console::print ("\fNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
