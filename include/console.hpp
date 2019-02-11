@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,6 +22,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include "compiler.hpp"
 #include "initprio.hpp"
 #include "spinlock.hpp"
 
