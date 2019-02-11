@@ -26,12 +26,12 @@
 #include "gdt.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
+#include "lowlevel.hpp"
 #include "msr.hpp"
 #include "stdio.hpp"
 #include "tss.hpp"
 #include "util.hpp"
 #include "vmx.hpp"
-#include "x86.hpp"
 
 Vmcs *              Vmcs::current;
 uint16              Vmcs::vpid_ctr;
