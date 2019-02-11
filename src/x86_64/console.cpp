@@ -22,7 +22,7 @@
 #include "bits.hpp"
 #include "console.hpp"
 #include "lock_guard.hpp"
-#include "x86.hpp"
+#include "lowlevel.hpp"
 
 Console *Console::list;
 Spinlock Console::lock;
