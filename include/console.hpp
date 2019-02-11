@@ -22,6 +22,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include "compiler.hpp"
 #include "initprio.hpp"
 #include "spinlock.hpp"
 
