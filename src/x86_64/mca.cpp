@@ -17,10 +17,10 @@
 
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 #include "mca.hpp"
 #include "msr.hpp"
 #include "stdio.hpp"
-#include "x86.hpp"
 
 unsigned Mca::banks;
 
