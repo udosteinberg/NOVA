@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,55 +26,69 @@
 
 #if defined(__GNUC__)
 
-        #define COMPILER            "gcc " __VERSION__
+        #define COMPILER                "gcc " __VERSION__
 
     #if defined(__GNUC_PATCHLEVEL__)
-        #define COMPILER_STRING     "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__) "." EXPAND (__GNUC_PATCHLEVEL__)
-        #define COMPILER_VERSION    (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
+        #define COMPILER_STRING         "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__) "." EXPAND (__GNUC_PATCHLEVEL__)
+        #define COMPILER_VERSION        (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
     #else
-        #define COMPILER_STRING     "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__)
-        #define COMPILER_VERSION    (__GNUC__ * 100 + __GNUC_MINOR__ * 10)
+        #define COMPILER_STRING         "gcc " EXPAND (__GNUC__) "." EXPAND (__GNUC_MINOR__)
+        #define COMPILER_VERSION        (__GNUC__ * 100 + __GNUC_MINOR__ * 10)
     #endif
 
-    #if (COMPILER_VERSION < 430)
-        #define COLD
-        #define HOT
+    #ifndef __has_cpp_attribute
+        #define __has_cpp_attribute(X)  0
+    #endif
+
+    #if   __has_cpp_attribute(fallthrough)
+        #define FALLTHROUGH             [[fallthrough]]             // C++17
+    #elif __has_cpp_attribute(clang::fallthrough)
+        #define FALLTHROUGH             [[clang::fallthrough]]
     #else
-        #define COLD                __attribute__((cold))
-        #define HOT                 __attribute__((hot))
+        #define FALLTHROUGH
     #endif
 
-    #if (COMPILER_VERSION < 450)
-        #define UNREACHED           __builtin_trap()
+    #if   __has_cpp_attribute(maybe_unused)
+        #define MAYBE_UNUSED            [[maybe_unused]]            // C++17
+    #elif __has_cpp_attribute(gnu::unused)
+        #define MAYBE_UNUSED            [[gnu::unused]]
     #else
-        #define UNREACHED           __builtin_unreachable()
+        #define MAYBE_UNUSED
     #endif
 
-    #if (COMPILER_VERSION < 460) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
-        #define nullptr             0
+    #if   __has_cpp_attribute(nodiscard)
+        #define NODISCARD               [[nodiscard]]               // C++17
+    #elif __has_cpp_attribute(gnu::warn_unused_result)
+        #define NODISCARD               [[gnu::warn_unused_result]]
+    #else
+        #define NODISCARD
     #endif
 
-        #define ALIGNED(X)          __attribute__((aligned(X)))
-        #define ALWAYS_INLINE       __attribute__((always_inline))
-        #define CPULOCAL            __attribute__((section (".cpulocal,\"w\",@nobits#")))
-        #define CPULOCAL_HOT        __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
-        #define FORMAT(X,Y)         __attribute__((format (printf, (X),(Y))))
-        #define INIT                __attribute__((section (".init")))
-        #define INITDATA            __attribute__((section (".initdata")))
-        #define INIT_PRIORITY(X)    __attribute__((init_priority((X))))
-        #define NOINLINE            __attribute__((noinline))
-        #define NONNULL             __attribute__((nonnull))
-        #define NORETURN            __attribute__((noreturn))
-        #define PACKED              __attribute__((packed))
-        #define REGPARM(X)          __attribute__((regparm(X)))
-        #define WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
+        #define NORETURN                [[noreturn]]                // C++11
 
-        #define EXPECT_FALSE(X)     __builtin_expect(!!(X), 0)
-        #define EXPECT_TRUE(X)      __builtin_expect(!!(X), 1)
+        #define COLD                    __attribute__((cold))
+        #define HOT                     __attribute__((hot))
 
-        #define ACCESS_ONCE(x)      (*static_cast<volatile typeof(x) *>(&(x)))
+        #define ALIGNED(X)              __attribute__((aligned(X)))
+        #define ALWAYS_INLINE           __attribute__((always_inline))
+        #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits#")))
+        #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
+        #define FORMAT(X,Y)             __attribute__((format (printf, (X),(Y))))
+        #define INIT                    __attribute__((section (".init")))
+        #define INITDATA                __attribute__((section (".initdata")))
+        #define INIT_PRIORITY(X)        __attribute__((init_priority((X))))
+        #define NOINLINE                __attribute__((noinline))
+        #define NONNULL                 __attribute__((nonnull))
+        #define PACKED                  __attribute__((packed))
+        #define REGPARM(X)              __attribute__((regparm(X)))
+
+        #define EXPECT_FALSE(X)         __builtin_expect(!!(X), 0)
+        #define EXPECT_TRUE(X)          __builtin_expect(!!(X), 1)
+        #define UNREACHED               __builtin_unreachable()
+
+        #define ACCESS_ONCE(x)          (*static_cast<volatile decltype(x) *>(&(x)))
 
 #else
-        #define COMPILER            "unknown compiler"
-        #define COMPILER_VERSION    0
+        #define COMPILER                "unknown compiler"
+        #define COMPILER_VERSION        0
 #endif

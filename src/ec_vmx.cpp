@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -71,6 +72,7 @@ void Ec::vmx_exception()
                     current->regs.cr2 = cr2;
                     Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x1000);
                     Vmcs::write (Vmcs::ENT_INTR_ERROR, err);
+                    FALLTHROUGH;
 
                 case Vtlb::SUCCESS:
                     ret_user_vmresume();
