@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -51,6 +52,12 @@
 
     #if (COMPILER_VERSION < 460) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
         #define nullptr             0
+    #endif
+
+    #if (COMPILER_VERSION < 700)
+        #define FALLTHROUGH
+    #else
+        #define FALLTHROUGH         __attribute__((fallthrough))
     #endif
 
         #define ALIGNED(X)          __attribute__((aligned(X)))
