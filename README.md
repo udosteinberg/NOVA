@@ -1,5 +1,4 @@
-NOVA Microhypervisor
-====================
+# NOVA Microhypervisor
 
 This is the source code for the NOVA microhypervisor.
 
@@ -19,95 +18,70 @@ the microhypervisor.
 **This code is experimental and not feature complete. If it breaks, you get
   to keep both pieces.**
 
+## Building
 
-Supported platforms
--------------------
+### Required Tools
 
-The NOVA microhypervisor runs on single- and multi-processor x86 machines
-that support ACPI.
+The following tools are needed to compile the source code:
 
-The virtualization features are available on:
+- **make 3.81 or higher**, available from https://ftp.gnu.org/gnu/make/
+- **binutils 2.23 or higher**, available from https://ftp.gnu.org/gnu/binutils/
+- **gcc 7.1 or higher**, available from https://ftp.gnu.org/gnu/gcc/
 
-- Intel CPUs with VMX,
-  regardless of whether the CPU supports nested paging (EPT) or not.
+### Build Environment
 
-- AMD CPUs with SVM,
-  regardless of whether the CPU supports nested paging (NPT) or not.
+The build environment can be customized permanently in `Makefile.conf` or
+ad hoc by passing the applicable `ARCH`, `BOARD` and `PREFIX_` variables to
+the invocation of `make` as described below.
 
+- `PREFIX_aarch64` sets the path for an **ARMv8-A** cross-toolchain
+- `PREFIX_x86_64` sets the path for an **x86 (64bit)** cross-toolchain
 
-Building from source code
--------------------------
+For example, if the ARMv8-A cross-toolchain is located at
+```
+/opt/aarch64-linux/bin/aarch64-linux-gcc
+/opt/aarch64-linux/bin/aarch64-linux-as
+/opt/aarch64-linux/bin/aarch64-linux-ld
+```
 
-You need the following tools to compile the source code:
+then set `PREFIX_aarch64=/opt/aarch64-linux/bin/aarch64-linux-`
 
-- make 3.81 or higher,
-  available from http://www.gnu.org/software/make/
+### Supported Architectures
 
-- binutils 2.21.51.0.3 or higher,
-  available from http://www.kernel.org/pub/linux/devel/binutils/
+#### ARMv8-A (64bit)
 
-- gcc, available from http://gcc.gnu.org/
-  - for x86_32: gcc 4.2 or higher
-  - for x86_64: gcc 4.5 or higher
+For CPUs with ARMv8-A architecture and boards with
+- either Advanced Configuration and Power Interface (ACPI)
+- or Flattened Device Tree (FDT)
 
+#### x86 (64bit)
 
-You can build a 32-bit microhypervisor binary as follows:
+For CPUs with x86 architecture
+- Intel VT-x (VMX+EPT) + optionally VT-d
+- AMD-V (SVM+NPT)
 
-    cd build; make ARCH=x86_32
+and boards with Advanced Configuration and Power Interface (ACPI).
 
-You can build a 64-bit microhypervisor binary as follows:
+**Platform** | **Build Command**  | **Comments**
+------------ | -------------------| --------------------
+x86_64       | `make ARCH=x86_64` | 64bit or 32bit VMs
 
-    cd build; make ARCH=x86_64
+## Booting
 
+See the NOVA interface specification in the `doc` directory for details
+regarding booting the NOVA microhypervisor.
 
-Booting
--------
+## License
 
-The NOVA microhypervisor can be started from a multiboot-compliant
-bootloader, such as GRUB or PXEGRUB. Here are some examples:
-
-Boot from harddisk 0, partition 0
-
-    title         NOVA
-    kernel        (hd0,0)/boot/nova/hypervisor
-    module        (hd0,0)/...
-    ...
-
-Boot from TFTP server aa.bb.cc.dd
-
-    title         NOVA
-    tftpserver    aa.bb.cc.dd
-    kernel        (nd)/boot/nova/hypervisor
-    module        (nd)/...
-    ...
-
-
-Command-Line Parameters
------------------------
-
-The following command-line parameters are supported for the microhypervisor.
-They must be separated by spaces.
-
-- *iommu*	- Enables DMA and interrupt remapping.
-- *keyb*	- Enables the microhypervisor to drive the keyboard.
-- *serial*	- Enables the microhypervisor to drive the serial console.
-- *spinner*	- Enables event spinners.
-- *vtlb*	- Forces use of vTLB instead of nested paging (EPT/NPT).
-- *nopcid*	- Disables TLB tags for address spaces.
-- *novga*  	- Disables VGA console.
-- *novpid* 	- Disables TLB tags for virtual machines.
-
-
-License
--------
-
-The NOVA source code is licensed under the GPL version 2.
+The NOVA source code is licensed under the **GPL version 2**.
 
 ```
 Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
 Economic rights: Technische Universitaet Dresden (Germany)
 
 Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
 
 NOVA is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License version 2 as
@@ -119,8 +93,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License version 2 for more details.
 ```
 
-
-Contact
--------
+## Contact
 
 Feedback and comments should be sent to udo@hypervisor.org
