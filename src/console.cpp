@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -106,6 +107,7 @@ void Console::vprintf (char const *format, va_list args)
                                 break;
                             }
                             mode = MODE_WIDTH;
+                            FALLTHROUGH;
                         case MODE_WIDTH: width = width * 10 + *format - '0'; break;
                         case MODE_PRECS: precs = precs * 10 + *format - '0'; break;
                     }
@@ -157,6 +159,7 @@ void Console::vprintf (char const *format, va_list args)
 
                 case 0:
                     format--;
+                    FALLTHROUGH;
 
                 default:
                     putc (*format);

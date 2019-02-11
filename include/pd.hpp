@@ -30,10 +30,10 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
     private:
         static Slab_cache cache;
 
-        WARN_UNUSED_RESULT
+        NODISCARD
         mword clamp (mword,   mword &, mword, mword);
 
-        WARN_UNUSED_RESULT
+        NODISCARD
         mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
