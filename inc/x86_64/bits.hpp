@@ -57,17 +57,6 @@ inline unsigned long max_order (mword base, size_t size)
 }
 
 ALWAYS_INLINE
-inline uint64 div64 (uint64 n, uint32 d, uint32 *r)
-{
-    uint64 q;
-
-     q = n / d;
-    *r = static_cast<uint32>(n % d);
-
-    return q;
-}
-
-ALWAYS_INLINE
 static inline mword align_dn (mword val, mword align)
 {
     val &= ~(align - 1);                // Expect power-of-2
