@@ -1,5 +1,5 @@
 /*
- * x86-Specific Functions
+ * Low-Level Functions
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,6 +21,7 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "types.hpp"
 
 template <typename T>
 ALWAYS_INLINE
@@ -38,7 +39,7 @@ inline void *flush (void *d, size_t n)
     return d;
 }
 
-ALWAYS_INLINE NORETURN
+NORETURN ALWAYS_INLINE
 inline void shutdown()
 {
     for (;;)
