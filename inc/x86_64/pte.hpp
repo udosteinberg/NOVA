@@ -21,7 +21,7 @@
 #pragma once
 
 #include "buddy.hpp"
-#include "x86.hpp"
+#include "lowlevel.hpp"
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
 class Pte
