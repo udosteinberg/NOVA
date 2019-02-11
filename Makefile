@@ -24,6 +24,7 @@
 
 # Defaults
 ARCH	?= aarch64
+BOARD	?= qemu
 COMP	?= gcc
 UNAME	?= $(shell uname)
 
@@ -50,16 +51,17 @@ SEDI	:= sed -i
 endif
 
 # Directories
-SRC_DIR	:= src
-INC_DIR	:= include
+SRC_DIR	:= src/$(ARCH) src
+INC_DIR	:= inc/$(ARCH) inc
+BLD_DIR	?= build-$(ARCH)
 
 # Patterns
 PAT_OBJ	:= $(BLD_DIR)/$(ARCH)-%.o
 
 # Files
 MFL	:= $(MAKEFILE_LIST)
-SRC	:= hypervisor.ld $(sort $(wildcard $(SRC_DIR)/*.S)) $(sort $(wildcard $(SRC_DIR)/*.cpp))
-OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(notdir $(SRC)))))
+SRC	:= hypervisor.ld $(sort $(notdir $(foreach dir,$(SRC_DIR),$(wildcard $(dir)/*.S)))) $(sort $(notdir $(foreach dir,$(SRC_DIR),$(wildcard $(dir)/*.cpp))))
+OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(SRC))))
 OBJ_DEP	:= $(OBJ:%.o=%.d)
 
 HYP	:= $(BLD_DIR)/$(ARCH)-hypervisor
