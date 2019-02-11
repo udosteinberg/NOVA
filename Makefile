@@ -47,8 +47,8 @@ SEDI	:= $(shell if sed --version 2>/dev/null | grep -q GNU; then echo "sed -i"; 
 
 # Directories
 CMD_DIR	:= cmd
-SRC_DIR	:= src
-INC_DIR	:= include
+SRC_DIR	:= src/$(ARCH) src
+INC_DIR	:= inc/$(ARCH) inc
 BLD_DIR	?= build-$(ARCH)
 
 # Patterns
