@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -70,11 +71,11 @@ SECTIONS
     .init_array : AT (ADDR (.init_array) - OFFSET)
     {
         PROVIDE (CTORS_L = .);
-        KEEP (SORT_BY_INIT_PRIORITY(*)(.init_array.65534 .ctors.00001))
+        KEEP (*(SORT_BY_INIT_PRIORITY (.init_array.65534) SORT_BY_INIT_PRIORITY (.ctors.00001)))
         PROVIDE (CTORS_C = .);
-        KEEP (SORT_BY_INIT_PRIORITY(*)(.init_array.65533 .ctors.00002))
+        KEEP (*(SORT_BY_INIT_PRIORITY (.init_array.65533) SORT_BY_INIT_PRIORITY (.ctors.00002)))
         PROVIDE (CTORS_G = .);
-        KEEP (SORT_BY_INIT_PRIORITY(*)(.init_array.* .ctors.*))
+        KEEP (*(SORT_BY_INIT_PRIORITY (.init_array.*) SORT_BY_INIT_PRIORITY (.ctors.*)))
         KEEP (*(.init_array .ctors))
         PROVIDE (CTORS_E = .);
     } : kern
@@ -119,8 +120,8 @@ SECTIONS
 
     .cpulocal CPU_LOCAL_DATA :
     {
-        SORT_BY_ALIGNMENT (*)(.cpulocal.hot)
-        SORT_BY_ALIGNMENT (*)(.cpulocal)
+        *(SORT_BY_ALIGNMENT (.cpulocal.hot))
+        *(SORT_BY_ALIGNMENT (.cpulocal))
     }
 
     /DISCARD/ :
