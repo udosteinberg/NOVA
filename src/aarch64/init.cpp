@@ -1,5 +1,5 @@
 /*
- * External Symbols
+ * Initialization Code
  *
  * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -15,9 +15,16 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "arch.hpp"
+#include "console.hpp"
+#include "extern.hpp"
 
-#include "types.hpp"
+extern "C" void init()
+{
+    for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
 
-extern char GIT_VER;
-extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
+    for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
+
+    // Now we're ready to talk to the world
+    Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+}
