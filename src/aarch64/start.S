@@ -49,4 +49,7 @@ __init_bsp:
                         adr     x0, STACK
                         mov     sp, x0
 
+                        // General initialization
+                        bl      init
+
                         b       .
