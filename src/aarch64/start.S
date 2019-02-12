@@ -79,4 +79,7 @@ __start_bsp:            mrs     x22, cntpct_el0
                         adr     x0, STACK
                         mov     sp, x0
 
+                        // General initialization
+                        bl      init
+
                         b       .
