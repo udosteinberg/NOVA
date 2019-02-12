@@ -20,3 +20,4 @@
 #include "types.hpp"
 
 extern char GIT_VER;
+extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
