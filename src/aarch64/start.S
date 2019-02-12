@@ -83,6 +83,9 @@ __init_bsp:             // Store boot parameters
                         adr     x0, STACK
                         mov     sp, x0
 
+                        // General initialization
+                        bl      init
+
                         b       .
 
 __boot_p0:              .quad   0
