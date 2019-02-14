@@ -73,20 +73,66 @@ __init_bsp:             // Store boot parameters
                         cmp     x0, x1
                         blo     1b
 
+                        // Determine current execution level
+                        mrs     x20, currentel
+
+                        // Check if we launched in EL3
+                        cmp     x20, #SPSR_EL3
+                        beq     el3
+
+                        // Check if we launched in EL2
+                        cmp     x20, #SPSR_EL2
+                        beq     el2
+
+                        // We launched in EL1 or EL0
+                        ret
+
+el3:
+                        // Configure EL3 execution controls via SCTLR
+                        mrs     x0, sctlr_el3
+                        orr     x0, x0, #(SCTLR_SA | SCTLR_C | SCTLR_A)
+                        orr     x0, x0, #(SCTLR_I)
+                        msr     sctlr_el3, x0
+                        isb
+
+                        // Configure EL2 execution controls via SCR
+                        mrs     x0, scr_el3
+                        orr     x0, x0, #SCR_RW
+                        orr     x0, x0, #SCR_RES1
+                        orr     x0, x0, #SCR_NS
+                        msr     scr_el3, x0
+
+                        // Configure EL2 initial SCTLR
+                        msr     sctlr_el2, xzr
+
+                        // Return to EL2
+                        mov     x0, #(SPSR_D | SPSR_A | SPSR_I | SPSR_F | SPSR_EL2 | SPSR_SP)
+                        adr     x1, el2
+                        msr     spsr_el3, x0
+                        msr     elr_el3, x1
+                        eret
+
+el2:
                         // Invalidate stale cache lines
                         adr     x0, ZERO_HPAS
                         adrp    x1, ZERO_HPAE
                         sub     x1, x1, x0
                         DCACHE  ivac
 
+                        // Configure EL2 execution controls via SCTLR
+                        mrs     x0, sctlr_el2
+                        orr     x0, x0, #(SCTLR_SA | SCTLR_C | SCTLR_A)
+                        orr     x0, x0, #(SCTLR_I)
+                        msr     sctlr_el2, x0
+                        isb
+
                         // Switch to boot stack
                         adr     x0, STACK
                         mov     sp, x0
 
-                        // General initialization
-                        bl      init
-
-                        b       .
+                        // Jump high
+                        ldr     x0, =high
+                        br      x0
 
 .balign                 0x8
 
@@ -97,3 +143,11 @@ __boot_p0:              .quad   0   // combined
 __boot_p1:              .quad   0   // combined
 __boot_p2:              .quad   0   // combined
 __boot_ts:              .quad   0   // combined
+
+.text
+
+high:
+                        // General initialization
+                        bl      init
+
+                        b       .
