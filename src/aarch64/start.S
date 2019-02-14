@@ -69,14 +69,67 @@ __start_bsp:            mrs     x22, cntpct_el0
                         cmp     x0, x1
                         blo     1b
 
+                        // Determine current execution level
+                        mrs     x20, currentel
+
+                        // Check if we launched in EL3
+                        cmp     x20, #PSTATE_A64_EL3
+                        beq     el3
+
+                        // Check if we launched in EL2
+                        cmp     x20, #PSTATE_A64_EL2
+                        beq     el2
+
+                        // We launched in EL1 or EL0
+                        ret
+
+el3:
+                        // Configure EL3 execution controls via SCTLR
+                        mrs     x0, sctlr_el3
+                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
+                        orr     x0, x0, #(SCTLR_ALL_I)
+                        msr     sctlr_el3, x0
+                        isb
+
+                        // Configure EL2 execution controls via SCR
+                        mrs     x0, scr_el3
+                        orr     x0, x0, #SCR_RW
+                        orr     x0, x0, #SCR_RES1
+                        orr     x0, x0, #SCR_NS
+                        msr     scr_el3, x0
+
+                        // Configure EL2 initial SCTLR
+                        msr     sctlr_el2, xzr
+
+                        // Return to EL2
+                        mov     x0, #(PSTATE_A64_D | PSTATE_ALL_A | PSTATE_ALL_I | PSTATE_ALL_F | PSTATE_A64_EL2 | PSTATE_A64_SP)
+                        adr     x1, el2
+                        msr     spsr_el3, x0
+                        msr     elr_el3, x1
+                        eret
+
+el2:
                         // Invalidate stale cache lines
                         adr     x0, ZERO_ADDR
                         adrp    x1, ZERO_STOP
                         sub     x1, x1, x0
                         DCACHE  ivac
 
+                        // Configure EL2 execution controls via SCTLR
+                        mrs     x0, sctlr_el2
+                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
+                        orr     x0, x0, #(SCTLR_ALL_I)
+                        msr     sctlr_el2, x0
+                        isb
+
+                        // Jump high
+                        b       1f
+
+.text
+
+1:
                         // Switch to boot stack
-                        adr     x0, STACK
+                        ldr     x0, =STACK
                         mov     sp, x0
 
                         // General initialization
