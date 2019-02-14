@@ -59,7 +59,7 @@ __init_bsp:
                         sub     x1, x23, x22
                         DCACHE  cvac
 
-1:                      msr     daifset, #0xf
+                        msr     daifset, #0xf
                         msr     spsel,   #0x1
 
                         // Enable I$, D$, Disable MMU
@@ -76,15 +76,67 @@ __init_bsp:
                         cmp     x0, x23
                         blo     .Lbss_loop
 
+                        // Determine current execution level
+                        mrs     x20, currentel
+
+                        // Check if we launched in EL3
+                        cmp     x20, #SPSR_EL3
+                        beq     .Lel3
+
+                        // Check if we launched in EL2
+                        cmp     x20, #SPSR_EL2
+                        beq     .Lel2
+
+                        // We launched in EL1 or EL0
+                        ret
+.Lel3:
+                        // Configure EL3 execution controls via SCTLR
+                        mrs     x0, sctlr_el3
+                        orr     x0, x0, #(SCTLR_SA | SCTLR_C | SCTLR_A)
+                        orr     x0, x0, #(SCTLR_I)
+                        msr     sctlr_el3, x0
+                        isb
+
+                        // Configure EL2 execution controls via SCR
+                        mrs     x0, scr_el3
+                        orr     x0, x0, #SCR_RW
+                        orr     x0, x0, #SCR_RES1
+                        orr     x0, x0, #SCR_NS
+                        msr     scr_el3, x0
+
+                        // Configure EL2 initial SCTLR
+                        msr     sctlr_el2, xzr
+
+                        // Return to EL2
+                        mov     x0, #(SPSR_D | SPSR_A | SPSR_I | SPSR_F | SPSR_EL2 | SPSR_SP)
+                        adr     x1, .Lel2
+                        msr     spsr_el3, x0
+                        msr     elr_el3, x1
+                        eret
+.Lel2:
                         // Invalidate stale cache lines
                         adr     x0, ZERO_HPAS
                         sub     x1, x23, x0
                         DCACHE  ivac
 
+                        // Configure EL2 execution controls via SCTLR
+                        mrs     x0, sctlr_el2
+                        orr     x0, x0, #(SCTLR_SA | SCTLR_C | SCTLR_A)
+                        orr     x0, x0, #(SCTLR_I)
+                        msr     sctlr_el2, x0
+                        isb
+
                         // Switch to boot stack
                         adr     x0, STACK
                         mov     sp, x0
 
+                        // Jump high
+                        ldr     x0, =.Lhigh
+                        br      x0
+
+.text
+
+.Lhigh:
                         // General initialization
                         bl      init
 
