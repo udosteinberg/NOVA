@@ -46,5 +46,5 @@ H2B-aarch64	?= $(OC) -O binary
 H2B-x86_64	?= $(OC) -O binary
 
 # Configure architecture-specific run targets
-RUN-aarch64	?= qemu-system-aarch64 -m 512 -smp 4 -no-reboot -display none -serial mon:stdio -M virt -cpu cortex-a57 -kernel
+RUN-aarch64	?= qemu-system-aarch64 -m 512 -smp 4 -no-reboot -display none -serial mon:stdio -M virt,virtualization=on,secure=off,gic-version=2,iommu=smmuv3 -cpu cortex-a57 -kernel
 RUN-x86_64	?= qemu-system-x86_64  -m 512 -smp 4 -no-reboot -display none -serial mon:stdio -M q35 -append serial -kernel
