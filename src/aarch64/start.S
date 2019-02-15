@@ -73,6 +73,13 @@ __init_bsp:             // Store boot parameters
                         cmp     x0, x1
                         blo     1b
 
+                        // Determine PA range (0-5)
+                        mov     x20, #5
+                        mrs     x21, id_aa64mmfr0_el1
+                        and     x21, x21, #7
+                        cmp     x21, x20
+                        csel    x21, x20, x21, hi
+
                         // Determine current execution level
                         mrs     x20, currentel
 
@@ -88,6 +95,11 @@ __init_bsp:             // Store boot parameters
                         ret
 
 el3:
+                        // Configure EL3 TCR: 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_A64_TG0_4K | TCR_ALL_SH0_INNER | TCR_ALL_ORGN0_WB_RW | TCR_ALL_IRGN0_WB_RW | TCR_A64_T0SZ (48))
+                        orr     x2, x0, x21, lsl #16
+                        msr     tcr_el3, x2
+
                         // Configure EL3 execution controls via SCTLR
                         mrs     x0, sctlr_el3
                         orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
@@ -118,6 +130,13 @@ el2:
                         adrp    x1, ZERO_HPAE
                         sub     x1, x1, x0
                         DCACHE  ivac
+
+                        // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_A64_TG0_4K | TCR_ALL_SH0_INNER | TCR_ALL_ORGN0_WB_RW | TCR_ALL_IRGN0_WB_RW | TCR_A64_T0SZ (48))
+                        orr     x0, x0, #BIT (31)
+                        orr     x0, x0, #BIT (23)
+                        orr     x2, x0, x21, lsl #16
+                        msr     tcr_el2, x2
 
                         // Configure EL2 execution controls via SCTLR
                         mrs     x0, sctlr_el2
