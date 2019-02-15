@@ -2,6 +2,7 @@
  * Budget Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,7 +23,7 @@
 class Timeout_budget : public Timeout
 {
     private:
-        void trigger();
+        void trigger() override;
 
     public:
         static Timeout_budget budget CPULOCAL;
