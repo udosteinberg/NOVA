@@ -76,6 +76,13 @@ __init_bsp:
                         cmp     x0, x23
                         blo     .Lbss_loop
 
+                        // Determine PA range (0-5)
+                        mov     x20, #5
+                        mrs     x21, id_aa64mmfr0_el1
+                        and     x21, x21, #7
+                        cmp     x21, x20
+                        csel    x21, x20, x21, hi
+
                         // Determine current execution level
                         mrs     x20, currentel
 
@@ -93,6 +100,11 @@ __init_bsp:
                         // Configure EL3 SCR
                         ldr     x0, =SCR_NOVA
                         msr     scr_el3, x0
+
+                        // Configure EL3 TCR: 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
+                        orr     x2, x0, x21, lsl #16
+                        msr     tcr_el3, x2
 
                         // Configure EL3 execution controls via SCTLR
                         mrs     x0, sctlr_el3
@@ -119,6 +131,13 @@ __init_bsp:
                         // Configure EL2 HCR
                         ldr     x0, =HCR_NOVA
                         msr     hcr_el2, x0
+
+                        // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
+                        orr     x0, x0, #BIT (31)
+                        orr     x0, x0, #BIT (23)
+                        orr     x2, x0, x21, lsl #16
+                        msr     tcr_el2, x2
 
                         // Configure EL2 execution controls via SCTLR
                         mrs     x0, sctlr_el2
