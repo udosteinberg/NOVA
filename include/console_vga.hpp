@@ -64,7 +64,7 @@ class Console_vga final : public Console
             memset (reinterpret_cast<void *>(HV_GLOBAL_FBUF + 160 * r), 0, 160);
         }
 
-        void putc (int c);
+        void putc (int) override;
 
     public:
         enum Color
