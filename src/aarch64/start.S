@@ -56,6 +56,13 @@ __init_bsp:
 .Linit_all:             msr     daifset, #0xf
                         msr     spsel,   #0x1
 
+                        // Determine PA range (0-5)
+                        mov     x0, #5
+                        mrs     x20, id_aa64mmfr0_el1
+                        ubfx    x20, x20, #0, #4
+                        cmp     x20, x0
+                        csel    x20, x0, x20, hi
+
                         // Invoke launch point of current EL
                         SWITCH  .Lel3, .Lel2, .Ldead
 .Lel3:
@@ -67,6 +74,11 @@ __init_bsp:
                         // Reconfigure EL3 MMU: SCR
                         ldr     x0, =SCR_NOVA
                         msr     scr_el3, x0
+
+                        // Reconfigure EL3 MMU: TCR = 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
+                        bfi     x0, x20, #16, #3
+                        msr     tcr_el3, x0
 
                         // Invalidate residual EL3 TLB entries
                         tlbi    alle3
@@ -91,6 +103,11 @@ __init_bsp:
                         // Reconfigure EL2 MMU: HCR
                         ldr     x0, =HCR_NOVA
                         msr     hcr_el2, x0
+
+                        // Reconfigure EL2 MMU: TCR = 4K pages, 48bit VA, HW-supported PA
+                        mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
+                        bfi     x0, x20, #16, #3
+                        msr     tcr_el2, x0
 
                         // Invalidate residual EL2 TLB entries
                         tlbi    alle2
