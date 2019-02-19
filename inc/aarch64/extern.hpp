@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "types.hpp"
+
 extern char __start_psci[], __start_spin[], GIT_VER[];
 
 extern uintptr_t __boot_p0, __boot_p1, __boot_p2, __boot_ts;
