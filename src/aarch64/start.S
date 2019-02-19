@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "paging.hpp"
 
 .globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp
 
@@ -37,6 +38,22 @@
                         cmp     x0, x1
                         blo     1b
                         dsb     sy
+.endm
+
+.macro                  PTE_FIX L, PTAB, VIRT, PHYS, ATTR
+                        adr     x0, (\PTAB) + __SIZEOF_POINTER__ * ((\VIRT) >> ((\L) * PTE_BPL + PAGE_BITS) & (BIT (PTE_BPL) - 1))
+                        adr     x1, (\PHYS) + (\ATTR)
+                        str     x1, [x0]
+.endm
+
+.macro                  PTE_REL L, PTAB, VIRT, PHYS, ATTR
+                        adr     x0, (\PTAB)
+                        adr     x1, (\PHYS) + (\ATTR)
+                        adr     x2, (\VIRT)
+                        lsr     x2, x2, (\L) * PTE_BPL + PAGE_BITS
+                        and     x2, x2, BIT (PTE_BPL) - 1
+                        add     x0, x0, x2, lsl #3
+                        str     x1, [x0]
 .endm
 
 /*
@@ -102,6 +119,11 @@ el3:
                         ldr     x0, =MAIR_VAL
                         msr     mair_el3, x0
 
+                        // Invalidate EL3 TLB
+                        tlbi    alle3
+                        dsb     nsh
+                        isb
+
                         // Configure EL3 execution controls via SCTLR
                         mrs     x0, sctlr_el3
                         orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
@@ -127,6 +149,24 @@ el3:
                         eret
 
 el2:
+                        // Configure Page Tables: Load Section (2M page)
+                        PTE_REL  3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, ATTR_nL | ATTR_P
+                        PTE_REL  2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, ATTR_nL | ATTR_P
+                        PTE_REL  1, PT1L_HPAS, NOVA_HPAS, NOVA_HPAS, ATTR_nG | ATTR_A | ATTR_SH (SH_INNER) | ATTR_CA (CA_MEM_WB) | ATTR_P
+
+                        // Configure Page Tables: Link Section (2M pages)
+                        PTE_FIX  3, PT3S_HPAS, LINK_ADDR, PT2H_HPAS, ATTR_nL | ATTR_P
+                        PTE_FIX  2, PT2H_HPAS, LINK_ADDR, PT1H_HPAS, ATTR_nL | ATTR_P
+
+                        adr     x2, PT1H_HPAS + __SIZEOF_POINTER__ * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & (BIT (PTE_BPL) - 1))
+                        adr     x1, NOVA_HPAS + (ATTR_nG | ATTR_A | ATTR_SH (SH_INNER) | ATTR_CA (CA_MEM_WB) | ATTR_P)
+                        adrp    x0, NOVA_HPAE
+1:                      str     x1, [x2], #__SIZEOF_POINTER__
+                        add     x1, x1, #BIT (PTE_BPL + PAGE_BITS)
+                        cmp     x1, x0
+                        blo     1b
+                        dmb     sy
+
                         // Invalidate stale cache lines
                         adr     x0, ZERO_HPAS
                         adrp    x1, ZERO_HPAE
@@ -151,9 +191,18 @@ el2:
                         ldr     x0, =MAIR_VAL
                         msr     mair_el2, x0
 
+                        // Configure EL2 TTBR
+                        adrp    x0, PT3S_HPAS
+                        msr     ttbr0_el2, x0
+
+                        // Invalidate EL2 TLB
+                        tlbi    alle2
+                        dsb     nsh
+                        isb
+
                         // Configure EL2 execution controls via SCTLR
                         mrs     x0, sctlr_el2
-                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
+                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A | SCTLR_ALL_M)
                         orr     x0, x0, #(SCTLR_ALL_I)
                         msr     sctlr_el2, x0
                         isb
