@@ -1,7 +1,7 @@
 /*
  * Virtual-Memory Layout
  *
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,5 +24,13 @@
 #define PAGE_SIZE       BIT64 (PAGE_BITS)
 #define PAGE_MASK       (PAGE_SIZE - 1)
 
-#define LINK_ADDR       LOAD_ADDR
+//                        [--PTE--]---      // ^39 ^30 ^21 ^12
+#define CPU_GLOBL_DATA  0xffff80000000      // 511 510 000 000   1G
+#define LINK_ADDR       0xff8000000000      // 511 000 000 000
+
+#define CPU_LOCAL_DATA  0xff7ffffff000      // 510 511 511 511   4K
+#define CPU_LOCAL_STCK  0xff7fffffd000      // 510 511 511 509   4K
+#define CPU_LOCAL_TMAP  0xff7fc0000000      // 510 511 000 000   2M*2
+#define CPU_LOCAL       0xff0000000000      // 510 000 000 000
+
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)
