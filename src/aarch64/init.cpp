@@ -16,11 +16,10 @@
  */
 
 #include "arch.hpp"
-#include "compiler.hpp"
 #include "config.hpp"
 #include "console.hpp"
 #include "extern.hpp"
-#include "types.hpp"
+#include "memory.hpp"
 
 extern "C"
 void init()
@@ -30,5 +29,5 @@ void init()
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
 
     // Now we're ready to talk to the world
-    Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+    Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<uintptr_t>(GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 }

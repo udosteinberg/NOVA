@@ -70,12 +70,40 @@ SECTIONS
     .bss : AT (ADDR (.bss) - OFFSET)
     {
         PROVIDE (ZERO_HPAS = . - OFFSET);
+
         *(.bss .bss.* .gnu.linkonce.b.*)
+
+        . = ALIGN(4K);
+
+        PROVIDE (KMEM_HVAS = .);
+
+        PROVIDE (PTAB_HVAS = .);
+        PROVIDE (PT3S_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2L_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1L_HPAS = . - OFFSET); . += 4K;
+
+        PROVIDE (KMEM_HVAF = .);
+
+        . = ALIGN(16M);
+
+        PROVIDE (KMEM_HVAE = .);
+
         PROVIDE (ZERO_HPAE = . - OFFSET);
+
     } : kern
 
     PROVIDE (NOVA_HPAS = LOAD_ADDR);
     PROVIDE (NOVA_HPAE = . - OFFSET);
+
+    PROVIDE (STCK_TOP = CPU_LOCAL_STCK + PAGE_SIZE);
+
+    .cpulocal CPU_LOCAL_DATA :
+    {
+        *(SORT_BY_ALIGNMENT (.cpulocal.hot))
+        *(SORT_BY_ALIGNMENT (.cpulocal))
+    }
 
     /DISCARD/ :
     {
