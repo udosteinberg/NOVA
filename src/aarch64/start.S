@@ -16,6 +16,7 @@
  */
 
 #include "arch.hpp"
+#include "memattr.hpp"
 #include "memory.hpp"
 
 .global                 __init_bsp
@@ -75,6 +76,10 @@ __init_bsp:
                         ldr     x0, =SCR_NOVA
                         msr     scr_el3, x0
 
+                        // Reconfigure EL3 MMU: MAIR
+                        ldr     x0, =MAIR_NOVA
+                        msr     mair_el3, x0
+
                         // Reconfigure EL3 MMU: TCR = 4K pages, 48bit VA, HW-supported PA
                         mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
                         bfi     x0, x20, #16, #3
@@ -103,6 +108,10 @@ __init_bsp:
                         // Reconfigure EL2 MMU: HCR
                         ldr     x0, =HCR_NOVA
                         msr     hcr_el2, x0
+
+                        // Reconfigure EL2 MMU: MAIR
+                        ldr     x0, =MAIR_NOVA
+                        msr     mair_el2, x0
 
                         // Reconfigure EL2 MMU: TCR = 4K pages, 48bit VA, HW-supported PA
                         mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
