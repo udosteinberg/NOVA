@@ -16,6 +16,7 @@
  */
 
 #include "arch.hpp"
+#include "memattr.hpp"
 #include "memory.hpp"
 
 .globl                  __init_bsp, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __boot_cl, __boot_ra, __boot_dt
@@ -97,6 +98,10 @@ el3:
                         orr     x2, x0, x21, lsl #16
                         msr     tcr_el3, x2
 
+                        // Configure EL3 MAIR
+                        ldr     x0, =MAIR_VAL
+                        msr     mair_el3, x0
+
                         // Configure EL3 execution controls via SCTLR
                         mrs     x0, sctlr_el3
                         orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
@@ -141,6 +146,10 @@ el2:
                         orr     x0, x0, #VTCR_RES1
                         orr     x2, x0, x21, lsl #16
                         msr     vtcr_el2, x2
+
+                        // Configure EL2 MAIR
+                        ldr     x0, =MAIR_VAL
+                        msr     mair_el2, x0
 
                         // Configure EL2 execution controls via SCTLR
                         mrs     x0, sctlr_el2
