@@ -17,7 +17,13 @@
 
 #pragma once
 
+#include "types.hpp"
+
 extern char __start_psci[], __start_spin[], GIT_VER[];
+
+extern mword PAGEH;
+extern mword EL2_TTBR0;
+extern mword LOAD_STOP;
 
 extern void (*CTORS_L)();
 extern void (*CTORS_C)();

@@ -70,11 +70,41 @@ SECTIONS
     .bss : AT (ADDR (.bss) - OFFSET)
     {
         PROVIDE (ZERO_ADDR = . - OFFSET);
+
         *(.bss .bss.* .gnu.linkonce.b.*)
+
+        . = ALIGN(4K);
+
+        PROVIDE (_mempool_l = .);
+
+        PROVIDE (PAGEH = .); . += 4K;
+
+        PROVIDE (EL2_TTBR0 = .);
+        PROVIDE (EL2_LVL3S = . - OFFSET); . += 4K;
+        PROVIDE (EL2_LVL2H = . - OFFSET); . += 4K;
+        PROVIDE (EL2_LVL1H = . - OFFSET); . += 4K;
+        PROVIDE (EL2_LVL2L = . - OFFSET); . += 4K;
+        PROVIDE (EL2_LVL1L = . - OFFSET); . += 4K;
+
+        PROVIDE (_mempool_f = .);
+
+        . = ALIGN(16M);
+
+        PROVIDE (_mempool_e = .);
+
         PROVIDE (ZERO_STOP = . - OFFSET);
+
     } : kern
 
     PROVIDE (LOAD_STOP = . - OFFSET);
+
+    PROVIDE (STCK_TOP = CPU_LOCAL_STCK + PAGE_SIZE);
+
+    .cpulocal CPU_LOCAL_DATA :
+    {
+        *(SORT_BY_ALIGNMENT (.cpulocal.hot))
+        *(SORT_BY_ALIGNMENT (.cpulocal))
+    }
 
     /DISCARD/ :
     {

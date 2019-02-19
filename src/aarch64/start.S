@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "paging.hpp"
 
 .globl                  __start_bsp
 
@@ -37,6 +38,12 @@
                         cmp     x0, x1
                         blo     1b
                         dsb     sy
+.endm
+
+.macro                  SET_PTE LEVEL, TABLE, VIRT, PHYS, ATTR
+                        adr     x1, (\TABLE) + SIZE * ((\VIRT) >> ((\LEVEL) * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        ldr     x0, =(\PHYS) + (\ATTR)
+                        str     x0, [x1]
 .endm
 
 /*
@@ -98,6 +105,11 @@ el3:
                         ldr     x0, =MAIR_VAL
                         msr     mair_el3, x0
 
+                        // Invalidate EL3 TLB
+                        tlbi    alle3
+                        dsb     nsh
+                        isb
+
                         // Configure EL3 execution controls via SCTLR
                         mrs     x0, sctlr_el3
                         orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
@@ -123,6 +135,27 @@ el3:
                         eret
 
 el2:
+                        // Configure Page Tables: Load Section (2M page)
+                        SET_PTE 3, EL2_LVL3S, LOAD_ADDR, EL2_LVL2L, ATTR_nL | ATTR_P
+                        SET_PTE 2, EL2_LVL2L, LOAD_ADDR, EL2_LVL1L, ATTR_nL | ATTR_P
+                        SET_PTE 1, EL2_LVL1L, LOAD_ADDR, LOAD_ADDR, ATTR_nG | ATTR_A | ATTR_SH (SH_INNER) | ATTR_CA (CA_MEM_WB) | ATTR_P
+
+                        // Configure Page Tables: MMIO section (1G page)
+                        SET_PTE 2, EL2_LVL2L, UART_BASE_PL, UART_BASE_PL, ATTR_nG | ATTR_A | ATTR_SH (SH_INNER) | ATTR_CA (CA_DEV) | ATTR_P
+
+                        // Configure Page Tables: Link Section (2M pages)
+                        SET_PTE 3, EL2_LVL3S, LINK_ADDR, EL2_LVL2H, ATTR_nL | ATTR_P
+                        SET_PTE 2, EL2_LVL2H, LINK_ADDR, EL2_LVL1H, ATTR_nL | ATTR_P
+
+                        adr     x2, EL2_LVL1H + SIZE * (LINK_ADDR >> (1 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        ldr     x1, =LOAD_ADDR | ATTR_nG | ATTR_A | ATTR_SH (SH_INNER) | ATTR_CA (CA_MEM_WB) | ATTR_P
+                        adrp    x0, LOAD_STOP
+1:                      str     x1, [x2], #SIZE
+                        add     x1, x1, #(1 << (1 * PTE_BPL + PAGE_BITS))
+                        cmp     x1, x0
+                        blo     1b
+                        dmb     sy
+
                         // Invalidate stale cache lines
                         adr     x0, ZERO_ADDR
                         adrp    x1, ZERO_STOP
@@ -147,9 +180,18 @@ el2:
                         ldr     x0, =MAIR_VAL
                         msr     mair_el2, x0
 
+                        // Configure EL2 TTBR
+                        adr     x0, EL2_LVL3S
+                        msr     ttbr0_el2, x0
+
+                        // Invalidate EL2 TLB
+                        tlbi    alle2
+                        dsb     nsh
+                        isb
+
                         // Configure EL2 execution controls via SCTLR
                         mrs     x0, sctlr_el2
-                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A)
+                        orr     x0, x0, #(SCTLR_A64_SA | SCTLR_ALL_C | SCTLR_ALL_A | SCTLR_ALL_M)
                         orr     x0, x0, #(SCTLR_ALL_I)
                         msr     sctlr_el2, x0
                         isb
