@@ -1,7 +1,7 @@
 /*
  * External Symbols
  *
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,9 +17,13 @@
 
 #pragma once
 
+#include "types.hpp"
+
 extern char __start_psci[], __start_spin[], GIT_VER[];
 
 extern uintptr_t __boot_p0, __boot_p1, __boot_p2, __boot_ts, __boot_cl, __boot_ra, __boot_dt;
+extern uintptr_t NOVA_HPAS, NOVA_HPAE, MHIP_HVAS, PTAB_HVAS;
+extern uintptr_t STCK_TOP;
 
 extern void (*CTORS_L)();
 extern void (*CTORS_C)();
