@@ -35,6 +35,21 @@
 #define PAGE_SIZE(L)    BITN ((L) * PTE_BPL + PAGE_BITS)
 #define OFFS_MASK(L)    (PAGE_SIZE (L) - 1)
 
-#define LINK_ADDR       LOAD_ADDR
-#define MMAP_CPU_DATA   0
+// Global Area                [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_GLB_MAP1   0x0000ff803e800000      // 511 000 500 000    4M + gap
+#define MMAP_GLB_MAP0   0x0000ff803e000000      // 511 000 496 000    4M + gap
+#define MMAP_GLB_GICD   0x0000ff803d020000      // 511 000 488 032   64K
+#define MMAP_GLB_GICC   0x0000ff803d010000      // 511 000 488 016   64K
+#define MMAP_GLB_GICH   0x0000ff803d000000      // 511 000 488 000   64K
+#define MMAP_GLB_UART   0x0000ff803c000000      // 511 000 480 000   16M
+#define MMAP_GLB_SMMU   0x0000ff8038000000      // 511 000 448 000   64M
+#define MMAP_GLB_CPUS   0x0000ff8030000000      // 511 000 384 000  128M
+#define MMAP_GLB_PCIE   0x0000ff8020000000      // 511 000 256 000  256M
+#define LINK_ADDR       0x0000ff8000000000      // 511 000 000 000  512M
+
+// CPU-Local Area             [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_CPU_DATA   0x0000ff7ffffff000      // 510 511 511 511    4K
+#define MMAP_CPU_DSTK   0x0000ff7fffffd000      // 510 511 511 509    4K + gap
+#define MMAP_CPU_GICR   0x0000ff7fffe00000      // 510 511 511 000  256K
+
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)
