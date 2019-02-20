@@ -24,7 +24,7 @@
 
 bool Hpt::sync_from (Hpt src, mword v, mword o)
 {
-    mword l = (bit_scan_reverse (v ^ o) - PAGE_BITS) / bpl();
+    mword l = (bit_scan_msb (v ^ o) - PAGE_BITS) / bpl();
 
     Hpt *s = static_cast<Hpt *>(src.walk (v, l, false));
     if (!s)
@@ -43,7 +43,7 @@ bool Hpt::sync_from (Hpt src, mword v, mword o)
 
 void Hpt::sync_master_range (mword s, mword e)
 {
-    for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
+    for (mword l = (bit_scan_msb (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
         sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), s, CPU_LOCAL);
 }
 

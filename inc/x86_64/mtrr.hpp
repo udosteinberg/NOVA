@@ -38,8 +38,8 @@ class Mtrr : public List<Mtrr>
 
         uint64 size() const
         {
-            return 1ULL << (static_cast<mword>(mask) ? bit_scan_forward (static_cast<mword>(mask >> 12)) + 12 :
-                                                       bit_scan_forward (static_cast<mword>(mask >> 32)) + 32);
+            return 1ULL << (static_cast<mword>(mask) ? bit_scan_lsb (static_cast<mword>(mask >> 12)) + 12 :
+                                                       bit_scan_lsb (static_cast<mword>(mask >> 32)) + 32);
         }
 
     public:
