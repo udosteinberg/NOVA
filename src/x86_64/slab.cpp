@@ -60,8 +60,8 @@ void Slab::free (void *ptr)
 Slab_cache::Slab_cache (unsigned long elem_size, unsigned elem_align)
           : curr (nullptr),
             head (nullptr),
-            size (align_up (elem_size, sizeof (mword))),
-            buff (align_up (size + sizeof (mword), elem_align)),
+            size (aligned_up (sizeof (mword), elem_size)),
+            buff (aligned_up (elem_align, size + sizeof (mword))),
             elem ((PAGE_SIZE - sizeof (Slab)) / buff)
 {
     trace (TRACE_MEMORY, "Slab Cache:%p (S:%lu A:%u)",
