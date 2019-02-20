@@ -122,7 +122,7 @@ void Vmcs::init()
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
     if (has_ept())
-        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
+        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_msb (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
     if (has_urg())
         fix_cr0_set &= ~(Cpu::CR0_PG | Cpu::CR0_PE);
 

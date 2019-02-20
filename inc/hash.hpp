@@ -17,8 +17,8 @@
 
 #pragma once
 
+#include "bits.hpp"
 #include "endian.hpp"
-#include "macros.hpp"
 #include "std.hpp"
 
 /*
@@ -31,8 +31,8 @@ class Sha
 
         // Section 3.2
         template<typename T> static constexpr T shr (T x, unsigned n) { return x >> n; }
-        template<typename T> static constexpr T rol (T x, unsigned n) { return x << n | x >> (-n & (8 * sizeof (T) - 1)); }
-        template<typename T> static constexpr T ror (T x, unsigned n) { return x >> n | x << (-n & (8 * sizeof (T) - 1)); }
+        template<typename T> static constexpr T rol (T x, unsigned n) { constexpr unsigned m { type_msbn<T>() }; return x << n | x >> (-n & m); }
+        template<typename T> static constexpr T ror (T x, unsigned n) { constexpr unsigned m { type_msbn<T>() }; return x >> n | x << (-n & m); }
 
         // Section 4.1.1
         template<typename T> static constexpr T chx (T x, T y, T z) { return (x & y) ^ (~x & z); }
