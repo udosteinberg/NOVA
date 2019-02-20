@@ -38,13 +38,12 @@ SECTIONS
         *(.init)
     } : init = 0x90909090
 
-    . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
+    .stack :
+    {
+        . = ALIGN(4K); PROVIDE (STACK = .);
+    } : init
 
-    PROVIDE (LOAD_E = .);
-    OFFSET = LINK_ADDR - ALIGN (4M);
-    PROVIDE (LINK_P = LINK_ADDR - OFFSET);
-
-    .text LINK_ADDR : AT (ADDR (.text) - OFFSET)
+    .text . + OFFSET : AT (ADDR (.text) - OFFSET)
     {
         *(.text.hot .text.hot.*)
         *(.text .text.* .gnu.linkonce.t.*)
@@ -84,22 +83,21 @@ SECTIONS
         PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
 
         PROVIDE (PDBR  = . - OFFSET);
-        PROVIDE (LVL4  = . - OFFSET); . += 4K;
-        PROVIDE (LVL3L = . - OFFSET); . += 4K;
-        PROVIDE (LVL3H = . - OFFSET); . += 4K;
-        PROVIDE (LVL2L = . - OFFSET); . += 4K;
+        PROVIDE (LVL3S = . - OFFSET); . += 4K;
         PROVIDE (LVL2H = . - OFFSET); . += 4K;
+        PROVIDE (LVL1H = . - OFFSET); . += 4K;
+        PROVIDE (LVL2L = . - OFFSET); . += 4K;
+        PROVIDE (LVL1L = . - OFFSET); . += 4K;
 
-        _mempool_f = .;
+        PROVIDE (_mempool_f = .);
 
-        . += 16M;
-        . = ALIGN(4M);
-
-        PROVIDE (LINK_E = . - OFFSET);
+        . = ALIGN(16M);
 
         PROVIDE (_mempool_e = .);
 
     } : kern
+
+    PROVIDE (LOAD_STOP = . - OFFSET);
 
     .cpulocal CPU_LOCAL_DATA :
     {
