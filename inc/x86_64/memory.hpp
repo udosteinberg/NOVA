@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,7 +25,7 @@
 #define PAGE_SIZE       (1 << PAGE_BITS)
 #define PAGE_MASK       (PAGE_SIZE - 1)
 
-#define LOAD_ADDR       0x200000
+#define LOAD_ADDR       0x400000
 
 #define USER_ADDR       0x00007ffffffff000
 #define LINK_ADDR       0xffffffff81000000

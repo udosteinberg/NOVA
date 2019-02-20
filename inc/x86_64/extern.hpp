@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -28,21 +29,14 @@ extern char PAGE_0;
 extern char PAGE_1;
 extern char PAGE_H;
 
-extern char FRAME_0;
-extern char FRAME_1;
-extern char FRAME_H;
-
-extern char PDBR;
-
-extern char LINK_P;
-extern char LINK_E;
-extern char LOAD_E;
+extern uintptr_t NOVA_HPAS, NOVA_HPAE, PTAB_HVAS;
 
 extern void (*CTORS_L)();
 extern void (*CTORS_C)();
 extern void (*CTORS_G)();
 extern void (*CTORS_E)();
 
+extern char __init_aps, __desc_gdt__;
 extern char entry_sys;
 extern char entry_vmx;
 extern mword handlers[];
