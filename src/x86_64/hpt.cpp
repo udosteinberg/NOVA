@@ -44,7 +44,7 @@ bool Hpt::sync_from (Hpt src, mword v, mword o)
 void Hpt::sync_master_range (mword s, mword e)
 {
     for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
-        sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), s, CPU_LOCAL);
+        sync_from (Hptp (reinterpret_cast<mword>(&PTAB_HVAS)), s, CPU_LOCAL);
 }
 
 Paddr Hpt::replace (mword v, mword p)

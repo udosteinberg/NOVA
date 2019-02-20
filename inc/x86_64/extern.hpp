@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -32,12 +33,8 @@ extern char FRAME_0;
 extern char FRAME_1;
 extern char FRAME_H;
 
-extern char PDBR;
-
-extern char LINK_P;
-extern char LINK_E;
-extern char LOAD_E;
-extern char OFFSET;
+extern char PTAB_HVAS;
+extern char NOVA_HPAE;
 
 extern void (*CTORS_L)();
 extern void (*CTORS_C)();

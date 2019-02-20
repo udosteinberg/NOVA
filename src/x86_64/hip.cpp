@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -109,8 +110,8 @@ void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
 
 void Hip::add_mhv (Hip_mem *&mem)
 {
-    mem->addr = reinterpret_cast<mword>(&LINK_P);
-    mem->size = reinterpret_cast<mword>(&LINK_E) - mem->addr;
+    mem->addr = LOAD_ADDR;
+    mem->size = reinterpret_cast<mword>(&NOVA_HPAE) - mem->addr;
     mem->type = Hip_mem::HYPERVISOR;
     mem++;
 }

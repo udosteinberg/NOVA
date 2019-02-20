@@ -49,7 +49,7 @@ mword kern_ptab_setup()
 }
 
 extern "C"
-void init (mword mbi)
+void init (uintptr_t, uintptr_t mbi)
 {
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);

@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,7 +23,7 @@
 
 OUTPUT_FORMAT("elf64-x86-64")
 OUTPUT_ARCH("i386:x86-64")
-ENTRY(__start_bsp)
+ENTRY(__init_bsp)
 
 PHDRS
 {
@@ -35,16 +35,15 @@ SECTIONS
 {
     .init LOAD_ADDR :
     {
-        *(.init)
+        *(.init .init.*)
     } : init = 0x90909090
 
-    . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
+    .stack :
+    {
+        . = ALIGN(4K); PROVIDE (STACK = .);
+    } : init
 
-    PROVIDE (LOAD_E = .);
-    OFFSET = LINK_ADDR - ALIGN (4M);
-    PROVIDE (LINK_P = LINK_ADDR - OFFSET);
-
-    .text LINK_ADDR : AT (ADDR (.text) - OFFSET)
+    .text . + OFFSET : AT (ADDR (.text) - OFFSET)
     {
         *(.text.hot .text.hot.*)
         *(.text .text.* .gnu.linkonce.t.*)
@@ -83,23 +82,25 @@ SECTIONS
         PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = . - OFFSET); . += 4K;
         PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
 
-        PROVIDE (PDBR  = . - OFFSET);
-        PROVIDE (LVL4  = . - OFFSET); . += 4K;
-        PROVIDE (LVL3L = . - OFFSET); . += 4K;
-        PROVIDE (LVL3H = . - OFFSET); . += 4K;
-        PROVIDE (LVL2L = . - OFFSET); . += 4K;
-        PROVIDE (LVL2H = . - OFFSET); . += 4K;
+        PROVIDE (PTAB_HVAS = . - OFFSET);
+        PROVIDE (PT3S_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2L_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1L_HPAS = . - OFFSET); . += 4K;
 
-        _mempool_f = .;
+        PROVIDE (_mempool_f = .);
 
-        . += 16M;
-        . = ALIGN(4M);
-
-        PROVIDE (LINK_E = . - OFFSET);
+        . = ALIGN(16M);
 
         PROVIDE (_mempool_e = .);
 
     } : kern
+
+    PROVIDE (NOVA_HPAS = LOAD_ADDR);
+    PROVIDE (NOVA_HPAE = . - OFFSET);
+
+    PROVIDE (STCK_TOP = CPU_LOCAL_STCK + PAGE_SIZE);
 
     .cpulocal CPU_LOCAL_DATA :
     {
