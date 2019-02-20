@@ -56,7 +56,7 @@ class Space
             Lock_guard <Spinlock> guard (lock);
 
             for (mword o; size; size -= 1UL << o, addr += 1UL << o)
-                Mdb::insert<Mdb> (&tree, new Mdb (nullptr, addr, addr, (o = max_order (addr, size)), attr, type));
+                Mdb::insert<Mdb> (&tree, new Mdb (nullptr, addr, addr, (o = aligned_order (size, addr)), attr, type));
         }
 
         void delreg (mword addr)
