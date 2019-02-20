@@ -135,8 +135,8 @@ void Cpu::check_features()
         cpp = tpp;
 
     unsigned tpc = tpp / cpp;
-    unsigned long t_bits = bit_scan_reverse (tpc - 1) + 1;
-    unsigned long c_bits = bit_scan_reverse (cpp - 1) + 1;
+    unsigned long t_bits = bit_scan_msb (tpc - 1) + 1;
+    unsigned long c_bits = bit_scan_msb (cpp - 1) + 1;
 
     thread  = top            & ((1u << t_bits) - 1);
     core    = top >>  t_bits & ((1u << c_bits) - 1);
