@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -36,8 +37,8 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own))
 
     Mtrr::init();
 
-    Space_mem::insert_root (0, reinterpret_cast<mword>(&LINK_P));
-    Space_mem::insert_root (reinterpret_cast<mword>(&LINK_E), 1ULL << 52);
+    Space_mem::insert_root (0, LOAD_ADDR);
+    Space_mem::insert_root (reinterpret_cast<mword>(&LOAD_STOP), USER_ADDR);
 
     // HIP
     Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), reinterpret_cast<mword>(&FRAME_H) + PAGE_SIZE, 1);
