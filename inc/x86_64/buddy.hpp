@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -76,13 +77,13 @@ class Buddy
         ALWAYS_INLINE
         inline mword virt_to_phys (mword virt)
         {
-            return virt - reinterpret_cast<mword>(&OFFSET);
+            return virt - OFFSET;
         }
 
         ALWAYS_INLINE
         inline mword phys_to_virt (mword phys)
         {
-            return phys + reinterpret_cast<mword>(&OFFSET);
+            return phys + OFFSET;
         }
 
     public:

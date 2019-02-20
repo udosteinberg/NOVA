@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,39 +23,15 @@
 #include "memory.hpp"
 #include "selectors.hpp"
 
-/*
- * Initialization Code
- */
-.section .init
-
 .globl                  __start_bsp
 
 /*
- * Multiboot Header
+ * Macros
  */
-__boot_header:          .long   0x1badb002
-                        .long   0x0
-                        .long  -0x1badb002
-
-/*
- * Global Descriptor Table (GDT)
- */
-.align                  8, 0x90
-__boot_gdt:             .word   0
-                        .word   __boot_gdt__ - __boot_gdt - 1
-                        .long   __boot_gdt
-#ifdef __x86_64__
-                        .quad   0x00a09b0000000000
-                        .quad   0x00a0930000000000
-                        .quad   0x00a0fb0000000000
-                        .quad   0x00a0f30000000000
-#else
-                        .quad   0x00cf9b000000ffff
-                        .quad   0x00cf93000000ffff
-                        .quad   0x00cffb000000ffff
-                        .quad   0x00cff3000000ffff
-#endif
-__boot_gdt__:
+.macro                  SET_PTE LEVEL, TABLE, VIRT, PHYS, ATTR
+                        mov     $((\PHYS) + (\ATTR)), %ecx
+                        mov     %ecx, (\TABLE) + SIZE * ((\VIRT) >> ((\LEVEL) * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+.endm
 
 .macro                  INIT_STATE
                         mov     $SEL_KERN_DATA, %ecx
@@ -85,6 +62,38 @@ __boot_gdt__:
 .endm
 
 /*
+ * Initialization Code
+ */
+.section .init
+
+/*
+ * Multiboot Header
+ */
+__boot_header:          .long   0x1badb002
+                        .long   0x0
+                        .long  -0x1badb002
+
+/*
+ * Global Descriptor Table (GDT)
+ */
+.align                  8, 0x90
+__boot_gdt:             .word   0
+                        .word   __boot_gdt__ - __boot_gdt - 1
+                        .long   __boot_gdt
+#ifdef __x86_64__
+                        .quad   0x00a09b0000000000
+                        .quad   0x00a0930000000000
+                        .quad   0x00a0fb0000000000
+                        .quad   0x00a0f30000000000
+#else
+                        .quad   0x00cf9b000000ffff
+                        .quad   0x00cf93000000ffff
+                        .quad   0x00cffb000000ffff
+                        .quad   0x00cff3000000ffff
+#endif
+__boot_gdt__:
+
+/*
  * AP Startup Code
  */
 .code16
@@ -106,30 +115,26 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
                         mov     $0x1000, %edi
                         rep     movsb
 #ifdef __x86_64__
-                        mov     $(LVL3L + 0x27), %ecx
-                        mov     %ecx, LVL4  + SIZE * (LOAD_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
-                        mov     $(LVL2L + 0x27), %ecx
-                        mov     %ecx, LVL3L + SIZE * (LOAD_ADDR >> (2 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        SET_PTE 3, LVL3S, LOAD_ADDR, LVL2L, 0x27
+                        SET_PTE 2, LVL2L, LOAD_ADDR, LVL1L, 0x27
 
-                        mov     $(LVL3H + 0x27), %ecx
-                        mov     %ecx, LVL4  + SIZE * (LINK_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
-                        mov     $(LVL2H + 0x27), %ecx
-                        mov     %ecx, LVL3H + SIZE * (LINK_ADDR >> (2 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        SET_PTE 3, LVL3S, LINK_ADDR, LVL2H, 0x27
+                        SET_PTE 2, LVL2H, LINK_ADDR, LVL1H, 0x27
 #endif
                         mov     $0xe3, %ecx
-                        mov     $LVL2L, %edi
+                        mov     $LVL1L, %edi
 1:                      mov     %ecx, (%edi)
                         add     $(1 << (PTE_BPL + PAGE_BITS)), %ecx
                         add     $SIZE, %edi
-                        cmp     $LOAD_E, %ecx
+                        cmp     $LOAD_STOP, %ecx
                         jb      1b
 
-                        mov     $(LINK_P + 0x1e3), %ecx
-                        mov     $(LVL2H + SIZE * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))), %edi
+                        mov     $(LOAD_ADDR + 0x1e3), %ecx
+                        mov     $(LVL1H + SIZE * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))), %edi
 1:                      mov     %ecx, (%edi)
                         add     $(1 << (PTE_BPL + PAGE_BITS)), %ecx
                         add     $SIZE, %edi
-                        cmp     $LINK_E, %ecx
+                        cmp     $LOAD_STOP, %ecx
                         jb      1b
 
                         INIT_PAGING
