@@ -41,10 +41,10 @@ Buddy Buddy::allocator (reinterpret_cast<mword>(&_mempool_p),
 Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
 {
     // Compute maximum aligned block size
-    unsigned long bit = bit_scan_reverse (size);
+    unsigned long bit = bit_scan_msb (size);
 
     // Compute maximum aligned physical block address (base)
-    base = phys_to_virt (align_up (phys, 1ul << bit));
+    base = phys_to_virt (aligned_up (BITN (bit), phys));
 
     // Convert block size to page order
     order = bit + 1 - PAGE_BITS;
