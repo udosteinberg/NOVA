@@ -28,11 +28,19 @@
 
 static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_frame_address (0)); }
 
+#if defined(__x86_64__)
 #define trace(T,format,...)                         \
 do {                                                \
     if (EXPECT_FALSE ((trace_mask & (T)) == (T)))   \
         Console::print ("[%2ld] " format, static_cast<long>(((stackptr() - 1) & ~OFFS_MASK) == MMAP_CPU_DSTK ? ACCESS_ONCE (Cpu::id) : ~0UL), ## __VA_ARGS__);   \
 } while (0)
+#else
+#define trace(T,format,...)                         \
+do {                                                \
+    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))   \
+        Console::print ("[%2ld] " format, ~0UL, ## __VA_ARGS__);   \
+} while (0)
+#endif
 
 /*
  * Definition of trace events
