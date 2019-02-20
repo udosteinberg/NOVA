@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,25 +25,15 @@
 #include "util.hpp"
 
 ALWAYS_INLINE
-inline long int bit_scan_reverse (mword val)
+constexpr long int bit_scan_reverse (mword val)
 {
-    if (EXPECT_FALSE (!val))
-        return -1;
-
-    asm volatile ("bsr %1, %0" : "=r" (val) : "rm" (val));
-
-    return val;
+    return val ? 8 * sizeof (mword) - 1 - __builtin_clzl (val) : -1;
 }
 
 ALWAYS_INLINE
-inline long int bit_scan_forward (mword val)
+constexpr long int bit_scan_forward (mword val)
 {
-    if (EXPECT_FALSE (!val))
-        return -1;
-
-    asm volatile ("bsf %1, %0" : "=r" (val) : "rm" (val));
-
-    return val;
+    return val ? __builtin_ctzl (val) : -1;
 }
 
 ALWAYS_INLINE
