@@ -243,12 +243,12 @@ void Ec::root_invoke()
             if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
                 die ("Bad ELF");
 
-            mword phys = align_dn (p->f_offs + Hip::root_addr, PAGE_SIZE);
-            mword virt = align_dn (p->v_addr, PAGE_SIZE);
-            mword size = align_up (p->f_size, PAGE_SIZE);
+            mword phys = aligned_dn (PAGE_SIZE, p->f_offs + Hip::root_addr);
+            mword virt = aligned_dn (PAGE_SIZE, p->v_addr);
+            mword size = aligned_up (PAGE_SIZE, p->f_size);
 
             for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
-                Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = min (max_order (phys, size), max_order (virt, size))) - PAGE_BITS, attr);
+                Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = aligned_order (size, phys, virt)) - PAGE_BITS, attr);
         }
     }
 
