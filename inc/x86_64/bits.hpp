@@ -1,10 +1,11 @@
 /*
- * Bit Scan Functions
+ * Bit Functions
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,31 +25,21 @@
 #include "util.hpp"
 
 ALWAYS_INLINE
-inline long int bit_scan_reverse (mword val)
+constexpr int bit_scan_reverse (unsigned long v)
 {
-    if (EXPECT_FALSE (!val))
-        return -1;
-
-    asm volatile ("bsr %1, %0" : "=r" (val) : "rm" (val));
-
-    return val;
+    return !v ? -1 : 8 * sizeof (v) - __builtin_clzl (v) - 1;
 }
 
 ALWAYS_INLINE
-inline long int bit_scan_forward (mword val)
+constexpr int bit_scan_forward (unsigned long v)
 {
-    if (EXPECT_FALSE (!val))
-        return -1;
-
-    asm volatile ("bsf %1, %0" : "=r" (val) : "rm" (val));
-
-    return val;
+    return !v ? -1 : __builtin_ctzl (v);
 }
 
 ALWAYS_INLINE
-inline unsigned long max_order (mword base, size_t size)
+inline unsigned long max_order (uintptr_t base, size_t size)
 {
-    long int o = bit_scan_reverse (size);
+    auto o = bit_scan_reverse (size);
 
     if (base)
         o = min (bit_scan_forward (base), o);
@@ -57,14 +48,14 @@ inline unsigned long max_order (mword base, size_t size)
 }
 
 ALWAYS_INLINE
-static inline mword align_dn (mword val, mword align)
+static inline uintptr_t align_dn (uintptr_t val, uintptr_t align)
 {
     val &= ~(align - 1);                // Expect power-of-2
     return val;
 }
 
 ALWAYS_INLINE
-static inline mword align_up (mword val, mword align)
+static inline uintptr_t align_up (uintptr_t val, uintptr_t align)
 {
     val += (align - 1);                 // Expect power-of-2
     return align_dn (val, align);
