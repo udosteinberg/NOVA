@@ -22,7 +22,7 @@
 #include "acpi_rsdt.hpp"
 #include "hpt.hpp"
 
-struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] INITDATA =
+struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] =
 {
     { SIG ('A','P','I','C'),    &Acpi::madt },
     { SIG ('D','M','A','R'),    &Acpi::dmar },
