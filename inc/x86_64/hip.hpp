@@ -109,16 +109,12 @@ class Hip
             return cpu < NUM_CPU && hip()->cpu_desc[cpu].flags & 1;
         }
 
-        INIT
         static void build (mword);
 
-        INIT
         static void add_mem (Hip_mem *&, mword, size_t);
 
-        INIT
         static void add_mod (Hip_mem *&, mword, size_t);
 
-        INIT
         static void add_mhv (Hip_mem *&);
 
         static void add_cpu();
