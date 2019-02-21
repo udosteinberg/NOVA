@@ -30,7 +30,7 @@ Paddr       Pci::cfg_base;
 size_t      Pci::cfg_size;
 Pci *       Pci::list;
 
-struct Pci::quirk_map Pci::map[] INITDATA =
+struct Pci::quirk_map Pci::map[] =
 {
 };
 
