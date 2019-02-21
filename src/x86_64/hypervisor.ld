@@ -43,7 +43,6 @@ SECTIONS
     .init :
     {
         *(.init)
-        *(.initdata)
     } : init
 
     . = ALIGN(4K) + 4K; PROVIDE_HIDDEN (STACK = .);
