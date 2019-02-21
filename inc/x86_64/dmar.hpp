@@ -69,7 +69,7 @@ class Dmar_ctx
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t) { return flush (Buddy::alloc (0, Buddy::Fill::BITS0), PAGE_SIZE); }
 };
 
 class Dmar_irt
@@ -82,7 +82,7 @@ class Dmar_irt
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t) { return flush (Buddy::alloc (0, Buddy::Fill::BITS0), PAGE_SIZE); }
 };
 
 class Dmar : public List<Dmar>

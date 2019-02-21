@@ -1,0 +1,195 @@
+/*
+ * Buddy Allocator
+ *
+ * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
+ * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ *
+ * This file is part of the NOVA microhypervisor.
+ *
+ * NOVA is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NOVA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License version 2 for more details.
+ */
+
+#include "assert.hpp"
+#include "bits.hpp"
+#include "buddy.hpp"
+#include "lock_guard.hpp"
+#include "macros.hpp"
+#include "string.hpp"
+
+extern uintptr_t KMEM_HVAS, KMEM_HVAF, KMEM_HVAE;
+
+Spinlock        Buddy::lock;
+unsigned long   Buddy::min_idx, Buddy::max_idx;
+uintptr_t       Buddy::base;
+uintptr_t       Buddy::offs;
+Buddy::Block *  Buddy::index;
+Buddy::Freelist Buddy::flist;
+
+void Buddy::init (uintptr_t offset)
+{
+    auto virt = reinterpret_cast<uintptr_t>(&KMEM_HVAS);
+    auto size = reinterpret_cast<uintptr_t>(&KMEM_HVAE) - virt;
+
+    base    = align_dn (virt, BIT (PTE_BPL + PAGE_BITS));
+    offs    = offset;
+    min_idx = page_to_index (virt);
+    max_idx = page_to_index (virt + (size / (PAGE_SIZE + sizeof *index)) * PAGE_SIZE);
+    index   = reinterpret_cast<Block *>(virt + size) - max_idx;
+
+    // Free all pages in the pool
+    for (auto i = reinterpret_cast<uintptr_t>(&KMEM_HVAF); i < index_to_page (max_idx); i += PAGE_SIZE)
+        free (reinterpret_cast<void *>(i));
+}
+
+/*
+ * Allocate physically contiguous memory region.
+ * @param ord       Block order (2^ord pages)
+ * @param fill      Fill pattern for the block
+ * @return          Kernel memory pointer or nullptr if unsuccessful
+ */
+void *Buddy::alloc (Order ord, Fill fill)
+{
+    Lock_guard <Spinlock> guard (lock);
+
+    // Iterate over all freelists, starting with the requested order
+    for (auto o = ord; o < orders; o++) {
+
+        // Get the first block from the order(o) freelist
+        auto block = flist.head (o);
+
+        // If that freelist is empty, try higher orders
+        if (!block)
+            continue;
+
+        // Dequeue the block from the freelist
+        flist.dequeue (block);
+
+        // Split higher-order blocks and put the upper half back into the freelist
+        while (o-- != ord) {
+            auto buddy = block + BIT (o);
+            assert (buddy->ord == o);
+            assert (!flist.head (o));
+            flist.enqueue (buddy);
+        }
+
+        // Set final block size and mark block as used
+        block->ord = ord;
+        block->tag = Block::Tag::USED;
+
+        auto ptr = reinterpret_cast<void *>(index_to_page (block_to_index (block)));
+
+        // Ensure corresponding physical block is order-aligned
+        assert ((virt_to_phys (reinterpret_cast<uintptr_t>(ptr)) & (BIT (block->ord + PAGE_BITS) - 1)) == 0);
+
+        // Fill the block if requested
+        if (fill != Fill::NONE)
+            memset (ptr, fill == Fill::BITS0 ? 0 : ~0U, BIT (block->ord + PAGE_BITS));
+
+        return ptr;
+    }
+
+    return nullptr;
+}
+
+/*
+ * Free physically contiguous memory region.
+ * @param ptr       Pointer to linear memory region
+ */
+void Buddy::free (void *ptr)
+{
+    auto idx = page_to_index (reinterpret_cast<uintptr_t>(ptr));
+
+    // Ensure virt is within allocator range
+    assert (idx >= min_idx && idx < max_idx);
+
+    auto block = index_to_block (idx);
+
+    // Ensure block is marked as used
+    assert (block->tag == Block::Tag::USED);
+
+    // Ensure corresponding physical block is order-aligned
+    assert ((virt_to_phys (reinterpret_cast<uintptr_t>(ptr)) & (BIT (block->ord + PAGE_BITS) - 1)) == 0);
+
+    Lock_guard <Spinlock> guard (lock);
+
+    // Mark block as free
+    block->tag = Block::Tag::FREE;
+
+    // Coalesce adjacent order(o) blocks into an order(o+1) block
+    for (auto o = block->ord; o < orders - 1; block->ord = ++o) {
+
+        // Compute buddy index
+        auto buddy_idx = block_to_index (block) ^ BIT (o);
+
+        // Stop if buddy is outside mempool
+        if (buddy_idx < min_idx || buddy_idx >= max_idx)
+            break;
+
+        auto buddy = index_to_block (buddy_idx);
+
+        // Stop if buddy is not free or fragmented
+        if (buddy->tag != Block::Tag::FREE || buddy->ord != o)
+            break;
+
+        // Dequeue buddy from the freelist
+        flist.dequeue (buddy);
+
+        // Merge block with buddy
+        if (block > buddy)
+            block = buddy;
+    }
+
+    // Put final-size block into the freelist
+    flist.enqueue (block);
+}
+
+/*
+ * Dequeue block b from freelist
+ */
+void Buddy::Freelist::dequeue (Block *b)
+{
+    auto o = b->ord;
+
+    assert (o < orders);
+    assert (b->tag == Block::Tag::FREE);
+    assert (b->prev || list[o] == b);
+
+    if (b->next)        // Relink successor
+        b->next->prev = b->prev;
+    if (b->prev)        // Relink predecessor
+        b->prev->next = b->next;
+    else                // Relink freelist head
+        list[o] = b->next;
+
+    // Unlink block
+    b->prev = b->next = nullptr;
+}
+
+/*
+ * Enqueue block b in freelist
+ */
+void Buddy::Freelist::enqueue (Block *b)
+{
+    auto o = b->ord;
+
+    assert (o < orders);
+    assert (b->tag == Block::Tag::FREE);
+    assert (!b->prev && !b->next);
+
+    b->next = list[o];  // Link to successor
+
+    if (list[o])        // Relink successor
+        list[o]->prev = b;
+
+    list[o] = b;        // Relink freelist head
+}

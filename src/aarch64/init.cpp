@@ -16,14 +16,17 @@
  */
 
 #include "arch.hpp"
+#include "buddy.hpp"
 #include "config.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 #include "memory.hpp"
 
 extern "C"
-void init()
+void init (uintptr_t offset)
 {
+    Buddy::init (offset);
+
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;

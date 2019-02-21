@@ -33,7 +33,7 @@ uint32      Vmcb::svm_feature;
 
 Vmcb::Vmcb (mword bmp, mword nptp) : base_io (bmp), asid (++asid_ctr), int_control (1ul << 24), npt_cr3 (nptp), efer (Cpu::EFER_SVME), g_pat (0x7040600070406ull)
 {
-    base_msr = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1));
+    base_msr = Buddy::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
 }
 
 void Vmcb::init()
