@@ -48,7 +48,6 @@ class Acpi_table_rsdt : public Acpi_table
             uint64  xsdt[1];
         };
 
-        INIT
         void parse (Paddr, size_t) const;
 };
 
