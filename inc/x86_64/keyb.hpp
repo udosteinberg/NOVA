@@ -41,7 +41,6 @@ class Keyb
         static unsigned const irq = 1;
         static unsigned gsi;
 
-        INIT
         static void init();
 
         static void interrupt();
