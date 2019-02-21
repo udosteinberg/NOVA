@@ -106,6 +106,5 @@ class Acpi
         static void reset();
         static void interrupt();
 
-        INIT
         static void setup();
 };

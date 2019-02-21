@@ -41,7 +41,6 @@ class Idt : public Descriptor
     public:
         static Idt idt[VEC_MAX];
 
-        INIT
         static void build();
 
         ALWAYS_INLINE

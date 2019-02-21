@@ -69,7 +69,6 @@ class Space_mem : public Space
             return hpt.replace (v, p);
         }
 
-        INIT
         void insert_root (uint64, uint64, mword = 0x7);
 
         bool insert_utcb (mword);

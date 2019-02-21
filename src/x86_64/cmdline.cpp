@@ -33,7 +33,7 @@ bool Cmdline::nopcid;
 bool Cmdline::novga;
 bool Cmdline::novpid;
 
-Cmdline::param_map Cmdline::map[] INITDATA =
+Cmdline::param_map Cmdline::map[] =
 {
     { "iommu",      &Cmdline::iommu     },
     { "keyb",       &Cmdline::keyb      },

@@ -33,7 +33,6 @@ class Cmdline
             bool * const  ptr;
         } map[];
 
-        INIT
         static char *get_arg (char **line);
 
     public:
@@ -47,6 +46,5 @@ class Cmdline
         static bool novga;
         static bool novpid;
 
-        INIT
         static void init (mword);
 };

@@ -77,7 +77,6 @@ class Pci : public List<Pci>
         }
 
     public:
-        INIT
         Pci (unsigned, unsigned);
 
         ALWAYS_INLINE
@@ -105,7 +104,6 @@ class Pci : public List<Pci>
             return true;
         }
 
-        INIT
         static void init (unsigned = 0, unsigned = 0);
 
         ALWAYS_INLINE
