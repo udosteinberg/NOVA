@@ -48,13 +48,15 @@
         #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits#")))
         #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
         #define FORMAT(X,Y)             __attribute__((format (printf, (X),(Y))))
-        #define INIT                    __attribute__((section (".init")))
-        #define INITDATA                __attribute__((section (".initdata")))
         #define INIT_PRIORITY(X)        __attribute__((init_priority((X))))
         #define NOINLINE                __attribute__((noinline))
         #define NONNULL                 __attribute__((nonnull))
         #define PACKED                  __attribute__((packed))
         #define REGPARM(X)              __attribute__((regparm(X)))
+
+        #define SEC_DATA                __attribute__((section (".data"), used))
+        #define SEC_HASH                __attribute__((section (".text"), used))
+        #define SEC_INIT                __attribute__((section (".init")))
 
         #define EXPECT_FALSE(X)         __builtin_expect(!!(X), 0)
         #define EXPECT_TRUE(X)          __builtin_expect(!!(X), 1)
