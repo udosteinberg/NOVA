@@ -113,7 +113,6 @@ class Acpi_table_fadt : public Acpi_table
             FORCE_APIC_PHYSICAL_MODE    = 1u << 19
         };
 
-        INIT
         void parse() const;
 };
 
