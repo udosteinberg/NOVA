@@ -67,6 +67,15 @@ __init_bsp:             // Store boot parameters
                         stp     x0, x1, [x4], #16
                         stp     x2, x3, [x4]
 
+                        // Determine relocation offset
+                        adr     x0, NOVA_HPAS
+                        mov     x1, LINK_ADDR
+                        sub     x22, x1, x0
+
+                        // Reject invalid relocation
+                        and     x0, x0, #BIT (PTE_BPL + PAGE_BITS) - 1
+                        cbnz    x0, .
+
                         // Clear to PoC
                         adrp    x0, NOVA_HPAS
                         adrp    x1, NOVA_HPAE
@@ -224,6 +233,7 @@ __boot_ts:              .quad   0
 
 high:
                         // General initialization
+                        mov     x0, x22
                         bl      init
 
                         b       .

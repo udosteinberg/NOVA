@@ -18,6 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "extern.hpp"
 #include "pd.hpp"
 
 Space_mem *Space_obj::space_mem()
@@ -31,10 +32,10 @@ Paddr Space_obj::walk (mword idx)
 
     if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == reinterpret_cast<Paddr>(&FRAME_0)) {
 
-        Paddr p = Buddy::ptr_to_phys (ptr = Buddy::allocator.alloc (0, Buddy::FILL_0));
+        Paddr p = Buddy::ptr_to_phys (ptr = Buddy::alloc (0, Buddy::Fill::BITS0));
 
         if ((phys = space_mem()->replace (virt, p | Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P)) != p)
-            Buddy::allocator.free (reinterpret_cast<mword>(ptr));
+            Buddy::free (ptr);
 
         phys |= virt & PAGE_MASK;
     }

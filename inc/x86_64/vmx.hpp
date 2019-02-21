@@ -354,7 +354,7 @@ class Vmcs
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            return Buddy::allocator.alloc (0, Buddy::NOFILL);
+            return Buddy::alloc (0, Buddy::Fill::NONE);
         }
 
         Vmcs (mword, mword, mword, uint64);

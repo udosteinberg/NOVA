@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "extern.hpp"
 #include "mtrr.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
