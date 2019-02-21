@@ -76,7 +76,8 @@ SECTIONS
         *(.bss .bss.* .gnu.linkonce.b.*)
 
         . = ALIGN(4K);
-        _mempool_l = .; PROVIDE (_mempool_p = _mempool_l - OFFSET);
+
+        PROVIDE (KMEM_HVAS = .);
 
         PROVIDE (PAGE_0 = .); PROVIDE (FRAME_0 = . - OFFSET); . += 4K;
         PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = . - OFFSET); . += 4K;
@@ -89,11 +90,11 @@ SECTIONS
         PROVIDE (LVL2L = . - OFFSET); . += 4K;
         PROVIDE (LVL1L = . - OFFSET); . += 4K;
 
-        PROVIDE (_mempool_f = .);
+        PROVIDE (KMEM_HVAF = .);
 
         . = ALIGN(16M);
 
-        PROVIDE (_mempool_e = .);
+        PROVIDE (KMEM_HVAE = .);
 
     } : kern
 

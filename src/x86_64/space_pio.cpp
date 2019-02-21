@@ -18,6 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "extern.hpp"
 #include "pd.hpp"
 
 Space_mem *Space_pio::space_mem()
@@ -30,7 +31,7 @@ Paddr Space_pio::walk (bool host, mword idx)
     Paddr &bmp = host ? hbmp : gbmp;
 
     if (!bmp) {
-        bmp = Buddy::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1));
+        bmp = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
 
         if (host)
             space_mem()->insert (SPC_LOCAL_IOP, 1, Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P, bmp);
@@ -41,7 +42,7 @@ Paddr Space_pio::walk (bool host, mword idx)
 
 void Space_pio::update (bool host, mword idx, mword attr)
 {
-    mword *m = static_cast<mword *>(Buddy::phys_to_ptr (walk (host, idx)));
+    mword *m = static_cast<mword *>(Kmem::phys_to_ptr (walk (host, idx)));
 
     if (attr)
         Atomic::clr_mask (*m, idx_to_mask (idx));

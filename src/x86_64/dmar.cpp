@@ -21,6 +21,7 @@
 
 #include "bits.hpp"
 #include "dmar.hpp"
+#include "extern.hpp"
 #include "lapic.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
@@ -34,7 +35,7 @@ Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
 Dmar_irt *  Dmar::irt = new Dmar_irt;
 uint32      Dmar::gcmd = GCMD_TE;
 
-Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
+Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Dmar_qi *>(Buddy::alloc (ord, Buddy::Fill::BITS0))), invq_idx (0)
 {
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
@@ -48,18 +49,18 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
     write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
     write<uint32>(REG_FECTL,  0);
 
-    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (ctx));
+    write<uint64>(REG_RTADDR, Kmem::ptr_to_phys (ctx));
     command (GCMD_SRTP);
 
     if (ir()) {
-        write<uint64>(REG_IRTA, Buddy::ptr_to_phys (irt) | 7);
+        write<uint64>(REG_IRTA, Kmem::ptr_to_phys (irt) | 7);
         command (GCMD_SIRTP);
         gcmd |= GCMD_IRE;
     }
 
     if (qi()) {
         write<uint64>(REG_IQT, 0);
-        write<uint64>(REG_IQA, Buddy::ptr_to_phys (invq));
+        write<uint64>(REG_IQA, Kmem::ptr_to_phys (invq));
         command (GCMD_QIE);
         gcmd |= GCMD_QIE;
     }
@@ -71,9 +72,9 @@ void Dmar::assign (unsigned long rid, Pd *p)
 
     Dmar_ctx *r = ctx + (rid >> 8);
     if (!r->present())
-        r->set (0, Buddy::ptr_to_phys (new Dmar_ctx) | 1);
+        r->set (0, Kmem::ptr_to_phys (new Dmar_ctx) | 1);
 
-    Dmar_ctx *c = static_cast<Dmar_ctx *>(Buddy::phys_to_ptr (r->addr())) + (rid & 0xff);
+    Dmar_ctx *c = static_cast<Dmar_ctx *>(Kmem::phys_to_ptr (r->addr())) + (rid & 0xff);
     if (c->present())
         c->set (0, 0);
 

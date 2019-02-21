@@ -22,6 +22,7 @@
 
 #include "atomic.hpp"
 #include "buddy.hpp"
+#include "kmem.hpp"
 #include "lowlevel.hpp"
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
@@ -64,7 +65,7 @@ class Pte
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            void *p = Buddy::allocator.alloc (0, Buddy::FILL_0);
+            void *p = Buddy::alloc (0, Buddy::Fill::BITS0);
 
             if (F)
                 flush (p, PAGE_SIZE);
@@ -73,7 +74,7 @@ class Pte
         }
 
         ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
+        static inline void operator delete (void *ptr) { Buddy::free (ptr); }
 
     public:
         enum
@@ -97,7 +98,7 @@ class Pte
         static inline unsigned max() { return L; }
 
         ALWAYS_INLINE
-        inline E root (mword l = L - 1) { return Buddy::ptr_to_phys (walk (0, l)); }
+        inline E root (mword l = L - 1) { return Kmem::ptr_to_phys (walk (0, l)); }
 
         size_t lookup (E, Paddr &, mword &);
 
