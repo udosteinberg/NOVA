@@ -42,7 +42,6 @@ class Gsi
         static Gsi      gsi_table[NUM_GSI];
         static unsigned irq_table[NUM_IRQ];
 
-        INIT
         static void setup();
 
         static uint64 set (unsigned, unsigned = 0, unsigned = 0);
