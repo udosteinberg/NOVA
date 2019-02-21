@@ -21,9 +21,12 @@
 
 #pragma once
 
+#include "arch.hpp"
+#include "compiler.hpp"
 #include "extern.hpp"
 #include "memory.hpp"
 #include "spinlock.hpp"
+#include "types.hpp"
 
 class Buddy
 {
@@ -31,45 +34,48 @@ class Buddy
         class Block
         {
             public:
+                enum class Tag : uint16
+                {
+                    USED    = 0,
+                    FREE    = 1,
+                };
+
                 Block *         prev;
                 Block *         next;
-                unsigned short  ord;
-                unsigned short  tag;
+                uint16          ord;
+                Tag             tag;
 
-                enum {
-                    Used  = 0,
-                    Free  = 1
-                };
         };
 
         Spinlock        lock;
-        signed long     max_idx;
-        signed long     min_idx;
+        unsigned long   min_idx;
+        unsigned long   max_idx;
         mword           base;
-        mword           order;
         Block *         index;
         Block *         head;
 
+        static uint16 const order = PTE_BPL + 1;
+
         ALWAYS_INLINE
-        inline signed long block_to_index (Block *b)
+        inline unsigned long block_to_index (Block *b)
         {
             return b - index;
         }
 
         ALWAYS_INLINE
-        inline Block *index_to_block (signed long i)
+        inline Block *index_to_block (unsigned long i)
         {
             return index + i;
         }
 
         ALWAYS_INLINE
-        inline signed long page_to_index (mword l_addr)
+        inline unsigned long page_to_index (mword virt)
         {
-            return l_addr / PAGE_SIZE - base / PAGE_SIZE;
+            return (virt - base) / PAGE_SIZE;
         }
 
         ALWAYS_INLINE
-        inline mword index_to_page (signed long i)
+        inline mword index_to_page (unsigned long i)
         {
             return base + i * PAGE_SIZE;
         }
@@ -96,11 +102,11 @@ class Buddy
 
         static Buddy allocator;
 
-        Buddy (mword phys, mword virt, mword f_addr, size_t size);
+        Buddy (mword, mword, size_t);
 
-        void *alloc (unsigned short ord, Fill fill = NOFILL);
+        void *alloc (uint16, Fill = NOFILL);
 
-        void free (mword addr);
+        void free (mword);
 
         ALWAYS_INLINE
         static inline void *phys_to_ptr (Paddr phys)

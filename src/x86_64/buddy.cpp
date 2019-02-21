@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -32,43 +33,24 @@ extern char _mempool_p, _mempool_l, _mempool_f, _mempool_e;
  * Buddy Allocator
  */
 INIT_PRIORITY (PRIO_BUDDY)
-Buddy Buddy::allocator (reinterpret_cast<mword>(&_mempool_p),
-                        reinterpret_cast<mword>(&_mempool_l),
+Buddy Buddy::allocator (reinterpret_cast<mword>(&_mempool_l),
                         reinterpret_cast<mword>(&_mempool_f),
                         reinterpret_cast<mword>(&_mempool_e) -
                         reinterpret_cast<mword>(&_mempool_l));
 
-Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
+Buddy::Buddy (mword virt, mword f_addr, size_t size)
 {
-    // Compute maximum aligned block size
-    unsigned long bit = bit_scan_reverse (size);
-
-    // Compute maximum aligned physical block address (base)
-    base = phys_to_virt (align_up (phys, 1ul << bit));
-
-    // Convert block size to page order
-    order = bit + 1 - PAGE_BITS;
-
-    trace (TRACE_MEMORY, "POOL: %#010lx-%#010lx O:%lu",
-           phys,
-           phys + size,
-           order);
-
-    // Allocate block-list heads
-    size -= order * sizeof *head;
-    head = reinterpret_cast<Block *>(virt + size);
-
-    // Allocate block-index storage
-    size -= size / (PAGE_SIZE + sizeof *index) * sizeof *index;
-    size &= ~PAGE_MASK;
+    size   -= order * sizeof *head;
+    base    = align_dn (virt, 1UL << (PTE_BPL + PAGE_BITS));
     min_idx = page_to_index (virt);
-    max_idx = page_to_index (virt + size);
-    index = reinterpret_cast<Block *>(virt + size) - min_idx;
+    max_idx = page_to_index (virt + (size / (PAGE_SIZE + sizeof *index)) * PAGE_SIZE);
+    head    = reinterpret_cast<Block *>(virt + size);
+    index   = reinterpret_cast<Block *>(virt + size) - max_idx;
 
     for (unsigned i = 0; i < order; i++)
         head[i].next = head[i].prev = head + i;
 
-    for (mword i = f_addr; i < virt + size; i += PAGE_SIZE)
+    for (mword i = f_addr; i < index_to_page (max_idx); i += PAGE_SIZE)
         free (i);
 }
 
@@ -78,11 +60,11 @@ Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
  * @param zero      Zero out block content if true
  * @return          Pointer to linear memory region
  */
-void *Buddy::alloc (unsigned short ord, Fill fill)
+void *Buddy::alloc (uint16 ord, Fill fill)
 {
     Lock_guard <Spinlock> guard (lock);
 
-    for (unsigned short j = ord; j < order; j++) {
+    for (auto j = ord; j < order; j++) {
 
         if (head[j].next == head + j)
             continue;
@@ -91,23 +73,23 @@ void *Buddy::alloc (unsigned short ord, Fill fill)
         block->prev->next = block->next;
         block->next->prev = block->prev;
         block->ord = ord;
-        block->tag = Block::Used;
+        block->tag = Block::Tag::USED;
 
         while (j-- != ord) {
-            Block *buddy = block + (1ul << j);
+            Block *buddy = block + (1UL << j);
             buddy->prev = buddy->next = head + j;
             buddy->ord = j;
-            buddy->tag = Block::Free;
+            buddy->tag = Block::Tag::FREE;
             head[j].next = head[j].prev = buddy;
         }
 
         mword virt = index_to_page (block_to_index (block));
 
         // Ensure corresponding physical block is order-aligned
-        assert ((virt_to_phys (virt) & ((1ul << (block->ord + PAGE_BITS)) - 1)) == 0);
+        assert ((virt_to_phys (virt) & ((1UL << (block->ord + PAGE_BITS)) - 1)) == 0);
 
         if (fill)
-            memset (reinterpret_cast<void *>(virt), fill == FILL_0 ? 0 : -1, 1ul << (block->ord + PAGE_BITS));
+            memset (reinterpret_cast<void *>(virt), fill == FILL_0 ? 0 : -1, 1UL << (block->ord + PAGE_BITS));
 
         return reinterpret_cast<void *>(virt);
     }
@@ -121,7 +103,7 @@ void *Buddy::alloc (unsigned short ord, Fill fill)
  */
 void Buddy::free (mword virt)
 {
-    signed long idx = page_to_index (virt);
+    auto idx = page_to_index (virt);
 
     // Ensure virt is within allocator range
     assert (idx >= min_idx && idx < max_idx);
@@ -129,19 +111,19 @@ void Buddy::free (mword virt)
     Block *block = index_to_block (idx);
 
     // Ensure block is marked as used
-    assert (block->tag == Block::Used);
+    assert (block->tag == Block::Tag::USED);
 
     // Ensure corresponding physical block is order-aligned
-    assert ((virt_to_phys (virt) & ((1ul << (block->ord + PAGE_BITS)) - 1)) == 0);
+    assert ((virt_to_phys (virt) & ((1UL << (block->ord + PAGE_BITS)) - 1)) == 0);
 
     Lock_guard <Spinlock> guard (lock);
 
-    unsigned short ord;
+    uint16 ord;
     for (ord = block->ord; ord < order - 1; ord++) {
 
         // Compute block index and corresponding buddy index
-        signed long block_idx = block_to_index (block);
-        signed long buddy_idx = block_idx ^ (1ul << ord);
+        auto block_idx = block_to_index (block);
+        auto buddy_idx = block_idx ^ (1UL << ord);
 
         // Buddy outside mempool
         if (buddy_idx < min_idx || buddy_idx >= max_idx)
@@ -150,7 +132,7 @@ void Buddy::free (mword virt)
         Block *buddy = index_to_block (buddy_idx);
 
         // Buddy in use or fragmented
-        if (buddy->tag == Block::Used || buddy->ord != ord)
+        if (buddy->tag == Block::Tag::USED || buddy->ord != ord)
             break;
 
         // Dequeue buddy from block list
@@ -163,7 +145,7 @@ void Buddy::free (mword virt)
     }
 
     block->ord = ord;
-    block->tag = Block::Free;
+    block->tag = Block::Tag::FREE;
 
     // Enqueue final-size block
     Block *h = head + ord;
