@@ -36,6 +36,5 @@ class Acpi_table
         char        creator_id[4];                  // 28
         uint32      creator_revision;               // 32
 
-        INIT
         bool good_checksum (Paddr addr) const;
 };
