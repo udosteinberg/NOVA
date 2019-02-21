@@ -87,10 +87,8 @@ class Console_vga final : public Console
             COLOR_LIGHT_WHITE   = 0xf
         };
 
-        INIT
         Console_vga();
 
-        INIT
         void setup();
 
         ALWAYS_INLINE
