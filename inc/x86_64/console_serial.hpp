@@ -52,7 +52,6 @@ class Console_serial final : public Console
         void putc (int) override;
 
     public:
-        INIT
         Console_serial();
 
         static Console_serial con;

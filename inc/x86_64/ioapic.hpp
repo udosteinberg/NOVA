@@ -76,7 +76,6 @@ class Ioapic : public List<Ioapic>
         }
 
     public:
-        INIT
         Ioapic (Paddr, unsigned, unsigned);
 
         ALWAYS_INLINE
