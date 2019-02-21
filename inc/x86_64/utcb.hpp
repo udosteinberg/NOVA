@@ -123,8 +123,8 @@ class Utcb : public Utcb_head, private Utcb_data
         inline Xfer *xfer() { return reinterpret_cast<Xfer *>(this) + PAGE_SIZE / sizeof (Xfer) - 1; }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }
+        static inline void *operator new (size_t) { return Buddy::alloc (0, Buddy::Fill::BITS0); }
 
         ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<mword>(ptr)); }
+        static inline void operator delete (void *ptr) { Buddy::free (ptr); }
 };

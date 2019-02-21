@@ -21,6 +21,7 @@
  */
 
 #include "bits.hpp"
+#include "extern.hpp"
 #include "lapic.hpp"
 #include "pd.hpp"
 #include "smmu.hpp"
@@ -35,7 +36,7 @@ Smmu_ctx *  Smmu::ctx = new Smmu_ctx;
 Smmu_irt *  Smmu::irt = new Smmu_irt;
 uint32      Smmu::gcmd = GCMD_TE;
 
-Smmu::Smmu (Paddr p) : List<Smmu> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Smmu_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
+Smmu::Smmu (Paddr p) : List<Smmu> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Smmu_qi *>(Buddy::alloc (ord, Buddy::Fill::BITS0))), invq_idx (0)
 {
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
@@ -49,18 +50,18 @@ Smmu::Smmu (Paddr p) : List<Smmu> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
     write<uint32>(REG_FEDATA, VEC_MSI_SMMU);
     write<uint32>(REG_FECTL,  0);
 
-    write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (ctx));
+    write<uint64>(REG_RTADDR, Kmem::ptr_to_phys (ctx));
     command (GCMD_SRTP);
 
     if (ir()) {
-        write<uint64>(REG_IRTA, Buddy::ptr_to_phys (irt) | 7);
+        write<uint64>(REG_IRTA, Kmem::ptr_to_phys (irt) | 7);
         command (GCMD_SIRTP);
         gcmd |= GCMD_IRE;
     }
 
     if (qi()) {
         write<uint64>(REG_IQT, 0);
-        write<uint64>(REG_IQA, Buddy::ptr_to_phys (invq));
+        write<uint64>(REG_IQA, Kmem::ptr_to_phys (invq));
         command (GCMD_QIE);
         gcmd |= GCMD_QIE;
     }
@@ -72,9 +73,9 @@ void Smmu::assign (unsigned long rid, Pd *p)
 
     Smmu_ctx *r = ctx + (rid >> 8);
     if (!r->present())
-        r->set (0, Buddy::ptr_to_phys (new Smmu_ctx) | 1);
+        r->set (0, Kmem::ptr_to_phys (new Smmu_ctx) | 1);
 
-    Smmu_ctx *c = static_cast<Smmu_ctx *>(Buddy::phys_to_ptr (r->addr())) + (rid & 0xff);
+    Smmu_ctx *c = static_cast<Smmu_ctx *>(Kmem::phys_to_ptr (r->addr())) + (rid & 0xff);
     if (c->present())
         c->set (0, 0);
 

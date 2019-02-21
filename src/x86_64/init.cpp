@@ -35,12 +35,12 @@ mword kern_ptab_setup()
 
     // Allocate and map cpu page
     hpt.update (CPU_LOCAL_DATA, 0,
-                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map kernel stack
     hpt.update (CPU_LOCAL_STCK, 0,
-                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
@@ -53,6 +53,8 @@ extern "C"
 void init (uintptr_t offset, uintptr_t mbi)
 {
     Kmem::init (offset);
+
+    Buddy::init();
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);

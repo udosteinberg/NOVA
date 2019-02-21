@@ -20,6 +20,7 @@
 
 #include "assert.hpp"
 #include "bits.hpp"
+#include "extern.hpp"
 #include "hpt.hpp"
 
 bool Hpt::sync_from (Hpt src, mword v, mword o)

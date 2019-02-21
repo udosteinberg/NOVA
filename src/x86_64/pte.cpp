@@ -32,7 +32,7 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool a)
 {
     unsigned long l = L;
 
-    for (P *p, *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
+    for (P *p, *e = static_cast<P *>(this);; e = static_cast<P *>(Kmem::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
 
         if (l == n)
             return e;
@@ -42,7 +42,7 @@ P *Pte<P,E,L,B,F>::walk (E v, unsigned long n, bool a)
             if (!a)
                 return nullptr;
 
-            if (!e->set (0, Buddy::ptr_to_phys (p = new P) | (l == L ? 0 : P::PTE_N)))
+            if (!e->set (0, Kmem::ptr_to_phys (p = new P) | (l == L ? 0 : P::PTE_N)))
                 delete p;
         }
     }
@@ -53,7 +53,7 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p, mword &a)
 {
     unsigned long l = L;
 
-    for (P *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
+    for (P *e = static_cast<P *>(this);; e = static_cast<P *>(Kmem::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
 
         if (EXPECT_FALSE (!e->val))
             return 0;
@@ -93,7 +93,7 @@ void Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
             continue;
 
         if (l && !e[i].super())
-            delete static_cast<P *>(Buddy::phys_to_ptr (e[i].addr()));
+            delete static_cast<P *>(Kmem::phys_to_ptr (e[i].addr()));
     }
 
     if (F)

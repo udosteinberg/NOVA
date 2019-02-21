@@ -354,7 +354,7 @@ class Vmcs
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            return Buddy::allocator.alloc (0, Buddy::NOFILL);
+            return Buddy::alloc (0, Buddy::Fill::NONE);
         }
 
         Vmcs (mword, mword, mword, uint64);
@@ -362,7 +362,7 @@ class Vmcs
         ALWAYS_INLINE
         inline Vmcs() : rev (basic.revision)
         {
-            uint64 phys = Buddy::ptr_to_phys (this);
+            uint64 phys = Kmem::ptr_to_phys (this);
 
             bool ret;
             asm volatile ("vmxon %1; seta %0" : "=q" (ret) : "m" (phys) : "cc");
@@ -375,7 +375,7 @@ class Vmcs
             if (EXPECT_TRUE (current == this))
                 current = nullptr;
 
-            uint64 phys = Buddy::ptr_to_phys (this);
+            uint64 phys = Kmem::ptr_to_phys (this);
 
             bool ret;
             asm volatile ("vmclear %1; seta %0" : "=q" (ret) : "m" (phys) : "cc");
@@ -388,7 +388,7 @@ class Vmcs
             if (EXPECT_TRUE (current == this))
                 return;
 
-            uint64 phys = Buddy::ptr_to_phys (current = this);
+            uint64 phys = Kmem::ptr_to_phys (current = this);
 
             bool ret;
             asm volatile ("vmptrld %1; seta %0" : "=q" (ret) : "m" (phys) : "cc");
