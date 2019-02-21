@@ -54,10 +54,8 @@ class Acpi_rsdp
             return !check;
         }
 
-        INIT
         static Acpi_rsdp *find (mword, unsigned);
 
     public:
-        INIT
         static void parse();
 };

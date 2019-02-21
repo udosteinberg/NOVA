@@ -49,9 +49,7 @@ class Mtrr : public List<Mtrr>
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
 
-        INIT
         static void init();
 
-        INIT
         static unsigned memtype (uint64, uint64 &);
 };

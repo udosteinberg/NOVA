@@ -231,7 +231,6 @@ class Dmar : public List<Dmar>
         void fault_handler();
 
     public:
-        INIT
         Dmar (Paddr);
 
         ALWAYS_INLINE
