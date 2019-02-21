@@ -30,7 +30,6 @@ class Acpi_table_hpet : public Acpi_table
         uint8       id;
         uint16      tick;
 
-        INIT
         void parse() const;
 };
 

@@ -38,7 +38,6 @@ class Acpi_table_mcfg : public Acpi_table
         uint64      reserved;
         Acpi_mcfg   mcfg[];
 
-        INIT
         void parse() const;
 };
 
