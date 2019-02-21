@@ -41,7 +41,6 @@ SECTIONS
     .init LOAD_ADDR :
     {
         *(.init)
-        *(.initdata)
     } : init = 0x90909090
 
     . = ALIGN(4K) + 4K; PROVIDE (STACK = .);

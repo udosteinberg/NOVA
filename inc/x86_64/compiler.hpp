@@ -74,8 +74,6 @@
         #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits#")))
         #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
         #define FORMAT(X,Y)             __attribute__((format (printf, (X),(Y))))
-        #define INIT                    __attribute__((section (".init")))
-        #define INITDATA                __attribute__((section (".initdata")))
         #define INIT_PRIORITY(X)        __attribute__((init_priority((X))))
         #define NOINLINE                __attribute__((noinline))
         #define NONNULL                 __attribute__((nonnull))
