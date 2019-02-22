@@ -20,9 +20,11 @@
 
 #pragma once
 
+#include "buddy.hpp"
 #include "cache.hpp"
 #include "list.hpp"
 #include "lowlevel.hpp"
+#include "memory.hpp"
 #include "slab.hpp"
 
 class Pd;
