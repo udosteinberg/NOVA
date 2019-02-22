@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,82 +21,25 @@
 
 #pragma once
 
-#include "buddy.hpp"
 #include "initprio.hpp"
-
-class Slab;
+#include "spinlock.hpp"
 
 class Slab_cache
 {
     private:
-        Spinlock    lock;
-        Slab *      curr;
-        Slab *      head;
+        struct Slab;
 
-        /*
-         * Back end allocator
-         */
-        void grow();
+        uint16 const    bsz;                    // Buffer size
+        uint16 const    bps;                    // Buffers per Slab
+        Slab *          curr    { nullptr };    // Current (Partial) Slab
+        Slab *          head    { nullptr };    // Head of Slab List
+        Spinlock        lock;                   // Allocator Spinlock
 
     public:
-        unsigned long size; // Size of an element
-        unsigned long buff; // Size of an element buffer (includes link field)
-        unsigned long elem; // Number of elements
-
-        Slab_cache (unsigned long elem_size, unsigned elem_align);
-
-        /*
-         * Front end allocator
-         */
+        [[nodiscard]]
         void *alloc();
 
-        /*
-         * Front end deallocator
-         */
-        void free (void *ptr);
-};
+        void free (void *);
 
-class Slab
-{
-    public:
-        unsigned long   avail;
-        Slab_cache *    cache;
-        Slab *          prev;                     // Prev slab in cache
-        Slab *          next;                     // Next slab in cache
-        char *          head;
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            return Buddy::alloc (0, Buddy::Fill::BITS0);
-        }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr)
-        {
-            Buddy::free (ptr);
-        }
-
-        Slab (Slab_cache *slab_cache);
-
-        ALWAYS_INLINE
-        inline bool full() const
-        {
-            return !avail;
-        }
-
-        ALWAYS_INLINE
-        inline bool empty() const
-        {
-            return avail == cache->elem;
-        }
-
-        void enqueue();
-        void dequeue();
-
-        ALWAYS_INLINE
-        inline void *alloc();
-
-        ALWAYS_INLINE
-        inline void free (void *ptr);
+        Slab_cache (size_t, size_t);
 };
