@@ -22,6 +22,7 @@
 
 #include "io.hpp"
 #include "list.hpp"
+#include "memory.hpp"
 #include "slab.hpp"
 
 class Dmar;
