@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,53 +23,34 @@
 #include "bits.hpp"
 #include "lock_guard.hpp"
 #include "slab.hpp"
-#include "stdio.hpp"
 
-Slab::Slab (Slab_cache *slab_cache)
-    : avail (slab_cache->elem),
-      cache (slab_cache),
-      prev  (nullptr),
-      next  (nullptr),
-      head  (nullptr)
+Slab::Slab (Slab_cache *c) : cache (c)
 {
-    char *link = reinterpret_cast<char *>(this) + PAGE_SIZE - cache->buff + cache->size;
-
-    for (unsigned long i = avail; i; i--, link -= cache->buff) {
-        *reinterpret_cast<char **>(link) = head;
-        head = link;
-    }
+    for (unsigned long i = cache->elem; i; i--)
+        free (reinterpret_cast<char *>(this) + PAGE_SIZE - i * cache->buff);
 }
 
 void *Slab::alloc()
 {
     avail--;
 
-    void *link = reinterpret_cast<void *>(head - cache->size);
-    head = *reinterpret_cast<char **>(head);
-    return link;
+    char *ptr = reinterpret_cast<char *>(head) - cache->size;
+    head = head->link;
+    return ptr;
 }
 
 void Slab::free (void *ptr)
 {
     avail++;
 
-    char *link = reinterpret_cast<char *>(ptr) + cache->size;
-    *reinterpret_cast<char **>(link) = head;
-    head = link;
+    Slab_elem *e = reinterpret_cast<Slab_elem *>(reinterpret_cast<mword>(ptr) + cache->size);
+    e->link = head;
+    head = e;
 }
 
-Slab_cache::Slab_cache (unsigned long elem_size, unsigned elem_align)
-          : curr (nullptr),
-            head (nullptr),
-            size (align_up (elem_size, sizeof (mword))),
-            buff (align_up (size + sizeof (mword), elem_align)),
-            elem ((PAGE_SIZE - sizeof (Slab)) / buff)
-{
-    trace (TRACE_MEMORY, "Slab Cache:%p (S:%lu A:%u)",
-           this,
-           elem_size,
-           elem_align);
-}
+Slab_cache::Slab_cache (size_t s, size_t a) : size (align_up (s, alignof (Slab_elem))),
+                                              buff (align_up (size + sizeof (Slab_elem), a)),
+                                              elem ((PAGE_SIZE - sizeof (Slab)) / buff) {}
 
 void Slab_cache::grow()
 {
