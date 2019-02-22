@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "memory.hpp"
 #include "msr.hpp"
 #include "mtrr.hpp"
 
