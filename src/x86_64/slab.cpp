@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,115 +21,209 @@
 
 #include "assert.hpp"
 #include "bits.hpp"
+#include "buddy.hpp"
 #include "lock_guard.hpp"
 #include "slab.hpp"
-#include "stdio.hpp"
 
-Slab::Slab (Slab_cache *slab_cache)
-    : avail (slab_cache->elem),
-      cache (slab_cache),
-      prev  (nullptr),
-      next  (nullptr),
-      head  (nullptr)
+struct Slab_cache::Slab
 {
-    char *link = reinterpret_cast<char *>(this) + PAGE_SIZE - cache->buff + cache->size;
+    struct Buffer
+    {
+        Buffer *        next    { nullptr };    // Intra-Slab Buffer Linkage
+    };
 
-    for (unsigned long i = avail; i; i--, link -= cache->buff) {
-        *reinterpret_cast<char **>(link) = head;
-        head = link;
+    Slab_cache * const  cache;                  // Slab_cache for this Slab
+    Slab *              prev    { nullptr };    // Prev Slab in Slab_cache
+    Slab *              next    { nullptr };    // Next Slab in Slab_cache
+    Buffer *            head    { nullptr };    // Head of Buffer List
+    unsigned            acnt    { 0 };          // Available Buffer Count
+
+    inline bool full() const    { return acnt == 0; }
+    inline bool empty() const   { return acnt == cache->bps; }
+
+    /*
+     * Allocate an element in this slab
+     *
+     * @return  Pointer to the element
+     */
+    NODISCARD ALWAYS_INLINE
+    inline void *alloc()
+    {
+        // Unlink buffer
+        auto b = head;
+        head = head->next;
+
+        // Update available buffer count
+        acnt--;
+
+        // The buffer that previously contained a buffer link will now be used as an element
+        return static_cast<void *>(b);
     }
-}
 
-void *Slab::alloc()
-{
-    avail--;
+    /*
+     * Free an element in this slab
+     *
+     * @param p Pointer to the element
+     * @return  true if slab was previously full, false otherwise
+     */
+    ALWAYS_INLINE
+    inline bool free (void *p)
+    {
+        // The buffer that previously contained an element will now be used as a buffer link
+        auto b = static_cast<Buffer *>(p);
 
-    void *link = reinterpret_cast<void *>(head - cache->size);
-    head = *reinterpret_cast<char **>(head);
-    return link;
-}
+        // Relink buffer
+        b->next = head;
+        head = b;
 
-void Slab::free (void *ptr)
-{
-    avail++;
+        // Update available buffer count
+        return !acnt++;
+    }
 
-    char *link = reinterpret_cast<char *>(ptr) + cache->size;
-    *reinterpret_cast<char **>(link) = head;
-    head = link;
-}
+    /*
+     * Slab Constructor
+     *
+     * @param c Slab cache to which this slab belongs
+     */
+    ALWAYS_INLINE
+    inline Slab (Slab_cache *c) : cache (c)
+    {
+        // Free all buffers in the slab
+        for (auto i = cache->bps; i; i--)
+            free (reinterpret_cast<char *>(this) + PAGE_SIZE - i * cache->bsz);
+    }
 
-Slab_cache::Slab_cache (unsigned long elem_size, unsigned elem_align)
-          : curr (nullptr),
-            head (nullptr),
-            size (align_up (elem_size, sizeof (mword))),
-            buff (align_up (size + sizeof (mword), elem_align)),
-            elem ((PAGE_SIZE - sizeof (Slab)) / buff)
-{
-    trace (TRACE_MEMORY, "Slab Cache:%p (S:%lu A:%u)",
-           this,
-           elem_size,
-           elem_align);
-}
+    NODISCARD
+    static inline void *operator new (size_t) noexcept
+    {
+        return Buddy::alloc (0, Buddy::Fill::BITS0);
+    }
 
-void Slab_cache::grow()
-{
-    Slab *slab = new Slab (this);
+    static inline void operator delete (void *ptr)
+    {
+        if (EXPECT_TRUE (ptr))
+            Buddy::free (ptr);
+    }
+};
 
-    if (head)
-        head->prev = slab;
+/*
+ * Slab Cache Constructor
+ *
+ * @param s Required element size
+ * @param a Required element alignment (must be a power of 2)
+ *
+ * Slab Linkage Example (P:partial precede F:full)
+ *
+ * nullptr <- P <-> P <-> P <-> P <-> F <-> F -> nullptr
+ *            ^                 ^
+ *          head              curr
+ *
+ *  head && !curr => slab cache contains only F-Slabs => no buffer available
+ *  head &&  curr => slab cache contains some P-Slabs => buffer in curr available
+ * !head && !curr => slab cache contains no slabs => initial state
+ * !head &&  curr => illegal
+ */
+Slab_cache::Slab_cache (size_t s, size_t a) : bsz (static_cast<uint16>(align_up (max (s, sizeof (Slab::Buffer)), max (a, alignof (Slab::Buffer))))),
+                                              bps ((PAGE_SIZE - sizeof (Slab)) / bsz) {}
 
-    slab->next = head;
-    head = curr = slab;
-}
-
+/*
+ * Allocate an element in this slab cache
+ *
+ * @return  Pointer to the element (success) or nullptr (failure)
+ */
 void *Slab_cache::alloc()
 {
     Lock_guard <Spinlock> guard (lock);
 
-    if (EXPECT_FALSE (!curr))
-        grow();
+    // Cache contains no slabs or only full slabs
+    if (EXPECT_FALSE (!curr)) {
 
+        // Allocate a new slab
+        auto slab = new Slab (this);
+
+        // Allocation failed
+        if (EXPECT_FALSE (!slab))
+            return nullptr;
+
+        // Link slab as head and curr (with no predecessor)
+        slab->next = head;
+
+        if (head)
+            head->prev = slab;
+
+        head = curr = slab;
+    }
+
+    // The current slab must be either empty or partial
     assert (!curr->full());
+
+    // If we have a successor slab, it must be full
     assert (!curr->next || curr->next->full());
 
-    // Allocate from slab
-    void *ret = curr->alloc();
+    // Allocate element in current slab
+    auto p = curr->alloc();
 
+    // If the current slab is now full, make its predecessor current
     if (EXPECT_FALSE (curr->full()))
         curr = curr->prev;
 
-    return ret;
+    return p;
 }
 
-void Slab_cache::free (void *ptr)
+/*
+ * Free an element in this slab cache
+ *
+ * @param p Pointer to the element
+ */
+void Slab_cache::free (void *p)
 {
     Lock_guard <Spinlock> guard (lock);
 
-    Slab *slab = reinterpret_cast<Slab *>(reinterpret_cast<mword>(ptr) & ~PAGE_MASK);
+    // Compute slab for this element
+    auto slab = reinterpret_cast<Slab *>(reinterpret_cast<uintptr_t>(p) & ~PAGE_MASK);
 
-    bool was_full = slab->full();
+    // Ensure we use the correct cache
+    assert (slab->cache == this);
 
-    slab->free (ptr);       // Deallocate from slab
+    // Free element in slab
+    auto was_full = slab->free (p);
 
-    if (EXPECT_FALSE (was_full)) {
+    // Slab Transition Full/Partial => Empty
+    if (EXPECT_FALSE (slab->empty())) {
 
-        // There are full slabs in front of us and we're partial; requeue
+        // If the slab was curr, new curr is the slab's predecessor
+        if (slab == curr)
+            curr = slab->prev;
+
+        // If the slab was head, new head is the slab's successor
+        if (slab == head)
+            head = slab->next;
+
+        // Unlink slab
+        if (slab->prev)
+            slab->prev->next = slab->next;
+        if (slab->next)
+            slab->next->prev = slab->prev;
+
+        // Deallocate slab
+        delete slab;
+
+    // Slab Transition Full => Partial
+    } else if (EXPECT_FALSE (was_full)) {
+
+        // Slab is now partial and there are full slabs in front it => requeue
         if (slab->prev && slab->prev->full()) {
 
-            // Dequeue
+            // Unlink slab
             slab->prev->next = slab->next;
             if (slab->next)
                 slab->next->prev = slab->prev;
 
-            // Enqueue after curr
-            if (curr) {
+            if (curr) {         // Link as successor of curr
                 slab->prev = curr;
                 slab->next = curr->next;
                 curr->next = curr->next->prev = slab;
-            }
-
-            // Enqueue as head
-            else {
+            } else {            // Link as head
                 slab->prev = nullptr;
                 slab->next = head;
                 head = head->prev = slab;
@@ -136,25 +231,5 @@ void Slab_cache::free (void *ptr)
         }
 
         curr = slab;
-
-    } else if (EXPECT_FALSE (slab->empty())) {
-
-        // There are partial slabs in front of us and we're empty; requeue
-        if (slab->prev && !slab->prev->empty()) {
-
-            // Make partial slab in front of us current if we were current
-            if (slab == curr)
-                curr = slab->prev;
-
-            // Dequeue
-            slab->prev->next = slab->next;
-            if (slab->next)
-                slab->next->prev = slab->prev;
-
-            // Enqueue as head
-            slab->prev = nullptr;
-            slab->next = head;
-            head = head->prev = slab;
-        }
     }
 }
