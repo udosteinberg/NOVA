@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,6 +21,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "buddy.hpp"
 #include "initprio.hpp"
 
@@ -29,8 +31,8 @@ class Slab_cache
 {
     private:
         Spinlock    lock;
-        Slab *      curr;
-        Slab *      head;
+        Slab *      curr    { nullptr };
+        Slab *      head    { nullptr };
 
         /*
          * Back end allocator
@@ -38,45 +40,48 @@ class Slab_cache
         void grow();
 
     public:
-        unsigned long size; // Size of an element
-        unsigned long buff; // Size of an element buffer (includes link field)
-        unsigned long elem; // Number of elements
+        size_t const        size;   // Size of an element
+        size_t const        buff;   // Size of an element buffer (includes Slab_elem)
+        unsigned long const elem;   // Number of elements per slab
 
-        Slab_cache (unsigned long elem_size, unsigned elem_align);
+        Slab_cache (size_t, size_t);
 
-        /*
-         * Front end allocator
-         */
         void *alloc();
 
-        /*
-         * Front end deallocator
-         */
-        void free (void *ptr);
+        void free (void *);
+};
+
+class Slab_elem
+{
+    public:
+        Slab_elem *         link;
 };
 
 class Slab
 {
-    public:
-        unsigned long   avail;
-        Slab_cache *    cache;
-        Slab *          prev;                     // Prev slab in cache
-        Slab *          next;                     // Next slab in cache
-        char *          head;
+    private:
+        Slab_cache * const  cache;
+        unsigned            avail   { 0 };
+        Slab_elem *         head    { nullptr };
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
+    public:
+        Slab *              prev    { nullptr };
+        Slab *              next    { nullptr };
+
+        static inline void *operator new (size_t) noexcept
         {
-            return Buddy::alloc (0, Buddy::Fill::BITS0);
+            auto ptr = Buddy::alloc (0, Buddy::Fill::BITS0);
+            assert (ptr);
+            return ptr;
         }
 
-        ALWAYS_INLINE
         static inline void operator delete (void *ptr)
         {
-            Buddy::free (ptr);
+            if (EXPECT_TRUE (ptr))
+                Buddy::free (ptr);
         }
 
-        Slab (Slab_cache *slab_cache);
+        Slab (Slab_cache *);
 
         ALWAYS_INLINE
         inline bool full() const
@@ -89,9 +94,6 @@ class Slab
         {
             return avail == cache->elem;
         }
-
-        void enqueue();
-        void dequeue();
 
         ALWAYS_INLINE
         inline void *alloc();
