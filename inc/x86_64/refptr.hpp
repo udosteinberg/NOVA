@@ -35,7 +35,7 @@ class Refcount
         inline bool add_ref()
         {
             for (uint32 r; (r = ref); )
-                if (Atomic::cmp_swap (ref, r, r + 1))
+                if (Atomic::compare_exchange (&ref, &r, r + 1))
                     return true;
 
             return false;

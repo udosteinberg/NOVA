@@ -54,7 +54,7 @@ class Pte
         ALWAYS_INLINE
         inline bool set (E o, E v)
         {
-            bool b = Atomic::cmp_swap (val, o, v);
+            bool b = Atomic::compare_exchange (&val, &o, v);
 
             if (F && b)
                 flush (this);
