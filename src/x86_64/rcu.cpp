@@ -51,7 +51,7 @@ void Rcu::start_batch (State s)
 {
     mword v, m = RCU_CMP | RCU_PND;
 
-    do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !Atomic::cmp_swap (state, v, v | s));
+    do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !Atomic::compare_exchange (&state, &v, v | s));
 
     if ((v ^ ~s) & m)
         return;
