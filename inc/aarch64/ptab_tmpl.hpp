@@ -16,3 +16,7 @@
  */
 
 #pragma once
+
+#include "ptab_hpt.hpp"
+
+template class Pagetable<Hpt, uint64, uint64, 4, 3, false>;
