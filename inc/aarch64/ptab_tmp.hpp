@@ -1,7 +1,7 @@
 /*
  * Page Table Templates
  *
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,3 +16,7 @@
  */
 
 #pragma once
+
+#include "ptab_hpt.hpp"
+
+template class Ptab<Hpt, uint64, uint64>;
