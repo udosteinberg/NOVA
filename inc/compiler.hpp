@@ -71,9 +71,18 @@
 
         #define ALIGNED(X)              __attribute__((aligned(X)))
         #define ALWAYS_INLINE           __attribute__((always_inline))
+    #if defined(__x86_64__)
         #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits#")))
         #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
+        #define EFICALL                 __attribute__((ms_abi))
+    #elif defined (__aarch64__)
+        #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits//")))
+        #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits//")))
+        #define EFICALL
+    #endif
         #define FORMAT(X,Y)             __attribute__((format (printf, (X),(Y))))
+        #define INIT                    __attribute__((section (".init")))
+        #define INIT_DATA               __attribute__((section (".init.data")))
         #define INIT_PRIORITY(X)        __attribute__((init_priority((X))))
         #define NOINLINE                __attribute__((noinline))
         #define NONNULL                 __attribute__((nonnull))
