@@ -16,3 +16,9 @@
  */
 
 #pragma once
+
+#include "hpt.hpp"
+
+template<> unsigned Pte<Hpt, 4, 9, uint64, uint64>::lim = 3 * 9 - 1;
+
+template class Pte<Hpt, 4, 9, uint64, uint64>;
