@@ -16,3 +16,7 @@
  */
 
 #pragma once
+
+#include "ptab_hst.hpp"
+
+template class Ptab<Pte_hst, uint64_t, uint64_t>;
