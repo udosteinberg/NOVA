@@ -16,3 +16,41 @@
  */
 
 #pragma once
+
+#include "arch.hpp"
+#include "compiler.hpp"
+#include "types.hpp"
+
+class Cpu final
+{
+    private:
+        static uint64_t midr                CPULOCAL;           // Main ID Register
+        static uint64_t mpidr               CPULOCAL;           // Multiprocessor Affinity Register
+
+    public:
+        static inline cpu_t             boot_cpu    { 0 };
+        static inline cpu_t             count       { 0 };
+
+        // Returns affinity in Aff3[31:24] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
+        ALWAYS_INLINE
+        static inline auto affinity() { return static_cast<uint32_t>((mpidr >> 8 & BIT_RANGE (31, 24)) | (mpidr & BIT_RANGE (23, 0))); }
+
+        // Returns affinity in Aff3[39:32] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
+        ALWAYS_INLINE
+        static inline auto affinity_bits (uint64_t v) { return v & (BIT64_RANGE (39, 32) | BIT64_RANGE (23, 0)); }
+
+        ALWAYS_INLINE
+        static inline void preemption_disable() { asm volatile ("msr daifset, #0xf" : : : "memory"); }
+
+        ALWAYS_INLINE
+        static inline void preemption_enable() { asm volatile ("msr daifclr, #0xf" : : : "memory"); }
+
+        ALWAYS_INLINE
+        static inline void preemption_point() { asm volatile ("msr daifclr, #0xf; msr daifset, #0xf" : : : "memory"); }
+
+        ALWAYS_INLINE
+        static inline void halt() { asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory"); }
+
+        static void init();
+        static void fini();
+};
