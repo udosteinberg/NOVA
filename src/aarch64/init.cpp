@@ -1,7 +1,7 @@
 /*
  * Initialization Code
  *
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,14 +16,40 @@
  */
 
 #include "acpi.hpp"
-#include "buddy.hpp"
 #include "cmdline.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 #include "kmem.hpp"
+#include "ptab_hpt.hpp"
 
 extern "C"
-void init (uintptr_t offset)
+Hpt::OAddr kern_ptab_setup (unsigned cpu)
+{
+    Hptp hptp; uintptr_t phys;
+
+    // Sync kernel code and data
+    hptp.sync_from_master (LINK_ADDR);
+
+    // Allocate and map kernel stack
+    hptp.update (MMAP_CPU_DSTK, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    // Allocate and map cpu page
+    hptp.update (MMAP_CPU_DATA, phys = Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    // Add to CPU array
+    Hptp::master.update (MMAP_GLB_DATA + cpu * PAGE_SIZE, phys, 0,
+                         Paging::Permissions (Paging::G | Paging::W | Paging::R),
+                         Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    return hptp.root_addr();
+}
+
+extern "C"
+unsigned init (uintptr_t offset)
 {
     if (!Acpi::resume) {
 
@@ -40,4 +66,6 @@ void init (uintptr_t offset)
         // Now we're ready to talk to the world
         Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
     }
+
+    return 0;
 }
