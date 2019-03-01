@@ -256,4 +256,18 @@ __init_bsp:
                         // General initialization
                         bl      init
 
-                        b       .
+                        // Switch to CPU-local page table
+                        bl      kern_ptab_setup
+                        msr     ttbr0_el2, x0
+                        isb
+
+                        // Invalidate residual EL2 TLB entries
+                        tlbi    alle2
+                        dsb     nsh
+                        isb
+
+                        // Switch to CPU-local stack
+                        adrp    x0, DSTK_TOP
+                        mov     sp, x0
+
+                        b       bootstrap
