@@ -15,11 +15,36 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.hpp"
 #include "config.hpp"
 #include "console.hpp"
 #include "extern.hpp"
-#include "memory.hpp"
+#include "hpt.hpp"
+
+extern "C"
+void kern_ptab_setup (unsigned cpu)
+{
+    Hptp hptp; mword phys;
+
+    // Sync kernel code and data
+    hptp.sync_from_master (LINK_ADDR, CPU_LOCAL);
+
+    // Allocate and map kernel stack
+    hptp.update (CPU_LOCAL_STCK, Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)), 0,
+                 Paging::Permissions (Paging::R | Paging::W | Paging::G),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    // Allocate and map cpu page
+    hptp.update (CPU_LOCAL_DATA, phys = Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)), 0,
+                 Paging::Permissions (Paging::R | Paging::W | Paging::G),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    // Add to CPU array
+    Hptp::master.update (CPU_GLOBL_DATA + cpu * PAGE_SIZE, phys, 0,
+                         Paging::Permissions (Paging::R | Paging::W | Paging::G),
+                         Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    hptp.make_current();
+}
 
 inline mword version()
 {
@@ -29,7 +54,7 @@ inline mword version()
 }
 
 extern "C"
-void init()
+unsigned init()
 {
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
@@ -37,4 +62,6 @@ void init()
 
     // Now we're ready to talk to the world
     Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, version(), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+
+    return 0;
 }

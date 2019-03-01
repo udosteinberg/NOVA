@@ -206,4 +206,16 @@ el2:
                         // General initialization
                         bl      init
 
-                        b       .
+                        // Switch to CPU-local page table
+                        bl      kern_ptab_setup
+
+                        // Switch to CPU-local stack
+                        adrp    x0, STCK_TOP
+                        mov     sp, x0
+
+                        // Invalidate TLB
+                        tlbi    alle2
+                        dsb     nsh
+                        isb
+
+                        b       bootstrap
