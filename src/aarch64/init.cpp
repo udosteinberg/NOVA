@@ -20,6 +20,7 @@
 #include "console.hpp"
 #include "cpu.hpp"
 #include "extern.hpp"
+#include "fdt.hpp"
 #include "patch.hpp"
 
 extern "C" uintptr_t kern_ptab_setup (cpu_t cpu)
@@ -46,6 +47,8 @@ extern "C" unsigned init()
         // Now we're ready to talk to the world
         Console::print ("\nNOVA Microhypervisor #%07lx-%#x (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), Patch::applied, ARCH, __DATE__, __TIME__, COMPILER_STRING);
     }
+
+    Fdt::init();
 
     return 0;
 }
