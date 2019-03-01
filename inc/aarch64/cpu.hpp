@@ -16,3 +16,26 @@
  */
 
 #pragma once
+
+#include "types.hpp"
+
+class Cpu
+{
+    public:
+        static inline void halt()
+        {
+            asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
+        }
+
+        static inline void preempt_disable()
+        {
+            asm volatile ("msr daifset, #0xf" : : : "memory");
+        }
+
+        static inline void preempt_enable()
+        {
+            asm volatile ("msr daifclr, #0xf" : : : "memory");
+        }
+
+        static void init();
+};
