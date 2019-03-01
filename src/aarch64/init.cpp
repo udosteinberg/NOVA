@@ -19,6 +19,7 @@
 #include "cmdline.hpp"
 #include "console.hpp"
 #include "extern.hpp"
+#include "fdt.hpp"
 #include "kmem.hpp"
 #include "ptab_hpt.hpp"
 
@@ -66,6 +67,8 @@ unsigned init (uintptr_t offset)
         // Now we're ready to talk to the world
         Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
     }
+
+    Fdt::init();
 
     return 0;
 }
