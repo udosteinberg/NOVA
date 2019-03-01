@@ -16,10 +16,16 @@
  */
 
 #include "acpi.hpp"
-#include "buddy.hpp"
 #include "cmdline.hpp"
 #include "console.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
+#include "ptab_hpt.hpp"
+
+extern "C" auto kern_ptab_setup (cpu_t cpu)
+{
+    return Cpu::remote_ptab (cpu);
+}
 
 extern "C" void preinit()
 {
@@ -27,7 +33,7 @@ extern "C" void preinit()
         Cmdline::init();
 }
 
-extern "C" void init()
+extern "C" unsigned init()
 {
     if (!Acpi::resume) {
 
@@ -40,4 +46,6 @@ extern "C" void init()
         // Now we're ready to talk to the world
         Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
     }
+
+    return 0;
 }
