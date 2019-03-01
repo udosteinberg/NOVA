@@ -1,7 +1,7 @@
 /*
  * Central Processing Unit (CPU)
  *
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,3 +16,31 @@
  */
 
 #pragma once
+
+#include "compiler.hpp"
+#include "types.hpp"
+
+class Cpu
+{
+    private:
+        static uint64   midr                CPULOCAL;           // Main ID Register
+        static uint64   mpidr               CPULOCAL;           // Multiprocessor Affinity Register
+
+    public:
+        static inline void halt()
+        {
+            asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
+        }
+
+        static inline void preempt_disable()
+        {
+            asm volatile ("msr daifset, #0xf" : : : "memory");
+        }
+
+        static inline void preempt_enable()
+        {
+            asm volatile ("msr daifclr, #0xf" : : : "memory");
+        }
+
+        static void init();
+};
