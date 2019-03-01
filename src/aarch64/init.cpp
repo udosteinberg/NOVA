@@ -16,10 +16,32 @@
  */
 
 #include "acpi.hpp"
-#include "buddy.hpp"
 #include "cmdline.hpp"
 #include "console.hpp"
 #include "extern.hpp"
+#include "ptab_hpt.hpp"
+
+extern "C" Hpt::OAddr kern_ptab_setup (unsigned cpu)
+{
+    Hptp hptp; uintptr_t phys;
+
+    // Share kernel code and data
+    hptp.share_from_master (LINK_ADDR);
+
+    // Allocate and map kernel stack
+    hptp.update (MMAP_CPU_DSTK, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+
+    // Allocate and map cpu page
+    hptp.update (MMAP_CPU_DATA, phys = Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+
+    // Add to CPU array
+    Hptp::master_map (MMAP_GLB_CPUS + cpu * PAGE_SIZE (0), phys, 0,
+                      Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+
+    return hptp.root_addr();
+}
 
 extern "C" void preinit()
 {
@@ -27,7 +49,7 @@ extern "C" void preinit()
         Cmdline::init();
 }
 
-extern "C" void init()
+extern "C" unsigned init()
 {
     if (!Acpi::resume) {
 
@@ -40,4 +62,6 @@ extern "C" void init()
         // Now we're ready to talk to the world
         Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
     }
+
+    return 0;
 }
