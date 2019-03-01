@@ -16,3 +16,18 @@
  */
 
 #pragma once
+
+#include "types.hpp"
+
+class Cpu
+{
+    public:
+        static unsigned online;
+
+        static void halt()
+        {
+            asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
+        }
+
+        static void init();
+};
