@@ -59,10 +59,14 @@ __start_bsp:            mrs     x22, cntpct_el0
                         sub     x1, x1, x0
                         DCACHE  cvac
 
+                        mov     x19, #-1
                         b       1f
-__start_psci:
-__start_spin:
-                        b       .
+
+__start_psci:           mov     x19, x0
+                        b       1f
+
+__start_spin:           mrs     x0, mpidr_el1
+                        and     x19, x0, #0xff
 
 1:                      msr     daifset, #0xf
                         msr     spsel,   #0x1
@@ -75,6 +79,9 @@ __start_spin:
                         msr     sctlr_el2, x0
                         isb
 
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, 2f
+
                         // Zero BSS
                         adr     x0, ZERO_ADDR
                         adrp    x1, ZERO_STOP
@@ -82,7 +89,7 @@ __start_spin:
                         cmp     x0, x1
                         blo     1b
 
-                        // Determine PA range
+2:                      // Determine PA range
                         mrs     x21, id_aa64mmfr0_el1
                         and     x21, x21, #7
 
@@ -140,6 +147,9 @@ el3:
                         eret
 
 el2:
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, 2f
+
                         // Configure Page Tables: Load Section (2M page)
                         SET_PTE 3, EL2_LVL3S, LOAD_ADDR, EL2_LVL2L, ATTR_nL | ATTR_P
                         SET_PTE 2, EL2_LVL2L, LOAD_ADDR, EL2_LVL1L, ATTR_nL | ATTR_P
@@ -164,7 +174,7 @@ el2:
                         sub     x1, x1, x0
                         DCACHE  ivac
 
-                        // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
+2:                      // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
                         mov     x0, #(TCR_A64_TG0_4K | TCR_ALL_SH0_IS | TCR_ALL_ORGN0_WB_WA | TCR_ALL_IRGN0_WB_WA | TCR_A64_T0SZ (48))
                         orr     x0, x0, #(1 << 31)
                         orr     x0, x0, #(1 << 23)
@@ -204,23 +214,46 @@ el2:
 .text
 
 1:
+                        // Acquire boot lock
+                        adr     x0, __boot_lock
+                        mov     w2, #1
+1:                      ldaxr   w1, [x0]
+                        cbnz    w1, 1b
+                        stxr    w1, w2, [x0]
+                        cbnz    w1, 1b
+
                         // Switch to boot stack
                         ldr     x0, =STACK
                         mov     sp, x0
 
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, 1f
+
                         // General initialization
                         bl      init
+                        mov     x19, x0
 
-                        // Switch to CPU-local page table
+1:                      // Switch to CPU-local page table
+                        mov     x0, x19
                         bl      kern_ptab_setup
 
                         // Switch to CPU-local stack
                         adrp    x0, STCK_TOP
                         mov     sp, x0
 
+                        // Release boot lock
+                        adr     x0, __boot_lock
+                        stlr    wzr, [x0]
+
                         // Invalidate TLB
                         tlbi    alle2
                         dsb     nsh
                         isb
 
+                        mov     x0, x19
+                        ubfx    x1, x20, #2, #2
                         b       bootstrap
+
+.section .data
+
+__boot_lock:            WORD    0

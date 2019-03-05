@@ -17,17 +17,31 @@
 
 #pragma once
 
+#include "atomic.hpp"
+#include "compiler.hpp"
+#include "memory.hpp"
 #include "types.hpp"
 
 class Cpu
 {
     public:
+        static unsigned id              CPULOCAL;
+        static unsigned hazard          CPULOCAL;
+        static bool     bsp             CPULOCAL;
+        static uint32   affinity        CPULOCAL;
+        static unsigned boot_cpu;
         static unsigned online;
+
+        ALWAYS_INLINE
+        static auto remote_affinity (unsigned cpu)
+        {
+            return *reinterpret_cast<decltype (affinity) *>(reinterpret_cast<mword>(&affinity) - CPU_LOCAL_DATA + CPU_GLOBL_DATA + cpu * PAGE_SIZE);
+        }
 
         static void halt()
         {
             asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
         }
 
-        static void init();
+        static void init (unsigned, unsigned);
 };

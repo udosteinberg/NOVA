@@ -15,13 +15,22 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "arch.hpp"
 #include "cpu.hpp"
+#include "extern.hpp"
 #include "stdio.hpp"
 
-unsigned Cpu::online;
+unsigned Cpu::id, Cpu::hazard, Cpu::boot_cpu, Cpu::online;
+bool Cpu::bsp;
+uint32 Cpu::affinity;
 
-void Cpu::init()
+void Cpu::init (unsigned cpu, unsigned e)
 {
+    for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+    id  = cpu;
+    bsp = cpu == boot_cpu;
+
     uint64 midr, mpidr;
 
     asm volatile ("mrs %0, midr_el1"  : "=r" (midr));
@@ -53,9 +62,9 @@ void Cpu::init()
             break;
     }
 
-    uint8  aff0  = mpidr       & 0xff;
-    uint8  aff1  = mpidr >>  8 & 0xff;
-    uint8  aff2  = mpidr >> 16 & 0xff;
+    affinity = static_cast<uint32>((mpidr >> 8 & 0xff000000) | (mpidr & 0xffffff));
 
-    trace (TRACE_CPU, "CORE: %x:%x:%x %s %20s r%llup%llu", aff2, aff1, aff0, impl, part, midr >> 20 & 0xf, midr & 0xf);
+    trace (TRACE_CPU, "CORE: %x:%x:%x %s %20s r%llup%llu (EL%u)",
+           affinity >> 16 & 0xff, affinity >> 8 & 0xff, affinity & 0xff,
+           impl, part, midr >> 20 & 0xf, midr & 0xf, e);
 }

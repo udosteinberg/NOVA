@@ -17,6 +17,7 @@
 
 #include "config.hpp"
 #include "console.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
@@ -69,5 +70,5 @@ unsigned init()
 
     Psci::init();
 
-    return 0;
+    return Cpu::boot_cpu;
 }

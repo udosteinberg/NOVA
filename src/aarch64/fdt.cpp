@@ -16,6 +16,7 @@
  */
 
 #include "assert.hpp"
+#include "cpu.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
 #include "memory.hpp"
@@ -29,6 +30,8 @@ char   const *Fdt::fdts;
 void Fdt::parse() const
 {
     trace (TRACE_FIRM, "FDTB: Version %u Size:%#x BootCPU:%u", fdt_version(), fdt_size(), boot_cpu());
+
+    Cpu::boot_cpu = boot_cpu();
 
     fdtb = reinterpret_cast<uint32 const *>(reinterpret_cast<mword>(this) + offs_structs());
     fdte = reinterpret_cast<uint32 const *>(reinterpret_cast<mword>(fdtb) + size_structs());
