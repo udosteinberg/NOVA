@@ -18,6 +18,7 @@
 #include "assert.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
+#include "psci.hpp"
 #include "ptab_hpt.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
@@ -186,6 +187,8 @@ void Fdt::parse_subtree (uint32 const *&w, unsigned pa_cells, unsigned ps_cells,
 
 bool Fdt::init()
 {
+    Psci::init();
+
     auto p = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_dt));
 
     // No FDT or FDT not properly aligned

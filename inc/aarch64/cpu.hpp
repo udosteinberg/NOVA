@@ -231,6 +231,9 @@ class Cpu
         static uint64           cptr        CPULOCAL;
         static uint64           mdcr        CPULOCAL;
 
+        static inline unsigned  boot_cpu    { 0 };
+        static inline unsigned  count       { 0 };
+
         ALWAYS_INLINE
         static inline void preemption_disable() { asm volatile ("msr daifset, #0xf" : : : "memory"); }
 
