@@ -17,9 +17,14 @@
 
 #include "cache.hpp"
 #include "cpu.hpp"
+#include "extern.hpp"
+#include "hazards.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 
+unsigned Cpu::id, Cpu::hazard;
+bool Cpu::bsp;
+Atomic<uint32> Cpu::affinity { 0 };
 uint64 Cpu::res0_hcr, Cpu::res0_sctlr32, Cpu::res1_sctlr32, Cpu::res0_sctlr64, Cpu::res1_sctlr64;
 uint64 Cpu::res0_spsr32, Cpu::res0_spsr64, Cpu::res0_tcr32, Cpu::res0_tcr64;
 uint64 Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
@@ -69,8 +74,15 @@ void Cpu::enumerate_features()
     asm volatile ("mrs %x0, mvfr2_el1"          : "=r" (feat_mfp32[2]));
 }
 
-void Cpu::init()
+void Cpu::init (unsigned cpu, unsigned e)
 {
+    for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+    hazard = HZD_BOOT_GST | HZD_BOOT_HST;
+
+    id  = cpu;
+    bsp = cpu == boot_cpu;
+
     enumerate_features();
 
     char const *impl = "Unknown", *part = impl;
@@ -130,14 +142,14 @@ void Cpu::init()
             break;
     }
 
-    auto affinity = static_cast<uint32>((mpidr >> 8 & 0xff000000) | (mpidr & 0xffffff));
+    affinity = static_cast<uint32>((mpidr >> 8 & 0xff000000) | (mpidr & 0xffffff));
 
     if (feature (Mem_feature::XNX))
         Npt::xnx = true;
 
-    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u GIC:%u XNX:%u",
+    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u GIC:%u XNX:%u (EL%u)",
            affinity >> 16 & 0xff, affinity >> 8 & 0xff, affinity & 0xff,
-           impl, part, midr >> 20 & 0xf, midr & 0xf, feature (Mem_feature::PARANGE), feature (Cpu_feature::GIC), Npt::xnx);
+           impl, part, midr >> 20 & 0xf, midr & 0xf, feature (Mem_feature::PARANGE), feature (Cpu_feature::GIC), Npt::xnx, e);
 
     uint64 res1_cptr =  (feature (Cpu_feature::FP)      != 15 ||
                          feature (Cpu_feature::ADVSIMD) != 15 ? 0 : CPTR_TFP)   |
@@ -249,4 +261,6 @@ void Cpu::init()
                  TCR_A64_RES0;
 
     Cache::init();
+
+    boot_lock.unlock();
 }

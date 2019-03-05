@@ -16,6 +16,7 @@
  */
 
 #include "assert.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "psci.hpp"
