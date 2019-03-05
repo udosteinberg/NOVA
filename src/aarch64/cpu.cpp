@@ -17,14 +17,18 @@
 
 #include "cache.hpp"
 #include "cpu.hpp"
+#include "extern.hpp"
 #include "stdio.hpp"
 
-unsigned Cpu::online;
+unsigned Cpu::id, Cpu::hazard, Cpu::boot_cpu, Cpu::online;
+bool Cpu::bsp;
+Atomic<uint32> Cpu::affinity { 0 };
 uint64 Cpu::res0_hcr, Cpu::res0_sctlr32, Cpu::res1_sctlr32, Cpu::res0_sctlr64, Cpu::res1_sctlr64;
 uint64 Cpu::res0_spsr32, Cpu::res0_spsr64, Cpu::res0_tcr32, Cpu::res0_tcr64;
 uint64 Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
 uint64 Cpu::feat_cpu64[2], Cpu::feat_dbg64[2], Cpu::feat_isa64[3], Cpu::feat_mem64[3], Cpu::feat_sve64[1];
 uint32 Cpu::feat_cpu32[3], Cpu::feat_dbg32[2], Cpu::feat_isa32[7], Cpu::feat_mem32[6], Cpu::feat_mfp32[3];
+Spinlock Cpu::boot_lock;
 
 void Cpu::enumerate_features()
 {
@@ -69,8 +73,13 @@ void Cpu::enumerate_features()
     asm volatile ("mrs %x0, mvfr2_el1"          : "=r" (feat_mfp32[2]));
 }
 
-void Cpu::init()
+void Cpu::init (unsigned cpu, unsigned e)
 {
+    for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+    id  = cpu;
+    bsp = cpu == boot_cpu;
+
     enumerate_features();
 
     char const *impl = "Unknown", *part = impl;
@@ -119,11 +128,11 @@ void Cpu::init()
             break;
     }
 
-    auto affinity = static_cast<uint32>((mpidr >> 8 & 0xff000000) | (mpidr & 0xffffff));
+    affinity = static_cast<uint32>((mpidr >> 8 & 0xff000000) | (mpidr & 0xffffff));
 
-    trace (TRACE_CPU, "CORE: %x:%x:%x %s %20s r%llup%llu PA:%u GIC:%u",
+    trace (TRACE_CPU, "CORE: %x:%x:%x %s %20s r%llup%llu PA:%u GIC:%u (EL%u)",
            affinity >> 16 & 0xff, affinity >> 8 & 0xff, affinity & 0xff,
-           impl, part, midr >> 20 & 0xf, midr & 0xf, feature (Mem_feature::PARANGE), feature (Cpu_feature::GIC));
+           impl, part, midr >> 20 & 0xf, midr & 0xf, feature (Mem_feature::PARANGE), feature (Cpu_feature::GIC), e);
 
     uint64 res1_cptr =  (feature (Cpu_feature::FP)      != 15 ||
                          feature (Cpu_feature::ADVSIMD) != 15 ? 0 : CPTR_TFP)   |
@@ -235,4 +244,6 @@ void Cpu::init()
                  TCR_A64_RES0;
 
     Cache::init();
+
+    boot_lock.unlock();
 }
