@@ -18,7 +18,10 @@
 #pragma once
 
 #include "arch.hpp"
+#include "atomic.hpp"
 #include "compiler.hpp"
+#include "kmem.hpp"
+#include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -97,6 +100,8 @@ class Cpu
         static uint32   feat_isa32[7]       CPULOCAL;           // ID_ISARx
         static uint32   feat_mem32[6]       CPULOCAL;           // ID_MMFRx
         static uint32   feat_mfp32[3]       CPULOCAL;           // MVFRx
+
+        static Spinlock boot_lock           asm ("__boot_lock");
 
         static void enumerate_features();
 
@@ -225,10 +230,21 @@ class Cpu
             E0PD        = 47,   // FEAT_E0PD (1)
         };
 
+        static unsigned         id          CPULOCAL;
+        static unsigned         hazard      CPULOCAL;
+        static bool             bsp         CPULOCAL;
+        static Atomic<uint32>   affinity    CPULOCAL;
         static uint64           cptr        CPULOCAL;
         static uint64           mdcr        CPULOCAL;
 
+        static unsigned         boot_cpu;
         static unsigned         online;
+
+        ALWAYS_INLINE
+        static inline uint32 remote_affinity (unsigned cpu)
+        {
+            return *Kmem::loc_to_glob (&affinity, cpu);
+        }
 
         static inline unsigned feature (Cpu_feature f)
         {
@@ -299,5 +315,5 @@ class Cpu
             x[30] =                                            feat_mfp32[2];
         }
 
-        static void init();
+        static void init (unsigned, unsigned);
 };
