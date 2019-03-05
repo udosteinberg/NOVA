@@ -18,6 +18,8 @@
 #include "cpu.hpp"
 #include "stdio.hpp"
 
+unsigned Cpu::online;
+
 void Cpu::init()
 {
     uint64 midr, mpidr;

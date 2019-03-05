@@ -22,6 +22,8 @@
 class Cpu
 {
     public:
+        static unsigned online;
+
         static inline void halt()
         {
             asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
