@@ -231,6 +231,8 @@ class Cpu
         static uint64           cptr        CPULOCAL;
         static uint64           mdcr        CPULOCAL;
 
+        static inline unsigned  online      { 0 };
+
         static inline void halt()
         {
             asm volatile ("wfi; msr daifclr, #0xf; msr daifset, #0xf" : : : "memory");
