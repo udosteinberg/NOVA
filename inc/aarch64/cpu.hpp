@@ -228,6 +228,8 @@ class Cpu
         static uint64           cptr        CPULOCAL;
         static uint64           mdcr        CPULOCAL;
 
+        static unsigned         online;
+
         static inline unsigned feature (Cpu_feature f)
         {
             return feat_cpu64[static_cast<unsigned>(f) / 16] >> static_cast<unsigned>(f) % 16 * 4 & 0xf;

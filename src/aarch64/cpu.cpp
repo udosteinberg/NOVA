@@ -19,6 +19,7 @@
 #include "cpu.hpp"
 #include "stdio.hpp"
 
+unsigned Cpu::online;
 uint64 Cpu::res0_hcr, Cpu::res0_sctlr32, Cpu::res1_sctlr32, Cpu::res0_sctlr64, Cpu::res1_sctlr64;
 uint64 Cpu::res0_spsr32, Cpu::res0_spsr64, Cpu::res0_tcr32, Cpu::res0_tcr64;
 uint64 Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
