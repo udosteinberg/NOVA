@@ -15,13 +15,20 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 
 extern "C" NORETURN
-void bootstrap()
+void bootstrap (unsigned i, unsigned e)
 {
-    Cpu::init();
+    static mword barrier;
+
+    Cpu::init (i, e);
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
 
     for (;;) {}
 }
