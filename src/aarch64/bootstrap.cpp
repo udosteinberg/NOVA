@@ -1,7 +1,7 @@
 /*
  * Bootstrap Code
  *
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,13 +15,20 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 
 extern "C" NORETURN
-void bootstrap()
+void bootstrap (unsigned i, unsigned e)
 {
-    Cpu::init();
+    static Atomic<unsigned> barrier { 0 };
+
+    Cpu::init (i, e);
+
+    // Barrier: wait for all CPUs to arrive here
+    for (++barrier; barrier != Cpu::online; pause()) ;
 
     for (;;) {}
 }
