@@ -20,6 +20,7 @@
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
+#include "psci.hpp"
 
 extern "C"
 void kern_ptab_setup (unsigned cpu)
@@ -65,6 +66,8 @@ unsigned init()
     Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, version(), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Fdt::init();
+
+    Psci::init();
 
     return 0;
 }

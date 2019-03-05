@@ -20,7 +20,7 @@
 #include "memory.hpp"
 #include "paging.hpp"
 
-.globl                  __start_bsp
+.globl                  __start_bsp, __start_psci, __start_spin
 
 /*
  * Macros
@@ -58,6 +58,11 @@ __start_bsp:            mrs     x22, cntpct_el0
                         adrp    x1, LOAD_STOP
                         sub     x1, x1, x0
                         DCACHE  cvac
+
+                        b       1f
+__start_psci:
+__start_spin:
+                        b       .
 
 1:                      msr     daifset, #0xf
                         msr     spsel,   #0x1
