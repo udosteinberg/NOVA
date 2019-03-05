@@ -16,6 +16,7 @@
  */
 
 #include "assert.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
@@ -36,6 +37,8 @@ void Fdt::parse (uint64 p) const
     phys = p;
 
     trace (TRACE_FIRM, "FDTB: %#010llx Version:%u Size:%#x BootCPU:%u", phys, fdt_version(), fdt_size(), boot_cpu());
+
+    Cpu::boot_cpu = boot_cpu();
 
     fdtb = reinterpret_cast<decltype (fdtb)>(reinterpret_cast<uintptr_t>(this) + offs_structs());
     fdte = reinterpret_cast<decltype (fdte)>(reinterpret_cast<uintptr_t>(fdtb) + size_structs());

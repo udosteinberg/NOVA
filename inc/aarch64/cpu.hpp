@@ -17,12 +17,27 @@
 
 #pragma once
 
+#include "compiler.hpp"
+#include "memory.hpp"
+#include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
 {
     public:
+        static unsigned id              CPULOCAL;
+        static unsigned hazard          CPULOCAL;
+        static bool     bsp             CPULOCAL;
+        static uint32   affinity        CPULOCAL;
+        static unsigned boot_cpu;
         static unsigned online;
+        static Spinlock boot_lock       asm ("__boot_lock");
+
+        ALWAYS_INLINE
+        static inline auto remote_affinity (unsigned cpu)
+        {
+            return __atomic_load_n (reinterpret_cast<decltype (affinity) *>(reinterpret_cast<uintptr_t>(&affinity) - CPU_LOCAL_DATA + CPU_GLOBL_DATA + cpu * PAGE_SIZE), __ATOMIC_RELAXED);
+        }
 
         static inline void halt()
         {
@@ -39,5 +54,5 @@ class Cpu
             asm volatile ("msr daifclr, #0xf" : : : "memory");
         }
 
-        static void init();
+        static void init (unsigned, unsigned);
 };

@@ -25,22 +25,22 @@
 #include "cpu.hpp"
 #include "memory.hpp"
 
+inline mword stackptr()
+{
 #if defined(__x86_64__)
-#define trace(T,format,...)                                         \
-do {                                                                \
-    register mword __esp asm ("esp");                               \
-    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))                   \
-        Console::print ("[%2ld] " format,                           \
-                static_cast<long>(((__esp - 1) & ~PAGE_MASK) ==     \
-                CPU_LOCAL_STCK ? Cpu::id : ~0UL), ## __VA_ARGS__);  \
-} while (0)
+#define STACK_PTR_REG "esp"
 #elif defined (__aarch64__)
-#define trace(T,format,...)                                         \
-do {                                                                \
-    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))                   \
-        Console::print ("[%2ld] " format, ~0UL, ## __VA_ARGS__);    \
-} while (0)
+#define STACK_PTR_REG "sp"
 #endif
+    register mword rsp asm ("sp");
+    return rsp;
+}
+
+#define trace(T,format,...)                         \
+do {                                                \
+    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))   \
+        Console::print ("[%2ld] " format, static_cast<long>(((stackptr() - 1) & ~PAGE_MASK) == CPU_LOCAL_STCK ? ACCESS_ONCE (Cpu::id) : ~0UL), ## __VA_ARGS__);   \
+} while (0)
 
 /*
  * Definition of trace events
