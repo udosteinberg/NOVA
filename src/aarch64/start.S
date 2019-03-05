@@ -20,7 +20,7 @@
 #include "memory.hpp"
 #include "paging.hpp"
 
-.globl                  __init_bsp, __boot_p0, __boot_p1, __boot_p2, __boot_ts
+.globl                  __init_bsp, __init_psci, __init_spin, __boot_p0, __boot_p1, __boot_p2, __boot_ts
 
 /*
  * Macros
@@ -81,6 +81,11 @@ __init_bsp:             // Store boot parameters
                         adrp    x1, NOVA_HPAE
                         sub     x1, x1, x0
                         DCACHE  cvac
+
+                        b       1f
+__init_psci:
+__init_spin:
+                        b       .
 
 1:                      msr     daifset, #0xf
                         msr     spsel,   #0x1
