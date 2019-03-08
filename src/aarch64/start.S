@@ -369,6 +369,10 @@ __init_spin:            mrs     x0, mpidr_el1
                         adrp    x0, PTAB_HPAS
                         msr     ttbr0_el2, x0
 
+                        // Configure EL2 VBAR
+                        ldr     x0, =vector_table
+                        msr     vbar_el2, x0
+
                         // Invalidate residual EL2 TLB entries
                         tlbi    alle2
                         dsb     nsh
