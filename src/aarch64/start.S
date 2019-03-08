@@ -219,6 +219,10 @@ el2:
                         adrp    x0, PT3S_HPAS
                         msr     ttbr0_el2, x0
 
+                        // Configure EL2 VBAR
+                        ldr     x0, =vector_table
+                        msr     vbar_el2, x0
+
                         // Invalidate EL2 TLB
                         tlbi    alle2
                         dsb     nsh
