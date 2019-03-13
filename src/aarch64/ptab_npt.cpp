@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "cpu.hpp"
 #include "ptab_npt.hpp"
 
 uint64_t Nptp::current;
@@ -24,9 +25,14 @@ void Nptp::init()
     // Reset at resume time to match vttbr
     current = 0;
 
-    auto const oas { 2 };
+    // OAS > 5 requires FEAT_LPA2
+    auto const oas { min (Cpu::feature (Cpu::Mem_feature::PARANGE), uint8_t { 5 }) };
 
-    bool const feat_vmid16 { false };
+    // IPA must not be larger than OAS supported by the CPU
+    if (Npt::ibits > Npt::pas (oas)) [[unlikely]]
+        panic ("Configured address-space size is too large");
+
+    bool const feat_vmid16 { Cpu::feature (Cpu::Mem_feature::VMIDBITS) == 2 };
 
     // Reduce the number of VMIDs according to what this CPU supports
     Vmid::allocator.reduce (BIT (feat_vmid16 ? 16 : 8));
