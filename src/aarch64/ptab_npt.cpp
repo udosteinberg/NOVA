@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "cpu.hpp"
 #include "ptab_npt.hpp"
 
 uint64_t Nptp::current;
@@ -24,7 +25,8 @@ void Nptp::init()
     // Reset at resume time to match vttbr
     current = 0;
 
-    auto const oas { 2 };
+    // OAS > 5 requires FEAT_LPA2
+    auto const oas { min (Cpu::feature (Cpu::Mem_feature::PARANGE), uint8_t (5)) };
 
     // IPA cannot be larger than OAS supported by CPU
     assert (Npt::ibits <= Npt::pas (oas));
