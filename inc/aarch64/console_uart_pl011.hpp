@@ -17,12 +17,11 @@
 
 #pragma once
 
-#include "console.hpp"
-#include "memory.hpp"
+#include "console_uart_mmio.hpp"
 
-class Console_pl011 final : public Console
+class Console_pl011_mmio
 {
-    private:
+    public:
         enum class Register
         {
             DR          = 0x00,     // Data Register
@@ -33,29 +32,30 @@ class Console_pl011 final : public Console
             LCR         = 0x2c,     // Line Control Register
             CR          = 0x30,     // Control Register
         };
+};
 
+class Console_pl011 final : private Console_pl011_mmio, private Console_uart_mmio<Console_pl011, Console_pl011_mmio::Register>
+{
+    friend class Console_uart;
+    friend class Console_uart_mmio;
+
+    private:
         static Console_pl011 con;
 
-        static unsigned const baudrate = 115200;
+        bool tx_busy() { return read<uint16> (Register::FR) & BIT (3); }
+        bool tx_full() { return read<uint16> (Register::FR) & BIT (5); }
 
-        mword const mmio_base = UART_BASE_PL;
-
-        template <typename T>
-        inline T read (Register r)
+        void tx (uint8 c)
         {
-            return *reinterpret_cast<T volatile *>(mmio_base + static_cast<mword>(r));
+            write<uint8> (Register::DR, c);
         }
 
-        template <typename T>
-        inline void write (Register r, T v)
+        void init()
         {
-            *reinterpret_cast<T volatile *>(mmio_base + static_cast<mword>(r)) = v;
+            write<uint16> (Register::CR,  0);
+            write<uint16> (Register::LCR, BIT_RANGE (6, 4));
+            write<uint16> (Register::CR,  BIT (8) | BIT (0));
         }
 
-        void init();
-        bool fini() override;
-        void outc (char) override;
-
-    public:
-        Console_pl011();
+        Console_pl011 (Hpt::OAddr p) : Console_uart_mmio (p) {}
 };
