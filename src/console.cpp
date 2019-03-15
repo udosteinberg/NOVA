@@ -112,13 +112,18 @@ void Console::vprintf (char const *format, va_list args)
                     }
                     continue;
 
-                case '.':
-                    mode = MODE_PRECS;
-                    continue;
-
                 case '#':
                     if (mode == MODE_FLAGS)
                         flags |= FLAG_ALT_FORM;
+                    continue;
+
+                case '*':
+                    width = va_arg (args, int);
+                    mode = MODE_WIDTH;
+                    continue;
+
+                case '.':
+                    mode = MODE_PRECS;
                     continue;
 
                 case 'l':
