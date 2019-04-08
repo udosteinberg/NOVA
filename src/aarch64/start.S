@@ -233,6 +233,10 @@ el2:
                         // Skip ahead if not BSP
                         tbz     x19, #63, 1f
 
+                        // Store boot time
+                        adr     x0, __boot_time
+                        str     x22, [x0]
+
                         // General initialization
                         bl      init
                         mov     x19, x0
@@ -244,11 +248,11 @@ el2:
                         // Switch to CPU-local stack
                         adrp    x0, STCK_TOP
                         mov     sp, x0
-
+/*
                         // Release boot lock
                         adr     x0, __boot_lock
                         stlr    wzr, [x0]
-
+*/
                         // Invalidate TLB
                         tlbi    alle2
                         dsb     nsh
@@ -258,6 +262,8 @@ el2:
                         ubfx    x1, x20, #2, #2
                         b       bootstrap
 
+/*
 .section .data
 
 __boot_lock:            WORD    0
+*/

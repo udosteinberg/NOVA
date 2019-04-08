@@ -20,6 +20,7 @@
 #include "atomic.hpp"
 #include "compiler.hpp"
 #include "memory.hpp"
+#include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -179,6 +180,8 @@ class Cpu
 
         static unsigned boot_cpu;
         static unsigned online;
+        static uint64   boot_time       asm ("__boot_time");
+        static Spinlock boot_lock       asm ("__boot_lock");
 
         ALWAYS_INLINE
         static auto remote_affinity (unsigned cpu)

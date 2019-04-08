@@ -30,6 +30,8 @@ uint64 Cpu::spsr32_res0, Cpu::spsr64_res0, Cpu::tcr32_res0, Cpu::tcr64_res0;
 uint64 Cpu::ctr, Cpu::clidr, Cpu::ccsidr[7][2], Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
 uint64 Cpu::cpu64_feat[2], Cpu::dbg64_feat[2], Cpu::isa64_feat[2], Cpu::mem64_feat[3], Cpu::sve64_feat[1];
 uint32 Cpu::cpu32_feat[3], Cpu::dbg32_feat[2], Cpu::isa32_feat[7], Cpu::mem32_feat[6], Cpu::mfp32_feat[3];
+uint64 Cpu::boot_time;
+Spinlock Cpu::boot_lock;
 
 void Cpu::enumerate_features()
 {
@@ -238,4 +240,6 @@ void Cpu::init (unsigned cpu, unsigned e)
                  (feature (Mem_feature::HAFDBS) >= 2 ? 0 : TCR_A64_HD)                      |
                  (feature (Mem_feature::HAFDBS) >= 1 ? 0 : TCR_A64_HA)                      |
                  TCR_A64_RES0;
+
+    boot_lock.unlock();
 }
