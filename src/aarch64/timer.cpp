@@ -16,6 +16,7 @@
  */
 
 #include "acpi.hpp"
+#include "interrupt.hpp"
 #include "stdio.hpp"
 #include "timeout.hpp"
 #include "timer.hpp"
@@ -35,6 +36,12 @@ void Timer::init()
 
     if (!Acpi::resume)
         trace (TRACE_TIMR, "TIMR: EL2p:%u%c EL1v:%u%c %lu Hz", ppi_el2_p, lvl_el2_p ? 'L' : 'E', ppi_el1_v, lvl_el1_v ? 'L' : 'E', freq);
+
+    // Configure EL1v timer interrupt
+    Interrupt::configure (Intid::from_ppi (ppi_el1_v), lvl_el1_v, false, false);
+
+    // Configure EL2p timer interrupt
+    Interrupt::configure (Intid::from_ppi (ppi_el2_p), lvl_el2_p, false, false);
 
     // Enable EL2p timer
     asm volatile ("msr cnthp_ctl_el2, %x0" : : "rZ" (BIT64 (0)));
