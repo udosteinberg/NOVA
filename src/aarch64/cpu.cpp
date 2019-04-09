@@ -27,6 +27,7 @@
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
+#include "timer.hpp"
 
 unsigned Cpu::id, Cpu::hazard;
 bool Cpu::bsp;
@@ -223,6 +224,8 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicr::init();
     Gicc::init();
     Gich::init();
+
+    Timer::init();
 
     Nptp::init();
 
