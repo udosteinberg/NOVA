@@ -70,6 +70,9 @@ class Interrupt final : private Intid
 
         static Event::Selector handler (bool);
 
+        static bool get_act_tmr();
+        static void set_act_tmr (bool);
+
         static void conf_sgi (unsigned, bool);
         static void conf_ppi (unsigned, bool, bool);
         static void conf_spi (unsigned, bool, bool, cpu_t);
