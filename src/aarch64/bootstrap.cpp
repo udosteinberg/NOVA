@@ -18,6 +18,7 @@
 #include "compiler.hpp"
 #include "cpu.hpp"
 #include "lowlevel.hpp"
+#include "interrupt.hpp"
 
 extern "C" NORETURN
 void bootstrap (unsigned i, unsigned e)
@@ -26,6 +27,10 @@ void bootstrap (unsigned i, unsigned e)
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
+
+    // Once all cores are up, we can route interrupts to them
+    if (Cpu::bsp)
+        Interrupt::init();
 
     for (;;) {}
 }
