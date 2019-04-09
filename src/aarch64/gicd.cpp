@@ -19,6 +19,7 @@
 #include "assert.hpp"
 #include "bits.hpp"
 #include "gicd.hpp"
+#include "interrupt.hpp"
 #include "lock_guard.hpp"
 #include "lowlevel.hpp"
 #include "space_hst.hpp"
@@ -56,6 +57,8 @@ bool Gicd::mmap_mmio()
             trace (TRACE_INTR, "GICD: %#010lx %03x:%03x r%up%u v%u ESPI:%u LPIS:%u INT:%u S:%u G:%u",
                    phys, iidr & BIT_RANGE (11, 0), iidr >> 24, iidr >> 16 & BIT_RANGE (3, 0), iidr >> 12 & BIT_RANGE (3, 0), arch,
                    arch >= 3 ? !!(typer & BIT (8)) : 0, arch >= 3 ? !!(typer & BIT (17)) : 0, intid, !!(typer & BIT (10)), group & BIT (0));
+
+            Interrupt::gsi_max = (Interrupt::gsi_pin = static_cast<gsi_t>(Intid::to_spi (intid))) - 1;
 
             // Reserve MMIO region
             Space_hst::access_ctrl (phys, size, Paging::NONE);
