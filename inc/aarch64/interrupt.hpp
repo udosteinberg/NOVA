@@ -47,6 +47,9 @@ class Interrupt final : private Intid
             RKE,
         };
 
+        static bool get_act_tmr();
+        static void set_act_tmr (bool);
+
         static void conf_sgi (unsigned, bool);
         static void conf_ppi (unsigned, bool, bool);
         static void conf_spi (unsigned, bool, bool, cpu_t);
