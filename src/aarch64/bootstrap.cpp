@@ -17,12 +17,16 @@
 
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "interrupt.hpp"
 #include "lowlevel.hpp"
 
 extern "C" [[noreturn]]
 void bootstrap (cpu_t c, unsigned e)
 {
     Cpu::init (c, e);
+
+    // Once initialized, each core can handle its assigned interrupts
+    Interrupt::init();
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
