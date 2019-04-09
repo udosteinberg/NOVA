@@ -17,16 +17,33 @@
 
 #pragma once
 
+#include "bitmap.hpp"
+#include "event.hpp"
 #include "intid.hpp"
+#include "status.hpp"
+
+class Sm;
 
 class Interrupt final : private Intid
 {
+    private:
+        static inline constinit Bitmap<NUM_SPI>  guest_s;
+        static inline constinit Bitmap<NUM_ESPI> guest_e;
+
+        static void rke_handler();
+
+        static Event::Selector handle_sgi  (unsigned, auto const &);
+        static Event::Selector handle_ppi  (unsigned, auto const &, bool);
+        static Event::Selector handle_spi  (unsigned, auto const &);
+        static Event::Selector handle_eppi (unsigned, auto const &);
+        static Event::Selector handle_espi (unsigned, auto const &);
+        static Event::Selector handle_lpi  (unsigned);
+
     public:
         static constexpr gsi_t vec_max { 0 };
         static constexpr gsi_t gsi_pin { 0 };
 
         static inline constinit gsi_t    gsi_max    { 0 };
-        static inline constinit uint32_t iid_msk    { 0 };
         static inline constinit unsigned num_spi    { 0 };
         static inline constinit unsigned num_eppi   { 0 };
         static inline constinit unsigned num_espi   { 0 };
@@ -37,4 +54,24 @@ class Interrupt final : private Intid
             RRQ,
             RKE,
         };
+
+        static void *get_ptr (arm_intid_t iid)
+        {
+            switch (Intid::type (iid)) {
+
+                default:
+                    return nullptr;
+            }
+        }
+
+        static bool tmr_act_get();
+        static void tmr_act_set (bool);
+
+        static Event::Selector handler (bool);
+
+        static Status assign (Sm *, cpu_t, uint16_t, pci_t, uint8_t, uintptr_t &, uintptr_t &);
+        static void deactivate (Sm *);
+
+        static void send_cpu (Request, cpu_t);
+        static void send_exc (Request);
 };
