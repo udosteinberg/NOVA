@@ -21,6 +21,7 @@
 #include "fpu.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
+#include "timer.hpp"
 
 bool Cpu::bsp;
 cpu_t Cpu::id;
@@ -263,6 +264,8 @@ void Cpu::init (cpu_t cpu, unsigned e)
            mpidr >> 32 & BIT_RANGE (7, 0), mpidr >> 16 & BIT_RANGE (7, 0), mpidr >> 8 & BIT_RANGE (7, 0), mpidr & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0),
            feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
+
+    Timer::init();
 
     Nptp::init();
 
