@@ -1,7 +1,7 @@
 /*
  * Interrupt Handling
  *
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,6 +24,7 @@
 #include "hazards.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
+#include "timer.hpp"
 
 Interrupt Interrupt::int_table[NUM_SPI];
 
@@ -58,7 +59,7 @@ Event::Selector Interrupt::handle_sgi (uint32 val, bool)
     return Event::Selector::NONE;
 }
 
-Event::Selector Interrupt::handle_ppi (uint32 val, bool)
+Event::Selector Interrupt::handle_ppi (uint32 val, bool vcpu)
 {
     auto ppi = Intid::to_ppi (val & BIT_RANGE (9, 0));
 
@@ -67,6 +68,13 @@ Event::Selector Interrupt::handle_ppi (uint32 val, bool)
     Counter::loc[ppi].inc();
 
     Gicc::eoi (val);
+
+    if (ppi == Timer::ppi_el1_v)        // Deactivation by guest
+        return vcpu ? Event::Selector::VTIMER : Event::Selector::NONE;
+
+    if (ppi == Timer::ppi_el2_p)        // Deactivation by host
+        Stc::interrupt();
+
     Gicc::dir (val);
 
     return Event::Selector::NONE;
@@ -97,6 +105,16 @@ Event::Selector Interrupt::handler (bool vcpu)
         return handle_spi (val, vcpu);
 
     return Event::Selector::NONE;
+}
+
+bool Interrupt::get_act_tmr()
+{
+    return (Gicd::arch < 3 ? Gicd::get_act : Gicr::get_act) (Intid::from_ppi (Timer::ppi_el1_v));
+}
+
+void Interrupt::set_act_tmr (bool a)
+{
+    (Gicd::arch < 3 ? Gicd::set_act : Gicr::set_act) (Intid::from_ppi (Timer::ppi_el1_v), a);
 }
 
 void Interrupt::conf_sgi (unsigned sgi, bool msk)
