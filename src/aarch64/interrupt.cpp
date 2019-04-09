@@ -22,6 +22,7 @@
 #include "gicr.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
+#include "timer.hpp"
 
 unsigned Interrupt::count()
 {
@@ -48,7 +49,7 @@ Event::Selector Interrupt::handle_sgi (uint32 val, bool)
     return Event::Selector::NONE;
 }
 
-Event::Selector Interrupt::handle_ppi (uint32 val, bool)
+Event::Selector Interrupt::handle_ppi (uint32 val, bool vcpu)
 {
     auto ppi = Intid::to_ppi (val & 0x3ff);
 
@@ -59,6 +60,12 @@ Event::Selector Interrupt::handle_ppi (uint32 val, bool)
     Gicc::eoi (val);
 
     Event::Selector evt = Event::Selector::NONE;
+
+    if (ppi == Timer::ppi_el2_p)
+        Timer::interrupt();
+
+    else if (ppi == Timer::ppi_el1_v && vcpu)
+        evt = Event::Selector::VTIMER;
 
     if (evt == Event::Selector::NONE)
         Gicc::dir (val);

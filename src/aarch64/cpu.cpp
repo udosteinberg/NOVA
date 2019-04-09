@@ -24,6 +24,7 @@
 #include "gich.hpp"
 #include "gicr.hpp"
 #include "stdio.hpp"
+#include "timer.hpp"
 
 unsigned Cpu::id, Cpu::hazard, Cpu::boot_cpu, Cpu::online;
 bool Cpu::bsp;
@@ -254,6 +255,8 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicr::init();
     Gicc::init();
     Gich::init();
+
+    Timer::init();
 
     boot_lock.unlock();
 }
