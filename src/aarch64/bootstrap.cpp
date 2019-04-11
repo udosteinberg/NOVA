@@ -18,7 +18,9 @@
 #include "atomic.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "ec.hpp"
 #include "lowlevel.hpp"
+#include "sc.hpp"
 
 extern "C" NORETURN
 void bootstrap (unsigned i, unsigned e)
@@ -27,8 +29,11 @@ void bootstrap (unsigned i, unsigned e)
 
     Cpu::init (i, e);
 
+    Ec::current = Ec::create (Cpu::id, Ec::idle);
+    Sc::current = Sc::create (Cpu::id, Ec::current, 0, 1000);
+
     // Barrier: wait for all CPUs to arrive here
     for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
 
-    for (;;) {}
+    Sc::schedule();
 }
