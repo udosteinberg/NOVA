@@ -21,6 +21,7 @@
 #include "gicd.hpp"
 #include "gicr.hpp"
 #include "interrupt.hpp"
+#include "sc.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 
@@ -33,7 +34,7 @@ Event::Selector Interrupt::handle_sgi (uint32 val, bool)
     Counter::count_sgi (sgi);
 
     switch (sgi) {
-        case Sgi::RRQ: break;
+        case Sgi::RRQ: Sc::rrq_handler(); break;
         case Sgi::RKE: break;
     }
 
