@@ -2,6 +2,7 @@
  * Budget Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,15 +16,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.hpp"
-#include "hazards.hpp"
-#include "initprio.hpp"
-#include "timeout_budget.hpp"
+#pragma once
 
-INIT_PRIORITY (PRIO_LOCAL)
-Timeout_budget Timeout_budget::budget;
+#include "timeout.hpp"
 
-void Timeout_budget::trigger()
+class Timeout_budget final : public Timeout
 {
-    Cpu::hazard |= HZD_SCHED;
-}
+    private:
+        void trigger() override;
+
+    public:
+        static Timeout_budget timeout CPULOCAL;
+};
