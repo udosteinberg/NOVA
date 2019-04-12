@@ -2,6 +2,7 @@
  * Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,17 +23,19 @@
 
 class Timeout
 {
-    protected:
-        Timeout *prev, *next;
-        uint64 time;
+    private:
+        uint64              time            { 0 };
+        Timeout *           prev            { nullptr };
+        Timeout *           next            { nullptr };
+
+        static Timeout *    list            CPULOCAL;
 
         virtual void trigger() = 0;
 
     public:
-        static Timeout *list CPULOCAL;
-
+        // Enforce a constructor for CPU-local timeouts
         ALWAYS_INLINE
-        inline Timeout() : prev (nullptr), next (nullptr), time (0) {}
+        inline Timeout() {}
 
         ALWAYS_INLINE
         inline bool active() const { return prev || list == this; }

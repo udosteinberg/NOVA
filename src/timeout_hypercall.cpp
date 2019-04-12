@@ -2,7 +2,7 @@
  * Hypercall Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,25 +16,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#ifndef __aarch64__
+#include "sm.hpp"
+#endif
+#include "timeout_hypercall.hpp"
 
-#include "timeout.hpp"
-
-class Ec;
-class Sm;
-
-class Timeout_hypercall : public Timeout
+void Timeout_hypercall::trigger()
 {
-    private:
-        Ec * const ec;
-        Sm *sm;
-
-        void trigger() override;
-
-    public:
-        ALWAYS_INLINE
-        inline Timeout_hypercall (Ec *e) : ec (e) {}
-
-        ALWAYS_INLINE
-        inline void enqueue (uint64 t, Sm *s) { sm = s; Timeout::enqueue (t); }
-};
+#ifndef __aarch64__
+    sm->timeout (ec);
+#endif
+}

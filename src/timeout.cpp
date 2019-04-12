@@ -2,6 +2,7 @@
  * Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,9 +16,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "lapic.hpp"
-#include "lowlevel.hpp"
 #include "timeout.hpp"
+#include "timer.hpp"
 
 Timeout *Timeout::list;
 
@@ -36,7 +36,7 @@ void Timeout::enqueue (uint64 t)
     if (!p) {
         next = list;
         list = this;
-        Lapic::set_timer (time);
+        Timer::set_dln (time);
     } else {
         next = p->next;
         p->next = this;
@@ -57,7 +57,10 @@ uint64 Timeout::dequeue()
             prev->next = next;
 
         else if ((list = next))
-            Lapic::set_timer (list->time);
+            Timer::set_dln (list->time);
+
+        else
+            Timer::stop();
     }
 
     prev = next = nullptr;
@@ -67,7 +70,7 @@ uint64 Timeout::dequeue()
 
 void Timeout::check()
 {
-    while (list && list->time <= rdtsc()) {
+    while (list && list->time <= Timer::time()) {
         Timeout *t = list;
         t->dequeue();
         t->trigger();
