@@ -17,12 +17,14 @@
 
 #include "interrupt.hpp"
 #include "stdio.hpp"
+#include "timeout.hpp"
 #include "timer.hpp"
 
 uint32 Timer::freq { 0 };
 
 void Timer::interrupt()
 {
+    Timeout::check();
 }
 
 void Timer::init()
