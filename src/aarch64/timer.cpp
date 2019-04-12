@@ -18,6 +18,7 @@
 #include "board.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
+#include "timeout.hpp"
 #include "timer.hpp"
 
 uint32      Timer::freq         { 0 };
@@ -28,6 +29,7 @@ bool        Timer::lvl_el1_v    { !!(Board::tmr[1].flg & BIT_RANGE (3, 2)) };
 
 void Timer::interrupt()
 {
+    Timeout::check();
 }
 
 void Timer::init()
