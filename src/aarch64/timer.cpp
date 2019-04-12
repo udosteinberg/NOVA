@@ -18,10 +18,12 @@
 #include "acpi.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
+#include "timeout.hpp"
 #include "timer.hpp"
 
 void Timer::interrupt()
 {
+    Timeout::check();
 }
 
 void Timer::init()
@@ -48,4 +50,7 @@ void Timer::init()
 
     // Enable EL2p timer
     asm volatile ("msr cnthp_ctl_el2, %0" : : "r" (BIT64 (0)));
+
+    // Start timeout infrastructure
+    Timeout::sync();
 }
