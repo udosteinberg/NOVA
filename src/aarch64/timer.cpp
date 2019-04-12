@@ -19,12 +19,14 @@
 #include "interrupt.hpp"
 #include "macros.hpp"
 #include "stdio.hpp"
+#include "timeout.hpp"
 #include "timer.hpp"
 
 uint32 Timer::freq;
 
 void Timer::interrupt()
 {
+    Timeout::check();
 }
 
 void Timer::init()

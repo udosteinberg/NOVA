@@ -149,8 +149,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         inline void clr_timeout()
         {
-            if (EXPECT_FALSE (timeout.active()))
-                timeout.dequeue();
+            timeout.dequeue();
         }
 
         ALWAYS_INLINE NORETURN

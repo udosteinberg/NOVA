@@ -1,7 +1,8 @@
 /*
- * Budget Timeout
+ * Hypercall Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,15 +16,25 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.hpp"
-#include "hazards.hpp"
-#include "initprio.hpp"
-#include "timeout_budget.hpp"
+#pragma once
 
-INIT_PRIORITY (PRIO_LOCAL)
-Timeout_budget Timeout_budget::budget;
+#include "timeout.hpp"
 
-void Timeout_budget::trigger()
+class Ec;
+class Sm;
+
+class Timeout_hypercall : public Timeout
 {
-    Cpu::hazard |= HZD_SCHED;
-}
+    private:
+        Ec * const  ec                      { nullptr };
+        Sm *        sm                      { nullptr };
+
+        void trigger() override;
+
+    public:
+        ALWAYS_INLINE
+        inline Timeout_hypercall (Ec *e) : ec (e) {}
+
+        ALWAYS_INLINE
+        inline void enqueue (uint64 t, Sm *s) { sm = s; Timeout::enqueue (t); }
+};
