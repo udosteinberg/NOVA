@@ -19,7 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "space_mem.hpp"
+#include "pd_kern.hpp"
 
 void Space_mem::sync (Space::Index si)
 {
@@ -68,13 +68,11 @@ Status Space_mem::delegate (Space_mem const *mem, unsigned long src, unsigned lo
         if (pm & Paging::K)
             pm = Paging::NONE;
 
-#if 0
         // Memory attributes are inherited for virt/virt delegations
         if (mem != &Pd_kern::nova()) {
             ca = src_ca;
             sh = src_sh;
         }
-#endif
 
         o = min (o, ord);
 
