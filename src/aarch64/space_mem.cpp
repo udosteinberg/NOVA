@@ -19,7 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "space_mem.hpp"
+#include "pd_kern.hpp"
 
 void Space_mem::sync (Space::Index si)
 {
@@ -68,13 +68,11 @@ Status Space_mem::delegate (Space_mem const *mem, unsigned long src, unsigned lo
         if (pm & Paging::K)
             pm = Paging::NONE;
 
-#if 0
         // If src is not NOVA, then inherit shareability and memory type
         if (mem != &Pd_kern::nova()) {
             sh = src_sh;
             ca = src_ca;
         }
-#endif
 
         o = min (o, ord);
 
