@@ -64,7 +64,7 @@ class Refptr
         ALWAYS_INLINE
         inline ~Refptr()
         {
-            if (ptr->del_ref())
+            if (ptr && ptr->del_ref())
                 delete ptr;
         }
 };
