@@ -21,6 +21,7 @@
 #pragma once
 
 #include "atomic.hpp"
+#include "types.hpp"
 
 class Refcount
 {
@@ -64,7 +65,7 @@ class Refptr
         ALWAYS_INLINE
         inline ~Refptr()
         {
-            if (ptr->del_ref())
+            if (ptr && ptr->del_ref())
                 delete ptr;
         }
 };
