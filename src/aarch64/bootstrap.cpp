@@ -20,6 +20,7 @@
 #include "cpu.hpp"
 #include "ec.hpp"
 #include "lowlevel.hpp"
+#include "pd.hpp"
 #include "sc.hpp"
 
 extern "C" NORETURN
@@ -34,6 +35,13 @@ void bootstrap (unsigned i, unsigned e)
 
     // Barrier: wait for all CPUs to arrive here
     for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
+
+    if (Cpu::bsp) {
+        Pd::root    = Pd::create();
+        Ec *root_ec = Ec::create (Pd::root, true, Cpu::id, 0, (Space_mem::num - 2) << PAGE_BITS, 0, Ec::root_invoke);
+        Sc *root_sc = Sc::create (Cpu::id, root_ec, Sc::max_prio(), 1000);
+        root_sc->remote_enqueue();
+    }
 
     Sc::schedule();
 }

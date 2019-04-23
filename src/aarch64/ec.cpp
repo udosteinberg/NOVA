@@ -22,8 +22,13 @@
 
 #include "counter.hpp"
 #include "ec_arch.hpp"
+#include "elf.hpp"
+#include "extern.hpp"
 #include "hazards.hpp"
+#include "hip.hpp"
+#include "interrupt.hpp"
 #include "pd_kern.hpp"
+#include "sm.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
@@ -87,4 +92,70 @@ void Ec::kill (char const *reason)
         ec->cont = ec->cont == Ec_arch::ret_user_hypercall ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
 
     reply (dead);
+}
+
+void Ec::root_invoke()
+{
+    auto const root = root_addr();
+
+    auto e = static_cast<Eh *>(Hpt::map (root));
+    if (!root || !e->valid (Eh::ELF_CLASS, Eh::ELF_MACHINE))
+        kill ("No ELF");
+
+    constexpr auto hip_addr = (Space_mem::num - 1) << PAGE_BITS;
+
+    current->regs.p0() = *reinterpret_cast<uintptr_t *>(Buddy::sym_to_virt (&__boot_p0));
+    current->regs.p1() = *reinterpret_cast<uintptr_t *>(Buddy::sym_to_virt (&__boot_p1));
+    current->regs.p2() = *reinterpret_cast<uintptr_t *>(Buddy::sym_to_virt (&__boot_p2));
+    current->regs.sp() = hip_addr;
+    current->regs.ip() = e->entry;
+
+    auto c = ACCESS_ONCE (e->ph_count);
+    auto p = static_cast<ELF_PHDR *>(Hpt::map (root + ACCESS_ONCE (e->ph_offset)));
+
+    uint64 root_e = 0, root_s = root_e - 1;
+
+    for (unsigned i = 0; i < c; i++, p++) {
+
+        if (p->type == 1) {
+
+            auto perm = Paging::Permissions (Paging::R * !!(p->flags & BIT (2)) |
+                                             Paging::W * !!(p->flags & BIT (1)) |
+                                             Paging::X * !!(p->flags & BIT (0)) |
+                                             Paging::U);
+
+            trace (TRACE_ROOT, "ROOT: P:%#llx => V:%#llx PM:%#x FS:%#llx MS:%#llx", p->f_offs + root, p->v_addr, perm, p->f_size, p->m_size);
+
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != (p->f_offs + root) % PAGE_SIZE)
+                kill ("Bad ELF");
+
+            uint64 phys = align_dn (p->f_offs + root, PAGE_SIZE);
+            uint64 virt = align_dn (p->v_addr, PAGE_SIZE);
+            uint64 size = align_up (p->v_addr + p->f_size, PAGE_SIZE) - virt;
+
+            root_s = min (root_s, phys);
+            root_e = max (root_e, phys + size);
+
+            for (unsigned o; size; size -= BIT64 (o), phys += BIT64 (o), virt += BIT64 (o))
+                current->pd->update_space_mem (&Pd_kern::nova(), phys >> PAGE_BITS, virt >> PAGE_BITS, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER, Space::Index::CPU_HST);
+        }
+    }
+
+    for (unsigned i = 0; i < Interrupt::count(); i++)
+        if (Interrupt::int_table[i].sm)
+            Pd_kern::insert_user_obj (1024 + i, Capability (Interrupt::int_table[i].sm, BIT (4) | BIT (1)));
+        else
+            trace (TRACE_ROOT, "ROOT: INTR: %u unavailable", i);
+
+    Hip::hip->build (root_s, root_e);
+    current->pd->Space_mem::update (hip_addr, Buddy::ptr_to_phys (Hip::hip), 0, Paging::Permissions (Paging::K | Paging::U | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    current->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd_kern::nova(), BIT (0)));
+    current->pd->Space_obj::insert (Space_obj::num - 2, Capability (current->pd, BIT_RANGE (4, 0)));
+    current->pd->Space_obj::insert (Space_obj::num - 3, Capability (Ec::current, BIT_RANGE (4, 0)));
+    current->pd->Space_obj::insert (Space_obj::num - 4, Capability (Sc::current, BIT_RANGE (4, 0)));
+
+    Console::flush();
+
+    Ec_arch::ret_user_hypercall();
 }
