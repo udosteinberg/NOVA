@@ -226,19 +226,19 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    Eh *e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_class != ELF_CLASS || e->ei_data != 1 || e->type != 2 || e->machine != ELF_MACHINE)
+    auto e = static_cast<Eh const *>(Hpt::remap (Hip::root_addr));
+    if (!Hip::root_addr || !e->valid (Eh::Machine::X86_64))
         die ("No ELF");
 
     unsigned count = e->ph_count;
     current->exc_regs().ip() = e->entry;
     current->exc_regs().sp() = USER_ADDR - PAGE_SIZE;
 
-    ELF_PHDR *p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
+    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
     for (unsigned i = 0; i < count; i++, p++) {
 
-        if (p->type == 1) {
+        if (p->type == Ph::Type::LOAD) {
 
             unsigned attr = !!(p->flags & 0x4) << 0 |   // R
                             !!(p->flags & 0x2) << 1 |   // W
