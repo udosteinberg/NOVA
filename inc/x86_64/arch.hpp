@@ -30,8 +30,8 @@
 #define WORD            .long
 #define SIZE            4
 #define ELF_PHDR        Ph32
-#define ELF_CLASS       1
-#define ELF_MACHINE     3
+#define ELF_CLASS       EC_32
+#define ELF_MACHINE     EM_386
 #define PTE_BPL         10
 #define PTE_LEV         2
 #define REG(X)          e##X
@@ -71,8 +71,8 @@
 #define WORD            .quad
 #define SIZE            8
 #define ELF_PHDR        Ph64
-#define ELF_CLASS       2
-#define ELF_MACHINE     62
+#define ELF_CLASS       EC_64
+#define ELF_MACHINE     EM_X86_64
 #define PTE_BPL         9
 #define PTE_LEV         4
 #define REG(X)          r##X
