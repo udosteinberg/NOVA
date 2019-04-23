@@ -120,6 +120,9 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         NORETURN
         static void idle (Ec *);
 
+        NORETURN
+        static void root_invoke (Ec *);
+
         NORETURN HOT
         static void recv_kern (Ec *);
 

@@ -33,5 +33,8 @@ void bootstrap (unsigned i, unsigned e)
     // Barrier: wait for all CPUs to arrive here
     for (++barrier; barrier != Cpu::online; pause()) ;
 
+    if (Cpu::bsp)
+        Ec::create_root();
+
     Sc::schedule();
 }
