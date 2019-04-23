@@ -240,6 +240,9 @@ class Ec : private Kobject, public Queue<Sc>
         NORETURN
         static void kill (char const *);
 
+        NORETURN
+        static void root_invoke();
+
         HOT NORETURN
         static void sys_ipc_call();
 

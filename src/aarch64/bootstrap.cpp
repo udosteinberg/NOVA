@@ -36,5 +36,11 @@ void bootstrap (unsigned i, unsigned e)
     // Barrier: wait for all CPUs to arrive here
     for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
 
+    if (Cpu::bsp) {
+        Ec *root_ec = Ec::create (&Pd::root, new Fpu, new Utcb, Cpu::id, 0, UTCB_ADDR, 0, Ec::root_invoke);
+        Sc *root_sc = Sc::create (Cpu::id, root_ec, Sc::max_prio(), 1000);
+        root_sc->remote_enqueue();
+    }
+
     Sc::schedule();
 }

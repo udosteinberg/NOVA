@@ -20,12 +20,19 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "bits.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
 #include "ec.hpp"
 #include "event.hpp"
 #include "extern.hpp"
+#include "elf.hpp"
+#include "gicd.hpp"
 #include "hazards.hpp"
+#include "hip.hpp"
+#include "interrupt.hpp"
+#include "sc.hpp"
+#include "sm.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
@@ -105,4 +112,63 @@ void Ec::kill (char const *reason)
         ec->cont = ec->cont == ret_user_hypercall ? static_cast<void (*)()>(sys_finish<Sys_regs::ABORTED>) : dead;
 
     reply (dead);
+}
+
+void Ec::root_invoke()
+{
+    trace (TRACE_CONT, "%s", __func__);
+
+    auto e = static_cast<Eh *>(Hpt::map (ROOT_ADDR));
+    if (!ROOT_ADDR || !e->valid (Eh::EC_64, Eh::EM_AARCH64))
+        kill ("No ELF");
+
+    current->regs.set_p0 (-1UL);
+    current->regs.set_p1 (FDTB_ADDR);
+    current->regs.set_sp (HIPB_ADDR);
+    current->regs.set_ip (e->entry);
+    auto c = ACCESS_ONCE (e->ph_count);
+    auto p = static_cast<Ph64 *>(Hpt::map (ROOT_ADDR + ACCESS_ONCE (e->ph_offset)));
+
+    uint64 root_e = 0, root_s = root_e - 1;
+
+    for (unsigned i = 0; i < c; i++, p++) {
+
+        if (p->type == 1) {
+
+            auto perm = Paging::Permissions (Paging::R * !!(p->flags & 0x4) |
+                                             Paging::W * !!(p->flags & 0x2) |
+                                             Paging::X * !!(p->flags & 0x1) |
+                                             Paging::U);
+
+            trace (TRACE_ROOT, "ROOT: P:%#llx => V:%#llx PM:%#x FS:%#llx MS:%#llx", p->f_offs + ROOT_ADDR, p->v_addr, perm, p->f_size, p->m_size);
+
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != (p->f_offs + ROOT_ADDR) % PAGE_SIZE)
+                kill ("Bad ELF");
+
+            uint64 phys = align_dn (p->f_offs + ROOT_ADDR, PAGE_SIZE);
+            uint64 virt = align_dn (p->v_addr, PAGE_SIZE);
+            uint64 size = align_up (p->v_addr + p->f_size, PAGE_SIZE) - virt;
+
+            root_s = min (root_s, phys);
+            root_e = max (root_e, phys + size);
+
+            for (unsigned o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
+                current->pd->Space_mem::update (virt, phys, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+        }
+    }
+
+    for (unsigned i = 0; i < Gicd::ints - 32; i++)
+        Pd::kern.Space_obj::insert (1024 + i, Capability (Interrupt::int_table[i].sm, BIT (4) | BIT (1)));
+
+    Hip::hip->build (root_s, root_e);
+    current->pd->Space_mem::update (HIPB_ADDR, Buddy::ptr_to_phys (&PAGEH), 0, Paging::Permissions (Paging::R | Paging::U), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+
+    current->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd::kern, 0x1));
+    current->pd->Space_obj::insert (Space_obj::num - 2, Capability (current->pd, 0x1f));
+    current->pd->Space_obj::insert (Space_obj::num - 3, Capability (Ec::current, 0x1f));
+    current->pd->Space_obj::insert (Space_obj::num - 4, Capability (Sc::current, 0x1f));
+
+    Console::flush();
+
+    ret_user_hypercall();
 }
