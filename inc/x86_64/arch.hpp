@@ -29,8 +29,8 @@
 #define WORD            .quad
 #define SIZE            8
 #define ELF_PHDR        Ph64
-#define ELF_CLASS       2
-#define ELF_MACHINE     62
+#define ELF_CLASS       EC_64
+#define ELF_MACHINE     EM_X86_64
 #define PTE_BPL         9
 #define PTE_LEV         4
 #define REG(X)          r##X
