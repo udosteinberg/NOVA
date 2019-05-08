@@ -1,7 +1,7 @@
 /*
- * External Symbols
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (ARM)
  *
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,17 +17,20 @@
 
 #pragma once
 
+#include "macros.hpp"
 #include "types.hpp"
 
-extern char __init_psci[], __init_spin[], GIT_VER[];
+class Hip_arch
+{
+    private:
+        uint16  num_smg;
+        uint16  num_ctx;
 
-extern uintptr_t __boot_p0, __boot_p1, __boot_p2, __boot_ts, __boot_cl, __boot_ra, __boot_dt;
+    public:
+        enum class Feature
+        {
+            SMMU    = BIT (0),
+        };
 
-extern uintptr_t MHIP_HVAS;
-extern uintptr_t NOVA_HPAS, NOVA_HPAE;
-extern uintptr_t PTAB_HVAS;
-
-extern void (*CTORS_L)();
-extern void (*CTORS_C)();
-extern void (*CTORS_G)();
-extern void (*CTORS_E)();
+        void build();
+};

@@ -1,7 +1,7 @@
 /*
- * External Symbols
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (ARM)
  *
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,19 +15,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "hip_arch.hpp"
+#include "smmu.hpp"
+#include "stdio.hpp"
 
-#include "types.hpp"
+void Hip_arch::build()
+{
+    num_smg = static_cast<uint16>(Smmu::num_smg);
+    num_ctx = static_cast<uint16>(Smmu::num_ctx);
 
-extern char __init_psci[], __init_spin[], GIT_VER[];
-
-extern uintptr_t __boot_p0, __boot_p1, __boot_p2, __boot_ts, __boot_cl, __boot_ra, __boot_dt;
-
-extern uintptr_t MHIP_HVAS;
-extern uintptr_t NOVA_HPAS, NOVA_HPAE;
-extern uintptr_t PTAB_HVAS;
-
-extern void (*CTORS_L)();
-extern void (*CTORS_C)();
-extern void (*CTORS_G)();
-extern void (*CTORS_E)();
+    trace (TRACE_ROOT, "INFO: SMG#: %3u", num_smg);
+    trace (TRACE_ROOT, "INFO: CTX#: %3u", num_ctx);
+}
