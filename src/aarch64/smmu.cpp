@@ -16,6 +16,7 @@
  */
 
 #include "bits.hpp"
+#include "hip.hpp"
 #include "interrupt.hpp"
 #include "lock_guard.hpp"
 #include "lowlevel.hpp"
@@ -91,6 +92,8 @@ void Smmu::init()
             Interrupt::conf_spi (config.ctx[i].spi, Cpu::id, false, config.ctx[i].flg & BIT_RANGE (3, 2));
 
     write (GR0_Register32::CR0, BIT (21) | BIT (10) | BIT_RANGE (5, 4) | BIT_RANGE (2, 1));
+
+    Hip::set_feature (Hip_arch::Feature::SMMU);
 }
 
 bool Smmu::configure (Pd *pd, Space::Index si, mword dev)
