@@ -77,6 +77,8 @@ SECTIONS
 
         PROVIDE (KMEM_HVAS = .);
 
+        PROVIDE (MHIP_HVAS = .); . += 4K;
+
         PROVIDE (PTAB_HVAS = .);
         PROVIDE (PT3S_HPAS = . - OFFSET); . += 4K;
         PROVIDE (PT2H_HPAS = . - OFFSET); . += 4K;
