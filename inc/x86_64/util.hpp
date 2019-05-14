@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,17 +21,72 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "types.hpp"
 
-template <typename T>
-ALWAYS_INLINE
-static inline T min (T v1, T v2)
+template <typename T, typename... ARGS> constexpr auto min (T head, ARGS... tail)
 {
-    return v1 < v2 ? v1 : v2;
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](auto const &t) { v = t < v ? t : v; }(tail), ...);
+
+    return v;
 }
 
-template <typename T>
-ALWAYS_INLINE
-static inline T max (T v1, T v2)
+template <typename T, typename... ARGS> constexpr auto max (T head, ARGS... tail)
 {
-    return v1 > v2 ? v1 : v2;
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](auto const &t) { v = t > v ? t : v; }(tail), ...);
+
+    return v;
 }
+
+template<typename T> constexpr auto gcd (T v1, T v2)
+{
+    while (v2) {
+        T const r { v1 % v2 };
+        v1  = v2;
+        v2  = r;
+    }
+
+    return v1;
+}
+
+/*
+ * Computes v / d * m
+ *
+ * v * m / d is precise, but the multiplication can potentially overflow
+ * v / d * m is imprecise, but using the remainder restores the precision
+ */
+constexpr auto div_mul (uint64_t v, uint64_t d, uint32_t m)
+{
+    auto const q { v / d };     // Quotient
+    auto const r { v % d };     // Remainder
+
+    return q * m + r * m / d;
+}
+
+template<typename T> constexpr bool match_list (T const list[], T id)
+{
+    for (auto ptr { list }; *ptr; ptr++)
+        if (*ptr == id)
+            return true;
+
+    return false;
+}
+
+/*
+ * Turns p into an "exposed" pointer. As a result, the standard allows
+ * integers to be converted to pointers of the same provenance as p.
+ */
+template<typename T> constexpr T *expose (T *p) noexcept
+{
+    [[maybe_unused]] auto x { reinterpret_cast<uintptr_t>(p) };
+    return p;
+}
+
+// Sanity checks
+static_assert (min (3, 1, 4, 1, 5, 9, 2, 6, 5) == 1);
+static_assert (max (3, 1, 4, 1, 5, 9, 2, 6, 5) == 9);
