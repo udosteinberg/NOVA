@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -19,17 +21,102 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "std.hpp"
 
-template <typename T>
-ALWAYS_INLINE
-static inline T min (T v1, T v2)
+/*
+ * Greatest Common Divisor of one or more values
+ */
+template<std::unsigned_integral T, typename... ARGS> requires (std::same_as<T, ARGS> && ...) constexpr auto gcd (T head, ARGS... tail)
 {
-    return v1 < v2 ? v1 : v2;
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](T t) { while (t) { T const r { v % t }; v = t; t = r; } }(tail), ...);
+
+    return v;
 }
 
-template <typename T>
-ALWAYS_INLINE
-static inline T max (T v1, T v2)
+/*
+ * Least Common Multiple of one or more values
+ */
+template<std::unsigned_integral T, typename... ARGS> requires (std::same_as<T, ARGS> && ...) constexpr auto lcm (T head, ARGS... tail)
 {
-    return v1 > v2 ? v1 : v2;
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](T const t) { v = v && t ? v / gcd (v, t) * t : 0; }(tail), ...);
+
+    return v;
 }
+
+/*
+ * Maximum of one or more values
+ */
+template<std::integral T, typename... ARGS> requires (std::integral<ARGS> && ...) ALWAYS_INLINE constexpr auto max (T head, ARGS... tail)
+{
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](auto const &t) { v = t > v ? t : v; }(tail), ...);
+
+    return v;
+}
+
+/*
+ * Minimum of one or more values
+ */
+template<std::integral T, typename... ARGS> requires (std::integral<ARGS> && ...) ALWAYS_INLINE constexpr auto min (T head, ARGS... tail)
+{
+    T v { head };
+
+    // Binary left fold over the comma operator with the lambda immediately invoked for each t in the tail pack
+    ([&v](auto const &t) { v = t < v ? t : v; }(tail), ...);
+
+    return v;
+}
+
+template<std::unsigned_integral T> static constexpr bool is_power_of_2 (T v) { return v && !(v & (v - 1)); }
+
+/*
+ * Computes v / d * m
+ *
+ * v * m / d is precise, but the multiplication can potentially overflow
+ * v / d * m is imprecise, but using the remainder restores the precision
+ */
+constexpr auto div_mul (uint64_t v, uint64_t d, uint32_t m)
+{
+    auto const q { v / d };     // Quotient
+    auto const r { v % d };     // Remainder
+
+    return q * m + r * m / d;
+}
+
+template<typename T> constexpr bool match_list (T const list[], T id)
+{
+    for (auto ptr { list }; *ptr; ptr++)
+        if (*ptr == id)
+            return true;
+
+    return false;
+}
+
+template<typename T> [[nodiscard]] auto view_buffer_as (uintptr_t b, size_t s, size_t o, unsigned n = 1)
+{
+    return o > s || n * sizeof (T) > s - o ? nullptr : std::start_lifetime_as_array<T> (b + o, n);
+}
+
+/*
+ * Turns p into an "exposed" pointer. As a result, the standard allows
+ * integers to be converted to pointers of the same provenance as p.
+ */
+template<typename T> constexpr T *expose (T *p) noexcept
+{
+    [[maybe_unused]] auto x { reinterpret_cast<uintptr_t>(p) };
+    return p;
+}
+
+// Sanity Checks
+static_assert (gcd (12300699UL, 20501165UL, 28701631UL, 36902097UL, 45102563UL) == 4100233UL);
+static_assert (lcm (12300699UL, 20501165UL, 28701631UL, 36902097UL, 45102563UL) == 14207307345UL);
+static_assert (max (3, 1, 4, 1, 5, 9, 2, 6, 5) == 9);
+static_assert (min (3, 1, 4, 1, 5, 9, 2, 6, 5) == 1);
