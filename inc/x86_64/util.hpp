@@ -33,3 +33,16 @@ static inline T max (T v1, T v2)
 {
     return v1 > v2 ? v1 : v2;
 }
+
+template <typename T>
+ALWAYS_INLINE
+static inline T gcd (T v1, T v2)
+{
+    while (v2) {
+        T r = v1 % v2;
+        v1  = v2;
+        v2  = r;
+    }
+
+    return v1;
+}
