@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "compiler.hpp"
 #include "types.hpp"
 #include "util.hpp"
 
