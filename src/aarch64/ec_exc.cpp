@@ -21,6 +21,27 @@
 #include "interrupt.hpp"
 #include "stdio.hpp"
 
+extern "C"
+void (*const syscall[16])() =
+{
+    &Ec::sys_ipc_call,
+    &Ec::sys_ipc_reply,
+    &Ec::sys_create_pd,
+    &Ec::sys_create_ec,
+    &Ec::sys_create_sc,
+    &Ec::sys_create_pt,
+    &Ec::sys_create_sm,
+    &Ec::sys_ctrl_pd,
+    &Ec::sys_ctrl_ec,
+    &Ec::sys_ctrl_sc,
+    &Ec::sys_ctrl_pt,
+    &Ec::sys_ctrl_sm,
+    &Ec::sys_ctrl_hw,
+    &Ec::sys_assign_int,
+    &Ec::sys_assign_dev,
+    &Ec::sys_finish<Sys_regs::BAD_HYP>,
+};
+
 bool Ec::switch_fpu()
 {
     assert (!(Cpu::hazard & HZD_FPU));
@@ -77,21 +98,27 @@ void Ec::handle_exc_kern (Exc_regs *r)
 
 void Ec::handle_exc_user (Exc_regs *r)
 {
+    bool resolved = false;
+
     switch (r->ep()) {
 
         case 0x7:       // FPU access
-            current->switch_fpu();
+            resolved = current->switch_fpu();
             break;
+
+        case 0x15:      // SVC from AArch64 state
+            (*syscall[r->r[0] & 0xf])();
+            UNREACHED;
     }
 
     if (current->subtype == Kobject::Subtype::EC_VCPU) {
         trace (TRACE_EXCEPTION, "EC:%p VMX %#lx at M:%#x IP:%#lx", static_cast<void *>(current), r->ep(), r->emode(), r->el2_elr);
         current->vmcb->save_gst();
+        resolved ? ret_user_vmexit() : send_msg<ret_user_vmexit>();
     } else {
         trace (TRACE_EXCEPTION, "EC:%p EXC %#lx at M:%#x IP:%#lx", static_cast<void *>(current), r->ep(), r->emode(), r->el2_elr);
+        resolved ? ret_user_exception() : send_msg<ret_user_exception>();
     }
-
-    kill ("exception");
 }
 
 void Ec::handle_irq_kern()
@@ -112,6 +139,5 @@ void Ec::handle_irq_user()
         ret_user_vmexit();
 
     current->regs.set_ep (Event::gst_arch + evt);
-
-    kill ("irq");
+    send_msg<ret_user_vmexit>();
 }

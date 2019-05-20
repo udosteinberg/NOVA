@@ -52,6 +52,8 @@ class Ec : private Kobject, public Queue<Sc>
         void                (*cont)()       { nullptr };
         Ec *                prev            { nullptr };
         Ec *                next            { nullptr };
+        Ec *                callee          { nullptr };
+        Ec *                caller          { nullptr };
         unsigned            hazard          { 0 };
         Timeout_hypercall   timeout         { this };
 
@@ -63,11 +65,46 @@ class Ec : private Kobject, public Queue<Sc>
         ALWAYS_INLINE
         inline Sys_regs *sys_regs() { return &regs; }
 
+        ALWAYS_INLINE
+        inline void set_partner (Ec *e)
+        {
+            callee = e;
+            callee->caller = this;
+            Sc::ctr_link++;
+        }
+
+        ALWAYS_INLINE
+        inline unsigned clr_partner()
+        {
+            callee->caller = nullptr;
+            callee = nullptr;
+            return Sc::ctr_link--;
+        }
+
         NORETURN
         static void set_vmm_info();
 
         NOINLINE
         static void handle_hazard (unsigned, void (*)());
+
+        NORETURN
+        static void dead() { kill ("IPC Abort"); }
+
+        NOINLINE
+        void help (void (*)());
+
+        HOT NORETURN
+        static void recv_kern();
+
+        HOT NORETURN
+        static void recv_user();
+
+        HOT NORETURN
+        static void reply (void (*)() = nullptr);
+
+        template <void (*)()>
+        NORETURN
+        static void send_msg();
 
         bool switch_fpu();
 
@@ -202,4 +239,53 @@ class Ec : private Kobject, public Queue<Sc>
 
         NORETURN
         static void kill (char const *);
+
+        HOT NORETURN
+        static void sys_ipc_call();
+
+        HOT NORETURN
+        static void sys_ipc_reply();
+
+        NORETURN
+        static void sys_create_pd();
+
+        NORETURN
+        static void sys_create_ec();
+
+        NORETURN
+        static void sys_create_sc();
+
+        NORETURN
+        static void sys_create_pt();
+
+        NORETURN
+        static void sys_create_sm();
+
+        NORETURN
+        static void sys_ctrl_pd();
+
+        NORETURN
+        static void sys_ctrl_ec();
+
+        NORETURN
+        static void sys_ctrl_sc();
+
+        NORETURN
+        static void sys_ctrl_pt();
+
+        NORETURN
+        static void sys_ctrl_sm();
+
+        NORETURN
+        static void sys_ctrl_hw();
+
+        NORETURN
+        static void sys_assign_int();
+
+        NORETURN
+        static void sys_assign_dev();
+
+        template <Sys_regs::Status S, bool T = false>
+        NOINLINE NORETURN
+        static void sys_finish();
 };

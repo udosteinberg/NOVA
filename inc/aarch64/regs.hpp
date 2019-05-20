@@ -24,6 +24,20 @@
 class Sys_regs
 {
     public:
+        enum Status
+        {
+            SUCCESS,
+            TIMEOUT,
+            ABORTED,
+            OVRFLOW,
+            BAD_HYP,
+            BAD_CAP,
+            BAD_PAR,
+            BAD_FTR,
+            BAD_CPU,
+            BAD_DEV,
+        };
+
         mword   r[31]       { 0 };
         mword   el0_sp      { 0 };
         mword   el0_tpidr   { 0 };
@@ -33,6 +47,12 @@ class Sys_regs
 
         inline unsigned emode() const { return el2_spsr & (PSTATE_ALL_nRW | PSTATE_ALL_M); }
 
+        inline unsigned flags() const { return r[0] >> 4 & 0xf; }
+
+        inline void set_status (Status status) { r[0] = status; }
+
+        inline void set_p0 (mword val) { r[0]    = val; }
+        inline void set_p1 (mword val) { r[1]    = val; }
         inline void set_sp (mword val) { el0_sp  = val; }
         inline void set_ip (mword val) { el2_elr = val; }
 };

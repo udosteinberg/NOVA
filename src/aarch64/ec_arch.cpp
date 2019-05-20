@@ -65,7 +65,7 @@ void Ec::set_vmm_info()
     v->el2.vmpidr = Cpu::mpidr;
     v->el2.vpidr  = Cpu::midr;
 
-    UNREACHED;
+    send_msg<ret_user_vmexit>();
 }
 
 void Ec::handle_hazard (unsigned hzd, void (*func)())
@@ -87,8 +87,10 @@ void Ec::handle_hazard (unsigned hzd, void (*func)())
 
         if (func == ret_user_vmexit) {
             current->regs.set_ep (Event::gst_arch + Event::Selector::RECALL);
+            send_msg<ret_user_vmexit>();
         } else {
             current->regs.set_ep (Event::hst_arch + Event::Selector::RECALL);
+            send_msg<ret_user_exception>();
         }
     }
 
