@@ -16,14 +16,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#ifndef __aarch64__
 #include "sm.hpp"
-#endif
 #include "timeout_hypercall.hpp"
 
 void Timeout_hypercall::trigger()
 {
-#ifndef __aarch64__
     sm->timeout (ec);
-#endif
 }
