@@ -1,7 +1,10 @@
 /*
- * Hypercall Timeout
+ * Semaphore (SM)
  *
- * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
+ * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -17,9 +20,12 @@
  */
 
 #include "sm.hpp"
-#include "timeout_hypercall.hpp"
+#include "stdio.hpp"
 
-void Timeout_hypercall::trigger()
+INIT_PRIORITY (PRIO_SLAB)
+Slab_cache Sm::cache (sizeof (Sm), 32);
+
+Sm::Sm (mword c, unsigned i) : Kobject (Kobject::Type::SM), counter (c), id (i)
 {
-    sm->timeout (ec);
+    trace (TRACE_CREATE, "SM:%p created (CNT:%lu)", static_cast<void *>(this), c);
 }
