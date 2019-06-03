@@ -21,8 +21,8 @@
 
 #pragma once
 
-#define STRING(x...) #x
-#define EXPAND(x) STRING(x)
+#define STRING(...) #__VA_ARGS__
+#define EXPAND(X) STRING(X)
 
 #if defined(__GNUC__)
 
