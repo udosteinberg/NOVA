@@ -20,15 +20,18 @@
 #include "bitmap.hpp"
 #include "event.hpp"
 #include "intid.hpp"
+#include "sm.hpp"
 #include "smmu.hpp"
-#include "status.hpp"
 
 class Dc;
-class Sm;
 
 class Interrupt final : private Intid
 {
     private:
+        static inline constinit Refptr<Sm> table_s[NUM_SPI];
+        static inline constinit Refptr<Sm> table_e[NUM_ESPI];
+        static inline constinit Refptr<Sm> table_l[NUM_LPI];
+
         static inline constinit Bitmap<NUM_SPI>  guest_s;
         static inline constinit Bitmap<NUM_ESPI> guest_e;
 
@@ -53,13 +56,27 @@ class Interrupt final : private Intid
             RKE,
         };
 
-        static void *get_ptr (arm_intid_t iid)
+        static Refptr<Sm> *get_ptr (arm_intid_t iid)
         {
             // No interrupt semaphores for SMMU IIDs
             if (Smmu::using_iid (iid)) [[unlikely]]
                 return nullptr;
 
+            unsigned n;
+
             switch (Intid::type (iid)) {
+
+                case Intid::Type::SPI:
+                    n = Intid::to_spi (iid);
+                    return n < num_spi ? table_s + n : nullptr;
+
+                case Intid::Type::ESPI:
+                    n = Intid::to_espi (iid);
+                    return n < num_espi ? table_e + n : nullptr;
+
+                case Intid::Type::LPI:
+                    n = Intid::to_lpi (iid);
+                    return n < num_lpi ? table_l + n : nullptr;
 
                 default:
                     return nullptr;
