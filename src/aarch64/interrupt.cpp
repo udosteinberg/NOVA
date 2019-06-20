@@ -21,6 +21,8 @@
 #include "gicd.hpp"
 #include "gicr.hpp"
 #include "interrupt.hpp"
+#include "sc.hpp"
+#include "sm.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
@@ -30,6 +32,13 @@ Interrupt Interrupt::int_table[NUM_SPI];
 unsigned Interrupt::count()
 {
     return Gicd::ints - BASE_SPI;
+}
+
+void Interrupt::init()
+{
+    for (unsigned spi = 0; spi < sizeof (int_table) / sizeof (*int_table); spi++)
+        if (!Smmu::using_spi (spi))
+            int_table[spi].sm = Sm::create (0, spi);
 }
 
 Event::Selector Interrupt::handle_sgi (uint32 val, bool)
@@ -43,7 +52,7 @@ Event::Selector Interrupt::handle_sgi (uint32 val, bool)
     Gicc::eoi (val);
 
     switch (sgi) {
-        case Request::RRQ: break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: break;
     }
 
@@ -84,7 +93,14 @@ Event::Selector Interrupt::handle_spi (uint32 val, bool)
 
     Gicc::eoi (val);
 
-    if (true) {
+    if (EXPECT_TRUE (int_table[spi].sm)) {
+
+        if (!int_table[spi].gst)
+            int_table[spi].dir = true;
+
+        int_table[spi].sm->up();
+
+    } else {
 
         Smmu::interrupt (spi);
 
