@@ -15,10 +15,11 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "ec.hpp"
 #include "interrupt.hpp"
-#include "lowlevel.hpp"
 #include "smmu.hpp"
 
 extern "C" [[noreturn]]
@@ -33,8 +34,16 @@ void bootstrap (unsigned i, unsigned e)
     if (Cpu::bsp)
         Smmu::initialize();
 
+    // Before cores leave the barrier into userland, the idle EC must exist
+    if (!Acpi::resume)
+        Ec::create_idle();
+
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
-    for (;;) {}
+    if (!Acpi::resume)
+        if (Cpu::bsp)
+            Ec::create_root();
+
+    Scheduler::schedule();
 }
