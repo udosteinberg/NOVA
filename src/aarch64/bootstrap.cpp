@@ -15,12 +15,18 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
+#include "ec.hpp"
 #include "gits.hpp"
 #include "smmu.hpp"
 
 extern "C" [[noreturn]] void bootstrap (cpu_t c)
 {
     Cpu::init (c);
+
+    // Idle EC must exist before scheduler invocation
+    if (!Acpi::resume) [[likely]]
+        Ec::create_idle();
 
     if (Cpu::bsp) [[unlikely]] {
 
@@ -39,5 +45,9 @@ extern "C" [[noreturn]] void bootstrap (cpu_t c)
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
-    for (;;) ;
+    if (!Acpi::resume)
+        if (Cpu::bsp)
+            Ec::create_root();
+
+    Scheduler::schedule();
 }
