@@ -18,13 +18,12 @@
 #include "acpi.hpp"
 #include "assert.hpp"
 #include "counter.hpp"
+#include "dc.hpp"
 #include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
-#include "hazard.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
-#include "timeout.hpp"
 
 void Interrupt::rke_handler()
 {
@@ -39,7 +38,7 @@ Event::Selector Interrupt::handle_sgi (unsigned n, auto const &dir)
     Counter::req[n].inc();
 
     switch (n) {
-        case Request::RRQ: break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: rke_handler(); break;
     }
 
@@ -69,7 +68,13 @@ Event::Selector Interrupt::handle_spi (unsigned n, auto const &dir)
 {
     assert (n < num_spi);
 
-    if (Smmu::using_iid (Intid::from_spi (n))) {
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_s[n].load() };
+
+    if (sm) [[likely]]
+        sm->up();
+
+    else if (Smmu::using_iid (Intid::from_spi (n))) {
 
         Smmu::interrupt (Intid::from_spi (n));
 
@@ -92,12 +97,24 @@ Event::Selector Interrupt::handle_espi (unsigned n, auto const &)
 {
     assert (n < num_espi);
 
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_e[n].load() };
+
+    if (sm) [[likely]]
+        sm->up();
+
     return Event::Selector::NONE;
 }
 
 Event::Selector Interrupt::handle_lpi (unsigned n)
 {
     assert (n < num_lpi);
+
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_l[n].load() };
+
+    if (sm) [[likely]]
+        sm->up();
 
     return Event::Selector::NONE;
 }
@@ -132,9 +149,9 @@ void Interrupt::tmr_act_set (bool a)
     Gicr::act_set (Intid::from_ppi (Timer::ppi_el1_v), a);
 }
 
-void Interrupt::deactivate (Sm *)
+void Interrupt::deactivate (Sm *sm)
 {
-    auto const iid { 0 };
+    auto const iid { sm->iid };
 
     // An LPI does not require deactivation
     if (Intid::type (iid) == Intid::Type::LPI)
@@ -148,10 +165,49 @@ void Interrupt::deactivate (Sm *)
     Gicc::dir (iid);
 }
 
-Status Interrupt::assign (bool, Sm * const, Dc const *, uint16_t idx, uint16_t cpu, uint8_t /*vec*/, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Interrupt::assign (bool attach, Sm * const sm, Dc const *dc, uint16_t idx, uint16_t cpu, uint8_t /*vec*/, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
-    // Determine interrupt ID
-    Intid const iid { idx };
+    // SM must be valid
+    assert (sm);
+
+    // Determine slot pointer
+    auto const iid { sm->iid };
+    auto const ptr { get_ptr (iid) };
+
+    // Pointer must be valid
+    assert (ptr);
+
+    if (attach) [[likely]] {
+
+        // Attach[ptr] nullptr -> sm
+        Sm *old { nullptr }; Refptr<Sm> ref { sm };
+
+        // Failed to acquire reference on sm
+        if (ref != sm) [[unlikely]]
+            return Status::ABORTED;
+
+        // Try atomic attach or detect reattach
+        if (!ptr->compare_exchange (old, ref)) [[unlikely]]
+            if (old != sm) [[unlikely]]
+                return Status::ABORTED;
+
+        // Scope exit drops ref on sm (reattach) or nullptr (attach)
+        assert (ref == sm || ref == nullptr);
+
+    } else {
+
+        // Detach[ptr] sm -> nullptr
+        Sm *old { sm }; Refptr<Sm> ref;
+
+        // Try atomic detach
+        if (!ptr->compare_exchange (old, ref)) [[unlikely]]
+            return Status::ABORTED;
+
+        // Scope exit drops ref on sm (detach)
+        assert (ref == sm);
+
+        return Status::SUCCESS;
+    }
 
     // Extract configuration from flags
     bool const msk { !!(cfg & BIT (0)) };
@@ -161,8 +217,16 @@ Status Interrupt::assign (bool, Sm * const, Dc const *, uint16_t idx, uint16_t c
     trace (TRACE_INTR, "INTR: Routing INTID %#06x (%c%c%c) to %#06x", uint32_t { iid }, msk ? 'M' : 'U', lvl ? 'L' : 'E', gst ? 'G' : 'H', cpu);
 
     // Configure LPI
-    if (iid >= Intid::BASE_LPI) [[likely]]
-        return Status::BAD_DEV;
+    if (iid >= Intid::BASE_LPI) [[likely]] {
+
+        // Source device, GITS and ITT must be provided
+        if (!dc || !dc->gits || !dc->itt) [[unlikely]]
+            return Status::BAD_DEV;
+
+        Gicr::conf_lpi (iid, msk);
+
+        return dc->gits->conf_lpi (iid, cpu, dc->did, idx, msi_addr, msi_data);
+    }
 
     // Report zero values for pin-based interrupts
     msi_addr = msi_data = 0;
