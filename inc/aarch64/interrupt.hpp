@@ -20,14 +20,13 @@
 #include "bitmap.hpp"
 #include "event.hpp"
 #include "intid.hpp"
+#include "sm.hpp"
 #include "status.hpp"
-#include "types.hpp"
-
-class Sm;
 
 class Interrupt final : private Intid
 {
     private:
+        static inline constinit Refptr<Sm> sm_table[NUM_SPI];
         static inline constinit Bitmap<NUM_SPI> guest_owned;
 
         static void rke_handler();
