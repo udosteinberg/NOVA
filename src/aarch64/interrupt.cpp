@@ -21,9 +21,10 @@
 #include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
-#include "hazard.hpp"
 #include "interrupt.hpp"
+#include "sm.hpp"
 #include "smmu.hpp"
+#include "space_obj.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 
@@ -51,7 +52,7 @@ Event::Selector Interrupt::handle_sgi (uint32_t val, bool)
     Gicc::eoi (val);
 
     switch (sgi) {
-        case Request::RRQ: break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: rke_handler(); break;
     }
 
@@ -89,7 +90,10 @@ Event::Selector Interrupt::handle_spi (uint32_t val, bool)
 
     Gicc::eoi (val);
 
-    if (true) {
+    if (EXPECT_TRUE (int_table[spi].sm))
+        int_table[spi].sm->up();
+
+    else {
 
         Smmu::interrupt (spi);
 
@@ -190,5 +194,11 @@ void Interrupt::init()
 
         // Configure interrupt
         conf_spi (spi, cfg.msk(), cfg.trg(), cfg.cpu());
+
+        Status s;
+
+        // Create interrupt semaphore
+        if (!Acpi::resume)
+            int_table[spi].sm = Pd::create_sm (s, &Space_obj::nova, Space_obj::Selector::NOVA_INT + spi, 0, spi);
     }
 }
