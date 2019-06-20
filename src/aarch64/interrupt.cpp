@@ -22,9 +22,18 @@
 #include "gicr.hpp"
 #include "interrupt.hpp"
 #include "sc.hpp"
+#include "sm.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
+
+Interrupt Interrupt::int_table[SPI_NUM];
+
+void Interrupt::init()
+{
+    for (unsigned i = 0; i < SPI_NUM; i++)
+        int_table[i].sm = Sm::create (0, i);
+}
 
 Event::Selector Interrupt::handle_sgi (uint32 val, bool)
 {
@@ -91,6 +100,11 @@ Event::Selector Interrupt::handle_spi (uint32 val, bool)
 
         default:
             Gicc::eoi (val);
+
+            if (!int_table[spi].gst)
+                int_table[spi].dir = true;
+
+            int_table[spi].sm->up();
             break;
     }
 
@@ -141,6 +155,9 @@ void Interrupt::conf_spi (unsigned spi, unsigned cpu, bool msk, bool trg, bool g
 {
     trace (TRACE_INTR, "INTR: %s: %u cpu=%u %c%c%c", __func__, spi, cpu, msk ? 'M' : 'U', trg ? 'E' : 'L', gst ? 'G' : 'H');
 
+    int_table[spi].cpu  = static_cast<uint16>(cpu);
+    int_table[spi].gst  = gst;
+
     Gicd::conf (spi + SPI_BASE, trg, cpu);
     Gicd::mask (spi + SPI_BASE, msk);
 }
@@ -148,4 +165,12 @@ void Interrupt::conf_spi (unsigned spi, unsigned cpu, bool msk, bool trg, bool g
 void Interrupt::send_sgi (unsigned cpu, Sgi sgi)
 {
     (Gicd::arch < 3 ? Gicd::send_sgi : Gicc::send_sgi) (cpu, sgi);
+}
+
+void Interrupt::deactivate_spi (unsigned spi)
+{
+    if (int_table[spi].dir) {
+        int_table[spi].dir = false;
+        Gicc::dir (spi + SPI_BASE);
+    }
 }
