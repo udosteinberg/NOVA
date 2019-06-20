@@ -65,6 +65,8 @@ class Interrupt : private Intid
 
         static unsigned count();
 
+        static void init();
+
         static Event::Selector handler (bool);
 
         static void conf_sgi (unsigned, bool);

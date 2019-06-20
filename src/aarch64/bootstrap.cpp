@@ -15,9 +15,9 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "compiler.hpp"
-#include "cpu.hpp"
-#include "lowlevel.hpp"
+#include "ec.hpp"
 
 extern "C" NORETURN
 void bootstrap (unsigned i, unsigned e)
@@ -27,5 +27,15 @@ void bootstrap (unsigned i, unsigned e)
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
-    for (;;) {}
+    if (!Acpi::resume) {
+
+        // Create idle EC
+        Ec::create_idle();
+
+        // Create root EC
+        if (Cpu::bsp)
+            Ec::create_root();
+    }
+
+    Scheduler::schedule();
 }

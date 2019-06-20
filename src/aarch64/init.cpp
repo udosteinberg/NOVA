@@ -22,6 +22,7 @@
 #include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
+#include "interrupt.hpp"
 #include "kmem.hpp"
 #include "ptab_hpt.hpp"
 #include "smmu.hpp"
@@ -73,6 +74,8 @@ unsigned init (uintptr_t offset)
         for (unsigned i = 0; i < sizeof (Board::smmu) / sizeof (*Board::smmu); i++)
             if (Board::smmu[i].mmio)
                 new Smmu (Board::smmu[i]);
+
+    Interrupt::init();
 
     return Cpu::boot_cpu;
 }
