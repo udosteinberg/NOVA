@@ -21,7 +21,6 @@
 #include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
-#include "hazard.hpp"
 #include "interrupt.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
@@ -45,7 +44,7 @@ Event::Selector Interrupt::handle_sgi (uint32_t val, bool)
     Gicc::eoi (val);
 
     switch (sgi) {
-        case Request::RRQ: break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: rke_handler(); break;
     }
 
@@ -83,7 +82,13 @@ Event::Selector Interrupt::handle_spi (uint32_t val, bool)
 
     Gicc::eoi (val);
 
-    if (Smmu::using_spi (spi)) {
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { sm_table[spi].atomic_load() };
+
+    if (sm) [[likely]]
+        sm->up();
+
+    else if (Smmu::using_spi (spi)) {
 
         Smmu::interrupt (spi);
 
@@ -149,11 +154,29 @@ void Interrupt::deactivate (gsi_t spi)
     Gicc::dir (Intid::from_spi (spi));
 }
 
-Status Interrupt::assign (Sm *, cpu_t cpu, gsi_t spi, pci_t, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Interrupt::assign (Sm *sm, cpu_t cpu, gsi_t spi, pci_t, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
+    // Table index must be valid (and must match the GSI)
+    if (spi > gsi_max || (sm && spi != sm->get_gsi())) [[unlikely]]
+        return Status::BAD_PAR;
+
     // Abort attempts to reconfigure SMMU interrupts
     if (Smmu::using_spi (spi))
         return Status::ABORTED;
+
+    {   Refptr<Sm> ref { sm };
+
+        // Failed to acquire reference
+        if (ref != sm) [[unlikely]]
+            return Status::ABORTED;
+
+        // Atomically replace Refptr<Sm> in the global table
+        sm_table[spi].atomic_swap (ref);
+    }
+
+    // Detach
+    if (!sm) [[unlikely]]
+        return Status::SUCCESS;
 
     // Extract configuration from flags
     bool const msk { !!(cfg & BIT (0)) };
