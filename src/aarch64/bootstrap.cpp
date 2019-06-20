@@ -15,9 +15,9 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "compiler.hpp"
-#include "cpu.hpp"
-#include "lowlevel.hpp"
+#include "ec.hpp"
 #include "interrupt.hpp"
 #include "smmu.hpp"
 
@@ -37,5 +37,15 @@ void bootstrap (unsigned i, unsigned e)
     if (Cpu::bsp)
         Interrupt::init();
 
-    for (;;) {}
+    if (!Acpi::resume) {
+
+        // Create idle EC
+        Ec::create_idle();
+
+        // Create root EC
+        if (Cpu::bsp)
+            Ec::create_root();
+    }
+
+    Scheduler::schedule();
 }
