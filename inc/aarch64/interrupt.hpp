@@ -21,6 +21,8 @@
 #include "intid.hpp"
 #include "types.hpp"
 
+class Sm;
+
 class Interrupt : private Intid
 {
     private:
@@ -35,13 +37,26 @@ class Interrupt : private Intid
             RKE,
         };
 
+        Sm *    sm  { nullptr };
+        uint16  cpu { 0xffff };
+        bool    gst { false };
+        bool    dir { false };
+
+        static Interrupt int_table[NUM_SPI];
+
         static unsigned count();
+
+        static void init();
 
         static Event::Selector handler (bool);
 
         static void conf_sgi (unsigned, bool);
         static void conf_ppi (unsigned, bool, bool);
         static void conf_spi (unsigned, unsigned, bool, bool);
+
+        static void configure (unsigned, unsigned, unsigned, uint16, uint32 &, uint16 &);
+
+        static void deactivate (unsigned);
 
         static void send_cpu (unsigned, Request);
 };

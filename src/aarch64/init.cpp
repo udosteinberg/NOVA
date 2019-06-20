@@ -22,6 +22,7 @@
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
+#include "interrupt.hpp"
 #include "psci.hpp"
 
 extern "C"
@@ -65,6 +66,8 @@ unsigned init (uintptr_t offset)
     Fdt::init();
 
     Psci::init();
+
+    Interrupt::init();
 
     return Cpu::boot_cpu;
 }
