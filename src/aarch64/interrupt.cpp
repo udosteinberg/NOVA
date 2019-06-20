@@ -21,10 +21,8 @@
 #include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
-#include "hazard.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
-#include "timeout.hpp"
 
 void Interrupt::rke_handler()
 {
@@ -39,7 +37,7 @@ Event::Selector Interrupt::handle_sgi (unsigned n, auto const &dir)
     Counter::req[n].inc();
 
     switch (n) {
-        case Request::RRQ: break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: rke_handler(); break;
     }
 
@@ -69,7 +67,13 @@ Event::Selector Interrupt::handle_spi (unsigned n, auto const &dir)
 {
     assert (n < num_spi);
 
-    if (Smmu::using_iid (Intid::from_spi (n))) {
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_s[n].atomic_load() };
+
+    if (sm) [[likely]]
+        sm->up();
+
+    else if (Smmu::using_iid (Intid::from_spi (n))) {
 
         Smmu::interrupt (Intid::from_spi (n));
 
@@ -92,12 +96,24 @@ Event::Selector Interrupt::handle_espi (unsigned n, auto const &)
 {
     assert (n < num_espi);
 
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_e[n].atomic_load() };
+
+    if (sm) [[likely]]
+        sm->up();
+
     return Event::Selector::NONE;
 }
 
 Event::Selector Interrupt::handle_lpi (unsigned n)
 {
     assert (n < num_lpi);
+
+    // Atomic load because other CPUs can update the table concurrently
+    Sm *const sm { table_l[n].atomic_load() };
+
+    if (sm) [[likely]]
+        sm->up();
 
     return Event::Selector::NONE;
 }
@@ -132,9 +148,9 @@ void Interrupt::tmr_act_set (bool a)
     Gicr::act_set (Intid::from_ppi (Timer::ppi_el1_v), a);
 }
 
-void Interrupt::deactivate (Sm *)
+void Interrupt::deactivate (Sm *sm)
 {
-    auto const iid { 0 };
+    auto const iid { sm->get_iid() };
 
     // An LPI does not require deactivation
     if (Intid::type (iid) == Type::LPI)
@@ -151,7 +167,24 @@ void Interrupt::deactivate (Sm *)
 Status Interrupt::assign (Sm *sm, cpu_t cpu, uint16_t idx, pci_t src, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
     // Determine interrupt ID
-    auto const iid { idx };
+    auto const iid { sm ? sm->get_iid() : idx };
+
+    // Obtain interrupt semaphore table pointer
+    auto const ptr { get_ptr (iid) };
+
+    // Pointer must be valid
+    if (!ptr) [[unlikely]]
+        return Status::BAD_PAR;
+
+    {   Refptr<Sm> ref { sm };
+
+        // Failed to acquire reference
+        if (ref != sm) [[unlikely]]
+            return Status::ABORTED;
+
+        // Atomically replace Refptr<Sm> in the interrupt semaphore table
+        ptr->atomic_swap (ref);
+    }
 
     // Detach
     if (!sm) [[unlikely]]
