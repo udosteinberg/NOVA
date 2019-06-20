@@ -23,6 +23,7 @@
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "hpt.hpp"
+#include "interrupt.hpp"
 #include "kmem.hpp"
 
 extern "C"
@@ -66,6 +67,8 @@ unsigned init (uintptr_t offset)
     Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<uintptr_t>(GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Acpi::init() || Fdt::init();
+
+    Interrupt::init();
 
     return Cpu::boot_cpu;
 }
