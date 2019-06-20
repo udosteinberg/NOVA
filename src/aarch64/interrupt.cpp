@@ -22,13 +22,23 @@
 #include "gicr.hpp"
 #include "interrupt.hpp"
 #include "sc.hpp"
+#include "sm.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 
+Interrupt Interrupt::int_table[NUM_SPI];
+
 unsigned Interrupt::count()
 {
     return Gicd::ints - BASE_SPI;
+}
+
+void Interrupt::init()
+{
+    for (unsigned spi = 0; spi < sizeof (int_table) / sizeof (*int_table); spi++)
+        if (!Smmu::using_spi (spi))
+            int_table[spi].sm = Sm::create (0, spi);
 }
 
 Event::Selector Interrupt::handle_sgi (uint32 val, bool)
@@ -89,7 +99,14 @@ Event::Selector Interrupt::handle_spi (uint32 val, bool)
 
     Gicc::eoi (val);
 
-    if (true) {
+    if (EXPECT_TRUE (int_table[spi].sm)) {
+
+        if (!int_table[spi].gst)
+            int_table[spi].dir = true;
+
+        int_table[spi].sm->up();
+
+    } else {
 
         Smmu::interrupt (spi);
 
@@ -139,6 +156,30 @@ void Interrupt::conf_spi (unsigned spi, unsigned cpu, bool msk, bool lvl)
 {
     Gicd::conf (spi + BASE_SPI, lvl, cpu);
     Gicd::mask (spi + BASE_SPI, msk);
+}
+
+void Interrupt::configure (unsigned spi, unsigned flags, unsigned cpu, uint16, uint32 &msi_addr, uint16 &msi_data)
+{
+    bool msk = flags & BIT (0);
+    bool lvl = flags & BIT (1);
+    bool gst = flags & BIT (3);
+
+    trace (TRACE_INTR, "INTR: %s: SPI:%03u CPU:%u %c%c%c", __func__, spi, cpu, msk ? 'M' : 'U', lvl ? 'L' : 'E', gst ? 'G' : 'H');
+
+    int_table[spi].cpu = static_cast<uint16>(cpu);
+    int_table[spi].gst = gst;
+
+    conf_spi (spi, cpu, msk, lvl);
+
+    msi_addr = msi_data = 0;
+}
+
+void Interrupt::deactivate (unsigned spi)
+{
+    if (int_table[spi].dir) {
+        int_table[spi].dir = false;
+        Gicc::dir (spi + BASE_SPI);
+    }
 }
 
 void Interrupt::send_cpu (unsigned cpu, Request req)
