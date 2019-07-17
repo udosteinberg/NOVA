@@ -1,5 +1,5 @@
 /*
- * Page Table Templates
+ * Nested Page Table (NPT)
  *
  * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -15,10 +15,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
-
-#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 
-template class Ptab<Hpt, uint64, uint64>;
-template class Ptab<Npt, uint64, uint64>;
+uint64 Nptp::current;
+
+void Nptp::init()
+{
+    // Reset at resume time to match vttbr
+    current = 0;
+
+    auto const oas { 2 };
+
+    // IPA cannot be larger than OAS supported by CPU
+    assert (Npt::ibits <= Npt::pas (oas));
+
+    asm volatile ("msr vtcr_el2, %x0; isb" : : "rZ" (VTCR_RES1 | oas << 16 | TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | (Npt::lev() - 2) << 6 | (64 - Npt::ibits)) : "memory");
+}
