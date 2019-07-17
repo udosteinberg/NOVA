@@ -16,6 +16,7 @@
  */
 
 #include "cpu.hpp"
+#include "ptab_npt.hpp"
 #include "stdio.hpp"
 
 uint64_t Cpu::ptab, Cpu::midr, Cpu::mpidr;
@@ -126,6 +127,8 @@ void Cpu::init()
     trace (TRACE_CPU, "CORE: %02lu:%02lu:%02lu:%02lu %s %s r%lup%lu",
            mpidr >> 32 & BIT_RANGE (7, 0), mpidr >> 16 & BIT_RANGE (7, 0), mpidr >> 8 & BIT_RANGE (7, 0), mpidr & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0));
+
+    Nptp::init();
 }
 
 void Cpu::fini()
