@@ -1,5 +1,5 @@
 /*
- * Page Table Entry (PTE)
+ * Nested Page Table (NPT)
  *
  * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -15,13 +15,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
-
-#include "hpt.hpp"
 #include "npt.hpp"
 
-template<> unsigned Pte<Hpt, 4, 9, uint64, uint64>::lim = 3 * 9 - 1;
-template<> unsigned Pte<Npt, 3, 9, uint64, uint64>::lim = 3 * 9 - 1;
-
-template class Pte<Hpt, 4, 9, uint64, uint64>;
-template class Pte<Npt, 3, 9, uint64, uint64>;
+uint64 Nptp::current;
