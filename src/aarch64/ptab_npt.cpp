@@ -1,5 +1,5 @@
 /*
- * Page Table Templates
+ * Nested Page Table (NPT)
  *
  * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -15,10 +15,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
-
-#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 
-template class Pagetable<Hpt, uint64, uint64, 4, 3, false>;
-template class Pagetable<Npt, uint64, uint64, 3, 3, true>;
+uint64 Nptp::current;
