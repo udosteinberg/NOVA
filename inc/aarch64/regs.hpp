@@ -21,6 +21,8 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
+class Vmcb;
+
 class Sys_regs
 {
     public:
@@ -63,4 +65,13 @@ class Exc_regs : public Sys_regs
         inline auto ep() const { return el2.esr >> 26; }
 
         inline void set_ep (uint64 val) { el2.esr = val << 26; }
+};
+
+class alignas(16) Cpu_regs : public Exc_regs
+{
+    public:
+        Vmcb * const vmcb;
+
+        inline Cpu_regs()         : vmcb (nullptr) {}
+        inline Cpu_regs (Vmcb *v) : vmcb (v) {}
 };

@@ -26,6 +26,7 @@
 #include "npt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
+#include "vmcb.hpp"
 
 unsigned Cpu::id, Cpu::hazard, Cpu::boot_cpu, Cpu::online;
 bool Cpu::bsp;
@@ -263,6 +264,8 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gich::init();
 
     Timer::init();
+
+    Vmcb::init();
 
     boot_lock.unlock();
 }
