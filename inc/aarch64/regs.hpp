@@ -19,7 +19,14 @@
 
 #include "arch.hpp"
 #include "compiler.hpp"
+#include "hazard.hpp"
 #include "types.hpp"
+
+class Space_gst;
+class Space_hst;
+class Space_obj;
+class Space_pio;
+class Vmcb;
 
 struct Sys_regs
 {
@@ -56,3 +63,16 @@ struct Exc_regs
 };
 
 static_assert (__is_standard_layout (Exc_regs) && sizeof (Exc_regs) == __SIZEOF_POINTER__ * 38);
+
+struct alignas (16) Cpu_regs final
+{
+    Exc_regs            exc;
+    Vmcb *        const vmcb;
+    Space_obj *   const obj;
+    Space_hst *   const hst;
+    Space_gst *         gst     { nullptr };
+    Hazard              hazard  { 0 };
+
+    inline Cpu_regs (Space_obj *o, Space_hst *h, Space_pio * = nullptr) : vmcb (nullptr), obj (o), hst (h) {}
+    inline Cpu_regs (Space_obj *o, Space_hst *h, Vmcb *v) : vmcb (v), obj (o), hst (h), hazard (Hazard::ILLEGAL) {}
+};
