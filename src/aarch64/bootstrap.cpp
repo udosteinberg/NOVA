@@ -18,6 +18,7 @@
 #include "atomic.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "ec.hpp"
 #include "lowlevel.hpp"
 
 extern "C" NORETURN
@@ -27,8 +28,10 @@ void bootstrap (unsigned i, unsigned e)
 
     Cpu::init (i, e);
 
+    Ec::create_idle();
+
     // Barrier: wait for all CPUs to arrive here
     for (++barrier; barrier != Cpu::online; pause()) ;
 
-    for (;;) {}
+    Sc::schedule();
 }

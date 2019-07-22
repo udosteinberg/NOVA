@@ -22,6 +22,7 @@
 #include "gicd.hpp"
 #include "gich.hpp"
 #include "gicr.hpp"
+#include "hazards.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 #include "vmcb.hpp"
@@ -82,6 +83,8 @@ void Cpu::enumerate_features()
 void Cpu::init (unsigned cpu, unsigned e)
 {
     for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+    hazard = HZD_BOOT_GST | HZD_BOOT_HST;
 
     id  = cpu;
     bsp = cpu == boot_cpu;
