@@ -21,6 +21,8 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
+class Vmcb;
+
 struct Sys_regs
 {
     uintptr_t   gpr[31]     { 0 };
@@ -56,3 +58,12 @@ struct Exc_regs
 };
 
 static_assert (__is_standard_layout (Exc_regs) && sizeof (Exc_regs) == __SIZEOF_POINTER__ * 38);
+
+struct alignas (16) Cpu_regs
+{
+    Exc_regs        exc;
+    Vmcb * const    vmcb;
+
+    inline Cpu_regs()         : vmcb (nullptr) {}
+    inline Cpu_regs (Vmcb *v) : vmcb (v) {}
+};
