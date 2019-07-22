@@ -22,6 +22,7 @@
 
 #include "assert.hpp"
 #include "counter.hpp"
+#include "ec.hpp"
 #include "hazards.hpp"
 #include "interrupt.hpp"
 #include "lock_guard.hpp"
@@ -90,6 +91,8 @@ void Sc::ready_dequeue (uint64 t)
     while (!list[prio_top] && prio_top)
         prio_top--;
 
+    ec->adjust_offset_ticks (t - last);
+
     last = t;
 }
 
@@ -119,6 +122,7 @@ void Sc::schedule (bool suspend)
         sc->ready_dequeue (t);
 
         Timeout_budget::timeout.enqueue (t + sc->left);
+        sc->ec->activate();
         Timeout_budget::timeout.dequeue();
     }
 
