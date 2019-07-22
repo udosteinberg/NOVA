@@ -26,6 +26,7 @@
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
+#include "vmcb.hpp"
 
 bool Cpu::bsp;
 cpu_t Cpu::id;
@@ -284,6 +285,7 @@ void Cpu::init (cpu_t cpu)
     Timer::init();
 
     Nptp::init();
+    Vmcb::init();
 
     boot_lock.unlock();
 }
