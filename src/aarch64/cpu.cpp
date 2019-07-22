@@ -25,6 +25,7 @@
 #include "gicr.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
+#include "vmcb.hpp"
 
 unsigned Cpu::id, Cpu::hazard, Cpu::boot_cpu, Cpu::online;
 bool Cpu::bsp;
@@ -166,8 +167,8 @@ void Cpu::init (unsigned cpu, unsigned e)
                         (feature (Dbg_feature::PMSVER)      >= 2 ? 0 : MDCR_TPMS | MDCR_E2PB)                           |
                         MDCR_RES0;
 
-    cptr = cptr_res1 & ~cptr_res0;
-    mdcr = mdcr_res1 & ~mdcr_res0;
+    cptr = ((Vmcb::cptr_hyp1 & ~Vmcb::cptr_hyp0) | cptr_res1) & ~cptr_res0;
+    mdcr = ((Vmcb::mdcr_hyp1 & ~Vmcb::mdcr_hyp0) | mdcr_res1) & ~mdcr_res0;
 
     hcr_res0  = (feature (Mem_feature::TWED) >= 1 ? 0 : HCR_TWEDEL | HCR_TWEDEn)            |
                 (feature (Cpu_feature::MTE)  >= 2 ? 0 : HCR_TID5 | HCR_DCT | HCR_ATA)       |
@@ -254,6 +255,8 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gich::init();
 
     Timer::init();
+
+    Vmcb::init();
 
     boot_lock.unlock();
 }
