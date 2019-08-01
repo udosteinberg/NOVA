@@ -54,6 +54,21 @@ For CPUs with ARMv8-A architecture and boards with
 - either Advanced Configuration and Power Interface (ACPI)
 - or Flattened Device Tree (FDT)
 
+**Board**                  | **Build Command**                 | **Comments**
+-------------------------- | --------------------------------- | --------------------
+ACPI Platform              | `make ARCH=aarch64 BOARD=acpi`    | Default Board
+ARM Fixed Virtual Platform | `make ARCH=aarch64 BOARD=fvp`     |
+NXP i.MX 8MQuad            | `make ARCH=aarch64 BOARD=imx8`    | 4 Cortex-A53, GICv3
+QEMU Virt Platform         | `make ARCH=aarch64 BOARD=qemu`    | Use `-M virt -smp 4`
+Renesas R-Car M3           | `make ARCH=aarch64 BOARD=rcar`    | 4 Cortex-A53, 2 Cortex-A57, GICv2
+Raspberry Pi 4 Model B     | `make ARCH=aarch64 BOARD=rpi4`    | 4 Cortex-A72, GICv2
+Qualcomm Snapdragon 670    | `make ARCH=aarch64 BOARD=sdm670`  | 6 Kryo 360 Silver, 2 Kryo 360 Gold, GICv3, SMMUv2
+NVIDIA Tegra X1            | `make ARCH=aarch64 BOARD=tegrax1` | 4 Cortex-A57, GICv2
+NVIDIA Tegra X2            | `make ARCH=aarch64 BOARD=tegrax2` | 4 Cortex-A57, 2 Denver, GICv2, SMMUv2
+Avnet Xilinx Ultra96       | `make ARCH=aarch64 BOARD=u96`     | 4 Cortex-A53, GICv2, SMMUv2
+NVIDIA Xavier              | `make ARCH=aarch64 BOARD=xavier`  | 6 Carmel, GICv2, SMMUv2
+Xilinx MPSoC ZCU102        | `make ARCH=aarch64 BOARD=zcu102`  | 4 Cortex-A53, GICv2, SMMUv2
+
 #### x86 (64bit)
 
 For CPUs with x86 architecture
