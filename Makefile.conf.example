@@ -19,6 +19,10 @@
 # Permitted values are: aarch64, x86_64
 ARCH		?= aarch64
 
+# Configure board (for aarch64)
+# Permitted values are: uefi, fvp, imx8, qemu, rcar, rpi4, sdm670, tegrax1, u96, xavier, zcu102
+BOARD		?= uefi
+
 # Configure compiler type
 # Permitted values are: gcc
 COMP		?= gcc
