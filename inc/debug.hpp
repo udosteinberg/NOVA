@@ -52,5 +52,12 @@ class Debug
             SERIAL_NS16550_PARAM    = 0x0012,   // 16550-compatible with parameters defined in Generic Address Structure
             SERIAL_SDM845_73        = 0x0013,   // SDM845 with clock rate of 7.372 MHz
             SERIAL_LPSS             = 0x0014,   // Intel LPSS
+
+            SERIAL_CDNS             = 0xfffa,
+            SERIAL_GENI             = 0xfffb,
+            SERIAL_MESON            = 0xfffc,
+            SERIAL_MINI             = 0xfffd,
+            SERIAL_SCIF             = 0xfffe,
+            SERIAL_NONE             = 0xffff,
         };
 };
