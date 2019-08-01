@@ -52,6 +52,19 @@ then set `PREFIX-aarch64=/opt/aarch64-linux/bin/aarch64-linux-`
 
 For CPUs with ARMv8-A architecture and boards with a flattened device tree (FDT).
 
+**Board**                  | **Build Command**                 | **Comments**
+-------------------------- | --------------------------------- | --------------------
+UEFI Platform              | `make ARCH=aarch64 BOARD=uefi`    | Default Board
+ARM Fixed Virtual Platform | `make ARCH=aarch64 BOARD=fvp`     |
+QEMU Virt Platform         | `make ARCH=aarch64 BOARD=qemu`    | Use `-M virt -smp 4`
+NXP i.MX 8MQuad            | `make ARCH=aarch64 BOARD=imx8`    | 4 Cortex-A53, GICv3
+Renesas R-Car M3           | `make ARCH=aarch64 BOARD=rcar`    | 4 Cortex-A53, 2 Cortex-A57, GICv2
+Raspberry Pi 4 Model B     | `make ARCH=aarch64 BOARD=rpi4`    | 4 Cortex-A72, GICv2
+Qualcomm Snapdragon 670    | `make ARCH=aarch64 BOARD=sdm670`  | 6 Kryo 360 Silver, 2 Kryo 360 Gold, GICv3, SMMUv2
+NVIDIA Tegra X1            | `make ARCH=aarch64 BOARD=tegrax1` | 4 Cortex-A57, GICv2
+Avnet Xilinx Ultra96       | `make ARCH=aarch64 BOARD=u96`     | 4 Cortex-A53, GICv2, SMMUv2
+Xilinx MPSoC ZCU102        | `make ARCH=aarch64 BOARD=zcu102`  | 4 Cortex-A53, GICv2, SMMUv2
+
 #### x86 (64bit)
 
 For CPUs with x86 architecture
