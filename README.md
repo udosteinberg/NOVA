@@ -54,6 +54,27 @@ For CPUs with ARMv8-A architecture and boards with
 - either Advanced Configuration and Power Interface (ACPI)
 - or Flattened Device Tree (FDT)
 
+**Board**                             | **Build Command**                            | **Comments**
+------------------------------------- | -------------------------------------------- | --------------------
+ACPI Platform                         | `make ARCH=aarch64 BOARD=acpi`               | Default Board
+QEMU Virt Platform                    | `make ARCH=aarch64 BOARD=qemu`               | Use `-M virt -smp 4`
+Allwinner A64                         | `make ARCH=aarch64 BOARD=allwinner_a64`      | 4 Cortex-A53, GICv2
+Amlogic G12B                          | `make ARCH=aarch64 BOARD=amlogic_g12b`       | 2 Cortex-A53, 4 Cortex-A73, GICv2
+Amlogic SM1                           | `make ARCH=aarch64 BOARD=amlogic_sm1`        | 4 Cortex-A55, GICv2
+Broadcom BCM2711                      | `make ARCH=aarch64 BOARD=broadcom_bcm2711`   | 4 Cortex-A72, GICv2
+HiSilicon Hi3660                      | `make ARCH=aarch64 BOARD=hisilicon_hi3660`   | 4 Cortex-A53, 4 Cortex-A73, GICv2
+NVIDIA Tegra X1                       | `make ARCH=aarch64 BOARD=nvidia_tegrax1`     | 4 Cortex-A57, GICv2
+NVIDIA Tegra X2                       | `make ARCH=aarch64 BOARD=nvidia_tegrax2`     | 4 Cortex-A57, 2 Denver, GICv2, SMMUv2
+NVIDIA Xavier                         | `make ARCH=aarch64 BOARD=nvidia_xavier`      | 6 Carmel, GICv2, SMMUv2
+NXP i.MX 8M                           | `make ARCH=aarch64 BOARD=nxp_imx8m`          | 4 Cortex-A53, GICv3
+Qualcomm Snapdragon 670               | `make ARCH=aarch64 BOARD=qualcomm_sdm670`    | 6 Kryo 360 Silver, 2 Kryo 360 Gold, GICv3, SMMUv2
+Renesas R-Car M3                      | `make ARCH=aarch64 BOARD=renesas_rcar3`      | 4 Cortex-A53, 2 Cortex-A57, GICv2
+Rockchip RK3399                       | `make ARCH=aarch64 BOARD=rockchip_rk3399`    | 4 Cortex-A53, 2 Cortex-A72, GICv3
+Texas Instruments J721E               | `make ARCH=aarch64 BOARD=ti_j721e`           | 2 Cortex-A72, GICv3, SMMUv3
+Xilinx Zynq Ultrascale+ MPSoC CG      | `make ARCH=aarch64 BOARD=xilinx_zynq_cg`     | 2 Cortex-A53, GICv2, SMMUv2
+Xilinx Zynq Ultrascale+ MPSoC Ultra96 | `make ARCH=aarch64 BOARD=xilinx_zynq_u96`    | 4 Cortex-A53, GICv2, SMMUv2
+Xilinx Zynq Ultrascale+ MPSoC ZCU102  | `make ARCH=aarch64 BOARD=xilinx_zynq_zcu102` | 4 Cortex-A53, GICv2, SMMUv2
+
 #### x86 (64bit)
 
 For CPUs with x86 architecture
