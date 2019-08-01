@@ -28,10 +28,7 @@
 #define SPSR_A32_63_32      BIT64_RANGE (63, 32)
 #define SPSR_A64_63_33      BIT64_RANGE (63, 33)
 #define SPSR_A64_CSR        BIT64 (32)              // Call Stack Recording
-#define SPSR_ALL_N          BIT64 (31)              // Condition Negative
-#define SPSR_ALL_Z          BIT64 (30)              // Condition Zero
-#define SPSR_ALL_C          BIT64 (29)              // Condition Carry
-#define SPSR_ALL_V          BIT64 (28)              // Condition Overflow
+#define SPSR_ALL_NZCV       BIT64_RANGE (31, 28)    // Condition Flags
 #define SPSR_A32_Q          BIT64 (27)              // Saturation
 #define SPSR_A64_27_26      BIT64_RANGE (27, 26)
 #define SPSR_A32_IT_1_0     BIT64_RANGE (26, 25)    // If-Then
@@ -350,7 +347,7 @@
 #define HCR_SWIO            BIT64  (1)              // Set/Way Invalidation Override
 #define HCR_VM              BIT64  (0)              // Enable MMU Stage 2
 
-#define HCRX_63_5           BIT64_RANGE (63, 12)
+#define HCRX_63_12          BIT64_RANGE (63, 12)
 #define HCRX_MSCEn          BIT64 (11)              // Memory Set/Copy Instructions Enable
 #define HCRX_MCE2           BIT64 (10)              // Trap Memory Set/Copy Exceptions
 #define HCRX_CMOW           BIT64  (9)              // Cache Maintenance Instruction Faults
