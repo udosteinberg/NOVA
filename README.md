@@ -56,6 +56,27 @@ For CPUs with ARMv8-A architecture and boards with
 - either Advanced Configuration and Power Interface (ACPI)
 - or Flattened Device Tree (FDT)
 
+| **Platform**                          | **Build Command**                            |
+| :------------------------------------ | :------------------------------------------- |
+| Generic Arm ACPI Platform             | `make ARCH=aarch64 BOARD=acpi`               |
+| QEMU Virt Platform                    | `make ARCH=aarch64 BOARD=qemu`               |
+| Allwinner A64                         | `make ARCH=aarch64 BOARD=allwinner_a64`      |
+| Amlogic G12B                          | `make ARCH=aarch64 BOARD=amlogic_g12b`       |
+| Amlogic SM1                           | `make ARCH=aarch64 BOARD=amlogic_sm1`        |
+| Broadcom BCM2711                      | `make ARCH=aarch64 BOARD=broadcom_bcm2711`   |
+| HiSilicon Hi3660                      | `make ARCH=aarch64 BOARD=hisilicon_hi3660`   |
+| NVIDIA Tegra X1                       | `make ARCH=aarch64 BOARD=nvidia_tegrax1`     |
+| NVIDIA Tegra X2                       | `make ARCH=aarch64 BOARD=nvidia_tegrax2`     |
+| NVIDIA Xavier                         | `make ARCH=aarch64 BOARD=nvidia_xavier`      |
+| NXP i.MX 8M                           | `make ARCH=aarch64 BOARD=nxp_imx8m`          |
+| Qualcomm Snapdragon 670               | `make ARCH=aarch64 BOARD=qualcomm_sdm670`    |
+| Renesas R-Car M3                      | `make ARCH=aarch64 BOARD=renesas_rcar3`      |
+| Rockchip RK3399                       | `make ARCH=aarch64 BOARD=rockchip_rk3399`    |
+| Texas Instruments J721E               | `make ARCH=aarch64 BOARD=ti_j721e`           |
+| Xilinx Zynq Ultrascale+ MPSoC CG      | `make ARCH=aarch64 BOARD=xilinx_zynq_cg`     |
+| Xilinx Zynq Ultrascale+ MPSoC Ultra96 | `make ARCH=aarch64 BOARD=xilinx_zynq_u96`    |
+| Xilinx Zynq Ultrascale+ MPSoC ZCU102  | `make ARCH=aarch64 BOARD=xilinx_zynq_zcu102` |
+
 #### x86 (64bit)
 
 For CPUs with x86 architecture
