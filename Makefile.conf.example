@@ -19,6 +19,10 @@
 # Permitted values are: aarch64, x86_64
 ARCH		?= aarch64
 
+# Configure board (for aarch64)
+# Permitted values are: qemu, imx8, poc, rcar, rpi4, u96
+BOARD		?= qemu
+
 # Configure compiler type
 # Permitted values are: gcc
 COMP		?= gcc
