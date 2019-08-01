@@ -60,6 +60,12 @@ class Debug
             SERIAL_LPSS             = 0x0014,   // Intel LPSS
             SERIAL_RISCV_SBI        = 0x0015,   // RISC-V SBI
 
+            SERIAL_CDNS             = 0xfffb,
+            SERIAL_GENI             = 0xfffc,
+            SERIAL_MESON            = 0xfffd,
+            SERIAL_SCIF             = 0xfffe,
+            SERIAL_NONE             = 0xffff,
+
             USB_XHCI                = 0x0000,   // XHCI-compliant controller with debug interface
             USB_EHCI                = 0x0001,   // EHCI-compliant controller with debug interface
         };
