@@ -25,6 +25,7 @@
 #define OFFS_MASK       (PAGE_SIZE - 1)
 
 // Global Area                [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_GLB_GICD   0x0000ffffffff0000      // 511 511 511 496  64K
 #define MMAP_GLB_UART   0x0000ffffffe00000      // 511 511 511 000   4K
 #define MMAP_GLB_DATA   0x0000ffffc0000000      // 511 511 000 000 256M
 #define LINK_ADDR       0x0000ff8000000000      // 511 000 000 000
