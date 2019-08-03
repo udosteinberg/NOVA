@@ -20,6 +20,7 @@
 #include "cpu.hpp"
 #include "fpu.hpp"
 #include "gicd.hpp"
+#include "gicr.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
@@ -28,7 +29,7 @@ bool Cpu::bsp;
 cpu_t Cpu::id;
 unsigned Cpu::hazard;
 uint64_t Cpu::res0_hcr, Cpu::res0_hcrx;
-uint64_t Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::gicr, Cpu::cptr, Cpu::mdcr;
+uint64_t Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr, Cpu::gicr;
 uint64_t Cpu::feat_cpu64[3], Cpu::feat_dbg64[2], Cpu::feat_isa64[4], Cpu::feat_mem64[5], Cpu::feat_sme64[1], Cpu::feat_sve64[1];
 uint32_t Cpu::feat_cpu32[3], Cpu::feat_dbg32[2], Cpu::feat_isa32[7], Cpu::feat_mem32[6], Cpu::feat_mfp32[3];
 uint16_t Cpu::gicr_pe;
@@ -272,6 +273,7 @@ void Cpu::init (cpu_t cpu)
            feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC));
 
     Gicd::init();
+    Gicr::init();
 
     Timer::init();
 
