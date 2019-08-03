@@ -32,6 +32,7 @@
 
 #define CPU_LOCAL_DATA  0xff7ffffff000      // 510 511 511 511   4K
 #define CPU_LOCAL_STCK  0xff7fffffd000      // 510 511 511 509   4K
+#define DEV_LOCAL_GICR  0xff7fffe00000      // 510 511 511 000 256K
 #define CPU_LOCAL_TMAP  0xff7fc0000000      // 510 511 000 000   2M*2
 #define CPU_LOCAL       0xff0000000000      // 510 000 000 000
 
