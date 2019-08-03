@@ -19,6 +19,7 @@
 #include "cache.hpp"
 #include "cpu.hpp"
 #include "fpu.hpp"
+#include "gicd.hpp"
 #include "hazards.hpp"
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
@@ -214,6 +215,8 @@ void Cpu::init (unsigned cpu, unsigned e)
            affinity() >> 16 & BIT_RANGE (7, 0), affinity() >> 8 & BIT_RANGE (7, 0), affinity() & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0),
            feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
+
+    Gicd::init();
 
     Nptp::init();
 
