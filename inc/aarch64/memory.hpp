@@ -43,6 +43,7 @@
 // CPU-Local Area             [--PTE--]---      // ^39 ^30 ^21 ^12
 #define MMAP_CPU_DATA   0x0000ff7ffffff000      // 510 511 511 511   4K
 #define MMAP_CPU_DSTK   0x0000ff7fffffd000      // 510 511 511 509   4K + gap
+#define MMAP_CPU_GICR   0x0000ff7fffe00000      // 510 511 511 000 256K
 #define MMAP_CPU_TMAP   0x0000ff7fffa00000      // 510 511 509 000   4M
 
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)
