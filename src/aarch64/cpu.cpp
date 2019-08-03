@@ -19,6 +19,7 @@
 #include "cpu.hpp"
 #include "extern.hpp"
 #include "gicd.hpp"
+#include "gicr.hpp"
 #include "hazards.hpp"
 #include "npt.hpp"
 #include "stdio.hpp"
@@ -254,6 +255,7 @@ void Cpu::init (unsigned cpu, unsigned e)
     Cache::init();
 
     Gicd::init();
+    Gicr::init();
 
     boot_lock.unlock();
 }
