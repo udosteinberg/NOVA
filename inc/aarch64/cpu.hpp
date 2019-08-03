@@ -300,9 +300,10 @@ class Cpu final
         static cpu_t            id          CPULOCAL;
         static unsigned         hazard      CPULOCAL;
         static bool             bsp         CPULOCAL;
-        static uint64_t         gicr        CPULOCAL;
         static uint64_t         cptr        CPULOCAL;
         static uint64_t         mdcr        CPULOCAL;
+        static uint64_t         gicr        CPULOCAL;
+        static uint16_t         gicr_num    CPULOCAL;
 
         static inline constinit cpu_t         boot_cpu { 0 };
         static inline constinit cpu_t         count    { 0 };
