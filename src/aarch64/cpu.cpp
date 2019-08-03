@@ -20,6 +20,7 @@
 #include "cpu.hpp"
 #include "fpu.hpp"
 #include "gicd.hpp"
+#include "gicr.hpp"
 #include "hazards.hpp"
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
@@ -284,6 +285,7 @@ void Cpu::init (unsigned cpu, unsigned e)
            feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
 
     Gicd::init();
+    Gicr::init();
 
     Nptp::init();
 
