@@ -20,6 +20,7 @@
 #include "cpu.hpp"
 #include "fpu.hpp"
 #include "gicd.hpp"
+#include "gicr.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
@@ -274,6 +275,7 @@ void Cpu::init (cpu_t cpu)
            feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC));
 
     Gicd::init();
+    Gicr::init();
 
     Timer::init();
 
