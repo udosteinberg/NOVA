@@ -1,0 +1,144 @@
+/*
+ * Generic Interrupt Controller: Distributor (GICD)
+ *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
+ * This file is part of the NOVA microhypervisor.
+ *
+ * NOVA is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NOVA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License version 2 for more details.
+ */
+
+#pragma once
+
+#include "barrier.hpp"
+#include "coresight.hpp"
+#include "intid.hpp"
+#include "memory.hpp"
+#include "spinlock.hpp"
+#include "status.hpp"
+#include "wait.hpp"
+
+class Gicd final : private Coresight
+{
+    friend class Acpi_table_madt;
+
+    private:
+        enum Group
+        {
+            GROUP0 = 0x00000000,
+            GROUP1 = 0xffffffff,
+        };
+
+        enum class Reg32 : unsigned
+        {
+            CTLR            = 0x0000,   // v2 v3 rw Control Register
+            TYPER           = 0x0004,   // v2 v3 r- Type Register
+            IIDR            = 0x0008,   // v2 v3 r- Implementer Identification Register
+            TYPER2          = 0x000c,   // -- v3 r- Type Register 2
+            STATUSR         = 0x0010,   // -- v3 rw Error Reporting Status Register
+            SETSPI_NSR      = 0x0040,   // -- v3 -w Set SPI Register, Non-Secure
+            CLRSPI_NSR      = 0x0048,   // -- v3 -w Clr SPI Register, Non-Secure
+            SETSPI_SR       = 0x0050,   // -- v3 -w Set SPI Register, Secure
+            CLRSPI_SR       = 0x0058,   // -- v3 -w Clr SPI Register, Secure
+            SGIR            = 0x0f00,   // v2 -- -w Software Generated Interrupt Register
+        };
+
+        enum class Arr32 : unsigned
+        {
+            IGROUPR         = 0x0080,   // v2 v3 rw Standard Interrupt Group Registers
+            ISENABLER       = 0x0100,   // v2 v3 rw Standard Interrupt Set-Enable Registers
+            ICENABLER       = 0x0180,   // v2 v3 rw Standard Interrupt Clr-Enable Registers
+            ISPENDR         = 0x0200,   // v2 v3 rw Standard Interrupt Set-Pending Registers
+            ICPENDR         = 0x0280,   // v2 v3 rw Standard Interrupt Clr-Pending Registers
+            ISACTIVER       = 0x0300,   // v2 v3 rw Standard Interrupt Set-Active Registers
+            ICACTIVER       = 0x0380,   // v2 v3 rw Standard Interrupt Clr-Active Registers
+            IPRIORITYR      = 0x0400,   // v2 v3 rw Standard Interrupt Priority Registers
+            ITARGETSR       = 0x0800,   // v2 -- rw          Interrupt Processor Targets Registers
+            ICFGR           = 0x0c00,   // v2 v3 rw Standard Interrupt Configuration Registers
+            IGRPMODR        = 0x0d00,   // -- v3 rw Standard Interrupt Group Modifier Registers
+            CPENDSGIR       = 0x0f10,   // v2 -- rw          SGI Clr-Pending Registers
+            SPENDSGIR       = 0x0f20,   // v2 -- rw          SGI Set-Pending Registers
+            INMIR           = 0x0f80,   // -- v3 rw Standard Non-Maskable Interrupt Registers
+            IGROUPR_E       = 0x1000,   // -- v3 rw Extended Interrupt Group Registers
+            ISENABLER_E     = 0x1200,   // -- v3 rw Extended Interrupt Set-Enable Registers
+            ICENABLER_E     = 0x1400,   // -- v3 rw Extended Interrupt Clr-Enable Registers
+            ISPENDR_E       = 0x1600,   // -- v3 rw Extended Interrupt Set-Pending Registers
+            ICPENDR_E       = 0x1800,   // -- v3 rw Extended Interrupt Clr-Pending Registers
+            ISACTIVER_E     = 0x1a00,   // -- v3 rw Extended Interrupt Set-Active Registers
+            ICACTIVER_E     = 0x1c00,   // -- v3 rw Extended Interrupt Clr-Active Registers
+            IPRIORITYR_E    = 0x2000,   // -- v3 rw Extended Interrupt Priority Registers
+            ICFGR_E         = 0x3000,   // -- v3 rw Extended Interrupt Configuration Registers
+            IGRPMODR_E      = 0x3400,   // -- v3 rw Extended Interrupt Group Modifier Registers
+            INMIR_E         = 0x3b00,   // -- v3 rw Extended Non-Maskable Interrupt Registers
+        };
+
+        enum class Arr64 : unsigned
+        {
+            IROUTER         = 0x6000,   // -- v3 rw Standard Interrupt Routing Registers
+            IROUTER_E       = 0x8000,   // -- v3 rw Extended Interrupt Routing Registers
+        };
+
+        static auto read  (Reg32 r)                  { return *std::start_lifetime_as<uint32_t volatile> (MMAP_GLB_GICD + std::to_underlying (r)); }
+        static auto read  (Arr32 r, unsigned n)      { return *std::start_lifetime_as<uint32_t volatile> (MMAP_GLB_GICD + std::to_underlying (r) + n * sizeof (uint32_t)); }
+        static auto read  (Arr64 r, unsigned n)      { return *std::start_lifetime_as<uint64_t volatile> (MMAP_GLB_GICD + std::to_underlying (r) + n * sizeof (uint64_t)); }
+
+        static void write (Reg32 r,             uint32_t v) { *std::start_lifetime_as<uint32_t volatile> (MMAP_GLB_GICD + std::to_underlying (r)) = v; }
+        static void write (Arr32 r, unsigned n, uint32_t v) { *std::start_lifetime_as<uint32_t volatile> (MMAP_GLB_GICD + std::to_underlying (r) + n * sizeof (uint32_t)) = v; }
+        static void write (Arr64 r, unsigned n, uint64_t v) { *std::start_lifetime_as<uint64_t volatile> (MMAP_GLB_GICD + std::to_underlying (r) + n * sizeof (uint64_t)) = v; }
+
+        static inline constinit uint64_t phys    { Board::gic[0].mmio };
+        static inline constinit uint8_t  ifid[8] { 0 };
+        static inline constinit Spinlock lock;
+
+        [[nodiscard]] static bool mmap_mmio();
+        [[nodiscard]] static bool init_mmio();
+
+        [[nodiscard]] static bool wait_rwp()
+        {
+            return arch < 3 || Wait::until (1, [&] { return (read (Reg32::CTLR) & BIT (31)) == 0; });
+        }
+
+        [[nodiscard]] static bool set_ctlr (uint32_t v)
+        {
+            write (Reg32::CTLR, v);
+
+            return wait_rwp();
+        }
+
+        static void send_sgi (uint32_t v)
+        {
+            /*
+             * Ensure all earlier stores are observable in the ISH domain
+             * before the SGI gets sent. Because the SGIR write is also a
+             * memory operation, we only need to ensure store ordering.
+             */
+            Barrier::wmb (Barrier::Domain::ISH);
+
+            write (Reg32::SGIR, v);
+        }
+
+        static inline void init_intid (Arr32, Arr32, Arr32, uint32_t, unsigned);
+
+    public:
+        static inline constinit Group    group   { GROUP0 };
+        static inline constinit unsigned arch    {  0 };
+        static inline constinit unsigned ord_iid { 10 };        // GICv2 fixed width
+
+        static void init();
+
+        static bool act_get (Intid);
+        static void act_set (Intid, bool);
+
+        static Status conf_std (Intid, cpu_t, bool = false, bool = false);
+        static Status conf_ext (Intid, cpu_t, bool = false, bool = false);
+
+        static void send_cpu (unsigned, cpu_t);
+        static void send_exc (unsigned);
+};
