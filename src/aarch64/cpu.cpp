@@ -21,6 +21,7 @@
 #include "extern.hpp"
 #include "gicc.hpp"
 #include "gicd.hpp"
+#include "gich.hpp"
 #include "gicr.hpp"
 #include "stdio.hpp"
 
@@ -252,6 +253,7 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicd::init();
     Gicr::init();
     Gicc::init();
+    Gich::init();
 
     boot_lock.unlock();
 }
