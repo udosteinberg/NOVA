@@ -21,6 +21,7 @@
 #include "fpu.hpp"
 #include "gicc.hpp"
 #include "gicd.hpp"
+#include "gich.hpp"
 #include "gicr.hpp"
 #include "hazards.hpp"
 #include "ptab_hpt.hpp"
@@ -289,6 +290,7 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicd::init();
     Gicr::init();
     Gicc::init();
+    Gich::init();
 
     Nptp::init();
 
