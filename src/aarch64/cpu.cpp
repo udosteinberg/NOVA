@@ -21,6 +21,7 @@
 #include "fpu.hpp"
 #include "gicc.hpp"
 #include "gicd.hpp"
+#include "gich.hpp"
 #include "gicr.hpp"
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
@@ -221,6 +222,7 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicd::init();
     Gicr::init();
     Gicc::init();
+    Gich::init();
 
     Nptp::init();
 
@@ -261,5 +263,5 @@ void Cpu::set_vmm_regs (uintptr_t (&x)[31], uint64 &hcr, uint64 &vpidr, uint64 &
     hcr    = constrain_hcr (0);
     vpidr  = midr;
     vmpidr = mpidr;
-    elrsr  = 0;
+    elrsr  = BIT (Gich::num_lr) - 1;
 }
