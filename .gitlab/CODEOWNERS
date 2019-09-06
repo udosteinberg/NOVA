@@ -1,0 +1,4 @@
+# Rules defined later take precedence over rules defined earlier
+
+# Default
+*		udo@hypervisor.org
