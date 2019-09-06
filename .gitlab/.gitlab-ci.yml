@@ -1,0 +1,126 @@
+#
+# Gitlab CI Configuration
+#
+# Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+#
+# This file is part of the NOVA microhypervisor.
+#
+# NOVA is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# NOVA is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License version 2 for more details.
+#
+
+variables:
+  DOCKER_REG: registry.gitlab.com/bluerocksec/ci-docker-image
+
+workflow:
+  rules:
+      # Push to default branch or any tag
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG)'
+      # Merge request targeting default branch (if not draft)
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH && $CI_MERGE_REQUEST_DRAFT == "false"'
+      # Multi-project pipeline or scheduled run or run from web UI
+    - if: '$CI_PIPELINE_SOURCE =~ /^(pipeline|schedule|web)$/'
+
+stages:
+  - build
+  - release
+
+##################
+# Build Template #
+##################
+.build:
+  stage: build
+  image: ${DOCKER_REG}:${DOCKER_IMG}
+  needs: []
+  timeout: 5m
+  variables:
+    IDIR: 'NOVA'
+    HOST: 'x86_64'
+    HGCC: '/opt/${HOST}-linux/usr/bin/${HOST}-linux-g++'
+    PRFX: '/opt/${ARCH}-linux/usr/bin/${ARCH}-linux-'
+  script:
+    - ${PRFX}ld -v
+    - ${PRFX}gcc -v
+    - mkdir ${IDIR}
+    - time make -s -j ${NJOBS} ARCH=${ARCH} INS_DIR=${IDIR} PREFIX_${ARCH}=${PRFX} HST_CC=${HGCC} install
+  artifacts:
+    paths:
+      - ${IDIR}/
+
+# Architectures
+.build-arm: { variables: { ARCH: 'aarch64' } }
+.build-x86: { variables: { ARCH: 'x86_64'  } }
+
+# Compilers
+.build-gcc-11: { variables: { DOCKER_IMG: 'gcc-11' } }
+.build-gcc-12: { variables: { DOCKER_IMG: 'gcc-12' } }
+.build-gcc-13: { variables: { DOCKER_IMG: 'gcc-13' } }
+.build-gcc-14: { variables: { DOCKER_IMG: 'gcc-14' } }
+.build-gcc-15: { variables: { DOCKER_IMG: 'gcc-15' } }
+.build-gcc-16: { variables: { DOCKER_IMG: 'gcc-16' } }
+
+# Build Jobs
+build-arm-gcc-11: { extends: [ .build, .build-arm, .build-gcc-11 ] }
+build-arm-gcc-12: { extends: [ .build, .build-arm, .build-gcc-12 ] }
+build-arm-gcc-13: { extends: [ .build, .build-arm, .build-gcc-13 ] }
+build-arm-gcc-14: { extends: [ .build, .build-arm, .build-gcc-14 ] }
+build-arm-gcc-15: { extends: [ .build, .build-arm, .build-gcc-15 ] }
+build-arm-gcc-16: { extends: [ .build, .build-arm, .build-gcc-16 ] }
+build-x86-gcc-11: { extends: [ .build, .build-x86, .build-gcc-11 ] }
+build-x86-gcc-12: { extends: [ .build, .build-x86, .build-gcc-12 ] }
+build-x86-gcc-13: { extends: [ .build, .build-x86, .build-gcc-13 ] }
+build-x86-gcc-14: { extends: [ .build, .build-x86, .build-gcc-14 ] }
+build-x86-gcc-15: { extends: [ .build, .build-x86, .build-gcc-15 ] }
+build-x86-gcc-16: { extends: [ .build, .build-x86, .build-gcc-16 ] }
+
+####################
+# Release Template #
+####################
+.release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs: []
+  timeout: 1m
+  rules:
+      # Push to protected release tag
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG =~ /^release-/'
+
+# Release Jobs
+version:
+  extends: .release
+  script:
+    - echo NOVA_VERSION=${CI_COMMIT_TAG//release-/} > version.env
+  artifacts:
+    reports:
+      dotenv: version.env
+
+release:
+  extends: .release
+  needs:
+    [
+      { job: build-arm-gcc-11, artifacts: false },
+      { job: build-arm-gcc-12, artifacts: false },
+      { job: build-arm-gcc-13, artifacts: false },
+      { job: build-arm-gcc-14, artifacts: false },
+      { job: build-arm-gcc-15, artifacts: false },
+      { job: build-arm-gcc-16, artifacts: false },
+      { job: build-x86-gcc-11, artifacts: false },
+      { job: build-x86-gcc-12, artifacts: false },
+      { job: build-x86-gcc-13, artifacts: false },
+      { job: build-x86-gcc-14, artifacts: false },
+      { job: build-x86-gcc-15, artifacts: false },
+      { job: build-x86-gcc-16, artifacts: false },
+      { job: version }
+    ]
+  script:
+    - echo Releasing ${CI_COMMIT_SHA} as ${NOVA_VERSION}
+  release:
+    name: 'Release ${NOVA_VERSION}'
+    tag_name: $CI_COMMIT_TAG
+    description: 'NOVA Microhypervisor Release ${NOVA_VERSION}'
