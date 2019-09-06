@@ -1,0 +1,39 @@
+stages:
+  - build
+
+default:
+  image: registry.gitlab.com/bedrocksystems/docker-image:latest
+  before_script:
+    - ${TOOL}gcc --version
+
+build-aarch64:
+  stage: build
+  only:
+    - master
+    - dev
+    - merge_requests
+  variables:
+    ARCH: 'aarch64'
+    TOOL: '/opt/aarch64-linux/bin/aarch64-linux-'
+  script:
+    - make -s -j $NJOBS ARCH=$ARCH BOARD=qemu PREFIX-$ARCH=$TOOL
+  artifacts:
+    paths:
+      - build-$ARCH/$ARCH-qemu-hypervisor
+    expire_in: 7 days
+
+build-x86_64:
+  stage: build
+  only:
+    - master
+    - dev
+    - merge_requests
+  variables:
+    ARCH: 'x86_64'
+    TOOL: '/opt/x86_64-linux/bin/x86_64-linux-'
+  script:
+    - make -s -j $NJOBS ARCH=$ARCH PREFIX-$ARCH=$TOOL
+  artifacts:
+    paths:
+      - build-$ARCH/$ARCH-hypervisor
+    expire_in: 7 days
