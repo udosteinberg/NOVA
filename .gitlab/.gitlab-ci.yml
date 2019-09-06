@@ -1,0 +1,61 @@
+#
+# Gitlab CI Configuration
+#
+# Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+#
+# This file is part of the NOVA microhypervisor.
+#
+# NOVA is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# NOVA is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License version 2 for more details.
+#
+
+variables:
+  GIT_DEPTH: 5
+
+default:
+  image: registry.gitlab.com/bedrocksystems/docker-image:latest
+
+workflow:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /^(\[Draft\]|\(Draft\)|Draft:)/'	# Skip draft MRs
+      when: never
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'			# push to default branch
+    - if:  $CI_COMMIT_TAG						# push to tag
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'		# merge request
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'				# multi-project pipeline
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'				# scheduled run
+    - if: '$CI_PIPELINE_SOURCE == "web"'				# pipeline run from UI
+
+stages:
+  - build
+
+.build:
+  stage: build
+  rules:
+    - when: always
+  variables:
+    IDIR: 'NOVA'
+    TOOL: '/opt/$ARCH-linux/bin/$ARCH-linux-'
+  script:
+    - ${TOOL}gcc --version
+    - mkdir $IDIR
+    - time make -s -j $NJOBS ARCH=$ARCH INS_DIR=$IDIR PREFIX-$ARCH=$TOOL install
+  artifacts:
+    paths:
+      - $IDIR/
+
+build-aarch64:
+  extends: .build
+  variables:
+    ARCH: 'aarch64'
+
+build-x86_64:
+  extends: .build
+  variables:
+    ARCH: 'x86_64'
