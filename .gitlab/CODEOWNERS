@@ -1,0 +1,7 @@
+# Rules defined later take precedence over rules defined earlier
+
+# Default
+*		udo@hypervisor.org
+
+# FM-Related Files
+/ver/		udo@hypervisor.org @gmalecha @aa755 @formal-methods
