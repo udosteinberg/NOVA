@@ -1,0 +1,5 @@
+CODEOWNERS	udo@hypervisor.org
+LICENSE		udo@hypervisor.org
+README		udo@hypervisor.org
+
+*		@default-codeowner
