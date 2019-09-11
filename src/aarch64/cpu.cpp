@@ -18,7 +18,7 @@
 #include "acpi.hpp"
 #include "cache.hpp"
 #include "cpu.hpp"
-#include "hazard.hpp"
+#include "fpu.hpp"
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
@@ -266,6 +266,9 @@ void Cpu::init (cpu_t cpu, unsigned e)
 void Cpu::fini()
 {
     auto const s { Acpi::get_transition() };
+
+    if (s.state() > 1)
+        Fpu::fini();
 
     Acpi::fini (s);
 }
