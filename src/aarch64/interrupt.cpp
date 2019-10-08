@@ -23,10 +23,10 @@
 #include "gicr.hpp"
 #include "hazard.hpp"
 #include "interrupt.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "timeout.hpp"
 #include "timer.hpp"
-#include "util.hpp"
 
 Interrupt Interrupt::int_table[NUM_SPI];
 
@@ -89,6 +89,13 @@ Event::Selector Interrupt::handle_spi (uint32_t val, bool)
     assert (spi < NUM_SPI);
 
     Gicc::eoi (val);
+
+    if (true) {
+
+        Smmu::interrupt (spi);
+
+        Gicc::dir (val);
+    }
 
     return Event::Selector::NONE;
 }
@@ -171,6 +178,10 @@ void Interrupt::init()
     assert (num_pin() <= sizeof (int_table) / sizeof (*int_table));
 
     for (unsigned spi { 0 }; spi < num_pin(); spi++) {
+
+        // Don't touch SMMU interrupts
+        if (Smmu::using_spi (spi))
+            continue;
 
         Config cfg { int_table[spi].config };
 
