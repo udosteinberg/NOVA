@@ -22,6 +22,7 @@
 #include "gits.hpp"
 #include "ptab_hpt.hpp"
 #include "smc_psci.hpp"
+#include "smmu_v2.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
 #include "uefi.hpp"
@@ -211,6 +212,12 @@ bool Fdt::init()
         if (Board::its[i].mmio) [[likely]]
             if (!Gits::setup (Board::its[i].mmio, i)) [[unlikely]]
                 panic ("GITS setup failed");
+
+    // Setup SMMUv2
+    for (unsigned i { 0 }; i < sizeof (Board::smmu_v2) / sizeof (*Board::smmu_v2); i++)
+        if (Board::smmu_v2[i].mmio) [[likely]]
+            if (!Smmu_v2::setup (Board::smmu_v2[i])) [[unlikely]]
+                panic ("SMMUv2 setup failed");
 
     auto const p { Uefi::info.fdtp };
 
