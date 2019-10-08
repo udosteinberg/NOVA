@@ -22,6 +22,7 @@
 #include "gicr.hpp"
 #include "interrupt.hpp"
 #include "sc.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 
@@ -87,6 +88,13 @@ Event::Selector Interrupt::handle_spi (uint32 val, bool)
     assert (spi < NUM_SPI);
 
     Gicc::eoi (val);
+
+    if (true) {
+
+        Smmu::interrupt (spi);
+
+        Gicc::dir (val);
+    }
 
     return Event::Selector::NONE;
 }

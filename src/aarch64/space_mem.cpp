@@ -26,8 +26,8 @@ void Space_mem::update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, 
     switch (si) {
         case Space::Index::CPU_HST: cpu_hst.update (v, p, o, pm, ca, sh); break;
         case Space::Index::CPU_GST: cpu_gst.update (v, p, o, pm, ca, sh); break;
-        case Space::Index::DMA_HST: dma_hst.update (v, p, o, pm, ca, sh); break;
-        case Space::Index::DMA_GST: dma_gst.update (v, p, o, pm, ca, sh); break;
+        case Space::Index::DMA_HST: dma_hst.update (v, p, o, pm, ca, sh, Smmu::nc); break;
+        case Space::Index::DMA_GST: dma_gst.update (v, p, o, pm, ca, sh, Smmu::nc); break;
     }
 }
 

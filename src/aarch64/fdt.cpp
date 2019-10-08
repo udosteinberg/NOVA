@@ -22,6 +22,7 @@
 #include "hpt.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
+#include "smmu.hpp"
 
 uint32 const *  Fdt::fdtb   { nullptr };
 uint32 const *  Fdt::fdte   { nullptr };
@@ -191,4 +192,8 @@ void Fdt::init()
     auto p = *reinterpret_cast<uintptr_t *>(Buddy::sym_to_virt (&__boot_p0));
 
     static_cast<Fdt *>(Hpt::map (p))->parse (p);
+
+    for (unsigned i = 0; i < sizeof (Board::smmu) / sizeof (*Board::smmu); i++)
+        if (Board::smmu[i].mmio)
+            new Smmu (Board::smmu[i]);
 }
