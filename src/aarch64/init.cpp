@@ -23,6 +23,7 @@
 #include "fdt.hpp"
 #include "kmem.hpp"
 #include "ptab_hpt.hpp"
+#include "smmu.hpp"
 
 extern "C"
 Hpt::OAddr kern_ptab_setup (unsigned cpu)
@@ -77,6 +78,12 @@ unsigned init (uintptr_t offset)
     }
 
     Acpi::init() || Fdt::init();
+
+    // If SMMUs were not enumerated by firmware, then enumerate them based on board knowledge
+    if (!Smmu::avail_smg() && !Smmu::avail_ctx())
+        for (unsigned i = 0; i < sizeof (Board::smmu) / sizeof (*Board::smmu); i++)
+            if (Board::smmu[i].mmio)
+                new Smmu (Board::smmu[i]);
 
     return Cpu::boot_cpu;
 }

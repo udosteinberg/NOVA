@@ -36,8 +36,8 @@ Status Space_mem::update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm
     switch (si) {
         case Space::Index::CPU_HST: return cpu_hst.update (v, p, o, pm, ca, sh);
         case Space::Index::CPU_GST: return cpu_gst.update (v, p, o, pm, ca, sh);
-        case Space::Index::DMA_HST: return dma_hst.update (v, p, o, pm, ca, sh);
-        case Space::Index::DMA_GST: return dma_gst.update (v, p, o, pm, ca, sh);
+        case Space::Index::DMA_HST: return dma_hst.update (v, p, o, pm, ca, sh, Smmu::nc);
+        case Space::Index::DMA_GST: return dma_gst.update (v, p, o, pm, ca, sh, Smmu::nc);
     }
 
     return Status::BAD_PAR;
