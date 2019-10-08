@@ -51,8 +51,8 @@ class Space_mem : public Space
         inline auto vmid_hst() const { return id_hst; }
         inline auto vmid_gst() const { return id_gst; }
 
-        inline auto ptab_hst() { return dma_hst.init_root (false); }
-        inline auto ptab_gst() { return dma_gst.init_root (false); }
+        inline auto ptab_hst() { return dma_hst.init_root (Smmu::nc); }
+        inline auto ptab_gst() { return dma_gst.init_root (Smmu::nc); }
 
         ALWAYS_INLINE inline void make_current_hst() { cpu_hst.make_current (id_hst); }
         ALWAYS_INLINE inline void make_current_gst() { cpu_gst.make_current (id_gst); }

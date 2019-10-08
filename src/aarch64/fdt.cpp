@@ -23,6 +23,7 @@
 #include "psci.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
+#include "smmu.hpp"
 
 uint32 const *  Fdt::fdtb   { nullptr };
 uint32 const *  Fdt::fdte   { nullptr };
@@ -192,6 +193,10 @@ void Fdt::parse_subtree (uint32 const *&w, unsigned pa_cells, unsigned ps_cells,
 bool Fdt::init()
 {
     Psci::init();
+
+    for (unsigned i = 0; i < sizeof (Board::smmu) / sizeof (*Board::smmu); i++)
+        if (Board::smmu[i].mmio)
+            new Smmu (Board::smmu[i]);
 
     auto p = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_dt));
 
