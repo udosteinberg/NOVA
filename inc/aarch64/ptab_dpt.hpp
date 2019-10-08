@@ -18,6 +18,7 @@
 #pragma once
 
 #include "ptab_npt.hpp"
+#include "smmu.hpp"
 
 class Dptp final : public Pagetable<Npt, uint64, uint64, 3, 3, true>
 {
@@ -27,5 +28,5 @@ class Dptp final : public Pagetable<Npt, uint64, uint64, 3, 3, true>
         inline explicit Dptp (OAddr v = 0) : Pagetable (Npt (v)) {}
 
         ALWAYS_INLINE
-        inline void invalidate (Vmid) const {}
+        inline void invalidate (Vmid v) const { Smmu::invalidate_all (v); }
 };
