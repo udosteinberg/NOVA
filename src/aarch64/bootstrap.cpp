@@ -19,6 +19,7 @@
 #include "cpu.hpp"
 #include "lowlevel.hpp"
 #include "interrupt.hpp"
+#include "smmu.hpp"
 
 extern "C" NORETURN
 void bootstrap (unsigned i, unsigned e)
@@ -27,6 +28,10 @@ void bootstrap (unsigned i, unsigned e)
 
     // Once initialized, each core can handle its assigned interrupts
     Interrupt::init();
+
+    // Before cores leave the barrier into userland, the SMMU must be active
+    if (Cpu::bsp)
+        Smmu::initialize();
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
