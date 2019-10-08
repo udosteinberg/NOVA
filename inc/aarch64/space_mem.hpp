@@ -51,8 +51,8 @@ class Space_mem : private Space
 
         NODISCARD inline auto rcpu_hst() { return cpu_hst.root_init (false); }
         NODISCARD inline auto rcpu_gst() { return cpu_gst.root_init (false); }
-        NODISCARD inline auto rdma_hst() { return dma_hst.root_init (false); }
-        NODISCARD inline auto rdma_gst() { return dma_gst.root_init (false); }
+        NODISCARD inline auto rdma_hst() { return dma_hst.root_init (Smmu::nc); }
+        NODISCARD inline auto rdma_gst() { return dma_gst.root_init (Smmu::nc); }
 
         ALWAYS_INLINE inline void make_current_hst() { cpu_hst.make_current (id_hst); }
         ALWAYS_INLINE inline void make_current_gst() { cpu_gst.make_current (id_gst); }

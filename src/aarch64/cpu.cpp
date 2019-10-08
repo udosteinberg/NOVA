@@ -24,6 +24,7 @@
 #include "gicr.hpp"
 #include "hazards.hpp"
 #include "ptab_npt.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
 #include "vmcb.hpp"
@@ -272,6 +273,9 @@ void Cpu::init (unsigned cpu, unsigned e)
     Gicr::init();
     Gicc::init();
     Gich::init();
+
+    if (bsp)
+        Smmu::initialize();
 
     Timer::init();
 
