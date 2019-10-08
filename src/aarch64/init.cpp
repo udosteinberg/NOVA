@@ -22,6 +22,7 @@
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "ptab_hpt.hpp"
+#include "smmu.hpp"
 
 extern "C" auto kern_ptab_setup (cpu_t cpu)
 {
@@ -55,6 +56,12 @@ extern "C" unsigned init()
     }
 
     Acpi::init() || Fdt::init();
+
+    // If SMMUs were not enumerated by firmware, then enumerate them based on board knowledge
+    if (!Smmu::avail_smg() && !Smmu::avail_ctx())
+        for (unsigned i = 0; i < sizeof (Board::smmu) / sizeof (*Board::smmu); i++)
+            if (Board::smmu[i].mmio)
+                new Smmu (Board::smmu[i]);
 
     return Cpu::boot_cpu;
 }
