@@ -39,6 +39,7 @@
 #define MMAP_GLB_GICC   0x0000fffffffe0000      // 511 511 511 480  64K
 #define MMAP_GLB_GICH   0x0000fffffffd0000      // 511 511 511 464  64K
 #define MMAP_GLB_UART   0x0000ffffffe00000      // 511 511 511 000   4K
+#define MMAP_GLB_SMMU   0x0000ffffd0000000      // 511 511 128 000 256M
 #define MMAP_GLB_DATA   0x0000ffffc0000000      // 511 511 000 000 256M
 #define LINK_ADDR       0x0000ff8000000000      // 511 000 000 000
 
