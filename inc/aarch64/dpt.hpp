@@ -18,10 +18,11 @@
 #pragma once
 
 #include "npt.hpp"
+#include "smmu.hpp"
 
 class Dptp final : public Npt
 {
     public:
         ALWAYS_INLINE
-        inline void flush (Vmid) {}
+        inline void flush (Vmid v) { Smmu::flush (v); }
 };
