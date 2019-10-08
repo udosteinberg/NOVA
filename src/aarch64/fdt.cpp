@@ -23,6 +23,7 @@
 #include "memory.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
+#include "smmu.hpp"
 
 uint64          Fdt::phys   { ~0ULL };
 uint32 const *  Fdt::fdtb   { nullptr };
@@ -45,6 +46,9 @@ void Fdt::parse (uint64 p) const
     fdts = reinterpret_cast<decltype (fdts)>(reinterpret_cast<uintptr_t>(this) + offs_strings());
 
     parse_subtree (fdtb, -1U, -1U, 0);
+
+    if (SMMU_SIZE)
+        new Smmu (SMMU_BASE, SMMU_SPI, SMMU_FLG & BIT_RANGE (3, 2));
 }
 
 void Fdt::parse_subtree (uint32 const *&w, unsigned pa_cells, unsigned ps_cells, unsigned l) const
