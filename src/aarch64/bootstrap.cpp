@@ -18,11 +18,16 @@
 #include "compiler.hpp"
 #include "cpu.hpp"
 #include "lowlevel.hpp"
+#include "smmu.hpp"
 
 extern "C" [[noreturn]]
 void bootstrap (cpu_t c, unsigned e)
 {
     Cpu::init (c, e);
+
+    // Before cores leave the barrier into userland, the SMMU must be active
+    if (Cpu::bsp)
+        Smmu::initialize();
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;

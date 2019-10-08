@@ -16,7 +16,14 @@
  */
 
 #include "hip_arch.hpp"
+#include "smmu.hpp"
+#include "stdio.hpp"
 
 void Hip_arch::build()
 {
+    num_smg = Smmu::avail_smg();
+    num_ctx = Smmu::avail_ctx();
+
+    trace (TRACE_ROOT, "INFO: SMG#: %5u", num_smg);
+    trace (TRACE_ROOT, "INFO: CTX#: %5u", num_ctx);
 }
