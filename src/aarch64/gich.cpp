@@ -17,7 +17,7 @@
 
 #include "acpi.hpp"
 #include "gich.hpp"
-#include "ptab_hpt.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 unsigned Gich::num_apr  { 0 };
@@ -38,6 +38,12 @@ bool Gich::mmap_mmio()
 {
     if (!phys)
         return false;
+
+    // FIXME
+    constexpr auto size = Board::gic[3].size;
+
+    // Reserve MMIO region
+    Pd_kern::remove_user_mem (phys, size);
 
     // Map MMIO region if needed
     if (Gicc::mode == Gicc::Mode::MMIO)
