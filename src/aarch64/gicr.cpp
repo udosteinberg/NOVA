@@ -21,6 +21,7 @@
 #include "gicr.hpp"
 #include "hpt.hpp"
 #include "lowlevel.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Gicr::wait_rwp()
@@ -33,6 +34,10 @@ void Gicr::wait_rwp()
 
 void Gicr::init()
 {
+    // Reserve MMIO region
+    if (Cpu::bsp)
+        Pd_kern::remove_user_mem (GICR_BASE, GICR_SIZE);
+
     if (Gicd::arch < 3 || !GICR_SIZE)
         return;
 
