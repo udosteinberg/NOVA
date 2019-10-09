@@ -18,12 +18,17 @@
 #include "assert.hpp"
 #include "gicc.hpp"
 #include "hpt.hpp"
+#include "pd.hpp"
 #include "stdio.hpp"
 
 Gicc::Mode Gicc::mode;
 
 void Gicc::init()
 {
+    // Reserve MMIO region even if we use REGS
+    if (Cpu::bsp)
+        Pd::remove_mem_user (GICC_BASE, GICC_SIZE);
+
     init_mode();
 
     switch (mode) {

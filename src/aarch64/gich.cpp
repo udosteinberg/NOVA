@@ -17,12 +17,17 @@
 
 #include "gich.hpp"
 #include "hpt.hpp"
+#include "pd.hpp"
 #include "stdio.hpp"
 
 unsigned Gich::num_apr, Gich::num_lr;
 
 void Gich::init()
 {
+    // Reserve MMIO region even if we use REGS
+    if (Cpu::bsp)
+        Pd::remove_mem_user (GICH_BASE, GICH_SIZE);
+
     switch (Gicc::mode) {
         case Gicc::Mode::REGS: init_regs(); break;
         case Gicc::Mode::MMIO: init_mmio(); break;

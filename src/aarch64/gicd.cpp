@@ -22,6 +22,7 @@
 #include "hpt.hpp"
 #include "lock_guard.hpp"
 #include "lowlevel.hpp"
+#include "pd.hpp"
 #include "stdio.hpp"
 
 Spinlock    Gicd::lock;
@@ -44,6 +45,9 @@ void Gicd::init()
     unsigned itl = 1;
 
     if (Cpu::bsp) {
+
+        // Reserve MMIO region
+        Pd::remove_mem_user (GICD_BASE, GICD_SIZE);
 
         for (unsigned size = PAGE_SIZE; size <= GICD_SIZE; size <<= 4) {
 
