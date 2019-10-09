@@ -21,6 +21,7 @@
 #include "gicr.hpp"
 #include "hpt.hpp"
 #include "lowlevel.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Gicr::init()
@@ -36,6 +37,10 @@ void Gicr::init()
 
 bool Gicr::mmap_mmio()
 {
+    // Reserve MMIO region
+    if (Cpu::bsp)
+        Pd_kern::remove_user_mem (phys, size);
+
     bool last = false;
     size_t sz = Gicd::arch < 4 ? 0x20000 : 0x40000;
 
