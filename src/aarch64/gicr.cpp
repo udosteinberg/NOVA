@@ -21,6 +21,7 @@
 #include "gicr.hpp"
 #include "hpt.hpp"
 #include "lowlevel.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Gicr::init()
@@ -61,6 +62,9 @@ bool Gicr::mmap_mmio()
             trace (TRACE_INTR, "GICR: %#010llx v%u r%up%u Impl:%#x Prod:%#x PPI:%llu",
                    addr, arch, iidr >> 16 & BIT_RANGE (3, 0), iidr >> 12 & BIT_RANGE (3, 0), iidr & BIT_RANGE (11, 0), iidr >> 24,
                    type >> 27 & BIT_RANGE (4, 0));
+
+            // Reserve MMIO region
+            Pd_kern::remove_user_mem (addr, size);
 
             return true;
         }

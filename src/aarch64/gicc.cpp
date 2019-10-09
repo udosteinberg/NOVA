@@ -18,6 +18,7 @@
 #include "assert.hpp"
 #include "gicc.hpp"
 #include "hpt.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Gicc::init()
@@ -38,7 +39,11 @@ void Gicc::mmap_mmio()
     if (phys) {
 
         // FIXME
+        constexpr auto size = Board::gic[2].size;
         constexpr auto offs = Board::gic[2].size == 0x20000 ? 0xf000 : 0;
+
+        // Reserve MMIO region
+        Pd_kern::remove_user_mem (phys, size);
 
         // Map MMIO region
         if (mode == Mode::MMIO)

@@ -17,6 +17,7 @@
 
 #include "gich.hpp"
 #include "hpt.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Gich::init()
@@ -33,6 +34,12 @@ void Gich::init()
 void Gich::mmap_mmio()
 {
     if (phys) {
+
+        // FIXME
+        constexpr auto size = Board::gic[3].size;
+
+        // Reserve MMIO region
+        Pd_kern::remove_user_mem (phys, size);
 
         // Map MMIO region
         if (Gicc::mode == Gicc::Mode::MMIO)
