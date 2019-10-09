@@ -18,7 +18,7 @@
 #include "acpi.hpp"
 #include "assert.hpp"
 #include "gicc.hpp"
-#include "ptab_hpt.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 Gicc::Mode Gicc::mode { Mode::MMIO };
@@ -42,7 +42,11 @@ bool Gicc::mmap_mmio()
         return false;
 
     // FIXME
+    constexpr auto size { Board::gic[2].size };
     constexpr auto offs { Board::gic[2].size == 0x20000 ? 0xf000 : 0 };
+
+    // Reserve MMIO region
+    Pd_kern::remove_user_mem (phys, size);
 
     // Map MMIO region if needed
     if (mode == Mode::MMIO)
