@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "console.hpp"
+#include "stdio.hpp"
 
 #ifdef DEBUG
-#define assert(X)   do {                                                                                                            \
-                        if (!(X)) [[unlikely]]                                                                                      \
-                            Console::panic ("Assertion \"%s\" failed at %s:%d:%s", #X, __FILE__, __LINE__, __PRETTY_FUNCTION__);    \
+#define assert(X)   do {                                                                                            \
+                        if (!(X)) [[unlikely]]                                                                      \
+                            panic ("Assertion \"%s\" in %s at %s:%d", #X, __PRETTY_FUNCTION__, __FILE__, __LINE__); \
                     } while (0)
 #elif __has_cpp_attribute (assume) && !defined(__clang__)
 #define assert(X)   [[assume (X)]]
