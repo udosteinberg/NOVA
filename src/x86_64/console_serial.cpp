@@ -46,13 +46,12 @@ Console_serial::Console_serial()
     enable();
 }
 
-void Console_serial::putc (int c)
+bool Console_serial::outc (char c) const
 {
-    if (c == '\n')
-        putc ('\r');
-
     while (!(in (LSR) & 0x20)) [[unlikely]]
         pause();
 
     out (THR, c);
+
+    return true;
 }
