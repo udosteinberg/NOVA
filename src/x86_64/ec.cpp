@@ -266,6 +266,8 @@ void Ec::root_invoke()
     Space_obj::insert_root (Ec::current);
     Space_obj::insert_root (Sc::current);
 
+    Console::flush();
+
     ret_user_sysexit();
 }
 
