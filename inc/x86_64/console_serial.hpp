@@ -43,13 +43,11 @@ class Console_serial final : public Console
 
         unsigned base;
 
-        ALWAYS_INLINE
-        inline unsigned in (Register r) { return Io::in<uint8>(base + r); }
+        auto in (Register r) const { return Io::in<uint8>(base + r); }
 
-        ALWAYS_INLINE
-        inline void out (Register r, unsigned v) { Io::out (base + r, static_cast<uint8>(v)); }
+        void out (Register r, uint8_t v) const { Io::out (base + r, v); }
 
-        void putc (int) override;
+        bool outc (char) const override final;
 
     public:
         Console_serial();
