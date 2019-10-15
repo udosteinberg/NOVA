@@ -46,11 +46,8 @@ Console_serial::Console_serial()
     enable();
 }
 
-void Console_serial::putc (int c)
+void Console_serial::outc (char c)
 {
-    if (c == '\n')
-        putc ('\r');
-
     while (EXPECT_FALSE (!(in (LSR) & 0x20)))
         pause();
 

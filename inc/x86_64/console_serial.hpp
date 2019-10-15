@@ -49,7 +49,9 @@ class Console_serial final : public Console
         ALWAYS_INLINE
         inline void out (Register r, unsigned v) { Io::out (base + r, static_cast<uint8>(v)); }
 
-        void putc (int) override;
+        void outc (char) override final;
+        void init() const override final {}
+        bool fini() const override final { return true; }
 
     public:
         Console_serial();
