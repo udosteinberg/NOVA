@@ -22,40 +22,61 @@
 #pragma once
 
 #include <stdarg.h>
-#include "compiler.hpp"
 #include "initprio.hpp"
+#include "list.hpp"
 #include "spinlock.hpp"
 
-class Console
+class Console : public List<Console>
 {
     private:
-        enum
+        enum class Mode
         {
-            MODE_FLAGS      = 0,
-            MODE_WIDTH      = 1,
-            MODE_PRECS      = 2,
-            FLAG_SIGNED     = 1UL << 0,
-            FLAG_ALT_FORM   = 1UL << 1,
-            FLAG_ZERO_PAD   = 1UL << 2,
+            FLAGS       = 0,
+            WIDTH       = 1,
+            PRECS       = 2,
         };
 
-        Console *next;
+        enum Flags
+        {
+            SIGNED      = BIT (0),
+            ALT_FORM    = BIT (1),
+            ZERO_PAD    = BIT (2),
+        };
 
-        static Console *list;
-        static Spinlock lock;
+        static inline Console *dormant { nullptr };
+        static inline Console *enabled { nullptr };
+        static inline Spinlock lock;
 
-        virtual void putc (int) = 0;
-        void print_num (uint64, unsigned, unsigned, unsigned);
-        void print_str (char const *, unsigned, unsigned);
+        virtual void outc (char) = 0;
 
-        FORMAT (2,0)
-        void vprintf (char const *, va_list);
+        static void putc (char c)
+        {
+            for (auto e { enabled }; e; e = e->next)
+                e->outc (c);
+        }
+
+        static void print_num (uint64, unsigned, unsigned, unsigned);
+        static void print_str (char const *, unsigned, unsigned);
+
+        FORMAT (1,0)
+        static void vprintf (char const *, va_list);
 
     protected:
-        NOINLINE
+        Console() : List (dormant) {}
+
+        virtual void init() const {};
+        virtual bool fini() const { return false; }
+
         void enable()
         {
-            Console **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = this;
+            remove (dormant);
+            insert (enabled);
+        }
+
+        void disable()
+        {
+            remove (enabled);
+            insert (dormant);
         }
 
     public:
@@ -64,4 +85,15 @@ class Console
 
         [[noreturn]] FORMAT (1,2)
         static void panic (char const *, ...);
+
+        static void flush()
+        {
+            for (Console *e { enabled }, *n; e; e = n) {
+
+                n = e->next;
+
+                if (e->fini())
+                    e->disable();
+            }
+        }
 };
