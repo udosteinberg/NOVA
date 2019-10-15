@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,14 +23,11 @@
 #include "lock_guard.hpp"
 #include "lowlevel.hpp"
 
-Console *Console::list;
-Spinlock Console::lock;
-
-void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned flags)
+void Console::print_num (uint64_t val, unsigned base, unsigned width, unsigned flags)
 {
     bool neg = false;
 
-    if (flags & FLAG_SIGNED && static_cast<signed long long>(val) < 0) {
+    if (flags & Flags::SIGNED && static_cast<signed long long>(val) < 0) {
         neg = true;
         val = -val;
     }
@@ -45,10 +42,10 @@ void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned fla
         *--ptr = '-';
 
     unsigned long count = buffer + sizeof buffer - ptr;
-    unsigned long n = count + (flags & FLAG_ALT_FORM ? 2 : 0);
+    unsigned long n = count + (flags & Flags::ALT_FORM ? 2 : 0);
 
-    if (flags & FLAG_ZERO_PAD) {
-        if (flags & FLAG_ALT_FORM) {
+    if (flags & Flags::ZERO_PAD) {
+        if (flags & Flags::ALT_FORM) {
             putc ('0');
             putc ('x');
         }
@@ -57,7 +54,7 @@ void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned fla
     } else {
         while (n++ < width)
             putc (' ');
-        if (flags & FLAG_ALT_FORM) {
+        if (flags & Flags::ALT_FORM) {
             putc ('0');
             putc ('x');
         }
@@ -90,33 +87,42 @@ void Console::vprintf (char const *format, va_list args)
             continue;
         }
 
-        unsigned flags = 0, width = 0, precs = 0, len = 0, mode = MODE_FLAGS;
+        auto mode = Mode::FLAGS;
+        unsigned flags = 0, width = 0, precs = 0, len = 0;
 
-        for (uint64 u;;) {
+        for (uint64_t u;;) {
 
             switch (*++format) {
 
                 case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
                     switch (mode) {
-                        case MODE_FLAGS:
+                        case Mode::FLAGS:
                             if (*format == '0') {
-                                flags |= FLAG_ZERO_PAD;
+                                flags |= Flags::ZERO_PAD;
                                 break;
                             }
-                            mode = MODE_WIDTH;
+                            mode = Mode::WIDTH;
                             [[fallthrough]];
-                        case MODE_WIDTH: width = width * 10 + *format - '0'; break;
-                        case MODE_PRECS: precs = precs * 10 + *format - '0'; break;
+                        case Mode::WIDTH: width = width * 10 + *format - '0'; break;
+                        case Mode::PRECS: precs = precs * 10 + *format - '0'; break;
+                    }
+                    continue;
+
+                case '#':
+                    if (mode == Mode::FLAGS)
+                        flags |= Flags::ALT_FORM;
+                    continue;
+
+                case '*':
+                    switch (mode) {
+                        case Mode::FLAGS: mode = Mode::WIDTH; [[fallthrough]];
+                        case Mode::WIDTH: width = va_arg (args, int); break;
+                        case Mode::PRECS: precs = va_arg (args, int); break;
                     }
                     continue;
 
                 case '.':
-                    mode = MODE_PRECS;
-                    continue;
-
-                case '#':
-                    if (mode == MODE_FLAGS)
-                        flags |= FLAG_ALT_FORM;
+                    mode = Mode::PRECS;
                     continue;
 
                 case 'l':
@@ -124,7 +130,7 @@ void Console::vprintf (char const *format, va_list args)
                     continue;
 
                 case 'c':
-                    putc (va_arg (args, int));
+                    putc (static_cast<char>(va_arg (args, int)));
                     break;
 
                 case 's':
@@ -137,7 +143,7 @@ void Console::vprintf (char const *format, va_list args)
                         case 1:  u = va_arg (args, long);       break;
                         default: u = va_arg (args, long long);  break;
                     }
-                    print_num (u, 10, width, flags | FLAG_SIGNED);
+                    print_num (u, 10, width, flags | Flags::SIGNED);
                     break;
 
                 case 'u':
@@ -151,7 +157,7 @@ void Console::vprintf (char const *format, va_list args)
                     break;
 
                 case 'p':
-                    print_num (reinterpret_cast<mword>(va_arg (args, void *)), 16, width, FLAG_ALT_FORM);
+                    print_num (reinterpret_cast<uintptr_t>(va_arg (args, void *)), 16, width, Flags::ALT_FORM);
                     break;
 
                 case 0:
@@ -169,31 +175,28 @@ void Console::vprintf (char const *format, va_list args)
         }
     }
 
+    putc ('\r');
     putc ('\n');
 }
 
 void Console::print (char const *format, ...)
 {
-    Lock_guard <Spinlock> guard (lock);
+    Lock_guard <Spinlock> guard { lock };
 
-    for (Console *c = list; c; c = c->next) {
-        va_list args;
-        va_start (args, format);
-        c->vprintf (format, args);
-        va_end (args);
-    }
+    va_list args;
+    va_start (args, format);
+    vprintf (format, args);
+    va_end (args);
 }
 
 void Console::panic (char const *format, ...)
 {
-    {   Lock_guard <Spinlock> guard (lock);
+    {   Lock_guard <Spinlock> guard { lock };
 
-        for (Console *c = list; c; c = c->next) {
-            va_list args;
-            va_start (args, format);
-            c->vprintf (format, args);
-            va_end (args);
-        }
+        va_list args;
+        va_start (args, format);
+        vprintf (format, args);
+        va_end (args);
     }
 
     shutdown();
