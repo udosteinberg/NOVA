@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,6 +23,7 @@
 
 #include "console.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 #include "memory.hpp"
 
 #define trace(T,format,...)                                         \
@@ -31,6 +33,12 @@ do {                                                                \
         Console::print ("[%2ld] " format,                           \
                 static_cast<long>(((__esp - 1) & ~PAGE_MASK) ==     \
                 CPU_LOCAL_STCK ? Cpu::id : ~0UL), ## __VA_ARGS__);  \
+} while (0)
+
+#define panic(format,...)                           \
+do {                                                \
+    trace (0, "FAIL: " format, ## __VA_ARGS__);     \
+    shutdown();                                     \
 } while (0)
 
 /*
