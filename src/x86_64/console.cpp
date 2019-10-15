@@ -126,7 +126,7 @@ void Console::vprintf (char const *format, va_list args)
                     continue;
 
                 case 'c':
-                    putc (va_arg (args, int));
+                    putc (static_cast<char>(va_arg (args, int)));
                     break;
 
                 case 's':
@@ -171,6 +171,7 @@ void Console::vprintf (char const *format, va_list args)
         }
     }
 
+    putc ('\r');
     putc ('\n');
 }
 
@@ -178,27 +179,21 @@ void Console::print (char const *format, ...)
 {
     Lock_guard <Spinlock> guard (lock);
 
-    for (Console *c = list; c; c = c->next) {
-        va_list args;
-        va_start (args, format);
-        c->vprintf (format, args);
-        va_end (args);
-    }
+    va_list args;
+    va_start (args, format);
+    vprintf (format, args);
+    va_end (args);
 }
 
 void Console::panic (char const *format, ...)
 {
     {   Lock_guard <Spinlock> guard (lock);
 
-        for (Console *c = list; c; c = c->next) {
-            va_list args;
-            va_start (args, format);
-            c->vprintf (format, args);
-            va_end (args);
-        }
+        va_list args;
+        va_start (args, format);
+        vprintf (format, args);
+        va_end (args);
     }
 
     shutdown();
 }
-
-extern "C" NORETURN void __cxa_pure_virtual() { UNREACHED; }
