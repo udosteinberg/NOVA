@@ -64,9 +64,6 @@ void Keyb::interrupt()
             case 0x2e:              // c
                 Counter::dump();
                 break;
-            case 0x3b ... 0x42:     // f1-f8
-                Console_vga::con.set_page (out - 0x3b);
-                break;
         }
     }
 }
