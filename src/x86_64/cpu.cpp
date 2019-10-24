@@ -62,7 +62,6 @@ unsigned    Cpu::model;
 unsigned    Cpu::stepping;
 unsigned    Cpu::brand;
 unsigned    Cpu::patch;
-unsigned    Cpu::row;
 
 uint32      Cpu::name[12];
 uint32      Cpu::features[6];
@@ -198,8 +197,6 @@ void Cpu::init()
     check_features();
 
     Lapic::init();
-
-    row = Console_vga::con.spinner (id);
 
     Paddr phys; mword attr;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
