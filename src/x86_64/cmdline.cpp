@@ -26,11 +26,9 @@
 bool Cmdline::iommu;
 bool Cmdline::keyb;
 bool Cmdline::serial;
-bool Cmdline::spinner;
 bool Cmdline::vtlb;
 bool Cmdline::nodl;
 bool Cmdline::nopcid;
-bool Cmdline::novga;
 bool Cmdline::novpid;
 
 struct Cmdline::param_map Cmdline::map[] =
@@ -38,11 +36,9 @@ struct Cmdline::param_map Cmdline::map[] =
     { "iommu",      &Cmdline::iommu     },
     { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
-    { "spinner",    &Cmdline::spinner   },
     { "vtlb",       &Cmdline::vtlb      },
     { "nodl",       &Cmdline::nodl      },
     { "nopcid",     &Cmdline::nopcid    },
-    { "novga",      &Cmdline::novga     },
     { "novpid",     &Cmdline::novpid    },
 };
 
