@@ -22,12 +22,12 @@
 #include "acpi.hpp"
 #include "compiler.hpp"
 #include "console_serial.hpp"
-#include "console_vga.hpp"
 #include "gsi.hpp"
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
 #include "keyb.hpp"
+#include "string.hpp"
 
 extern "C"
 mword kern_ptab_setup()
@@ -69,8 +69,6 @@ void init (mword mbi)
     Idt::build();
     Gsi::setup();
     Acpi::setup();
-
-    Console_vga::con.setup();
 
     Keyb::init();
 }

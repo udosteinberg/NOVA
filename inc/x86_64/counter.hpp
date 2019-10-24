@@ -21,8 +21,8 @@
 #pragma once
 
 #include "config.hpp"
-#include "console_vga.hpp"
 #include "cpu.hpp"
+#include "memory.hpp"
 
 class Counter
 {
@@ -46,13 +46,5 @@ class Counter
         static inline unsigned remote (unsigned c, unsigned i)
         {
             return *reinterpret_cast<volatile unsigned *>(reinterpret_cast<mword>(ipi + i) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
-        }
-
-        template <unsigned D, unsigned B>
-        static void print (mword val, Console_vga::Color c, unsigned col)
-        {
-            if (EXPECT_FALSE (Cpu::row))
-                for (unsigned i = 0; i < D; i++, val /= B)
-                    Console_vga::con.put (Cpu::row, col - i, c, !i || val ? (val % B)["0123456789ABCDEF"] : ' ');
         }
 };
