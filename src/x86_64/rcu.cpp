@@ -76,7 +76,6 @@ void Rcu::update()
     if (l_batch != batch()) {
         l_batch = batch();
         Cpu::hazard |= HZD_RCU;
-        Counter::print<1,16> (l_batch, Console_vga::COLOR_LIGHT_GREEN, SPN_RCU);
     }
 
     if (curr.head && complete (c_batch))
