@@ -141,7 +141,7 @@ void Lapic::lvt_vector (unsigned vector)
 
     eoi();
 
-    Counter::print<1,16> (++Counter::lvt[lvt], Console_vga::COLOR_LIGHT_BLUE, lvt + SPN_LVT);
+    Counter::lvt[lvt]++;
 }
 
 void Lapic::ipi_vector (unsigned vector)
@@ -155,5 +155,5 @@ void Lapic::ipi_vector (unsigned vector)
 
     eoi();
 
-    Counter::print<1,16> (++Counter::ipi[ipi], Console_vga::COLOR_LIGHT_GREEN, ipi + SPN_IPI);
+    Counter::ipi[ipi]++;
 }
