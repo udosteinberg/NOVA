@@ -193,7 +193,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         {
             if (EXPECT_TRUE (cont != dead)) {
 
-                Counter::print<1,16> (++Counter::helping, Console_vga::COLOR_LIGHT_WHITE, SPN_HLP);
+                Counter::helping++;
+
                 current->cont = c;
 
                 if (EXPECT_TRUE (++Sc::ctr_loop < 100))
