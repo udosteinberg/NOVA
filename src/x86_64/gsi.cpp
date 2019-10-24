@@ -103,5 +103,5 @@ void Gsi::vector (unsigned vector)
 
     gsi_table[gsi].sm->up();
 
-    Counter::print<1,16> (++Counter::gsi[gsi], Console_vga::Color (Console_vga::COLOR_LIGHT_YELLOW - gsi / 64), SPN_GSI + gsi % 64);
+    Counter::gsi[gsi]++;
 }
