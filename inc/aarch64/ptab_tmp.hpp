@@ -17,8 +17,10 @@
 
 #pragma once
 
+#include "ptab_dpt.hpp"
 #include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 
+template class Ptab<Dpt, uint64_t, uint64_t>;
 template class Ptab<Hpt, uint64_t, uint64_t>;
 template class Ptab<Npt, uint64_t, uint64_t>;
