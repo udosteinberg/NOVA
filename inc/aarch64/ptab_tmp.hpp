@@ -17,8 +17,10 @@
 
 #pragma once
 
+#include "ptab_dma.hpp"
 #include "ptab_gst.hpp"
 #include "ptab_hst.hpp"
 
+template class Ptab<Pte_dma, uint64_t, uint64_t>;
 template class Ptab<Pte_gst, uint64_t, uint64_t>;
 template class Ptab<Pte_hst, uint64_t, uint64_t>;
