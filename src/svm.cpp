@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -39,7 +40,7 @@ Vmcb::Vmcb (mword bmp, mword nptp) : base_io (bmp), asid (++asid_ctr), int_contr
 void Vmcb::init()
 {
     if (!Cpu::feature (Cpu::FEAT_SVM)) {
-        Hip::clr_feature (Hip::FEAT_SVM);
+        Hip::hip->clr_feature (Hip::FEAT_SVM);
         return;
     }
 

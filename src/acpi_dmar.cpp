@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -90,5 +91,5 @@ void Acpi_table_dmar::parse() const
 
     Dmar::enable (flags);
 
-    Hip::set_feature (Hip::FEAT_SMMU);
+    Hip::hip->set_feature (Hip::FEAT_SMMU);
 }

@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -302,7 +303,7 @@ template <> void Exc_regs::nst_ctrl<Vmcs>(bool on)
 
 void Exc_regs::fpu_ctrl (bool on)
 {
-    if (Hip::feature() & Hip::FEAT_VMX) {
+    if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
         vmcs->make_current();
 

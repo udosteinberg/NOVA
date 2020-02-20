@@ -110,7 +110,7 @@ class Utcb : public Utcb_head, private Utcb_data
         ALWAYS_INLINE NONNULL
         inline void save (Utcb *dst)
         {
-            register mword n = ui();
+            mword n = ui();
 
             dst->items = items;
 #if 0

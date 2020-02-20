@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -30,23 +31,23 @@
 mword Hip::root_addr;
 mword Hip::root_size;
 
+Hip *Hip::hip = reinterpret_cast<Hip *>(&PAGE_H);
+
 void Hip::build (mword addr)
 {
-    Hip *h = hip();
-
-    h->signature  = 0x41564f4e;
-    h->cpu_offs   = reinterpret_cast<mword>(h->cpu_desc) - reinterpret_cast<mword>(h);
-    h->cpu_size   = static_cast<uint16>(sizeof (Hip_cpu));
-    h->mem_offs   = reinterpret_cast<mword>(h->mem_desc) - reinterpret_cast<mword>(h);
-    h->mem_size   = static_cast<uint16>(sizeof (Hip_mem));
-    h->api_flg    = FEAT_VMX | FEAT_SVM;
-    h->api_ver    = CFG_VER;
-    h->sel_num    = Space_obj::caps;
-    h->sel_gsi    = NUM_GSI;
-    h->sel_exc    = NUM_EXC;
-    h->sel_vmi    = NUM_VMI;
-    h->cfg_page   = PAGE_SIZE;
-    h->cfg_utcb   = PAGE_SIZE;
+    signature  = 0x41564f4e;
+    cpu_offs   = reinterpret_cast<mword>(cpu_desc) - reinterpret_cast<mword>(this);
+    cpu_size   = static_cast<uint16>(sizeof (Hip_cpu));
+    mem_offs   = reinterpret_cast<mword>(mem_desc) - reinterpret_cast<mword>(this);
+    mem_size   = static_cast<uint16>(sizeof (Hip_mem));
+    api_flg    = FEAT_VMX | FEAT_SVM;
+    api_ver    = CFG_VER;
+    sel_num    = Space_obj::caps;
+    sel_gsi    = NUM_GSI;
+    sel_exc    = NUM_EXC;
+    sel_vmi    = NUM_VMI;
+    cfg_page   = PAGE_SIZE;
+    cfg_utcb   = PAGE_SIZE;
 
     Multiboot *mbi = static_cast<Multiboot *>(Hpt::remap (addr));
 
@@ -60,7 +61,7 @@ void Hip::build (mword addr)
     if (flags & Multiboot::CMDLINE)
         Cmdline::init (cmdline);
 
-    Hip_mem *mem = h->mem_desc;
+    Hip_mem *mem = mem_desc;
 
     if (flags & Multiboot::MEMORY_MAP)
         add_mem (mem, mmap_addr, mmap_len);
@@ -70,7 +71,7 @@ void Hip::build (mword addr)
 
     add_mhv (mem);
 
-    h->length = static_cast<uint16>(reinterpret_cast<mword>(mem) - reinterpret_cast<mword>(h));
+    length = static_cast<uint16>(reinterpret_cast<mword>(mem) - reinterpret_cast<mword>(this));
 }
 
 void Hip::add_mem (Hip_mem *&mem, mword addr, size_t len)
@@ -117,7 +118,7 @@ void Hip::add_mhv (Hip_mem *&mem)
 
 void Hip::add_cpu()
 {
-    Hip_cpu *cpu = hip()->cpu_desc + Cpu::id;
+    Hip_cpu *cpu = cpu_desc + Cpu::id;
 
     cpu->acpi_id = Cpu::acpi_id[Cpu::id];
     cpu->package = static_cast<uint8>(Cpu::package);
@@ -128,14 +129,12 @@ void Hip::add_cpu()
 
 void Hip::add_check()
 {
-    Hip *h = hip();
-
-    h->freq_tsc = Lapic::freq_tsc;
+    freq_tsc = Lapic::freq_tsc;
 
     uint16 c = 0;
-    for (uint16 const *ptr = reinterpret_cast<uint16 const *>(&PAGE_H);
-                       ptr < reinterpret_cast<uint16 const *>(&PAGE_H + h->length);
+    for (uint16 const *ptr = reinterpret_cast<uint16 const *>(this);
+                       ptr < reinterpret_cast<uint16 const *>(reinterpret_cast<mword>(this + length));
                        c = static_cast<uint16>(c - *ptr++)) ;
 
-    h->checksum = c;
+    checksum = c;
 }
