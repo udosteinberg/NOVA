@@ -1,10 +1,11 @@
 /*
- * Serial Console
+ * Console: NS16550 UART
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,13 +20,12 @@
  */
 
 #include "cmdline.hpp"
-#include "console_serial.hpp"
+#include "console_uart_ns16550.hpp"
 #include "hpt.hpp"
-#include "lowlevel.hpp"
 
-INIT_PRIORITY (PRIO_CONSOLE) Console_serial Console_serial::con;
+INIT_PRIORITY (PRIO_CONSOLE) Console_ns16550 Console_ns16550::con;
 
-Console_serial::Console_serial()
+Console_ns16550::Console_ns16550()
 {
     if (!Cmdline::serial)
         return;
@@ -35,21 +35,7 @@ Console_serial::Console_serial()
         !(base = *reinterpret_cast<uint16 *>(mem + 0x402)))
         return;
 
-    out (LCR, 0x80);
-    out (DLL, (freq / 115200) & 0xff);
-    out (DLM, (freq / 115200) >> 8);
-    out (LCR, 3);
-    out (IER, 0);
-    out (FCR, 7);
-    out (MCR, 3);
+    init();
 
     enable();
-}
-
-void Console_serial::outc (char c)
-{
-    while (EXPECT_FALSE (!(in (LSR) & 0x20)))
-        pause();
-
-    out (THR, c);
 }

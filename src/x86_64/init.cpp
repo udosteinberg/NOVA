@@ -20,7 +20,6 @@
 
 #include "acpi.hpp"
 #include "compiler.hpp"
-#include "console_serial.hpp"
 #include "gsi.hpp"
 #include "hip.hpp"
 #include "hpt.hpp"
