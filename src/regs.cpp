@@ -302,7 +302,7 @@ template <> void Exc_regs::nst_ctrl<Vmcs>(bool on)
 
 void Exc_regs::fpu_ctrl (bool on)
 {
-    if (Hip::feature() & Hip::FEAT_VMX) {
+    if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
         vmcs->make_current();
 
