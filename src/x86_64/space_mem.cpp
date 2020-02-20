@@ -91,7 +91,7 @@ void Space_mem::shootdown()
 {
     for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
 
-        if (!Hip::cpu_online (cpu))
+        if (!Hip::hip->cpu_online (cpu))
             continue;
 
         Pd *pd = Pd::remote (cpu);
