@@ -222,7 +222,7 @@ void Cpu::init()
 
     trace (TRACE_CPU, "CORE:%x:%x:%x %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
 
-    Hip::add_cpu();
+    Hip::hip->add_cpu();
 
     boot_lock++;
 }
