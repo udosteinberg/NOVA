@@ -106,6 +106,8 @@ class Lapic
         static unsigned freq_tsc;
         static unsigned freq_bus;
 
+        static inline auto time()       { return __builtin_ia32_rdtsc(); }
+
         ALWAYS_INLINE
         static inline unsigned id()
         {
