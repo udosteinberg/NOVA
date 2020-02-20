@@ -33,6 +33,7 @@
 #include "pd.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
+#include "timer.hpp"
 #include "tss.hpp"
 #include "vmx.hpp"
 
@@ -209,6 +210,8 @@ void Cpu::init()
 
     if (EXPECT_TRUE (feature (FEAT_SMEP)))
         set_cr4 (get_cr4() | Cpu::CR4_SMEP);
+
+    Timer::init();
 
     Vmcs::init();
     Vmcb::init();
