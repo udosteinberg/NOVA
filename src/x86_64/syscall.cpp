@@ -243,12 +243,12 @@ void Ec::sys_create_ec()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
-    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
+    if (EXPECT_FALSE (!Hip::hip->cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
-    if (EXPECT_FALSE (!r->utcb() && !(Hip::feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM)))) {
+    if (EXPECT_FALSE (!r->utcb() && !(Hip::hip->feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM)))) {
         trace (TRACE_ERROR, "%s: VCPUs not supported", __func__);
         sys_finish<Sys_regs::BAD_FTR>();
     }
@@ -513,7 +513,7 @@ void Ec::sys_assign_gsi()
 {
     Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(current->sys_regs());
 
-    if (EXPECT_FALSE (!Hip::cpu_online (r->cpu()))) {
+    if (EXPECT_FALSE (!Hip::hip->cpu_online (r->cpu()))) {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Sys_regs::BAD_CPU>();
     }

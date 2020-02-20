@@ -39,7 +39,7 @@ Vmcb::Vmcb (mword bmp, mword nptp) : base_io (bmp), asid (++asid_ctr), int_contr
 void Vmcb::init()
 {
     if (!Cpu::feature (Cpu::FEAT_SVM)) {
-        Hip::clr_feature (Hip::FEAT_SVM);
+        Hip::hip->clr_feature (Hip::FEAT_SVM);
         return;
     }
 
