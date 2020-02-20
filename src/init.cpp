@@ -58,7 +58,7 @@ void init (mword mbi)
 
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
-    Hip::build (mbi);
+    Hip::hip->build (mbi);
 
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
 
