@@ -98,7 +98,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 void Vmcs::init()
 {
     if (!Cpu::feature (Cpu::FEAT_VMX) || (Msr::read<uint32>(Msr::IA32_FEATURE_CONTROL) & 0x5) != 0x5) {
-        Hip::clr_feature (Hip::FEAT_VMX);
+        Hip::hip->clr_feature (Hip::FEAT_VMX);
         return;
     }
 

@@ -74,6 +74,8 @@ class Hip
         Hip_mem mem_desc[];
 
     public:
+        static Hip *hip;
+
         enum Feature {
             FEAT_IOMMU  = 1U << 0,
             FEAT_VMX    = 1U << 1,
@@ -83,40 +85,34 @@ class Hip
         static mword root_addr;
         static mword root_size;
 
-        ALWAYS_INLINE
-        static inline Hip *hip()
+        uint32 feature()
         {
-            return reinterpret_cast<Hip *>(&PAGE_H);
+            return api_flg;
         }
 
-        static uint32 feature()
+        void set_feature (Feature f)
         {
-            return hip()->api_flg;
+            Atomic::set_mask (api_flg, static_cast<typeof api_flg>(f));
         }
 
-        static void set_feature (Feature f)
+        void clr_feature (Feature f)
         {
-            Atomic::set_mask (hip()->api_flg, static_cast<typeof hip()->api_flg>(f));
+            Atomic::clr_mask (api_flg, static_cast<typeof api_flg>(f));
         }
 
-        static void clr_feature (Feature f)
+        bool cpu_online (unsigned long cpu)
         {
-            Atomic::clr_mask (hip()->api_flg, static_cast<typeof hip()->api_flg>(f));
+            return cpu < NUM_CPU && cpu_desc[cpu].flags & 1;
         }
 
-        static bool cpu_online (unsigned long cpu)
-        {
-            return cpu < NUM_CPU && hip()->cpu_desc[cpu].flags & 1;
-        }
+        void build (mword);
 
-        static void build (mword);
+        void add_mem (Hip_mem *&, mword, size_t);
 
-        static void add_mem (Hip_mem *&, mword, size_t);
+        void add_mod (Hip_mem *&, mword, size_t);
 
-        static void add_mod (Hip_mem *&, mword, size_t);
+        void add_mhv (Hip_mem *&);
 
-        static void add_mhv (Hip_mem *&);
-
-        static void add_cpu();
-        static void add_check();
+        void add_cpu();
+        void add_check();
 };
