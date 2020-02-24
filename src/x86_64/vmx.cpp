@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -33,7 +34,7 @@
 #include "x86.hpp"
 
 Vmcs *              Vmcs::current;
-unsigned            Vmcs::vpid_ctr;
+uint16              Vmcs::vpid_ctr;
 Vmcs::vmx_basic     Vmcs::basic;
 Vmcs::vmx_ept_vpid  Vmcs::ept_vpid;
 Vmcs::vmx_ctrl_pin  Vmcs::ctrl_pin;
@@ -55,13 +56,11 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (PF_ERROR_MATCH, 0);
     write (CR3_TARGET_COUNT, 0);
 
-    write (VMCS_LINK_PTR,    ~0ul);
-    write (VMCS_LINK_PTR_HI, ~0ul);
+    write (VMCS_LINK_PTR, ~0ULL);
 
     write (VPID, ++vpid_ctr);
 
-    write (EPTP,    static_cast<mword>(eptp) | (Ept::max() - 1) << 3 | 6);
-    write (EPTP_HI, static_cast<mword>(eptp >> 32));
+    write (EPTP, eptp | (Ept::max() - 1) << 3 | 6);
 
     write (IO_BITMAP_A, bmp);
     write (IO_BITMAP_B, bmp + PAGE_SIZE);
@@ -128,7 +127,7 @@ void Vmcs::init()
     ctrl_cpu[0].set |= CPU_HLT | CPU_IO | CPU_IO_BITMAP | CPU_SECONDARY;
     ctrl_cpu[1].set |= CPU_VPID | CPU_URG;
 
-    if (Cmdline::vtlb || !ept_vpid.invept)
+    if (!ept_vpid.invept)
         ctrl_cpu[1].clr &= ~(CPU_EPT | CPU_URG);
     if (Cmdline::novpid || !ept_vpid.invvpid)
         ctrl_cpu[1].clr &= ~CPU_VPID;
