@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -135,7 +136,10 @@ class Vmcs
             GUEST_DEBUGCTL          = 0x2802ul,
             GUEST_EFER              = 0x2806ul,
             GUEST_PERF_GLOBAL_CTRL  = 0x2808ul,
-            GUEST_PDPTE             = 0x280aul,
+            GUEST_PDPTE0            = 0x280aul,
+            GUEST_PDPTE1            = 0x280cul,
+            GUEST_PDPTE2            = 0x280eul,
+            GUEST_PDPTE3            = 0x2810ul,
 
             // 64-Bit Host State
             HOST_EFER               = 0x2c02ul,
