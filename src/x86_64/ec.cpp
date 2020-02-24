@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,7 +28,6 @@
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
-#include "vtlb.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Ec::cache (sizeof (Ec), 32);
@@ -68,7 +68,6 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
     } else {
 
         regs.dst_portal = NUM_VMI - 2;
-        regs.vtlb = new Vtlb;
 
         if (Hip::feature() & Hip::FEAT_VMX) {
 
@@ -80,7 +79,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
             regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p VTLB:%p)", this, p, regs.vmcs, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p)", this, p, regs.vmcs);
 
         } else if (Hip::feature() & Hip::FEAT_SVM) {
 
@@ -88,7 +87,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p VTLB:%p)", this, p, regs.vmcb, regs.vtlb);
+            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p)", this, p, regs.vmcb);
         }
     }
 }
@@ -138,8 +137,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::TSC_OFFSET,    static_cast<mword>(current->regs.tsc_offset));
-            Vmcs::write (Vmcs::TSC_OFFSET_HI, static_cast<mword>(current->regs.tsc_offset >> 32));
+            Vmcs::write (Vmcs::TSC_OFFSET, current->regs.tsc_offset);
         } else
             current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
     }
@@ -187,10 +185,7 @@ void Ec::ret_user_vmresume()
 
     if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
-        if (current->regs.nst_on)
-            Pd::current->ept.flush();
-        else
-            current->regs.vtlb->flush (true);
+        Pd::current->ept.flush();
     }
 
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
@@ -202,7 +197,7 @@ void Ec::ret_user_vmresume()
                   "mov %1," EXPAND (PREG(sp);)
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 
-    trace (0, "VM entry failed with error %#lx", Vmcs::read (Vmcs::VMX_INST_ERROR));
+    trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
 
     die ("VMENTRY");
 }
@@ -215,10 +210,7 @@ void Ec::ret_user_vmrun()
 
     if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
-        if (current->regs.nst_on)
-            current->regs.vmcb->tlb_control = 1;
-        else
-            current->regs.vtlb->flush (true);
+        current->regs.vmcb->tlb_control = 1;
     }
 
     asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
@@ -303,25 +295,14 @@ void Ec::handle_tss()
     Console::panic ("Task gate invoked");
 }
 
-bool Ec::fixup (mword &eip)
-{
-    for (mword *ptr = &FIXUP_S; ptr < &FIXUP_E; ptr += 2)
-        if (eip == *ptr) {
-            eip = *++ptr;
-            return true;
-        }
-
-    return false;
-}
-
 void Ec::die (char const *reason, Exc_regs *r)
 {
     if (current->utcb || current->pd == &Pd::kern)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                current, Sc::current, r->vec, r->cs, r->REG(ip), r->cr2, r->err, reason);
     else
-        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR3:%#lx CR4:%#lx (%s)",
-               current, Sc::current, r->vec, r->cr0_shadow, r->cr3_shadow, r->cr4_shadow, reason);
+        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR4:%#lx (%s)",
+               current, Sc::current, r->vec, r->cr0_shadow, r->cr4_shadow, reason);
 
     Ec *ec = current->rcap;
 
