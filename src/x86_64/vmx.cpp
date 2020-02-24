@@ -109,6 +109,8 @@ void Vmcs::init()
     fix_cr4_set = static_cast<mword>( Msr::read (Msr::IA32_VMX_CR4_FIXED0));
     fix_cr4_clr = static_cast<mword>(~Msr::read (Msr::IA32_VMX_CR4_FIXED1));
 
+    fix_cr0_clr |= Cpu::CR0_CD | Cpu::CR0_NW;
+
     basic.val       = Msr::read (Msr::IA32_VMX_BASIC);
     ctrl_exi.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_EXIT  : Msr::IA32_VMX_CTRL_EXIT);
     ctrl_ent.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_ENTRY : Msr::IA32_VMX_CTRL_ENTRY);
