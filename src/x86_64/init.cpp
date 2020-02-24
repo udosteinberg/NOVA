@@ -26,7 +26,6 @@
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
-#include "keyb.hpp"
 #include "string.hpp"
 
 extern "C"
@@ -69,6 +68,4 @@ void init (mword mbi)
     Idt::build();
     Gsi::setup();
     Acpi::setup();
-
-    Keyb::init();
 }
