@@ -27,10 +27,6 @@ unsigned    Counter::lvt[NUM_LVT];
 unsigned    Counter::gsi[NUM_GSI];
 unsigned    Counter::exc[NUM_EXC];
 unsigned    Counter::vmi[NUM_VMI];
-unsigned    Counter::vtlb_gpf;
-unsigned    Counter::vtlb_hpf;
-unsigned    Counter::vtlb_fill;
-unsigned    Counter::vtlb_flush;
 unsigned    Counter::schedule;
 unsigned    Counter::helping;
 uint64      Counter::cycles_idle;
@@ -39,14 +35,10 @@ void Counter::dump()
 {
     trace (0, "TIME: %16llu", rdtsc());
     trace (0, "IDLE: %16llu", Counter::cycles_idle);
-    trace (0, "VGPF: %16u", Counter::vtlb_gpf);
-    trace (0, "VHPF: %16u", Counter::vtlb_hpf);
-    trace (0, "VFIL: %16u", Counter::vtlb_fill);
-    trace (0, "VFLU: %16u", Counter::vtlb_flush);
     trace (0, "SCHD: %16u", Counter::schedule);
     trace (0, "HELP: %16u", Counter::helping);
 
-    Counter::vtlb_gpf = Counter::vtlb_hpf = Counter::vtlb_fill = Counter::vtlb_flush = Counter::schedule = Counter::helping = 0;
+    Counter::schedule = Counter::helping = 0;
 
     for (unsigned i = 0; i < sizeof (Counter::ipi) / sizeof (*Counter::ipi); i++)
         if (Counter::ipi[i]) {
