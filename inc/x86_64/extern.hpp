@@ -40,9 +40,6 @@ extern char LINK_E;
 extern char LOAD_E;
 extern char OFFSET;
 
-extern mword FIXUP_S;
-extern mword FIXUP_E;
-
 extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
 
 extern char entry_sysenter;
