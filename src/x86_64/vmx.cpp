@@ -73,7 +73,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
 #ifdef __x86_64__
     write (HOST_EFER, Msr::read (Msr::IA32_EFER));
-    exi |= EXI_LOAD_EFER | EXI_HOST_64;
+    exi |= EXI_SAVE_EFER | EXI_LOAD_EFER | EXI_HOST_64;
     ent |= ENT_LOAD_EFER;
 #endif
 
