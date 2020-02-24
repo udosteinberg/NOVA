@@ -259,6 +259,7 @@ class Vmcs
         {
             EXI_HOST_64             = 1UL << 9,
             EXI_INTA                = 1UL << 15,
+            EXI_SAVE_EFER           = 1UL << 20,
             EXI_LOAD_EFER           = 1UL << 21,
         };
 
