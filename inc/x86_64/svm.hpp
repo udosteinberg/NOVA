@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -97,7 +98,7 @@ class Vmcb
             CPU_SKINIT      = 1ul << 6,
         };
 
-        static mword const force_ctrl0 =    CPU_INTR    |
+        static uint32 const force_ctrl0 =   CPU_INTR    |
                                             CPU_NMI     |
                                             CPU_INIT    |
                                             CPU_INVD    |
@@ -106,7 +107,7 @@ class Vmcb
                                             CPU_MSR     |
                                             CPU_SHUTDOWN;
 
-        static mword const force_ctrl1 =    CPU_VMLOAD  |
+        static uint32 const force_ctrl1 =   CPU_VMLOAD  |
                                             CPU_VMSAVE  |
                                             CPU_CLGI    |
                                             CPU_SKINIT;
@@ -123,15 +124,6 @@ class Vmcb
         inline Vmcb()
         {
             asm volatile ("vmsave" : : "a" (Buddy::ptr_to_phys (this)) : "memory");
-        }
-
-        ALWAYS_INLINE
-        inline void adjust_rip (mword len)
-        {
-            rip += len;
-
-            if (int_shadow)
-                int_shadow = 0;
         }
 
         static bool has_npt() { return Vmcb::svm_feature & 1; }

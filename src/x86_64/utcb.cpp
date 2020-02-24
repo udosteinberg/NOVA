@@ -112,82 +112,77 @@ bool Utcb::load_vmx (Cpu_regs *regs)
     regs->vmcs->make_current();
 
     if (m & Mtd::RSP)
-        rsp = Vmcs::read (Vmcs::GUEST_RSP);
+        rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
 
     if (m & Mtd::RIP_LEN) {
-        rip      = Vmcs::read (Vmcs::GUEST_RIP);
-        inst_len = Vmcs::read (Vmcs::EXI_INST_LEN);
+        rip      = Vmcs::read<mword>  (Vmcs::GUEST_RIP);
+        inst_len = Vmcs::read<uint32> (Vmcs::EXI_INST_LEN);
     }
 
     if (m & Mtd::RFLAGS)
-        rflags = Vmcs::read (Vmcs::GUEST_RFLAGS);
+        rflags = Vmcs::read<mword> (Vmcs::GUEST_RFLAGS);
 
     if (m & Mtd::DS_ES) {
-        ds.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_DS), Vmcs::read (Vmcs::GUEST_BASE_DS), Vmcs::read (Vmcs::GUEST_LIMIT_DS), Vmcs::read (Vmcs::GUEST_AR_DS));
-        es.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_ES), Vmcs::read (Vmcs::GUEST_BASE_ES), Vmcs::read (Vmcs::GUEST_LIMIT_ES), Vmcs::read (Vmcs::GUEST_AR_ES));
+        ds.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_DS), Vmcs::read<mword> (Vmcs::GUEST_BASE_DS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_DS), Vmcs::read<uint32> (Vmcs::GUEST_AR_DS));
+        es.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_ES), Vmcs::read<mword> (Vmcs::GUEST_BASE_ES), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_ES), Vmcs::read<uint32> (Vmcs::GUEST_AR_ES));
     }
 
     if (m & Mtd::FS_GS) {
-        fs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_FS), Vmcs::read (Vmcs::GUEST_BASE_FS), Vmcs::read (Vmcs::GUEST_LIMIT_FS), Vmcs::read (Vmcs::GUEST_AR_FS));
-        gs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_GS), Vmcs::read (Vmcs::GUEST_BASE_GS), Vmcs::read (Vmcs::GUEST_LIMIT_GS), Vmcs::read (Vmcs::GUEST_AR_GS));
+        fs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_FS), Vmcs::read<mword> (Vmcs::GUEST_BASE_FS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_FS), Vmcs::read<uint32> (Vmcs::GUEST_AR_FS));
+        gs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_GS), Vmcs::read<mword> (Vmcs::GUEST_BASE_GS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GS), Vmcs::read<uint32> (Vmcs::GUEST_AR_GS));
     }
 
     if (m & Mtd::CS_SS) {
-        cs.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_CS), Vmcs::read (Vmcs::GUEST_BASE_CS), Vmcs::read (Vmcs::GUEST_LIMIT_CS), Vmcs::read (Vmcs::GUEST_AR_CS));
-        ss.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_SS), Vmcs::read (Vmcs::GUEST_BASE_SS), Vmcs::read (Vmcs::GUEST_LIMIT_SS), Vmcs::read (Vmcs::GUEST_AR_SS));
+        cs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_CS), Vmcs::read<mword> (Vmcs::GUEST_BASE_CS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_CS), Vmcs::read<uint32> (Vmcs::GUEST_AR_CS));
+        ss.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_SS), Vmcs::read<mword> (Vmcs::GUEST_BASE_SS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_SS), Vmcs::read<uint32> (Vmcs::GUEST_AR_SS));
     }
 
     if (m & Mtd::TR)
-        tr.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_TR), Vmcs::read (Vmcs::GUEST_BASE_TR), Vmcs::read (Vmcs::GUEST_LIMIT_TR), Vmcs::read (Vmcs::GUEST_AR_TR));
+        tr.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_TR), Vmcs::read<mword> (Vmcs::GUEST_BASE_TR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_TR), Vmcs::read<uint32> (Vmcs::GUEST_AR_TR));
 
     if (m & Mtd::LDTR)
-        ld.set_vmx (Vmcs::read (Vmcs::GUEST_SEL_LDTR), Vmcs::read (Vmcs::GUEST_BASE_LDTR), Vmcs::read (Vmcs::GUEST_LIMIT_LDTR), Vmcs::read (Vmcs::GUEST_AR_LDTR));
+        ld.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_LDTR), Vmcs::read<mword> (Vmcs::GUEST_BASE_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_AR_LDTR));
 
     if (m & Mtd::GDTR)
-        gd.set_vmx (0, Vmcs::read (Vmcs::GUEST_BASE_GDTR), Vmcs::read (Vmcs::GUEST_LIMIT_GDTR), 0);
+        gd.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_GDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GDTR), 0);
 
     if (m & Mtd::IDTR)
-        id.set_vmx (0, Vmcs::read (Vmcs::GUEST_BASE_IDTR), Vmcs::read (Vmcs::GUEST_LIMIT_IDTR), 0);
+        id.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_IDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_IDTR), 0);
 
     if (m & Mtd::CR) {
-        cr0 = regs->read_cr<Vmcs> (0);
-        cr2 = regs->read_cr<Vmcs> (2);
-        cr3 = regs->read_cr<Vmcs> (3);
-        cr4 = regs->read_cr<Vmcs> (4);
+        cr0 = regs->get_cr0<Vmcs>();
+        cr2 = regs->get_cr2<Vmcs>();
+        cr3 = regs->get_cr3<Vmcs>();
+        cr4 = regs->get_cr4<Vmcs>();
     }
 
     if (m & Mtd::DR)
-        dr7 = Vmcs::read (Vmcs::GUEST_DR7);
+        dr7 = Vmcs::read<mword> (Vmcs::GUEST_DR7);
 
     if (m & Mtd::SYSENTER) {
-        sysenter_cs  = Vmcs::read (Vmcs::GUEST_SYSENTER_CS);
-        sysenter_rsp = Vmcs::read (Vmcs::GUEST_SYSENTER_ESP);
-        sysenter_rip = Vmcs::read (Vmcs::GUEST_SYSENTER_EIP);
+        sysenter_cs  = Vmcs::read<uint32> (Vmcs::GUEST_SYSENTER_CS);
+        sysenter_rsp = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_ESP);
+        sysenter_rip = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_EIP);
     }
 
     if (m & Mtd::QUAL) {
-        if (regs->dst_portal == 48) {
-            qual[0] = regs->nst_error;
-            qual[1] = regs->nst_fault;
-        } else {
-            qual[0] = Vmcs::read (Vmcs::EXI_QUALIFICATION);
-            qual[1] = Vmcs::read (Vmcs::INFO_PHYS_ADDR);
-        }
+        qual[0] = Vmcs::read<mword>  (Vmcs::EXI_QUALIFICATION);
+        qual[1] = Vmcs::read<uint64> (Vmcs::INFO_PHYS_ADDR);
     }
 
     if (m & Mtd::INJ) {
         if (regs->dst_portal == 33 || regs->dst_portal == NUM_VMI - 1) {
-            intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_INFO));
-            intr_error = static_cast<uint32>(Vmcs::read (Vmcs::ENT_INTR_ERROR));
+            intr_info  = Vmcs::read<uint32> (Vmcs::ENT_INTR_INFO);
+            intr_error = Vmcs::read<uint32> (Vmcs::ENT_INTR_ERROR);
         } else {
-            intr_info  = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_INFO));
-            intr_error = static_cast<uint32>(Vmcs::read (Vmcs::IDT_VECT_ERROR));
+            intr_info  = Vmcs::read<uint32> (Vmcs::IDT_VECT_INFO);
+            intr_error = Vmcs::read<uint32> (Vmcs::IDT_VECT_ERROR);
         }
     }
 
     if (m & Mtd::STA) {
-        intr_state = static_cast<uint32>(Vmcs::read (Vmcs::GUEST_INTR_STATE));
-        actv_state = static_cast<uint32>(Vmcs::read (Vmcs::GUEST_ACTV_STATE));
+        intr_state = Vmcs::read<uint32> (Vmcs::GUEST_INTR_STATE);
+        actv_state = Vmcs::read<uint32> (Vmcs::GUEST_ACTV_STATE);
     }
 
     if (m & Mtd::TSC) {
@@ -197,7 +192,7 @@ bool Utcb::load_vmx (Cpu_regs *regs)
 
 #ifdef __x86_64__
     if (m & Mtd::EFER)
-        efer = Vmcs::read (Vmcs::GUEST_EFER);
+        efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
 #endif
 
     barrier();
@@ -229,7 +224,7 @@ bool Utcb::save_vmx (Cpu_regs *regs)
 
     if (mtd & Mtd::RIP_LEN) {
         Vmcs::write (Vmcs::GUEST_RIP, rip);
-        Vmcs::write (Vmcs::ENT_INST_LEN, inst_len);
+        Vmcs::write (Vmcs::ENT_INST_LEN, static_cast<uint32> (inst_len));
     }
 
     if (mtd & Mtd::RFLAGS)
@@ -293,10 +288,10 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CR) {
-        regs->write_cr<Vmcs> (0, cr0);
-        regs->write_cr<Vmcs> (2, cr2);
-        regs->write_cr<Vmcs> (3, cr3);
-        regs->write_cr<Vmcs> (4, cr4);
+        regs->set_cr0<Vmcs> (cr0);
+        regs->set_cr2<Vmcs> (cr2);
+        regs->set_cr3<Vmcs> (cr3);
+        regs->set_cr4<Vmcs> (cr4);
     }
 
     if (mtd & Mtd::DR)
@@ -309,13 +304,13 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CTRL) {
-        regs->vmx_set_cpu_ctrl0 (ctrl[0]);
-        regs->vmx_set_cpu_ctrl1 (ctrl[1]);
+        regs->set_cpu_ctrl0<Vmcs> (ctrl[0]);
+        regs->set_cpu_ctrl1<Vmcs> (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {
 
-        uint32 val = static_cast<uint32>(Vmcs::read (Vmcs::CPU_EXEC_CTRL0));
+        uint32 val = Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL0);
 
         if (intr_info & 0x1000)
             val |=  Vmcs::CPU_INTR_WINDOW;
@@ -327,7 +322,7 @@ bool Utcb::save_vmx (Cpu_regs *regs)
         else
             val &= ~Vmcs::CPU_NMI_WINDOW;
 
-        regs->vmx_set_cpu_ctrl0 (val);
+        regs->set_cpu_ctrl0<Vmcs> (val);
 
         Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x3000);
         Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
@@ -405,10 +400,10 @@ bool Utcb::load_svm (Cpu_regs *regs)
         id = vmcb->idtr;
 
     if (m & Mtd::CR) {
-        cr0 = regs->read_cr<Vmcb> (0);
-        cr2 = regs->read_cr<Vmcb> (2);
-        cr3 = regs->read_cr<Vmcb> (3);
-        cr4 = regs->read_cr<Vmcb> (4);
+        cr0 = regs->get_cr0<Vmcb>();
+        cr2 = regs->get_cr2<Vmcb>();
+        cr3 = regs->get_cr3<Vmcb>();
+        cr4 = regs->get_cr4<Vmcb>();
     }
 
     if (m & Mtd::DR)
@@ -421,13 +416,8 @@ bool Utcb::load_svm (Cpu_regs *regs)
     }
 
     if (m & Mtd::QUAL) {
-        if (regs->dst_portal == NUM_VMI - 4) {
-            qual[0] = regs->nst_error;
-            qual[1] = regs->nst_fault;
-        } else {
-            qual[0] = vmcb->exitinfo1;
-            qual[1] = vmcb->exitinfo2;
-        }
+        qual[0] = vmcb->exitinfo1;
+        qual[1] = vmcb->exitinfo2;
     }
 
     if (m & Mtd::INJ) {
@@ -513,10 +503,10 @@ bool Utcb::save_svm (Cpu_regs *regs)
         vmcb->idtr = id;
 
     if (mtd & Mtd::CR) {
-        regs->write_cr<Vmcb> (0, cr0);
-        regs->write_cr<Vmcb> (2, cr2);
-        regs->write_cr<Vmcb> (3, cr3);
-        regs->write_cr<Vmcb> (4, cr4);
+        regs->set_cr0<Vmcb> (cr0);
+        regs->set_cr2<Vmcb> (cr2);
+        regs->set_cr3<Vmcb> (cr3);
+        regs->set_cr4<Vmcb> (cr4);
     }
 
     if (mtd & Mtd::DR)
@@ -529,8 +519,8 @@ bool Utcb::save_svm (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CTRL) {
-        regs->svm_set_cpu_ctrl0 (ctrl[0]);
-        regs->svm_set_cpu_ctrl1 (ctrl[1]);
+        regs->set_cpu_ctrl0<Vmcb> (ctrl[0]);
+        regs->set_cpu_ctrl1<Vmcb> (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {
