@@ -24,7 +24,6 @@
 #include "string.hpp"
 
 bool Cmdline::iommu;
-bool Cmdline::keyb;
 bool Cmdline::serial;
 bool Cmdline::vtlb;
 bool Cmdline::nodl;
@@ -34,7 +33,6 @@ bool Cmdline::novpid;
 struct Cmdline::param_map Cmdline::map[] =
 {
     { "iommu",      &Cmdline::iommu     },
-    { "keyb",       &Cmdline::keyb      },
     { "serial",     &Cmdline::serial    },
     { "vtlb",       &Cmdline::vtlb      },
     { "nodl",       &Cmdline::nodl      },
