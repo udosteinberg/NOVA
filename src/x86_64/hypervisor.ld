@@ -60,13 +60,6 @@ SECTIONS
         *(.rodata .rodata.* .gnu.linkonce.r.*)
     } : kern
 
-    .fixup : AT (ADDR (.fixup) - OFFSET)
-    {
-        PROVIDE_HIDDEN (FIXUP_S = .);
-        KEEP (*(.fixup))
-        PROVIDE_HIDDEN (FIXUP_E = .);
-    } : kern
-
     .init_array : AT (ADDR (.init_array) - OFFSET)
     {
         /*
