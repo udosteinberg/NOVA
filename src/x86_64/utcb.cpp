@@ -190,6 +190,10 @@ bool Utcb::load_vmx (Cpu_regs const &c)
         cr4 = c.vmx_get_gst_cr4();
         cr2 = c.cr2;
         cr3 = Vmcs::read<mword> (Vmcs::Encoding::GUEST_CR3);
+        pdpte[0] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE0);
+        pdpte[1] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE1);
+        pdpte[2] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE2);
+        pdpte[3] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE3);
     }
 
     if (m & Mtd::DR)
@@ -337,6 +341,10 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         c.vmx_set_gst_cr4 (cr4);
         c.cr2 = cr2;
         Vmcs::write (Vmcs::Encoding::GUEST_CR3, cr3);
+        Vmcs::write (Vmcs::GUEST_PDPTE0, pdpte[0]);
+        Vmcs::write (Vmcs::GUEST_PDPTE1, pdpte[1]);
+        Vmcs::write (Vmcs::GUEST_PDPTE2, pdpte[2]);
+        Vmcs::write (Vmcs::GUEST_PDPTE3, pdpte[3]);
     }
 
     if (mtd & Mtd::DR)
