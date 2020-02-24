@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -31,21 +32,30 @@ bool Utcb::load_exc (Cpu_regs *regs)
 {
     mword m = regs->mtd;
 
-    if (m & Mtd::GPR_ACDB) {
+    if (m & Mtd::GPR_0_3) {
         rax = regs->REG(ax);
         rcx = regs->REG(cx);
         rdx = regs->REG(dx);
         rbx = regs->REG(bx);
     }
 
-    if (m & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_4_7) {
+        rsp = regs->REG(sp);
         rbp = regs->REG(bp);
         rsi = regs->REG(si);
         rdi = regs->REG(di);
     }
 
-    if (m & Mtd::RSP)
-        rsp = regs->REG(sp);
+    if (m & Mtd::GPR_8_15) {
+        r8  = regs->REG(8);
+        r9  = regs->REG(9);
+        r10 = regs->REG(10);
+        r11 = regs->REG(11);
+        r12 = regs->REG(12);
+        r13 = regs->REG(13);
+        r14 = regs->REG(14);
+        r15 = regs->REG(15);
+    }
 
     if (m & Mtd::RIP_LEN)
         rip = regs->REG(ip);
@@ -67,21 +77,30 @@ bool Utcb::load_exc (Cpu_regs *regs)
 
 bool Utcb::save_exc (Cpu_regs *regs)
 {
-    if (mtd & Mtd::GPR_ACDB) {
+    if (mtd & Mtd::GPR_0_3) {
         regs->REG(ax) = rax;
         regs->REG(cx) = rcx;
         regs->REG(dx) = rdx;
         regs->REG(bx) = rbx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (mtd & Mtd::GPR_4_7) {
+        regs->REG(sp) = rsp;
         regs->REG(bp) = rbp;
         regs->REG(si) = rsi;
         regs->REG(di) = rdi;
     }
 
-    if (mtd & Mtd::RSP)
-        regs->REG(sp) = rsp;
+    if (mtd & Mtd::GPR_8_15) {
+        regs->REG(8)  = r8;
+        regs->REG(9)  = r9;
+        regs->REG(10) = r10;
+        regs->REG(11) = r11;
+        regs->REG(12) = r12;
+        regs->REG(13) = r13;
+        regs->REG(14) = r14;
+        regs->REG(15) = r15;
+    }
 
     if (mtd & Mtd::RIP_LEN)
         regs->REG(ip) = rip;
@@ -94,25 +113,34 @@ bool Utcb::save_exc (Cpu_regs *regs)
 
 bool Utcb::load_vmx (Cpu_regs *regs)
 {
+    regs->vmcs->make_current();
+
     mword m = regs->mtd;
 
-    if (m & Mtd::GPR_ACDB) {
+    if (m & Mtd::GPR_0_3) {
         rax = regs->REG(ax);
         rcx = regs->REG(cx);
         rdx = regs->REG(dx);
         rbx = regs->REG(bx);
     }
 
-    if (m & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_4_7) {
+        rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
         rbp = regs->REG(bp);
         rsi = regs->REG(si);
         rdi = regs->REG(di);
     }
 
-    regs->vmcs->make_current();
-
-    if (m & Mtd::RSP)
-        rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
+    if (m & Mtd::GPR_8_15) {
+        r8  = regs->REG(8);
+        r9  = regs->REG(9);
+        r10 = regs->REG(10);
+        r11 = regs->REG(11);
+        r12 = regs->REG(12);
+        r13 = regs->REG(13);
+        r14 = regs->REG(14);
+        r15 = regs->REG(15);
+    }
 
     if (m & Mtd::RIP_LEN) {
         rip      = Vmcs::read<mword>  (Vmcs::GUEST_RIP);
@@ -202,23 +230,32 @@ bool Utcb::load_vmx (Cpu_regs *regs)
 
 bool Utcb::save_vmx (Cpu_regs *regs)
 {
-    if (mtd & Mtd::GPR_ACDB) {
+    regs->vmcs->make_current();
+
+    if (mtd & Mtd::GPR_0_3) {
         regs->REG(ax) = rax;
         regs->REG(cx) = rcx;
         regs->REG(dx) = rdx;
         regs->REG(bx) = rbx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (mtd & Mtd::GPR_4_7) {
+        Vmcs::write (Vmcs::GUEST_RSP, rsp);
         regs->REG(bp) = rbp;
         regs->REG(si) = rsi;
         regs->REG(di) = rdi;
     }
 
-    regs->vmcs->make_current();
-
-    if (mtd & Mtd::RSP)
-        Vmcs::write (Vmcs::GUEST_RSP, rsp);
+    if (mtd & Mtd::GPR_8_15) {
+        regs->REG(8)  = r8;
+        regs->REG(9)  = r9;
+        regs->REG(10) = r10;
+        regs->REG(11) = r11;
+        regs->REG(12) = r12;
+        regs->REG(13) = r13;
+        regs->REG(14) = r14;
+        regs->REG(15) = r15;
+    }
 
     if (mtd & Mtd::RIP_LEN) {
         Vmcs::write (Vmcs::GUEST_RIP, rip);
@@ -346,21 +383,30 @@ bool Utcb::load_svm (Cpu_regs *regs)
 
     mword m = regs->mtd;
 
-    if (m & Mtd::GPR_ACDB) {
+    if (m & Mtd::GPR_0_3) {
         rax = static_cast<mword>(vmcb->rax);
         rcx = regs->REG(cx);
         rdx = regs->REG(dx);
         rbx = regs->REG(bx);
     }
 
-    if (m & Mtd::GPR_BSD) {
+    if (m & Mtd::GPR_4_7) {
+        rsp = static_cast<mword>(vmcb->rsp);
         rbp = regs->REG(bp);
         rsi = regs->REG(si);
         rdi = regs->REG(di);
     }
 
-    if (m & Mtd::RSP)
-        rsp = static_cast<mword>(vmcb->rsp);
+    if (m & Mtd::GPR_8_15) {
+        r8  = regs->REG(8);
+        r9  = regs->REG(9);
+        r10 = regs->REG(10);
+        r11 = regs->REG(11);
+        r12 = regs->REG(12);
+        r13 = regs->REG(13);
+        r14 = regs->REG(14);
+        r15 = regs->REG(15);
+    }
 
     if (m & Mtd::RIP_LEN)
         rip = static_cast<mword>(vmcb->rip);
@@ -447,21 +493,30 @@ bool Utcb::save_svm (Cpu_regs *regs)
 {
     Vmcb * const vmcb = regs->vmcb;
 
-    if (mtd & Mtd::GPR_ACDB) {
-        vmcb->rax = rax;
+    if (mtd & Mtd::GPR_0_3) {
+        vmcb->rax     = rax;
         regs->REG(cx) = rcx;
         regs->REG(dx) = rdx;
         regs->REG(bx) = rbx;
     }
 
-    if (mtd & Mtd::GPR_BSD) {
+    if (mtd & Mtd::GPR_4_7) {
+        vmcb->rsp     = rsp;
         regs->REG(bp) = rbp;
         regs->REG(si) = rsi;
         regs->REG(di) = rdi;
     }
 
-    if (mtd & Mtd::RSP)
-        vmcb->rsp = rsp;
+    if (mtd & Mtd::GPR_8_15) {
+        regs->REG(8)  = r8;
+        regs->REG(9)  = r9;
+        regs->REG(10) = r10;
+        regs->REG(11) = r11;
+        regs->REG(12) = r12;
+        regs->REG(13) = r13;
+        regs->REG(14) = r14;
+        regs->REG(15) = r15;
+    }
 
     if (mtd & Mtd::RIP_LEN)
         vmcb->rip = rip;
