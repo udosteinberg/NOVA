@@ -97,19 +97,17 @@ class Msr
             FEATURE_VMX_O_SMX       = 1ul << 2
         };
 
-        template <typename T>
         ALWAYS_INLINE
-        static inline T read (Register msr)
+        static inline uint64 read (Register msr)
         {
             mword h, l;
             asm volatile ("rdmsr" : "=a" (l), "=d" (h) : "c" (msr));
-            return static_cast<T>(static_cast<uint64>(h) << 32 | l);
+            return static_cast<uint64>(h) << 32 | l;
         }
 
-        template <typename T>
         ALWAYS_INLINE
-        static inline void write (Register msr, T val)
+        static inline void write (Register msr, uint64 val)
         {
-            asm volatile ("wrmsr" : : "a" (static_cast<mword>(val)), "d" (static_cast<mword>(static_cast<uint64>(val) >> 32)), "c" (msr));
+            asm volatile ("wrmsr" : : "a" (static_cast<mword>(val)), "d" (static_cast<mword>(val >> 32)), "c" (msr));
         }
 };
