@@ -37,7 +37,6 @@ class Cmdline
 
     public:
         static bool iommu;
-        static bool keyb;
         static bool serial;
         static bool vtlb;
         static bool nodl;
