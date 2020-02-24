@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -30,7 +31,7 @@ class Vmcs
 
         static Vmcs *current CPULOCAL_HOT;
 
-        static unsigned vpid_ctr CPULOCAL;
+        static uint16 vpid_ctr CPULOCAL;
 
         static union vmx_basic {
             uint64      val;
@@ -124,19 +125,15 @@ class Vmcs
             ENT_MSR_LD_ADDR         = 0x200aul,
             VMCS_EXEC_PTR           = 0x200cul,
             TSC_OFFSET              = 0x2010ul,
-            TSC_OFFSET_HI           = 0x2011ul,
             APIC_VIRT_ADDR          = 0x2012ul,
             APIC_ACCS_ADDR          = 0x2014ul,
             EPTP                    = 0x201aul,
-            EPTP_HI                 = 0x201bul,
 
             INFO_PHYS_ADDR          = 0x2400ul,
 
             // 64-Bit Guest State
             VMCS_LINK_PTR           = 0x2800ul,
-            VMCS_LINK_PTR_HI        = 0x2801ul,
             GUEST_DEBUGCTL          = 0x2802ul,
-            GUEST_DEBUGCTL_HI       = 0x2803ul,
             GUEST_EFER              = 0x2806ul,
             GUEST_PERF_GLOBAL_CTRL  = 0x2808ul,
             GUEST_PDPTE             = 0x280aul,
@@ -394,34 +391,37 @@ class Vmcs
             assert (ret);
         }
 
+        template <typename T>
         ALWAYS_INLINE
-        static inline mword read (Encoding enc)
+        static inline T read (Encoding enc)
         {
-            mword val;
-            asm volatile ("vmread %1, %0" : "=rm" (val) : "r" (static_cast<mword>(enc)) : "cc");
-            return val;
+            mword lo, hi;
+            asm volatile ("vmread %1, %0" : "=rm" (lo) : "r" (static_cast<mword>(enc)) : "cc");
+
+            if (sizeof (T) <= sizeof (mword))
+                return static_cast<T> (lo);
+
+            asm volatile ("vmread %1, %0" : "=rm" (hi) : "r" (static_cast<mword>(enc + 1)) : "cc");
+
+            return static_cast<T>(static_cast<uint64>(hi) << 32 | lo);
         }
 
+        template <typename T>
         ALWAYS_INLINE
-        static inline void write (Encoding enc, mword val)
+        static inline void write (Encoding enc, T val)
         {
-            asm volatile ("vmwrite %0, %1" : : "rm" (val), "r" (static_cast<mword>(enc)) : "cc");
-        }
+            asm volatile ("vmwrite %0, %1" : : "rm" (static_cast<mword>(val)), "r" (static_cast<mword>(enc)) : "cc");
 
-        ALWAYS_INLINE
-        static inline void adjust_rip()
-        {
-            write (GUEST_RIP, read (GUEST_RIP) + read (EXI_INST_LEN));
+            if (sizeof (T) <= sizeof (mword))
+                return;
 
-            uint32 intr = static_cast<uint32>(read (GUEST_INTR_STATE));
-            if (EXPECT_FALSE (intr & 3))
-                write (GUEST_INTR_STATE, intr & ~3);
+            asm volatile ("vmwrite %0, %1" : : "rm" (static_cast<mword>(static_cast<uint64>(val) >> 32)), "r" (static_cast<mword>(enc + 1)) : "cc");
         }
 
         ALWAYS_INLINE
         static inline unsigned long vpid()
         {
-            return has_vpid() ? read (VPID) : 0;
+            return has_vpid() ? read<uint16> (VPID) : 0;
         }
 
         static bool has_secondary() { return ctrl_cpu[0].clr & CPU_SECONDARY; }

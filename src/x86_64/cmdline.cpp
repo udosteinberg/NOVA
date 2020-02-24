@@ -25,7 +25,6 @@
 
 bool Cmdline::iommu;
 bool Cmdline::serial;
-bool Cmdline::vtlb;
 bool Cmdline::nodl;
 bool Cmdline::nopcid;
 bool Cmdline::novpid;
@@ -34,7 +33,6 @@ struct Cmdline::param_map Cmdline::map[] =
 {
     { "iommu",      &Cmdline::iommu     },
     { "serial",     &Cmdline::serial    },
-    { "vtlb",       &Cmdline::vtlb      },
     { "nodl",       &Cmdline::nodl      },
     { "nopcid",     &Cmdline::nopcid    },
     { "novpid",     &Cmdline::novpid    },
