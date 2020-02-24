@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -74,6 +74,7 @@ class Utcb_data
                 uint32          ctrl[2];
                 uint64          reserved;
                 mword           cr0, cr2, cr3, cr4;
+                uint64          pdpte[4];
                 mword           cr8, efer;
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
                 Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
