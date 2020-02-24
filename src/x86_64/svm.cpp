@@ -43,7 +43,7 @@ void Vmcb::init()
         return;
     }
 
-    Msr::write (Msr::IA32_EFER, Msr::read<uint32>(Msr::IA32_EFER) | Cpu::EFER_SVME);
+    Msr::write (Msr::IA32_EFER, Msr::read (Msr::IA32_EFER) | Cpu::EFER_SVME);
     Msr::write (Msr::AMD_SVM_HSAVE_PA, root = Buddy::ptr_to_phys (new Vmcb));
 
     trace (TRACE_SVM, "VMCB:%#010lx REV:%#x NPT:%d", root, svm_version, has_npt());

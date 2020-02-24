@@ -35,7 +35,7 @@ unsigned    Lapic::freq_bus;
 
 void Lapic::init()
 {
-    Paddr apic_base = Msr::read<Paddr>(Msr::IA32_APIC_BASE);
+    Paddr apic_base = static_cast<Paddr>(Msr::read (Msr::IA32_APIC_BASE));
 
     Pd::kern.Space_mem::delreg (apic_base & ~PAGE_MASK);
     Hptp (Hpt::current()).update (CPU_LOCAL_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~PAGE_MASK);
@@ -121,7 +121,7 @@ void Lapic::error_handler()
 
 void Lapic::timer_handler()
 {
-    bool expired = (freq_bus ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0;
+    bool expired = (freq_bus ? read (LAPIC_TMR_CCR) : Msr::read (Msr::IA32_TSC_DEADLINE)) == 0;
     if (expired)
         Timeout::check();
 
