@@ -19,8 +19,6 @@
  */
 
 #include "counter.hpp"
-#include "stdio.hpp"
-#include "x86.hpp"
 
 unsigned    Counter::ipi[NUM_IPI];
 unsigned    Counter::lvt[NUM_LVT];
@@ -34,47 +32,3 @@ unsigned    Counter::vtlb_flush;
 unsigned    Counter::schedule;
 unsigned    Counter::helping;
 uint64      Counter::cycles_idle;
-
-void Counter::dump()
-{
-    trace (0, "TIME: %16llu", rdtsc());
-    trace (0, "IDLE: %16llu", Counter::cycles_idle);
-    trace (0, "VGPF: %16u", Counter::vtlb_gpf);
-    trace (0, "VHPF: %16u", Counter::vtlb_hpf);
-    trace (0, "VFIL: %16u", Counter::vtlb_fill);
-    trace (0, "VFLU: %16u", Counter::vtlb_flush);
-    trace (0, "SCHD: %16u", Counter::schedule);
-    trace (0, "HELP: %16u", Counter::helping);
-
-    Counter::vtlb_gpf = Counter::vtlb_hpf = Counter::vtlb_fill = Counter::vtlb_flush = Counter::schedule = Counter::helping = 0;
-
-    for (unsigned i = 0; i < sizeof (Counter::ipi) / sizeof (*Counter::ipi); i++)
-        if (Counter::ipi[i]) {
-            trace (0, "IPI %#4x: %12u", i, Counter::ipi[i]);
-            Counter::ipi[i] = 0;
-        }
-
-    for (unsigned i = 0; i < sizeof (Counter::lvt) / sizeof (*Counter::lvt); i++)
-        if (Counter::lvt[i]) {
-            trace (0, "LVT %#4x: %12u", i, Counter::lvt[i]);
-            Counter::lvt[i] = 0;
-        }
-
-    for (unsigned i = 0; i < sizeof (Counter::gsi) / sizeof (*Counter::gsi); i++)
-        if (Counter::gsi[i]) {
-            trace (0, "GSI %#4x: %12u", i, Counter::gsi[i]);
-            Counter::gsi[i] = 0;
-        }
-
-    for (unsigned i = 0; i < sizeof (Counter::exc) / sizeof (*Counter::exc); i++)
-        if (Counter::exc[i]) {
-            trace (0, "EXC %#4x: %12u", i, Counter::exc[i]);
-            Counter::exc[i] = 0;
-        }
-
-    for (unsigned i = 0; i < sizeof (Counter::vmi) / sizeof (*Counter::vmi); i++)
-        if (Counter::vmi[i]) {
-            trace (0, "VMI %#4x: %12u", i, Counter::vmi[i]);
-            Counter::vmi[i] = 0;
-        }
-}

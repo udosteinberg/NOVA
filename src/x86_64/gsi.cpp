@@ -23,7 +23,6 @@
 #include "dmar.hpp"
 #include "gsi.hpp"
 #include "ioapic.hpp"
-#include "keyb.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
 #include "vectors.hpp"
@@ -90,10 +89,7 @@ void Gsi::vector (unsigned vector)
 {
     unsigned gsi = vector - VEC_GSI;
 
-    if (gsi == Keyb::gsi)
-        Keyb::interrupt();
-
-    else if (gsi == Acpi::gsi)
+    if (gsi == Acpi::gsi)
         Acpi::interrupt();
 
     else if (gsi_table[gsi].trg)
