@@ -30,31 +30,31 @@ Slab_cache Mtrr::cache (sizeof (Mtrr), 8);
 
 void Mtrr::init()
 {
-    count = Msr::read<uint32>(Msr::IA32_MTRR_CAP) & 0xff;
-    dtype = Msr::read<uint32>(Msr::IA32_MTRR_DEF_TYPE) & 0xff;
+    count = Msr::read (Msr::IA32_MTRR_CAP) & 0xff;
+    dtype = Msr::read (Msr::IA32_MTRR_DEF_TYPE) & 0xff;
 
     for (unsigned i = 0; i < count; i++)
-        new Mtrr (Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_BASE + 2 * i)),
-                  Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_MASK + 2 * i)));
+        new Mtrr (Msr::read (Msr::Register (Msr::IA32_MTRR_PHYS_BASE + 2 * i)),
+                  Msr::read (Msr::Register (Msr::IA32_MTRR_PHYS_MASK + 2 * i)));
 }
 
 unsigned Mtrr::memtype (uint64 phys, uint64 &next)
 {
     if (phys < 0x80000) {
         next = 1 + (phys | 0xffff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>
+        return static_cast<unsigned>(Msr::read (Msr::IA32_MTRR_FIX64K_BASE) >>
                                     (phys >> 13 & 0x38)) & 0xff;
     }
 
     if (phys < 0xc0000) {
         next = 1 + (phys | 0x3fff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
+        return static_cast<unsigned>(Msr::read (Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
                                     (phys >> 11 & 0x38)) & 0xff;
     }
 
     if (phys < 0x100000) {
         next = 1 + (phys | 0xfff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
+        return static_cast<unsigned>(Msr::read (Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
                                     (phys >>  9 & 0x38)) & 0xff;
     }
 
