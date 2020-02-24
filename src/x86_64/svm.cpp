@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -42,9 +43,6 @@ void Vmcb::init()
         Hip::hip->clr_feature (Hip::FEAT_SVM);
         return;
     }
-
-    if (Cmdline::vtlb)
-        svm_feature &= ~1;
 
     Msr::write (Msr::IA32_EFER, Msr::read<uint32>(Msr::IA32_EFER) | Cpu::EFER_SVME);
     Msr::write (Msr::AMD_SVM_HSAVE_PA, root = Buddy::ptr_to_phys (new Vmcb));
