@@ -76,30 +76,14 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static bool handle_exc_gp (Exc_regs *);
         static bool handle_exc_pf (Exc_regs *);
 
-        static inline uint8 ifetch (mword);
-
         NORETURN
         static inline void svm_exception (mword);
-
-        NORETURN
-        static inline void svm_cr();
-
-        NORETURN
-        static inline void svm_invlpg();
 
         NORETURN
         static inline void vmx_exception();
 
         NORETURN
         static inline void vmx_extint();
-
-        NORETURN
-        static inline void vmx_invlpg();
-
-        NORETURN
-        static inline void vmx_cr();
-
-        static bool fixup (mword &);
 
         NOINLINE
         static void handle_hazard (mword, void (*)());

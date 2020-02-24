@@ -46,7 +46,6 @@ enum {
     TRACE_MEMORY    = 1UL << 13,
     TRACE_PCI       = 1UL << 14,
     TRACE_SCHEDULE  = 1UL << 16,
-    TRACE_VTLB      = 1UL << 17,
     TRACE_DEL       = 1UL << 18,
     TRACE_REV       = 1UL << 19,
     TRACE_RCU       = 1UL << 20,
