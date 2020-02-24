@@ -39,7 +39,7 @@ void bootstrap()
     // Barrier: wait for all ECs to arrive here
     for (++barrier; barrier != Cpu::online; pause()) ;
 
-    Msr::write<uint64>(Msr::IA32_TSC, 0);
+    Msr::write (Msr::IA32_TSC, 0);
 
     // Create root task
     if (Cpu::bsp) {
