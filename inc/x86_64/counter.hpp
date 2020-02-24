@@ -40,8 +40,6 @@ class Counter
         static unsigned helping         CPULOCAL;
         static uint64   cycles_idle     CPULOCAL;
 
-        static void dump();
-
         ALWAYS_INLINE
         static inline unsigned remote (unsigned c, unsigned i)
         {
