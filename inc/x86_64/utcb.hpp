@@ -35,7 +35,7 @@ class Utcb_segment
         uint64  base;
 
         ALWAYS_INLINE
-        inline void set_vmx (mword s, mword b, mword l, mword a)
+        inline void set_vmx (uint16 s, mword b, uint32 l, uint32 a)
         {
             sel   = static_cast<uint16>(s);
             ar    = static_cast<uint16>((a >> 4 & 0x1f00) | (a & 0xff));
