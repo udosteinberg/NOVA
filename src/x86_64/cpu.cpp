@@ -85,8 +85,8 @@ void Cpu::check_features()
     vendor = Vendor (v);
 
     if (vendor == INTEL) {
-        Msr::write<uint64>(Msr::IA32_BIOS_SIGN_ID, 0);
-        platform = static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_PLATFORM_ID) >> 50) & 7;
+        Msr::write (Msr::IA32_BIOS_SIGN_ID, 0);
+        platform = static_cast<unsigned>(Msr::read (Msr::IA32_PLATFORM_ID) >> 50) & 7;
     }
 
     switch (static_cast<uint8>(eax)) {
@@ -110,7 +110,7 @@ void Cpu::check_features()
             tpp      =  ebx >> 16 & 0xff;
     }
 
-    patch = static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_BIOS_SIGN_ID) >> 32);
+    patch = static_cast<unsigned>(Msr::read (Msr::IA32_BIOS_SIGN_ID) >> 32);
 
     cpuid (0x80000000, eax, ebx, ecx, edx);
 
@@ -147,7 +147,7 @@ void Cpu::check_features()
     // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
     if (vendor == AMD)
         if (family > 0xf || (family == 0xf && model >= 0x40))
-            Msr::write (Msr::AMD_IPMR, Msr::read<uint32>(Msr::AMD_IPMR) & ~(3ul << 27));
+            Msr::write (Msr::AMD_IPMR, Msr::read (Msr::AMD_IPMR) & ~(3UL << 27));
 }
 
 void Cpu::setup_thermal()
@@ -157,10 +157,10 @@ void Cpu::setup_thermal()
 
 void Cpu::setup_sysenter()
 {
-    Msr::write<mword>(Msr::IA32_SYSENTER_CS, 0);
-    Msr::write<mword>(Msr::IA32_STAR,  static_cast<mword>(SEL_USER_CODE32) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
-    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sys));
-    Msr::write<mword>(Msr::IA32_FMASK, Cpu::EFL_DF | Cpu::EFL_IF);
+    Msr::write (Msr::IA32_SYSENTER_CS, 0);
+    Msr::write (Msr::IA32_STAR,  static_cast<uint64>(SEL_USER_CODE32) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32);
+    Msr::write (Msr::IA32_LSTAR, reinterpret_cast<uint64>(&entry_sys));
+    Msr::write (Msr::IA32_FMASK, Cpu::EFL_DF | Cpu::EFL_IF);
 }
 
 void Cpu::setup_pcid()

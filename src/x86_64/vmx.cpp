@@ -73,7 +73,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (HOST_SEL_GS, 0);
     write (HOST_SEL_TR, SEL_TSS_RUN);
 
-    write (HOST_EFER, Msr::read<uint64>(Msr::IA32_EFER));
+    write (HOST_EFER, Msr::read (Msr::IA32_EFER));
     exi |= EXI_LOAD_EFER | EXI_HOST_64;
     ent |= ENT_LOAD_EFER;
 
@@ -99,26 +99,26 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
 void Vmcs::init()
 {
-    if (!Cpu::feature (Cpu::FEAT_VMX) || (Msr::read<uint32>(Msr::IA32_FEATURE_CONTROL) & 0x5) != 0x5) {
+    if (!Cpu::feature (Cpu::FEAT_VMX) || (Msr::read (Msr::IA32_FEATURE_CONTROL) & 0x5) != 0x5) {
         Hip::hip->clr_feature (Hip::FEAT_VMX);
         return;
     }
 
-    fix_cr0_set =  Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED0);
-    fix_cr0_clr = ~Msr::read<mword>(Msr::IA32_VMX_CR0_FIXED1);
-    fix_cr4_set =  Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED0);
-    fix_cr4_clr = ~Msr::read<mword>(Msr::IA32_VMX_CR4_FIXED1);
+    fix_cr0_set = static_cast<mword>( Msr::read (Msr::IA32_VMX_CR0_FIXED0));
+    fix_cr0_clr = static_cast<mword>(~Msr::read (Msr::IA32_VMX_CR0_FIXED1));
+    fix_cr4_set = static_cast<mword>( Msr::read (Msr::IA32_VMX_CR4_FIXED0));
+    fix_cr4_clr = static_cast<mword>(~Msr::read (Msr::IA32_VMX_CR4_FIXED1));
 
-    basic.val       = Msr::read<uint64>(Msr::IA32_VMX_BASIC);
-    ctrl_exi.val    = Msr::read<uint64>(basic.ctrl ? Msr::IA32_VMX_TRUE_EXIT  : Msr::IA32_VMX_CTRL_EXIT);
-    ctrl_ent.val    = Msr::read<uint64>(basic.ctrl ? Msr::IA32_VMX_TRUE_ENTRY : Msr::IA32_VMX_CTRL_ENTRY);
-    ctrl_pin.val    = Msr::read<uint64>(basic.ctrl ? Msr::IA32_VMX_TRUE_PIN   : Msr::IA32_VMX_CTRL_PIN);
-    ctrl_cpu[0].val = Msr::read<uint64>(basic.ctrl ? Msr::IA32_VMX_TRUE_CPU0  : Msr::IA32_VMX_CTRL_CPU0);
+    basic.val       = Msr::read (Msr::IA32_VMX_BASIC);
+    ctrl_exi.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_EXIT  : Msr::IA32_VMX_CTRL_EXIT);
+    ctrl_ent.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_ENTRY : Msr::IA32_VMX_CTRL_ENTRY);
+    ctrl_pin.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_PIN   : Msr::IA32_VMX_CTRL_PIN);
+    ctrl_cpu[0].val = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_CPU0  : Msr::IA32_VMX_CTRL_CPU0);
 
     if (has_secondary())
-        ctrl_cpu[1].val = Msr::read<uint64>(Msr::IA32_VMX_CTRL_CPU1);
+        ctrl_cpu[1].val = Msr::read (Msr::IA32_VMX_CTRL_CPU1);
     if (has_ept() || has_vpid())
-        ept_vpid.val = Msr::read<uint64>(Msr::IA32_VMX_EPT_VPID);
+        ept_vpid.val = Msr::read (Msr::IA32_VMX_EPT_VPID);
     if (has_ept())
         Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
     if (has_urg())
