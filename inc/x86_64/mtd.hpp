@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -29,9 +31,9 @@ class Mtd
         enum Item
         {
             // IPC
-            GPR_ACDB        = 1UL << 0,
-            GPR_BSD         = 1UL << 1,
-            RSP             = 1UL << 2,
+            GPR_0_3         = 1UL << 0,
+            GPR_4_7         = 1UL << 1,
+            GPR_8_15        = 1UL << 2,
             RIP_LEN         = 1UL << 3,
             RFLAGS          = 1UL << 4,
             DS_ES           = 1UL << 5,
