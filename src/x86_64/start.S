@@ -20,6 +20,7 @@
  */
 
 #include "arch.hpp"
+#include "memattr.hpp"
 #include "memory.hpp"
 #include "selectors.hpp"
 
@@ -62,16 +63,20 @@ __boot_gdt__:
 .endm
 
 .macro                  INIT_PAGING
-                        mov     $0xc0000080, %ecx
-                        rdmsr
-                        or      $0x101, %eax
+                        mov     $0x277, %ecx
+                        mov     $(PAT_VAL >> 32), %edx
+                        mov     $(PAT_VAL & BIT_RANGE (31, 0)), %eax
                         wrmsr
-                        mov     $0x6b8, %edx
+                        mov     $0xc0000080, %ecx
+                        xor     %edx, %edx
+                        mov     $(EFER_NXE | EFER_LME | EFER_SCE), %eax
+                        wrmsr
+                        mov     $PDBR, %ecx
+                        mov     $(CR4_OSXMMEXCPT | CR4_OSFXSR | CR4_PGE | CR4_PAE | CR4_PSE | CR4_DE), %edx
+                        mov     $(CR0_PG | CR0_WP | CR0_NE | CR0_TS | CR0_MP | CR0_PE), %eax
                         mov     %edx, %cr4
-                        mov     $PDBR, %edx
-                        mov     %edx, %cr3
-                        mov     $0x8001002b, %edx
-                        mov     %edx, %cr0
+                        mov     %ecx, %cr3
+                        mov     %eax, %cr0
 .endm
 
 /*
