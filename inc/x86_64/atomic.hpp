@@ -25,6 +25,10 @@ class Atomic
     public:
         template <typename T>
         ALWAYS_INLINE
+        static T load (T &ptr) { return __atomic_load_n (&ptr, __ATOMIC_SEQ_CST); }
+
+        template <typename T>
+        ALWAYS_INLINE
         static inline bool cmp_swap (T &ptr, T o, T n) { return __sync_bool_compare_and_swap (&ptr, o, n); }
 
         template <typename T>
