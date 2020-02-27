@@ -92,12 +92,12 @@ class Hip
 
         void set_feature (Feature f)
         {
-            Atomic::set_mask (api_flg, static_cast<typeof api_flg>(f));
+            Atomic::set_mask (api_flg, static_cast<decltype (api_flg)>(f));
         }
 
         void clr_feature (Feature f)
         {
-            Atomic::clr_mask (api_flg, static_cast<typeof api_flg>(f));
+            Atomic::clr_mask (api_flg, static_cast<decltype (api_flg)>(f));
         }
 
         bool cpu_online (unsigned long cpu)
