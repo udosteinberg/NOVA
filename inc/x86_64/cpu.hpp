@@ -78,10 +78,21 @@ class Cpu
             ACPI            = 0 * 32 + 22,      // Thermal Monitor and Software Controlled Clock Facilities
             // 0x1.ECX
             VMX             = 1 * 32 +  5,      // Virtual Machine Extensions
+            EIST            = 1 * 32 +  7,      // Enhanced Intel SpeedStep Technology
             PCID            = 1 * 32 + 17,      // Process Context Identifiers
             TSC_DEADLINE    = 1 * 32 + 24,      // TSC Deadline Support
             // 0x6.EAX
+            TURBO_BOOST     = 2 * 32 +  1,      // Turbo Boost Technology
             ARAT            = 2 * 32 +  2,      // Always Running APIC Timer
+            HWP             = 2 * 32 +  7,      // HWP
+            HWP_NTF         = 2 * 32 +  8,      // HWP Notification
+            HWP_ACT         = 2 * 32 +  9,      // HWP Activity Window
+            HWP_EPP         = 2 * 32 + 10,      // HWP Energy Performance Preference
+            HWP_PLR         = 2 * 32 + 11,      // HWP Package Level Request
+            HWP_CAP         = 2 * 32 + 15,      // HWP Capabilities
+            HWP_PECI        = 2 * 32 + 16,      // HWP PECI Override
+            HWP_FLEX        = 2 * 32 + 17,      // HWP Flexible
+            HWP_FAM         = 2 * 32 + 18,      // HWP Fast Access Mode
             // 0x7.EBX
             SMEP            = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
             RDT_M           = 3 * 32 + 12,      // Platform QoS Monitoring
