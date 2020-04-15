@@ -31,6 +31,7 @@ class Cmdline final
         // Command line parameters must be in a measured section
         SEC_HASH static inline bool insecure { false };
         SEC_HASH static inline bool noccst   { false };
+        SEC_HASH static inline bool nocpst   { false };
         SEC_HASH static inline bool nodl     { false };
         SEC_HASH static inline bool nopcid   { false };
         SEC_HASH static inline bool nosmmu   { false };
@@ -48,6 +49,7 @@ class Cmdline final
         {
             { "insecure",   insecure    },
             { "noccst",     noccst      },
+            { "nocpst",     nocpst      },
             { "nodl",       nodl        },
             { "nopcid",     nopcid      },
             { "nosmmu",     nosmmu      },
