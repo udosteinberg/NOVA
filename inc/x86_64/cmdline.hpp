@@ -33,6 +33,7 @@ class Cmdline final
         SEC_HASH static inline bool nodl     { false };
         SEC_HASH static inline bool nopcid   { false };
         SEC_HASH static inline bool nosmmu   { false };
+        SEC_HASH static inline bool noturbo  { false };
         SEC_HASH static inline bool nouart   { false };
         SEC_HASH static inline bool novpid   { false };
 
@@ -49,6 +50,7 @@ class Cmdline final
             { "nodl",       nodl        },
             { "nopcid",     nopcid      },
             { "nosmmu",     nosmmu      },
+            { "noturbo",    noturbo     },
             { "nouart",     nouart      },
             { "novpid",     novpid      },
         };

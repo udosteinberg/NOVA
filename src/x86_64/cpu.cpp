@@ -271,6 +271,46 @@ void Cpu::setup_msr()
             Msr::write (Msr::Reg64::AMD_IPMR, Msr::read (Msr::Reg64::AMD_IPMR) & ~(3UL << 27));
 }
 
+void Cpu::setup_pstate()
+{
+    if (vendor != Vendor::INTEL)
+        return;
+
+    if (feature (Feature::HWP)) {
+
+        // Enable HWP
+        Msr::write (Msr::Reg64::IA32_PM_ENABLE, BIT (0));
+
+        // Additional HWP MSRs may only be accessed after HWP is enabled
+        auto const msr { Msr::read (Msr::Reg64::IA32_HWP_CAPABILITIES) };
+        auto const min { static_cast<uint8_t>(msr >> 24) };     // Lowest
+        auto const gtd { static_cast<uint8_t>(msr >>  8) };     // Currently Guaranteed
+        auto const max { static_cast<uint8_t>(msr) };           // Highest
+        auto const des { Cmdline::noturbo ? gtd : max };
+
+        // Set desired level
+        Msr::write (Msr::Reg64::IA32_HWP_REQUEST, des << 16 | max << 8 | min);
+
+        trace (TRACE_CPU, "HWPM: Level:%u (%u:%u:%u)", des, min, gtd, max);
+
+    } else if (feature (Feature::EIST)) {
+
+        // Enable EIST
+        Msr::write (Msr::Reg64::IA32_MISC_ENABLE, Msr::read (Msr::Reg64::IA32_MISC_ENABLE) | BIT (16));
+
+        auto const msr { Msr::read (Msr::Reg64::PLATFORM_INFO) };
+        auto const min { static_cast<uint8_t>(msr >> 48) };
+        auto const gtd { static_cast<uint8_t>(msr >>  8) };
+        auto const max { feature (Feature::TURBO_BOOST) ? static_cast<uint8_t>(Msr::read (Msr::Reg64::TURBO_RATIO_LIMIT)) : gtd };
+        auto const des { Cmdline::noturbo ? gtd : max };
+
+        // Set desired ratio and (dis)engage turbo mode
+        Msr::write (Msr::Reg64::IA32_PERF_CTL, (Msr::read (Msr::Reg64::IA32_PERF_CTL) & ~(BIT64 (32) | BIT64_RANGE (15, 8))) | (feature (Feature::TURBO_BOOST) && Cmdline::noturbo ? BIT64 (32) : 0) | des << 8);
+
+        trace (TRACE_CPU, "EIST: Ratio:%u (%u:%u:%u)", des, min, gtd, max);
+    }
+}
+
 void Cpu::init()
 {
     if (Acpi::resume)
@@ -302,6 +342,8 @@ void Cpu::init()
     }
 
     setup_msr();
+
+    setup_pstate();
 
     Cr::set_cr4 (Cr::get_cr4() | feature (Feature::SMAP)  * CR4_SMAP    |
                                  feature (Feature::SMEP)  * CR4_SMEP    |
