@@ -52,6 +52,7 @@ class Cpu final
         static void enumerate_features (uint32_t &, uint32_t &, uint32_t (&)[4], uint32_t (&)[12]);
 
         static void setup_msr();
+        static void setup_pstate();
 
         static inline Spinlock boot_lock    asm ("__boot_lock");
 
@@ -74,11 +75,22 @@ class Cpu final
             HTT                     = 0 * 32 + 28,      // Hyper-Threading Technology
             // 0x1.ECX
             VMX                     = 1 * 32 +  5,      // Virtual Machine Extensions
+            EIST                    = 1 * 32 +  7,      // Enhanced Intel SpeedStep Technology
             PCID                    = 1 * 32 + 17,      // Process Context Identifiers
             X2APIC                  = 1 * 32 + 21,      // x2APIC Support
             TSC_DEADLINE            = 1 * 32 + 24,      // TSC Deadline Support
             // 0x6.EAX
+            TURBO_BOOST             = 2 * 32 +  1,      // Turbo Boost Technology
             ARAT                    = 2 * 32 +  2,      // Always Running APIC Timer
+            HWP                     = 2 * 32 +  7,      // HWP Baseline Resource and Capability
+            HWP_NTF                 = 2 * 32 +  8,      // HWP Notification
+            HWP_ACT                 = 2 * 32 +  9,      // HWP Activity Window
+            HWP_EPP                 = 2 * 32 + 10,      // HWP Energy Performance Preference
+            HWP_PLR                 = 2 * 32 + 11,      // HWP Package Level Request
+            HWP_CAP                 = 2 * 32 + 15,      // HWP Capabilities
+            HWP_PECI                = 2 * 32 + 16,      // HWP PECI Override
+            HWP_FLEX                = 2 * 32 + 17,      // HWP Flexible
+            HWP_FAM                 = 2 * 32 + 18,      // HWP Fast Access Mode
             // 0x7.EBX
             SMEP                    = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
             SMAP                    = 3 * 32 + 20,      // Supervisor Mode Access Prevention

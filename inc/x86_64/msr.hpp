@@ -56,8 +56,11 @@ class Msr final
             IA32_MCG_CTL                    = 0x17b,
             IA32_OVERCLOCKING_STATUS        = 0x195,
             IA32_PERF_STATUS                = 0x198,
+            IA32_PERF_CTL                   = 0x199,
             IA32_THERM_INTERRUPT            = 0x19b,
             IA32_THERM_STATUS               = 0x19c,
+            IA32_MISC_ENABLE                = 0x1a0,
+            TURBO_RATIO_LIMIT               = 0x1ad,
             IA32_PACKAGE_THERM_STATUS       = 0x1b1,
             IA32_DEBUGCTL                   = 0x1d9,
             IA32_PAT                        = 0x277,        // PAT
@@ -83,6 +86,13 @@ class Msr final
             IA32_VMX_CTRL_CPU_TER           = 0x492,        // VMX
             IA32_VMX_CTRL_EXI_SEC           = 0x493,        // VMX
             IA32_TSC_DEADLINE               = 0x6e0,        // TSC_DEADLINE
+            IA32_PM_ENABLE                  = 0x770,        // HWP
+            IA32_HWP_CAPABILITIES           = 0x771,        // HWP
+            IA32_HWP_REQUEST_PKG            = 0x772,        // HWP_PLR
+            IA32_HWP_INTERRUPT              = 0x773,        // HWP_NTF
+            IA32_HWP_REQUEST                = 0x774,        // HWP
+            IA32_HWP_PECI_REQUEST_INFO      = 0x775,
+            IA32_HWP_STATUS                 = 0x777,        // HWP
             IA32_XSS                        = 0xda0,        // XSAVE
 
             IA32_EFER                       = 0xc0000080,   // LM
