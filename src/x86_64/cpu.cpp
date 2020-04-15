@@ -160,6 +160,45 @@ void Cpu::setup_msr()
             Msr::write (Msr::AMD_IPMR, Msr::read (Msr::AMD_IPMR) & ~(3UL << 27));
 }
 
+void Cpu::setup_pstate()
+{
+    if (vendor != Vendor::INTEL)
+        return;
+
+    if (feature (Feature::HWP)) {
+
+        // Enable HWP
+        Msr::write (Msr::IA32_PM_ENABLE, BIT (0));
+
+        auto msr = Msr::read (Msr::IA32_HWP_CAPABILITIES);
+        auto min = static_cast<uint8>(msr >> 24);
+        auto nom = static_cast<uint8>(msr >>  8);
+        auto max = static_cast<uint8>(msr);
+        auto des = Cmdline::noturbo ? nom : max;
+
+        // Set desired ratio
+        Msr::write (Msr::IA32_HWP_REQUEST, des << 16 | max << 8 | min);
+
+        trace (TRACE_CPU, "HWPS: Ratio:%u (%u:%u:%u)", des, min, nom, max);
+
+    } else if (feature (Feature::EIST)) {
+
+        // Enable EIST
+        Msr::write (Msr::IA32_MISC_ENABLE, Msr::read (Msr::IA32_MISC_ENABLE) | BIT (16));
+
+        auto msr = Msr::read (Msr::PLATFORM_INFO);
+        auto min = static_cast<uint8>(msr >> 48);
+        auto nom = static_cast<uint8>(msr >>  8);
+        auto max = feature (Feature::TURBO_BOOST) ? static_cast<uint8>(Msr::read (Msr::TURBO_RATIO_LIMIT)) : nom;
+        auto des = Cmdline::noturbo ? nom : max;
+
+        // Set desired ratio and (dis)engage turbo mode
+        Msr::write (Msr::IA32_PERF_CTL, (Msr::read (Msr::IA32_PERF_CTL) & ~(BIT64 (32) | BIT64_RANGE (15, 8))) | (feature (Feature::TURBO_BOOST) && Cmdline::noturbo ? BIT64 (32) : 0) | des << 8);
+
+        trace (TRACE_CPU, "EIST: Ratio:%u (%u:%u:%u)", des, min, nom, max);
+    }
+}
+
 void Cpu::init()
 {
     uint32 name[12] = { 0 };
@@ -193,6 +232,8 @@ void Cpu::init()
     }
 
     setup_msr();
+
+    setup_pstate();
 
     set_cr4 (get_cr4() | feature (Feature::SMAP) * CR4_SMAP  |
                          feature (Feature::SMEP) * CR4_SMEP  |
