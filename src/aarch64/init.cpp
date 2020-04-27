@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "buddy.hpp"
 #include "config.hpp"
 #include "console.hpp"
@@ -64,7 +65,7 @@ unsigned init (uintptr_t offset)
     // Now we're ready to talk to the world
     Console::print ("\nNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<uintptr_t>(GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
-    Fdt::init();
+    Acpi::init() || Fdt::init();
 
     return Cpu::boot_cpu;
 }
