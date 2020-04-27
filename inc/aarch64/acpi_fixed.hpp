@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -51,20 +51,19 @@ class Acpi_fixed
         }
 
         /*
-         * Perform core powerdown
+         * Offline the calling core
          */
-        static inline bool pwrdn (Transition)
-        {
-            return Psci::cpu_off();
-        }
+        static inline bool offline_core() { return Psci::cpu_off(); }
+
+        /*
+         * Wait for all APs to be offline
+         */
+        static inline void offline_wait() { Psci::offline_wait(); }
 
         /*
          * Perform platform reset
          */
-        static inline bool reset()
-        {
-            return Psci::system_reset();
-        }
+        static inline bool reset() { return Psci::system_reset(); }
 
         /*
          * Perform platform sleep
