@@ -21,6 +21,49 @@
 
 #pragma once
 
+#include "acpi_table.hpp"
+#include "acpi_table_dbg2.hpp"
+#include "acpi_table_facs.hpp"
+#include "acpi_table_fadt.hpp"
+#include "acpi_table_gtdt.hpp"
+#include "acpi_table_iort.hpp"
+#include "acpi_table_madt.hpp"
+#include "acpi_table_rsdp.hpp"
+#include "acpi_table_rsdt.hpp"
+#include "acpi_table_spcr.hpp"
+#include "ptab_hpt.hpp"
+
 class Acpi_arch
 {
+    protected:
+        static inline uintptr_t rsdp_find() { return 0; }
+
+        static inline void parse_tables()
+        {
+            if (gtdt)
+                static_cast<Acpi_table_gtdt *>(Hptp::map (gtdt))->parse();
+            if (iort)
+                static_cast<Acpi_table_iort *>(Hptp::map (iort))->parse();
+            if (madt)
+                static_cast<Acpi_table_madt *>(Hptp::map (madt))->parse();
+        }
+
+        static inline uint64 dbg2 { 0 }, facs { 0 }, fadt { 0 }, gtdt { 0 }, iort { 0 }, madt { 0 }, spcr { 0 };
+
+        static inline void wake_prepare() {}
+
+    public:
+        static constexpr struct
+        {
+            uint32 const    sig;
+            uint64 &        var;
+        } tables[] =
+        {
+            { Acpi_header::sig_value ("APIC"), madt },
+            { Acpi_header::sig_value ("DBG2"), dbg2 },
+            { Acpi_header::sig_value ("FACP"), fadt },
+            { Acpi_header::sig_value ("GTDT"), gtdt },
+            { Acpi_header::sig_value ("IORT"), iort },
+            { Acpi_header::sig_value ("SPCR"), spcr },
+        };
 };
