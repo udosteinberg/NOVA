@@ -51,6 +51,11 @@ class Acpi_table_madt final
                 INT_SOURCE      = 0x08,                         // INT Source
                 X2APIC          = 0x09,                         // Local x2APIC
                 X2APIC_NMI      = 0x0a,                         // Local x2APIC NMI
+                GICC            = 0x0b,                         // GIC CPU Interface
+                GICD            = 0x0c,                         // GIC Distributor
+                GMSI            = 0x0d,                         // GIC MSI Frame
+                GICR            = 0x0e,                         // GIC Redistributor
+                GITS            = 0x0f,                         // GIC Interrupt Translation Service
             };
 
             auto type() const { return Type { uint8_t { *this } }; }
@@ -101,6 +106,99 @@ class Acpi_table_madt final
         };
 
         static_assert (alignof (Controller_x2apic) == 1 && sizeof (Controller_x2apic) == 16);
+
+        /*
+         * 5.2.12.14: GIC CPU Interface (GICC) Structure
+         */
+        struct Controller_gicc : public Controller              // 0
+        {
+            Unaligned_le<uint16_t>  reserved1;                  // 2    5.0+
+            Unaligned_le<uint32_t>  cpu;                        // 4    5.0+
+            Unaligned_le<uint32_t>  uid;                        // 8    5.0+
+            Unaligned_le<uint32_t>  flags;                      // 12   5.0+
+            Unaligned_le<uint32_t>  park_pver;                  // 16   5.0+
+            Unaligned_le<uint32_t>  gsiv_perf;                  // 20   5.0+
+            Unaligned_le<uint64_t>  phys_park;                  // 24   5.0+
+            Unaligned_le<uint64_t>  phys_gicc;                  // 32   5.0+
+            Unaligned_le<uint64_t>  phys_gicv;                  // 40   5.1+
+            Unaligned_le<uint64_t>  phys_gich;                  // 48   5.1+
+            Unaligned_le<uint32_t>  gsiv_vgic;                  // 56   5.1+
+            Unaligned_le<uint64_t>  phys_gicr;                  // 60   5.1+
+            Unaligned_le<uint64_t>  val_mpidr;                  // 68   5.1+
+            Unaligned_le<uint8_t>   ppec;                       // 76   6.0+
+            Unaligned_le<uint8_t>   reserved2[3];               // 77   6.0+
+
+            void parse() const;
+        };
+
+        static_assert (alignof (Controller_gicc) == 1 && sizeof (Controller_gicc) == 80);
+
+        /*
+         * 5.2.12.15: GIC Distributor (GICD) Structure
+         */
+        struct Controller_gicd : public Controller              // 0
+        {
+            Unaligned_le<uint16_t>  reserved1;                  // 2    5.0+
+            Unaligned_le<uint32_t>  hid;                        // 4    5.0+
+            Unaligned_le<uint64_t>  phys_gicd;                  // 8    5.0+
+            Unaligned_le<uint32_t>  vect_base;                  // 16   5.0+
+            Unaligned_le<uint8_t>   version;                    // 20   5.0+
+            Unaligned_le<uint8_t>   reserved2[3];               // 21   5.0+
+
+            void parse() const;
+        };
+
+        static_assert (alignof (Controller_gicd) == 1 && sizeof (Controller_gicd) == 24);
+
+        /*
+         * 5.2.12.16: GIC MSI Frame (GMSI) Structure
+         */
+        struct Controller_gmsi : public Controller              // 0
+        {
+            Unaligned_le<uint16_t>  reserved1;                  // 2    5.1+
+            Unaligned_le<uint32_t>  id;                         // 4    5.1+
+            Unaligned_le<uint64_t>  phys_gmsi;                  // 8    5.1+
+            Unaligned_le<uint32_t>  flags;                      // 16   5.1+
+            Unaligned_le<uint16_t>  spi_count;                  // 20   5.1+
+            Unaligned_le<uint16_t>  spi_base;                   // 22   5.1+
+
+            void parse() const;
+        };
+
+        static_assert (alignof (Controller_gmsi) == 1 && sizeof (Controller_gmsi) == 24);
+
+        /*
+         * 5.2.12.17: GIC Redistributor (GICR) Structure
+         */
+        struct Controller_gicr : public Controller              // 0
+        {
+            Unaligned_le<uint8_t>   flags;                      // 2    6.6+
+            Unaligned_le<uint8_t>   reserved1;                  // 3    5.1+
+            Unaligned_le<uint64_t>  phys_gicr;                  // 4    5.1+
+            Unaligned_le<uint32_t>  size_gicr;                  // 12   5.1+
+
+            void parse() const;
+        };
+
+        static_assert (alignof (Controller_gicr) == 1 && sizeof (Controller_gicr) == 16);
+
+        /*
+         * 5.2.12.18: GIC Interrupt Translation Service (GITS) Structure
+         */
+        struct Controller_gits : public Controller              // 0
+        {
+            Unaligned_le<uint8_t>   flags;                      // 2    6.6+
+            Unaligned_le<uint8_t>   reserved1;                  // 3    6.0+
+            Unaligned_le<uint32_t>  id;                         // 4    6.0+
+            Unaligned_le<uint64_t>  phys_gits;                  // 8    6.0+
+            Unaligned_le<uint32_t>  reserved2;                  // 16   6.0+
+
+            void parse() const;
+        };
+
+        static_assert (alignof (Controller_gits) == 1 && sizeof (Controller_gits) == 20);
+
+        [[nodiscard]] bool parse_entry (Controller::Type) const;
 
     public:
         [[nodiscard]] bool parse() const;
