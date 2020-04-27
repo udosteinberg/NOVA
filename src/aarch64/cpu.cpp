@@ -24,7 +24,6 @@
 #include "gich.hpp"
 #include "gicr.hpp"
 #include "hazards.hpp"
-#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
