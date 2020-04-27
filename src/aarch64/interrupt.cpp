@@ -15,11 +15,13 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "assert.hpp"
 #include "counter.hpp"
 #include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
+#include "hazards.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
 #include "timer.hpp"
@@ -33,6 +35,8 @@ unsigned Interrupt::count()
 
 void Interrupt::rke_handler()
 {
+    if (Acpi::get_transition().state())
+        Cpu::hazard |= HZD_SLEEP;
 }
 
 Event::Selector Interrupt::handle_sgi (uint32 val, bool)

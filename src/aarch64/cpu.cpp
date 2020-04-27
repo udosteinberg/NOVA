@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "cache.hpp"
 #include "cpu.hpp"
 #include "extern.hpp"
@@ -283,4 +284,8 @@ void Cpu::init (unsigned cpu, unsigned e)
 void Cpu::fini()
 {
     hazard &= ~HZD_SLEEP;
+
+    auto s = Acpi::get_transition();
+
+    Acpi::fini (s);
 }
