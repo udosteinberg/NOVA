@@ -23,7 +23,6 @@
 
 #include "atomic.hpp"
 #include "extern.hpp"
-#include "kmem.hpp"
 #include "lowlevel.hpp"
 #include "psci.hpp"
 
