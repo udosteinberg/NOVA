@@ -98,6 +98,8 @@ class Acpi
         static inline mword tmr_msb() { return feature & 0x100 ? 31 : 23; }
 
     public:
+        static Paddr rsdp;
+
         static unsigned irq;
         static unsigned gsi;
 
