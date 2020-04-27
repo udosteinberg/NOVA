@@ -27,13 +27,13 @@
 #include "lowlevel.hpp"
 #include "psci.hpp"
 
-class Acpi_fixed
+class Acpi_fixed final
 {
     private:
         static inline Atomic<bool> wak_sts;
 
     public:
-        class Transition
+        class Transition final
         {
             private:
                 uint16_t val;
@@ -51,20 +51,19 @@ class Acpi_fixed
         }
 
         /*
-         * Perform core powerdown
+         * Offline the calling core
          */
-        static inline bool pwrdn (Transition)
-        {
-            return Psci::cpu_off();
-        }
+        static inline bool offline_core() { return Psci::cpu_off(); }
+
+        /*
+         * Wait for all APs to be offline
+         */
+        static inline void offline_wait() { Psci::offline_wait(); }
 
         /*
          * Perform platform reset
          */
-        static inline bool reset()
-        {
-            return Psci::system_reset();
-        }
+        static inline bool reset() { return Psci::system_reset(); }
 
         /*
          * Perform platform sleep

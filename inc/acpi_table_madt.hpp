@@ -50,6 +50,11 @@ class Acpi_table_madt final
                 LAPIC   = 0,                            // Local APIC
                 IOAPIC  = 1,                            // I/O APIC
                 X2APIC  = 9,                            // Local x2APIC
+                GICC    = 11,                           // GIC CPU Interface
+                GICD    = 12,                           // GIC Distributor
+                GMSI    = 13,                           // GIC MSI Frame
+                GICR    = 14,                           // GIC Redistributor
+                GITS    = 15,                           // GIC Interrupt Translation Service
             };
 
             Type        type;                           //  0 + n
@@ -109,6 +114,102 @@ class Acpi_table_madt final
         };
 
         static_assert (sizeof (Controller_x2apic) == 16);
+
+        /*
+         * 5.2.12.14: GIC CPU Interface (GICC) Structure
+         */
+        struct Controller_gicc : Controller
+        {
+            enum Flags : uint32_t
+            {
+                ENABLED             = BIT (0),
+                TRIGGER_EDGE_PERF   = BIT (1),
+                TRIGGER_EDGE_VGIC   = BIT (2),
+            };
+
+            uint16_t    reserved1;                      //  2 + n (5.0)
+            uint32_t    cpu;                            //  4 + n (5.0)
+            uint32_t    uid;                            //  8 + n (5.0)
+            Flags       flags;                          // 12 + n (5.0)
+            uint32_t    park_pver;                      // 16 + n (5.0)
+            uint32_t    gsiv_perf;                      // 20 + n (5.0)
+            uint32_t    phys_park_lo, phys_park_hi;     // 24 + n (5.0)
+            uint32_t    phys_gicc_lo, phys_gicc_hi;     // 32 + n (5.0)
+            uint32_t    phys_gicv_lo, phys_gicv_hi;     // 40 + n (5.1)
+            uint32_t    phys_gich_lo, phys_gich_hi;     // 48 + n (5.1)
+            uint32_t    gsiv_vgic;                      // 56 + n (5.1)
+            uint32_t    phys_gicr_lo, phys_gicr_hi;     // 60 + n (5.1)
+            uint32_t    val_mpidr_lo, val_mpidr_hi;     // 68 + n (5.1)
+            uint8_t     ppec;                           // 76 + n (6.0)
+            uint8_t     reserved2[3];                   // 77 + n (6.0)
+
+            void parse() const;
+        };
+
+        static_assert (sizeof (Controller_gicc) == 80);
+
+        /*
+         * 5.2.12.15: GIC Distributor (GICD) Structure
+         */
+        struct Controller_gicd : Controller
+        {
+            uint16_t    reserved1;                      //  2 + n (5.0)
+            uint32_t    hid;                            //  4 + n (5.0)
+            uint32_t    phys_gicd_lo, phys_gicd_hi;     //  8 + n (5.0)
+            uint32_t    vect_base;                      // 16 + n (5.0)
+            uint8_t     version;                        // 20 + n (5.0)
+            uint8_t     reserved2[3];                   // 21 + n (5.0)
+
+            void parse() const;
+        };
+
+        static_assert (sizeof (Controller_gicd) == 24);
+
+        /*
+         * 5.2.12.16: GIC MSI Frame (GMSI) Structure
+         */
+        struct Controller_gmsi : Controller
+        {
+            uint16_t    reserved1;                      //  2 + n (5.1)
+            uint32_t    id;                             //  4 + n (5.1)
+            uint32_t    phys_gmsi_lo, phys_gmsi_hi;     //  8 + n (5.1)
+            uint32_t    flags;                          // 16 + n (5.1)
+            uint16_t    spi_count;                      // 20 + n (5.1)
+            uint16_t    spi_base;                       // 22 + n (5.1)
+
+            void parse() const;
+        };
+
+        static_assert (sizeof (Controller_gmsi) == 24);
+
+        /*
+         * 5.2.12.17: GIC Redistributor (GICR) Structure
+         */
+        struct Controller_gicr : Controller
+        {
+            uint16_t    reserved1;                      //  2 + n (5.1)
+            uint32_t    phys_gicr_lo, phys_gicr_hi;     //  4 + n (5.1)
+            uint32_t    size_gicr;                      // 12 + n (5.1)
+
+            void parse() const;
+        };
+
+        static_assert (sizeof (Controller_gicr) == 16);
+
+        /*
+         * 5.2.12.18: GIC Interrupt Translation Service (GITS) Structure
+         */
+        struct Controller_gits : Controller
+        {
+            uint16_t    reserved1;                      //  2 + n (6.0)
+            uint32_t    id;                             //  4 + n (6.0)
+            uint32_t    phys_gits_lo, phys_gits_hi;     //  8 + n (6.0)
+            uint32_t    reserved2;                      // 16 + n (6.0)
+
+            void parse() const;
+        };
+
+        static_assert (sizeof (Controller_gits) == 20);
 
     public:
         void parse() const;

@@ -21,6 +21,41 @@
 
 #pragma once
 
+#include "acpi_table_gtdt.hpp"
+#include "acpi_table_iort.hpp"
+#include "ptab_hpt.hpp"
+
 class Acpi_arch
 {
+    protected:
+        static constexpr auto rsdp_find() { return 0; }
+
+        static void parse_tables()
+        {
+            if (gtdt)
+                static_cast<Acpi_table_gtdt *>(Hptp::map (MMAP_GLB_MAP0, gtdt))->parse();
+            if (iort)
+                static_cast<Acpi_table_iort *>(Hptp::map (MMAP_GLB_MAP0, iort))->parse();
+        }
+
+        static void wake_prepare() {}
+
+        static inline uint64_t dbg2 { 0 }, facs { 0 }, fadt { 0 }, gtdt { 0 }, iort { 0 }, madt { 0 }, mcfg { 0 }, spcr { 0 }, srat { 0 };
+
+    public:
+        static constexpr struct
+        {
+            uint32_t const  sig;
+            uint64_t &      var;
+        } tables[] =
+        {
+            { Signature::value ("APIC"), madt },
+            { Signature::value ("DBG2"), dbg2 },
+            { Signature::value ("FACP"), fadt },
+            { Signature::value ("GTDT"), gtdt },
+            { Signature::value ("IORT"), iort },
+            { Signature::value ("MCFG"), mcfg },
+            { Signature::value ("SPCR"), spcr },
+            { Signature::value ("SRAT"), srat },
+        };
 };
