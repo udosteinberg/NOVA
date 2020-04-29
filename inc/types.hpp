@@ -1,8 +1,10 @@
 /*
- * Constant-Width Types
+ * Type Support
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,8 +20,6 @@
 
 #pragma once
 
-#include <stddef.h>
-
 typedef unsigned char       uint8;
 typedef unsigned short      uint16;
 typedef unsigned int        uint32;
@@ -27,3 +27,16 @@ typedef unsigned long long  uint64;
 
 typedef unsigned long       mword;
 typedef unsigned long       Paddr;
+
+typedef __INT32_TYPE__      int32_t;
+typedef __INT64_TYPE__      int64_t;
+
+typedef __SIZE_TYPE__       size_t;
+typedef __UINTPTR_TYPE__    uintptr_t;
+
+/*
+ * Chooses type F (if false) or type T (if true) based on a compile-time boolean
+ */
+template<bool, class F, class T> struct conditional {};
+template<      class F, class T> struct conditional<false, F, T> { typedef F type; };
+template<      class F, class T> struct conditional<true,  F, T> { typedef T type; };
