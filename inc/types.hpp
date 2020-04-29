@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,8 +20,6 @@
 
 #pragma once
 
-#include <stddef.h>
-
 typedef unsigned char       uint8;
 typedef unsigned short      uint16;
 typedef unsigned int        uint32;
@@ -27,3 +27,6 @@ typedef unsigned long long  uint64;
 
 typedef unsigned long       mword;
 typedef unsigned long       Paddr;
+
+typedef __SIZE_TYPE__       size_t;
+typedef __UINTPTR_TYPE__    uintptr_t;
