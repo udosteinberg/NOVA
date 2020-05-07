@@ -113,8 +113,10 @@ void Ec::handle_hazard (unsigned hzd, cont_t func)
 
         if (func == Ec_arch::ret_user_vmexit) {
             regs.set_ep (Event::gst_arch + Event::Selector::RECALL);
+            send_msg<Ec_arch::ret_user_vmexit> (this);
         } else {
             regs.set_ep (Event::hst_arch + Event::Selector::RECALL);
+            send_msg<Ec_arch::ret_user_exception> (this);
         }
     }
 
@@ -196,5 +198,5 @@ void Ec_arch::set_vmm_info (Ec *const self)
 
     Cpu::fill_info_regs (v->el2.hcr, v->el2.vpidr, v->el2.vmpidr, r->r);
 
-    UNREACHED;
+    send_msg<ret_user_vmexit> (self);
 }

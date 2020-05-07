@@ -100,7 +100,7 @@ void Ec_arch::handle_exc_user (Exc_regs *r)
 
     // SVC #0 from AArch64 state
     if (EXPECT_TRUE (esr == (VAL_SHIFT (0x15, 26) | BIT (25) | 0)))
-        ;
+        (*syscall[r->r[0] & 0xf])(self);
 
     // SVC #1 from AArch64 state
     else if (esr == (VAL_SHIFT (0x15, 26) | BIT (25) | 1))
@@ -113,10 +113,10 @@ void Ec_arch::handle_exc_user (Exc_regs *r)
     if (self->subtype == Kobject::Subtype::EC_VCPU) {
         trace (TRACE_EXCEPTION, "EC:%p VMX %#llx at M:%#x IP:%#llx", static_cast<void *>(self), r->ep(), r->emode(), r->el2.elr);
         self->regs.vmcb->save_gst();
-        resolved ? ret_user_vmexit (self) : self->kill ("exception");
+        resolved ? ret_user_vmexit (self) : send_msg<ret_user_vmexit> (self);
     } else {
         trace (TRACE_EXCEPTION, "EC:%p EXC %#llx at M:%#x IP:%#llx", static_cast<void *>(self), r->ep(), r->emode(), r->el2.elr);
-        resolved ? ret_user_exception (self) : self->kill ("exception");
+        resolved ? ret_user_exception (self) : send_msg<ret_user_exception> (self);
     }
 }
 
@@ -141,5 +141,5 @@ void Ec_arch::handle_irq_user()
 
     self->regs.set_ep (Event::gst_arch + evt);
 
-    self->kill ("irq");
+    send_msg<ret_user_vmexit> (self);
 }

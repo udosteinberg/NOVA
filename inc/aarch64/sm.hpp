@@ -99,7 +99,7 @@ class Sm : public Kobject, private Queue<Ec>
                 dequeue (ec);
             }
 
-            // ec->release (Ec::sys_finish<Sys_regs::SUCCESS, true>);
+            ec->release (Ec::sys_finish<Status::SUCCESS, true>);
 
             return true;
         }
@@ -115,6 +115,6 @@ class Sm : public Kobject, private Queue<Ec>
                 dequeue (ec);
             }
 
-            // ec->release (Ec::sys_finish<Sys_regs::TIMEOUT>);
+            ec->release (Ec::sys_finish<Status::TIMEOUT>);
         }
 };

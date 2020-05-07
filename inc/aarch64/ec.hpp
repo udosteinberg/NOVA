@@ -31,6 +31,7 @@
 #include "regs.hpp"
 #include "sc.hpp"
 #include "slab.hpp"
+#include "status.hpp"
 #include "timeout_hypercall.hpp"
 
 class Fpu;
@@ -50,6 +51,8 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         Pd *          const pd          { nullptr };
         Fpu *         const fpu         { nullptr };
         Utcb *        const utcb        { nullptr };
+        Ec *                callee      { nullptr };
+        Ec *                caller      { nullptr };
         Atomic<cont_t>      cont        { nullptr };
         Atomic<unsigned>    hazard      { 0 };
         Timeout_hypercall   timeout     { this };
@@ -71,6 +74,22 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         ALWAYS_INLINE
         inline bool blocked() const { return queued() || !cont; }
 
+        ALWAYS_INLINE NONNULL
+        inline void set_partner (Ec *e)
+        {
+            callee = e;
+            callee->caller = this;
+            Sc::ctr_link++;
+        }
+
+        ALWAYS_INLINE
+        inline unsigned clr_partner()
+        {
+            callee->caller = nullptr;
+            callee = nullptr;
+            return Sc::ctr_link--;
+        }
+
         ALWAYS_INLINE
         inline void set_hazard (unsigned h) { hazard |= h; }
 
@@ -86,11 +105,72 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         NOINLINE
         void handle_hazard (unsigned, cont_t);
 
+        NOINLINE
+        void help (Ec *, cont_t);
+
+        NORETURN HOT
+        void reply (cont_t = nullptr);
+
         NORETURN
         void kill (char const *);
 
         NORETURN
+        static void dead (Ec *self) { self->kill ("IPC Abort"); }
+
+        NORETURN
         static void idle (Ec *);
+
+        NORETURN HOT
+        static void recv_kern (Ec *);
+
+        NORETURN HOT
+        static void recv_user (Ec *);
+
+        template <cont_t>
+        NORETURN
+        static void send_msg (Ec *);
+
+        NORETURN HOT
+        static void sys_ipc_call (Ec *);
+
+        NORETURN HOT
+        static void sys_ipc_reply (Ec *);
+
+        NORETURN
+        static void sys_create_pd (Ec *);
+
+        NORETURN
+        static void sys_create_ec (Ec *);
+
+        NORETURN
+        static void sys_create_sc (Ec *);
+
+        NORETURN
+        static void sys_create_pt (Ec *);
+
+        NORETURN
+        static void sys_create_sm (Ec *);
+
+        NORETURN
+        static void sys_ctrl_pd (Ec *);
+
+        NORETURN
+        static void sys_ctrl_ec (Ec *);
+
+        NORETURN
+        static void sys_ctrl_sc (Ec *);
+
+        NORETURN
+        static void sys_ctrl_pt (Ec *);
+
+        NORETURN
+        static void sys_ctrl_sm (Ec *);
+
+        NORETURN
+        static void sys_assign_int (Ec *);
+
+        NORETURN
+        static void sys_assign_dev (Ec *);
 
         // Kernel Thread
         Ec (unsigned, cont_t);
@@ -178,4 +258,10 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         void activate();
 
         void adjust_offset_ticks (uint64);
+
+        template <Status S, bool T = false>
+        NORETURN NOINLINE
+        static void sys_finish (Ec *);
+
+        static cont_t const syscall[16] asm ("syscall");
 };

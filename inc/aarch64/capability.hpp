@@ -23,6 +23,7 @@
 
 #include "compiler.hpp"
 #include "kobject.hpp"
+#include "syscall.hpp"
 
 class Capability
 {
@@ -98,4 +99,19 @@ class Capability
 
         ALWAYS_INLINE
         inline unsigned prm() const { return val & pmask; }
+
+        ALWAYS_INLINE
+        inline auto validate (Perm_pd p) const { return validate (Kobject::Type::PD, static_cast<unsigned>(p)); }
+
+        ALWAYS_INLINE
+        inline auto validate (Perm_ec p) const { return validate (Kobject::Type::EC, static_cast<unsigned>(p)); }
+
+        ALWAYS_INLINE
+        inline auto validate (Perm_sc p) const { return validate (Kobject::Type::SC, static_cast<unsigned>(p)); }
+
+        ALWAYS_INLINE
+        inline auto validate (Perm_pt p) const { return validate (Kobject::Type::PT, static_cast<unsigned>(p)); }
+
+        ALWAYS_INLINE
+        inline auto validate (Perm_sm p) const { return validate (Kobject::Type::SM, static_cast<unsigned>(p)); }
 };
