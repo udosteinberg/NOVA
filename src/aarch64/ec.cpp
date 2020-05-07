@@ -20,6 +20,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "counter.hpp"
 #include "ec_arch.hpp"
 #include "hazards.hpp"
 #include "pd_kern.hpp"
@@ -38,8 +39,28 @@ void Ec::activate()
 {
     Ec *ec = this;
 
+    for (Sc::ctr_link = 0; ec->callee; ec = ec->callee)
+        Sc::ctr_link++;
+
     if (EXPECT_TRUE (!ec->blocked() || !ec->block_sc()))
         static_cast<Ec_arch *>(ec)->make_current();
+}
+
+void Ec::help (void (*c)())
+{
+    if (EXPECT_FALSE (cont == dead))
+        return;
+
+    Counter::helping.inc();
+
+    current->cont = c;
+
+    if (EXPECT_FALSE (++Sc::ctr_loop >= 100))
+        kill ("Livelock");
+
+    activate();
+
+    Sc::schedule (true);
 }
 
 void Ec::idle()
@@ -60,7 +81,10 @@ void Ec::kill (char const *reason)
 {
     trace (TRACE_KILL, "Killed EC:%p (%s)", static_cast<void *>(current), reason);
 
-    // XXX: FIXME
-    for (;;)
-        Cpu::halt();
+    Ec *ec = current->caller;
+
+    if (ec)
+        ec->cont = ec->cont == Ec_arch::ret_user_hypercall ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
+
+    reply (dead);
 }
