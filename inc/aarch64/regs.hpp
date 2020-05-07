@@ -27,6 +27,18 @@ class Sys_regs
 {
     public:
         uintptr_t   r[31]       { 0 };
+
+        inline auto &p0() const { return r[0]; }
+        inline auto &p1() const { return r[1]; }
+        inline auto &p2() const { return r[2]; }
+        inline auto &p3() const { return r[3]; }
+        inline auto &p4() const { return r[4]; }
+
+        inline auto &p0()       { return r[0]; }
+        inline auto &p1()       { return r[1]; }
+        inline auto &p2()       { return r[2]; }
+
+        inline unsigned flags() const { return p0() >> 4 & BIT_RANGE (3, 0); }
 };
 
 class Exc_regs : public Sys_regs
