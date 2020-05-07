@@ -30,6 +30,7 @@
 #include "regs.hpp"
 #include "sc.hpp"
 #include "slab.hpp"
+#include "status.hpp"
 #include "timeout_hypercall.hpp"
 
 class Fpu;
@@ -51,6 +52,8 @@ class Ec : private Kobject, public Queue<Sc>
         void                (*cont)()   { nullptr };
         Ec *                prev        { nullptr };
         Ec *                next        { nullptr };
+        Ec *                callee      { nullptr };
+        Ec *                caller      { nullptr };
         unsigned            hazard      { 0 };
         Timeout_hypercall   timeout     { this };
 
@@ -65,6 +68,22 @@ class Ec : private Kobject, public Queue<Sc>
         ALWAYS_INLINE
         inline Sys_regs *sys_regs() { return &regs; }
 
+        ALWAYS_INLINE
+        inline void set_partner (Ec *e)
+        {
+            callee = e;
+            callee->caller = this;
+            Sc::ctr_link++;
+        }
+
+        ALWAYS_INLINE
+        inline unsigned clr_partner()
+        {
+            callee->caller = nullptr;
+            callee = nullptr;
+            return Sc::ctr_link--;
+        }
+
         void fpu_load();
         void fpu_save();
         bool fpu_switch();
@@ -73,6 +92,25 @@ class Ec : private Kobject, public Queue<Sc>
 
         NOINLINE
         static void handle_hazard (unsigned, void (*)());
+
+        NORETURN
+        static void dead() { kill ("IPC Abort"); }
+
+        NOINLINE
+        void help (void (*)());
+
+        NORETURN HOT
+        static void recv_kern();
+
+        NORETURN HOT
+        static void recv_user();
+
+        NORETURN HOT
+        static void reply (void (*)() = nullptr);
+
+        template <void (*)()>
+        NORETURN
+        static void send_msg();
 
         Ec (unsigned, void (*)());
 
@@ -170,4 +208,53 @@ class Ec : private Kobject, public Queue<Sc>
 
         NORETURN
         static void kill (char const *);
+
+        NORETURN HOT
+        static void sys_ipc_call();
+
+        NORETURN HOT
+        static void sys_ipc_reply();
+
+        NORETURN
+        static void sys_create_pd();
+
+        NORETURN
+        static void sys_create_ec();
+
+        NORETURN
+        static void sys_create_sc();
+
+        NORETURN
+        static void sys_create_pt();
+
+        NORETURN
+        static void sys_create_sm();
+
+        NORETURN
+        static void sys_ctrl_pd();
+
+        NORETURN
+        static void sys_ctrl_ec();
+
+        NORETURN
+        static void sys_ctrl_sc();
+
+        NORETURN
+        static void sys_ctrl_pt();
+
+        NORETURN
+        static void sys_ctrl_sm();
+
+        NORETURN
+        static void sys_ctrl_hw();
+
+        NORETURN
+        static void sys_assign_int();
+
+        NORETURN
+        static void sys_assign_dev();
+
+        template <Status S, bool T = false>
+        NORETURN NOINLINE
+        static void sys_finish();
 };

@@ -23,6 +23,8 @@
 #include "stdio.hpp"
 #include "vmcb.hpp"
 
+extern void (*const syscall[16])();
+
 void Ec::fpu_load()
 {
     assert (fpu);
@@ -90,21 +92,27 @@ void Ec_arch::handle_exc_kern (Exc_regs *r)
 
 void Ec_arch::handle_exc_user (Exc_regs *r)
 {
+    bool resolved = false;
+
     switch (r->ep()) {
 
         case 0x7:       // FPU access
-            current->fpu_switch();
+            resolved = current->fpu_switch();
             break;
+
+        case 0x15:      // SVC from AArch64 state
+            (*syscall[r->r[0] & 0xf])();
+            UNREACHED;
     }
 
     if (current->subtype == Kobject::Subtype::EC_VCPU) {
         trace (TRACE_EXCEPTION, "EC:%p VMX %#lx at M:%#x IP:%#llx", static_cast<void *>(current), r->ep(), r->emode(), r->el2.elr);
         current->regs.vmcb->save_gst();
+        resolved ? ret_user_vmexit() : send_msg<ret_user_vmexit>();
     } else {
         trace (TRACE_EXCEPTION, "EC:%p EXC %#lx at M:%#x IP:%#llx", static_cast<void *>(current), r->ep(), r->emode(), r->el2.elr);
+        resolved ? ret_user_exception() : send_msg<ret_user_exception>();
     }
-
-    kill ("exception");
 }
 
 void Ec_arch::handle_irq_kern()
@@ -125,6 +133,5 @@ void Ec_arch::handle_irq_user()
         ret_user_vmexit();
 
     current->regs.set_ep (Event::gst_arch + evt);
-
-    kill ("irq");
+    send_msg<ret_user_vmexit>();
 }
