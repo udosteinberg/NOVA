@@ -1,7 +1,8 @@
 /*
  * List Element
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,18 +18,17 @@
 
 #pragma once
 
-#include "compiler.hpp"
-
 template <typename T>
 class List
 {
     protected:
-        T *next;
+        T *next { nullptr };
 
     public:
-        ALWAYS_INLINE
-        explicit inline List (T *&list) : next (nullptr)
+        explicit inline List (T *&head)
         {
-            T **ptr; for (ptr = &list; *ptr; ptr = &(*ptr)->next) ; *ptr = static_cast<T *>(this);
+            T **ptr;
+            for (ptr = &head; *ptr; ptr = &(*ptr)->next) ;
+            *ptr = static_cast<T *>(this);
         }
 };
