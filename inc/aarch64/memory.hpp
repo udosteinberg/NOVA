@@ -24,6 +24,7 @@
 #define PAGE_MASK       (PAGE_SIZE - 1)
 
 //                        [--PTE--]---      // ^39 ^30 ^21 ^12
+#define DEV_GLOBL_UART  0xffffffe00000      // 511 511 511 000   4K
 #define CPU_GLOBL_DATA  0xffff80000000      // 511 510 000 000   1G
 #define LINK_ADDR       0xff8000000000      // 511 000 000 000
 
