@@ -59,7 +59,6 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         static Slab_cache cache;
 
-        REGPARM (1)
         static void handle_exc (Exc_regs *) asm ("exc_handler");
 
         NORETURN
@@ -114,8 +113,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         inline void redirect_to_iret()
         {
-            regs.REG(sp) = regs.ARG_SP;
-            regs.REG(ip) = regs.ARG_IP;
+            regs.rsp = regs.ARG_SP;
+            regs.rip = regs.ARG_IP;
         }
 
         void load_fpu();
@@ -162,7 +161,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
             pd->make_current();
 
-            asm volatile ("mov %0," EXPAND (PREG(sp);) "jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
+            asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE

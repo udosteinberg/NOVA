@@ -32,24 +32,22 @@ class Sys_regs
 {
     public:
         struct {
-#ifdef __x86_64__
-            mword   r15     { 0 };
-            mword   r14     { 0 };
-            mword   r13     { 0 };
-            mword   r12     { 0 };
-            mword   r11     { 0 };
-            mword   r10     { 0 };
-            mword   r9      { 0 };
-            mword   r8      { 0 };
-#endif
-            mword   REG(di) { 0 };
-            mword   REG(si) { 0 };
-            mword   REG(bp) { 0 };
-            mword   cr2     { 0 };
-            mword   REG(bx) { 0 };
-            mword   REG(dx) { 0 };
-            mword   REG(cx) { 0 };
-            mword   REG(ax) { 0 };
+            uintptr_t   r15 { 0 };
+            uintptr_t   r14 { 0 };
+            uintptr_t   r13 { 0 };
+            uintptr_t   r12 { 0 };
+            uintptr_t   r11 { 0 };
+            uintptr_t   r10 { 0 };
+            uintptr_t   r9  { 0 };
+            uintptr_t   r8  { 0 };
+            uintptr_t   rdi { 0 };
+            uintptr_t   rsi { 0 };
+            uintptr_t   rbp { 0 };
+            uintptr_t   cr2 { 0 };
+            uintptr_t   rbx { 0 };
+            uintptr_t   rdx { 0 };
+            uintptr_t   rcx { 0 };
+            uintptr_t   rax { 0 };
         };
 
         enum Status
@@ -86,29 +84,29 @@ class Exc_regs : public Sys_regs
     public:
         union {
             struct {
-                mword   gs;
-                mword   fs;
-                mword   es;
-                mword   ds;
-                mword   err;
-                mword   vec;
-                mword   REG(ip);
-                mword   cs;
-                mword   REG(fl);
-                mword   REG(sp);
-                mword   ss;
+                uintptr_t   gs;
+                uintptr_t   fs;
+                uintptr_t   es;
+                uintptr_t   ds;
+                uintptr_t   err;
+                uintptr_t   vec;
+                uintptr_t   rip;
+                uintptr_t   cs;
+                uintptr_t   rfl;
+                uintptr_t   rsp;
+                uintptr_t   ss;
             };
             struct {
                 union {
                     Vmcs *  vmcs;
                     Vmcb *  vmcb;
                 };
-                mword   reserved1;
-                mword   reserved2;
-                mword   cr0_shadow;
-                mword   cr4_shadow;
-                mword   dst_portal;
-                uint8   fpu_on;
+                uintptr_t   reserved1;
+                uintptr_t   reserved2;
+                uintptr_t   cr0_shadow;
+                uintptr_t   cr4_shadow;
+                uintptr_t   dst_portal;
+                uint8       fpu_on;
             };
         };
 
