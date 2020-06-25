@@ -16,6 +16,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "arch.hpp"
 #include "extern.hpp"
 #include "idt.hpp"
 #include "selectors.hpp"
@@ -27,8 +28,5 @@ void Idt::build()
     mword *ptr = handlers;
 
     for (unsigned vector = 0; vector < VEC_MAX; vector++, ptr++)
-        if (*ptr)
-            idt[vector].set (SYS_INTR_GATE, *ptr & 3, SEL_KERN_CODE, *ptr & ~3);
-        else
-            idt[vector].set (SYS_TASK_GATE, 0, SEL_TSS_DBF, 0);
+        idt[vector].set (SYS_INTR_GATE, *ptr & IDT_USER ? 3 : 0, SEL_KERN_CODE, *ptr & ~IDT_MASK);
 }
