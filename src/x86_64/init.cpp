@@ -48,7 +48,7 @@ mword kern_ptab_setup()
     return hpt.addr();
 }
 
-extern "C" REGPARM (1)
+extern "C"
 void init (mword mbi)
 {
     // Setup 0-page and 1-page
