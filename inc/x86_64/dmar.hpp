@@ -257,6 +257,5 @@ class Dmar : public List<Dmar>
 
         void assign (unsigned long, Pd *);
 
-        REGPARM (1)
         static void vector (unsigned) asm ("msi_vector");
 };
