@@ -25,48 +25,6 @@
 #define PSEG(X)         %%X
 #endif
 
-#ifdef __i386__
-#define ARCH            "x86_32"
-#define WORD            .long
-#define SIZE            4
-#define ELF_PHDR        Ph32
-#define ELF_CLASS       1
-#define ELF_MACHINE     3
-#define PTE_BPL         10
-#define PTE_LEV         2
-#define REG(X)          e##X
-#define ARG_IP          REG(dx)
-#define ARG_SP          REG(cx)
-#define ARG_1           REG(ax)
-#define ARG_2           REG(di)
-#define ARG_3           REG(si)
-#define ARG_4           REG(bx)
-#define ARG_5           REG(bp)
-#define OFS_CR2         0xc
-#define OFS_VEC         0x34
-#define OFS_CS          0x3c
-
-#define LOAD_KSP        pop     PREG(sp);               \
-                     1: cld;
-
-#define SAVE_SEG        push    PSEG(ds);               \
-                        push    PSEG(es);               \
-                        push    PSEG(fs);               \
-                        push    PSEG(gs);
-
-#define LOAD_SEG        pop     PSEG(gs);               \
-                        pop     PSEG(fs);               \
-                        pop     PSEG(es);               \
-                        pop     PSEG(ds);               \
-                        add     $(2 * SIZE), PREG(sp);
-
-#define SAVE_GPR        pusha;
-#define LOAD_GPR        popa;
-#define RET_USER_HYP    sti; sysexit;
-#define RET_USER_EXC    iret;
-#endif
-
-#ifdef __x86_64__
 #define ARCH            "x86_64"
 #define WORD            .quad
 #define SIZE            8
@@ -132,4 +90,3 @@
                         sysretq;
 
 #define RET_USER_EXC    iretq;
-#endif
