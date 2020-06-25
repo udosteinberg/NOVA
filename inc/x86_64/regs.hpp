@@ -32,7 +32,6 @@ class Sys_regs
 {
     public:
         struct {
-#ifdef __x86_64__
             mword   r15     { 0 };
             mword   r14     { 0 };
             mword   r13     { 0 };
@@ -41,7 +40,6 @@ class Sys_regs
             mword   r10     { 0 };
             mword   r9      { 0 };
             mword   r8      { 0 };
-#endif
             mword   REG(di) { 0 };
             mword   REG(si) { 0 };
             mword   REG(bp) { 0 };

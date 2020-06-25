@@ -59,7 +59,6 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         static Slab_cache cache;
 
-        REGPARM (1)
         static void handle_exc (Exc_regs *) asm ("exc_handler");
 
         NORETURN
