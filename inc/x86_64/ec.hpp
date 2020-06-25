@@ -29,6 +29,7 @@
 #include "queue.hpp"
 #include "regs.hpp"
 #include "sc.hpp"
+#include "status.hpp"
 #include "timeout_hypercall.hpp"
 #include "tss.hpp"
 
@@ -60,8 +61,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         static Slab_cache cache;
 
-        REGPARM (1)
         static void handle_exc (Exc_regs *) asm ("exc_handler");
+        static void handle_ist (Exc_regs *) asm ("ist_handler");
 
         [[noreturn]]
         static void handle_vmx() asm ("vmx_handler");
@@ -69,11 +70,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         [[noreturn]]
         static void handle_svm() asm ("svm_handler");
 
-        [[noreturn]]
-        static void handle_tss() asm ("tss_handler");
-
         static void handle_exc_nm();
-        static bool handle_exc_ts (Exc_regs *);
         static bool handle_exc_gp (Exc_regs *);
         static bool handle_exc_pf (Exc_regs *);
 
@@ -89,11 +86,9 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         NOINLINE
         static void handle_hazard (mword, void (*)());
 
-        ALWAYS_INLINE
-        inline Sys_regs *sys_regs() { return &regs; }
-
-        ALWAYS_INLINE
-        inline Exc_regs *exc_regs() { return &regs; }
+        ALWAYS_INLINE inline Cpu_regs &cpu_regs() { return regs; }
+        ALWAYS_INLINE inline Exc_regs &exc_regs() { return regs.exc; }
+        ALWAYS_INLINE inline Sys_regs &sys_regs() { return regs.exc.sys; }
 
         ALWAYS_INLINE
         inline void set_partner (Ec *p)
@@ -115,8 +110,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         inline void redirect_to_iret()
         {
-            regs.REG(sp) = regs.ARG_SP;
-            regs.REG(ip) = regs.ARG_IP;
+            exc_regs().rsp = exc_regs().sp();
+            exc_regs().rip = exc_regs().ip();
         }
 
         void load_fpu();
@@ -159,11 +154,11 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         {
             current = this;
 
-            Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
+            Tss::run.sp0 = reinterpret_cast<mword>(&exc_regs() + 1);
 
             pd->make_current();
 
-            asm volatile ("mov %0," EXPAND (PREG(sp);) "jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
+            asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE
@@ -224,9 +219,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         [[noreturn]]
         static void ret_user_vmrun();
 
-        template <Sys_regs::Status S, bool T = false>
-        [[noreturn]] NOINLINE
-        static void sys_finish();
+        template <Status S, bool T = false> [[noreturn]] NOINLINE static void sys_finish();
 
         [[noreturn]]
         void activate();
@@ -303,7 +296,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         static void dead() { die ("IPC Abort"); }
 
         [[noreturn]]
-        static void die (char const *, Exc_regs * = &current->regs);
+        static void die (char const *);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
