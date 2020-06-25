@@ -57,30 +57,6 @@ inline unsigned long max_order (mword base, size_t size)
 }
 
 ALWAYS_INLINE
-inline uint64 div64 (uint64 n, uint32 d, uint32 *r)
-{
-    uint64 q;
-
-#ifdef __i386__
-    asm volatile ("divl %5;"
-                  "xchg %1, %2;"
-                  "divl %5;"
-                  "xchg %1, %3;"
-                  : "=A" (q),   // quotient
-                    "=r" (*r)   // remainder
-                  : "a"  (static_cast<uint32>(n >> 32)),
-                    "d"  (0),
-                    "1"  (static_cast<uint32>(n)),
-                    "rm" (d));
-#else
-     q = n / d;
-    *r = static_cast<uint32>(n % d);
-#endif
-
-    return q;
-}
-
-ALWAYS_INLINE
 static inline mword align_dn (mword val, mword align)
 {
     val &= ~(align - 1);                // Expect power-of-2
