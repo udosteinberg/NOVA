@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,15 +19,11 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "arch.hpp"
 #include "memory.hpp"
 
-#ifdef __i386__
-OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")
-#else
-OUTPUT_FORMAT("elf64-x86-64")
-OUTPUT_ARCH("i386:x86-64")
-#endif
+OUTPUT_ARCH(BFD_ARCH)
+OUTPUT_FORMAT(BFD_FORMAT)
 ENTRY(__start_bsp)
 
 PHDRS
@@ -41,7 +37,7 @@ SECTIONS
     .init LOAD_ADDR :
     {
         *(.init)
-    } : init = 0x90909090
+    } : init
 
     . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
 
@@ -53,7 +49,7 @@ SECTIONS
     {
         *(.text.hot .text.hot.*)
         *(.text .text.* .gnu.linkonce.t.*)
-    } : kern = 0x90909090
+    } : kern
 
     .rodata : AT (ADDR (.rodata) - OFFSET)
     {
@@ -89,16 +85,12 @@ SECTIONS
         PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
 
         PROVIDE (PDBR  = . - OFFSET);
-#ifdef __i386__
-        PROVIDE (LVL2L = . - OFFSET);
-        PROVIDE (LVL2H = . - OFFSET); . += 4K;
-#else
         PROVIDE (LVL4  = . - OFFSET); . += 4K;
         PROVIDE (LVL3L = . - OFFSET); . += 4K;
         PROVIDE (LVL3H = . - OFFSET); . += 4K;
         PROVIDE (LVL2L = . - OFFSET); . += 4K;
         PROVIDE (LVL2H = . - OFFSET); . += 4K;
-#endif
+
         _mempool_f = .;
 
         . += 16M;

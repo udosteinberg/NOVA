@@ -52,8 +52,8 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
             regs.ds  = SEL_USER_DATA;
             regs.es  = SEL_USER_DATA;
             regs.ss  = SEL_USER_DATA;
-            regs.REG(fl) = Cpu::EFL_IF;
-            regs.REG(sp) = s;
+            regs.rfl = Cpu::EFL_IF;
+            regs.rsp = s;
         } else
             regs.set_sp (s);
 
@@ -83,7 +83,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.REG(ax) = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.root()));
+            regs.rax = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.root()));
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
@@ -122,16 +122,6 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         send_msg<ret_user_iret>();
     }
 
-    if (hzd & HZD_STEP) {
-        current->regs.clr_hazard (HZD_STEP);
-
-        if (func == ret_user_sysexit)
-            current->redirect_to_iret();
-
-        current->regs.dst_portal = Cpu::EXC_DB;
-        send_msg<ret_user_iret>();
-    }
-
     if (hzd & HZD_TSC) {
         current->regs.clr_hazard (HZD_TSC);
 
@@ -154,11 +144,11 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR RET_USER_HYP) : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR RET_USER_HYP) : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -166,11 +156,11 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     // No need to check HZD_DS_ES because IRET will reload both anyway
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR LOAD_SEG RET_USER_EXC) : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR LOAD_SEG RET_USER_EXC) : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -191,10 +181,10 @@ void Ec::ret_user_vmresume()
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
-                  "mov %1," EXPAND (PREG(sp);)
+                  "mov %1, %%rsp;"
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
@@ -213,15 +203,15 @@ void Ec::ret_user_vmrun()
         current->regs.vmcb->tlb_control = 1;
     }
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "clgi;"
                   "sti;"
                   "vmload;"
                   "vmrun;"
                   "vmsave;"
                   EXPAND (SAVE_GPR)
-                  "mov %1," EXPAND (PREG(ax);)
-                  "mov %2," EXPAND (PREG(sp);)
+                  "mov %1, %%rax;"
+                  "mov %2, %%rsp;"
                   "vmload;"
                   "cli;"
                   "stgi;"
@@ -290,16 +280,11 @@ void Ec::root_invoke()
     ret_user_sysexit();
 }
 
-void Ec::handle_tss()
-{
-    Console::panic ("Task gate invoked");
-}
-
 void Ec::die (char const *reason, Exc_regs *r)
 {
     if (current->utcb || current->pd == &Pd::kern)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               current, Sc::current, r->vec, r->cs, r->REG(ip), r->cr2, r->err, reason);
+               current, Sc::current, r->vec, r->cs, r->rip, r->cr2, r->err, reason);
     else
         trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR4:%#lx (%s)",
                current, Sc::current, r->vec, r->cr0_shadow, r->cr4_shadow, reason);
