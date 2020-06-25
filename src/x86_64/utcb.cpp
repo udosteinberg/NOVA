@@ -32,26 +32,26 @@ bool Utcb::load_exc (Cpu_regs *regs)
     mword m = regs->mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->REG(ax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rax = regs->rax;
+        rcx = regs->rcx;
+        rdx = regs->rdx;
+        rbx = regs->rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = regs->rbp;
+        rsi = regs->rsi;
+        rdi = regs->rdi;
     }
 
     if (m & Mtd::RSP)
-        rsp = regs->REG(sp);
+        rsp = regs->rsp;
 
     if (m & Mtd::RIP_LEN)
-        rip = regs->REG(ip);
+        rip = regs->rip;
 
     if (m & Mtd::RFLAGS)
-        rflags = regs->REG(fl);
+        rflags = regs->rfl;
 
     if (m & Mtd::QUAL) {
         qual[0] = regs->err;
@@ -68,26 +68,26 @@ bool Utcb::load_exc (Cpu_regs *regs)
 bool Utcb::save_exc (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
-        regs->REG(ax) = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        regs->rax = rax;
+        regs->rcx = rcx;
+        regs->rdx = rdx;
+        regs->rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        regs->rbp = rbp;
+        regs->rsi = rsi;
+        regs->rdi = rdi;
     }
 
     if (mtd & Mtd::RSP)
-        regs->REG(sp) = rsp;
+        regs->rsp = rsp;
 
     if (mtd & Mtd::RIP_LEN)
-        regs->REG(ip) = rip;
+        regs->rip = rip;
 
     if (mtd & Mtd::RFLAGS)
-        regs->REG(fl) = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+        regs->rfl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
 
     return mtd & Mtd::FPU;
 }
@@ -97,16 +97,16 @@ bool Utcb::load_vmx (Cpu_regs *regs)
     mword m = regs->mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->REG(ax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rax = regs->rax;
+        rcx = regs->rcx;
+        rdx = regs->rdx;
+        rbx = regs->rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = regs->rbp;
+        rsi = regs->rsi;
+        rdi = regs->rdi;
     }
 
     regs->vmcs->make_current();
@@ -190,10 +190,8 @@ bool Utcb::load_vmx (Cpu_regs *regs)
         tsc_off = regs->tsc_offset;
     }
 
-#ifdef __x86_64__
     if (m & Mtd::EFER)
         efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
-#endif
 
     barrier();
     mtd = m;
@@ -205,16 +203,16 @@ bool Utcb::load_vmx (Cpu_regs *regs)
 bool Utcb::save_vmx (Cpu_regs *regs)
 {
     if (mtd & Mtd::GPR_ACDB) {
-        regs->REG(ax) = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        regs->rax = rax;
+        regs->rcx = rcx;
+        regs->rdx = rdx;
+        regs->rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        regs->rbp = rbp;
+        regs->rsi = rsi;
+        regs->rdi = rdi;
     }
 
     regs->vmcs->make_current();
@@ -336,10 +334,8 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     if (mtd & Mtd::TSC)
         regs->add_tsc_offset (tsc_off);
 
-#ifdef __x86_64__
     if (mtd & Mtd::EFER)
         regs->write_efer<Vmcs> (efer);
-#endif
 
     return mtd & Mtd::FPU;
 }
@@ -352,15 +348,15 @@ bool Utcb::load_svm (Cpu_regs *regs)
 
     if (m & Mtd::GPR_ACDB) {
         rax = static_cast<mword>(vmcb->rax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rcx = regs->rcx;
+        rdx = regs->rdx;
+        rbx = regs->rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = regs->rbp;
+        rsi = regs->rsi;
+        rdi = regs->rdi;
     }
 
     if (m & Mtd::RSP)
@@ -437,10 +433,8 @@ bool Utcb::load_svm (Cpu_regs *regs)
         tsc_off = regs->tsc_offset;
     }
 
-#ifdef __x86_64__
     if (m & Mtd::EFER)
         efer = vmcb->efer;
-#endif
 
     barrier();
     mtd = m;
@@ -455,15 +449,15 @@ bool Utcb::save_svm (Cpu_regs *regs)
 
     if (mtd & Mtd::GPR_ACDB) {
         vmcb->rax = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        regs->rcx = rcx;
+        regs->rdx = rdx;
+        regs->rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        regs->rbp = rbp;
+        regs->rsi = rsi;
+        regs->rdi = rdi;
     }
 
     if (mtd & Mtd::RSP)
@@ -542,10 +536,8 @@ bool Utcb::save_svm (Cpu_regs *regs)
     if (mtd & Mtd::TSC)
         regs->add_tsc_offset (tsc_off);
 
-#ifdef __x86_64__
     if (mtd & Mtd::EFER)
         regs->write_efer<Vmcb> (efer);
-#endif
 
     return mtd & Mtd::FPU;
 }
