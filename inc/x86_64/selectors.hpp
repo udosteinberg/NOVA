@@ -1,10 +1,11 @@
 /*
- * Selectors
+ * Segment Selectors
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,12 +21,10 @@
 
 #pragma once
 
-#define SEL_NULL_DESC   0x0
-#define SEL_KERN_CODE   0x8
-#define SEL_KERN_DATA   0x10
-#define SEL_USER_CODE   0x1b
-#define SEL_USER_DATA   0x23
-#define SEL_USER_CODE_L 0x2b
+#define SEL_KERN_CODE   0x8     // IA32_STAR[47:32] + 0
+#define SEL_KERN_DATA   0x10    // IA32_STAR[47:32] + 8
+#define SEL_USER_DATA   0x1b    // IA32_STAR[63:48] + 8
+#define SEL_USER_CODE   0x23    // IA32_STAR[63:48] + 16
 #define SEL_TSS_RUN     0x30
 #define SEL_TSS_DBF     0x40
 #define SEL_MAX         0x50

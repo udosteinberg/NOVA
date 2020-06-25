@@ -19,7 +19,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "bits.hpp"
 #include "console.hpp"
 #include "lock_guard.hpp"
 #include "x86.hpp"
@@ -39,10 +38,8 @@ void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned fla
     char buffer[24], *ptr = buffer + sizeof buffer;
 
     do {
-        uint32 r;
-        val = div64 (val, base, &r);
-        *--ptr = r["0123456789abcdef"];
-    } while (val);
+        *--ptr = "0123456789abcdef"[val % base];
+    } while (val /= base);
 
     if (neg)
         *--ptr = '-';
