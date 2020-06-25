@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,10 +20,8 @@
  *
  */
 
-#include "arch.hpp"
-#include "hazards.hpp"
+#include "entry.hpp"
 #include "memory.hpp"
-#include "selectors.hpp"
 #include "vectors.hpp"
 
 .data
@@ -34,50 +33,39 @@ handlers:
 .macro                  INTRGATE DPL
                         .align  4, 0x90
 1:                      .data
-                         WORD   1b + \DPL
+                        .quad   1b + \DPL
                         .previous
 .endm
 
 .macro                  TASKGATE
                         .data
-                         WORD   0
+                        .quad   0
                         .previous
 .endm
 
-.macro                  SAVE_STATE
-                        SAVE_SEG
+.macro                  SAVE_STATE N
+.rept                   \N
+                        push    $0
+.endr
                         SAVE_GPR
-                        mov     %REG(sp), %REG(bx)
-                        cmp     $CPU_LOCAL_STCK, %REG(sp)
-                        jae     1f
+                        mov     %rsp, %rbx
+                        testb   $3, OFS_CS (%rbx)
+                        jz      1f
                         cld
-                        mov     $CPU_LOCAL_STCK + PAGE_SIZE, %REG(sp)
-                        mov     $SEL_USER_DATA, %REG(ax)
-                        mov     %REG(ax), %ds
-                        mov     %REG(ax), %es
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
 1:
 .endm
 
 .macro                  EXCEPTION VEC, DPL
 INTRGATE                \DPL
-#ifdef __i386__
-.if                     \VEC == 1
-                        testb   $3, 4(%REG(sp))
-                        jz      entry_sysenter_db
-.endif
-#endif
                         push    $\VEC
                         jmp     entry_exc
 .endm
 
 .macro                  EXCEPTION_ERROR VEC, DPL
 INTRGATE                \DPL
-                        push    (%REG(sp))
-#ifdef __i386__
-                        movl    $\VEC, 4(%esp)
-#else
-                        movq    $\VEC, 8(%rsp)
-#endif
+                        push    (%rsp)
+                        movq    $\VEC, __SIZEOF_POINTER__(%rsp)
                         jmp     entry_exc_error
 .endm
 
@@ -85,10 +73,10 @@ INTRGATE                \DPL
  * Exception Entries
  */
 entry_exc:              push    $0
-entry_exc_error:        SAVE_STATE
-                        mov     %cr2, %REG(ax)
-                        mov     %REG(ax), OFS_CR2 (%REG(bx))
-                        mov     %REG(bx), %ARG_1
+entry_exc_error:        SAVE_STATE 1
+                        mov     %cr2, %rax
+                        mov     %rax, OFS_CR2 (%rbx)
+                        mov     %rbx, %rdi
                         call    exc_handler
                         jmp     ret_from_interrupt
 
@@ -127,9 +115,8 @@ INTRGATE                0
 .set                    VEC, VEC + 1
 .endr
 
-entry_gsi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
+entry_gsi:              SAVE_STATE 2
+                        mov     OFS_VEC (%rbx), %rdi
                         call    gsi_vector
                         jmp     ret_from_interrupt
 
@@ -143,9 +130,8 @@ INTRGATE                0
 .set                    VEC, VEC + 1
 .endr
 
-entry_lvt:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
+entry_lvt:              SAVE_STATE 2
+                        mov     OFS_VEC (%rbx), %rdi
                         call    lvt_vector
                         jmp     ret_from_interrupt
 
@@ -159,9 +145,8 @@ INTRGATE                0
 .set                    VEC, VEC + 1
 .endr
 
-entry_msi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
+entry_msi:              SAVE_STATE 2
+                        mov     OFS_VEC (%rbx), %rdi
                         call    msi_vector
                         jmp     ret_from_interrupt
 
@@ -175,39 +160,31 @@ INTRGATE                0
 .set                    VEC, VEC + 1
 .endr
 
-entry_ipi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
+entry_ipi:              SAVE_STATE 2
+                        mov     OFS_VEC (%rbx), %rdi
                         call    ipi_vector
                         jmp     ret_from_interrupt
 
 /*
  * Interrupt Return
  */
-ret_from_interrupt:     testb   $3, OFS_CS (%REG(bx))
+ret_from_interrupt:     testb   $3, OFS_CS (%rbx)
                         jnz     ret_user_iret
                         LOAD_GPR
-                        add     $(6 * SIZE), %REG(sp)
-                        RET_USER_EXC
-
-#ifdef __i386__
-entry_sysenter_db:      mov     12(%esp), %esp
-                   lock orl     $HZD_STEP, (%esp)
-                        orl     $0x100, -12(%esp)
-                        jmp     1f
-#endif
+                        IRET
 
 /*
  * System-Call Entry
  */
 .align                  4, 0x90
-.globl                  entry_sysenter
-entry_sysenter:         LOAD_KSP
-                        lea     -11*SIZE(%REG(sp)), %REG(sp)
+.globl                  entry_sys
+entry_sys:              mov     %rsp, %r11
+                        mov     tss_run + 4, %rsp
+                        lea     -(__SIZEOF_POINTER__ * 8)(%rsp), %rsp
                         SAVE_GPR
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
-                        and     $0xf, %ARG_1
-                        jmp     *syscall(,%ARG_1,SIZE)
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
+                        and     $0xf, %rdi
+                        jmp     *syscall(, %rdi, __SIZEOF_POINTER__)
 
 /*
  * VMX Entry
@@ -215,7 +192,7 @@ entry_sysenter:         LOAD_KSP
 .align                  4, 0x90
 .globl                  entry_vmx
 entry_vmx:              SAVE_GPR
-                        mov     %cr2, %REG(ax)
-                        mov     %REG(ax), OFS_CR2 (%REG(sp))
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
+                        mov     %cr2, %rax
+                        mov     %rax, OFS_CR2 (%rsp)
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
                         jmp     vmx_handler
