@@ -33,9 +33,7 @@ class Idt : public Descriptor
         {
             val[0] = static_cast<uint32>(selector << 16 | (offset & 0xffff));
             val[1] = static_cast<uint32>((offset & 0xffff0000) | 1u << 15 | dpl << 13 | type);
-#ifdef __x86_64__
             val[2] = static_cast<uint32>(offset >> 32);
-#endif
         }
 
     public:

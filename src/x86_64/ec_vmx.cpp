@@ -46,7 +46,7 @@ void Ec::vmx_exception()
     switch (intr_info & 0x7ff) {
 
         default:
-            current->regs.dst_portal = Vmcs::VMX_EXC_NMI;
+            current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
             break;
 
         case 0x202:         // NMI
@@ -79,7 +79,9 @@ void Ec::vmx_extint()
 
 void Ec::handle_vmx()
 {
-    Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
+    current->regs.cr2 = get_cr2();
+
+    Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
 
@@ -90,7 +92,7 @@ void Ec::handle_vmx()
         case Vmcs::VMX_EXTINT:      vmx_extint();
     }
 
-    current->regs.dst_portal = reason;
+    current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmresume>();
 }
