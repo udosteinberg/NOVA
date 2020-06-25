@@ -102,4 +102,4 @@ void Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
 
 template class Pte<Dpt, uint64, 4, 9, true>;
 template class Pte<Ept, uint64, 4, 9, false>;
-template class Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>;
+template class Pte<Hpt, uint64, 4, 9, false>;
