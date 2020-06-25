@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,9 +21,8 @@
  */
 
 #include "arch.hpp"
-#include "hazards.hpp"
+#include "entry.hpp"
 #include "memory.hpp"
-#include "selectors.hpp"
 #include "vectors.hpp"
 
 .data
@@ -31,191 +31,171 @@ handlers:
 
 .text
 
-.macro                  INTRGATE DPL
-                        .align  4, 0x90
-1:                      .data
-                         WORD   1b + \DPL
+.macro                  NOGATE
+                        .data
+                        .quad   0
                         .previous
 .endm
 
-.macro                  TASKGATE
+.macro                  INTRGATE IDT
+                        .balign 4, 0x90
+1:
                         .data
-                         WORD   0
+                        .quad   1b + \IDT
                         .previous
+.endm
+
+.macro                  EXCEPTION_ERROR VEC, IDT
+INTRGATE                \IDT
+                        push    (%rsp)
+                        movq    $\VEC, __SIZEOF_POINTER__(%rsp)
+    .if \IDT & IDT_IST1
+                        jmp     entry_ist_err
+    .else
+                        jmp     entry_exc_err
+    .endif
+.endm
+
+.macro                  EXCEPTION VEC, IDT
+INTRGATE                \IDT
+                        push    $\VEC
+    .if \IDT & IDT_IST1
+                        jmp     entry_ist
+    .else
+                        jmp     entry_exc
+    .endif
+.endm
+
+.macro                  INTERRUPT VEC, LABEL
+INTRGATE                0
+                        push    $\VEC
+                        jmp     \LABEL
 .endm
 
 .macro                  SAVE_STATE
-                        SAVE_SEG
                         SAVE_GPR
-                        mov     %REG(sp), %REG(bx)
-                        cmp     $CPU_LOCAL_STCK, %REG(sp)
-                        jae     1f
+                        mov     %rsp, %rbx
+                        testb   $3, OFS_CS(%rbx)
+                        jz      1f
                         cld
-                        mov     $CPU_LOCAL_STCK + PAGE_SIZE, %REG(sp)
-                        mov     $SEL_USER_DATA, %REG(ax)
-                        mov     %REG(ax), %ds
-                        mov     %REG(ax), %es
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
 1:
 .endm
 
-.macro                  EXCEPTION VEC, DPL
-INTRGATE                \DPL
-#ifdef __i386__
-.if                     \VEC == 1
-                        testb   $3, 4(%REG(sp))
-                        jz      entry_sysenter_db
-.endif
-#endif
-                        push    $\VEC
-                        jmp     entry_exc
-.endm
-
-.macro                  EXCEPTION_ERROR VEC, DPL
-INTRGATE                \DPL
-                        push    (%REG(sp))
-#ifdef __i386__
-                        movl    $\VEC, 4(%esp)
-#else
-                        movq    $\VEC, 8(%rsp)
-#endif
-                        jmp     entry_exc_error
-.endm
+/*
+ * Exceptions
+ */
+EXCEPTION               EXC_DE,     0               // Fault
+EXCEPTION               EXC_DB,     0               // Trap or Fault
+EXCEPTION               EXC_NMI,    IDT_IST1        // NMI
+EXCEPTION               EXC_BP,     IDT_USER        // Trap
+EXCEPTION               EXC_OF,     IDT_USER        // Trap
+EXCEPTION               EXC_BR,     0               // Fault
+EXCEPTION               EXC_UD,     0               // Fault
+EXCEPTION               EXC_NM,     0               // Fault
+EXCEPTION_ERROR         EXC_DF,     IDT_IST1        // Abort
+NOGATE                                              // Abort
+EXCEPTION_ERROR         EXC_TS,     0               // Fault
+EXCEPTION_ERROR         EXC_NP,     0               // Fault
+EXCEPTION_ERROR         EXC_SS,     0               // Fault
+EXCEPTION_ERROR         EXC_GP,     0               // Fault
+EXCEPTION_ERROR         EXC_PF,     0               // Fault
+NOGATE
+EXCEPTION               EXC_MF,     0               // Fault
+EXCEPTION_ERROR         EXC_AC,     0               // Fault
+EXCEPTION               EXC_MC,     IDT_IST1        // Abort
+EXCEPTION               EXC_XM,     0               // Fault
+EXCEPTION               EXC_VE,     0               // Fault
+EXCEPTION_ERROR         EXC_CP,     0               // Fault
 
 /*
- * Exception Entries
+ * Unused Exceptions
  */
-entry_exc:              push    $0
-entry_exc_error:        SAVE_STATE
-                        mov     %cr2, %REG(ax)
-                        mov     %REG(ax), OFS_CR2 (%REG(bx))
-                        mov     %REG(bx), %ARG_1
+.rept                   NUM_EXC - 0x16
+NOGATE
+.endr
+
+/*
+ * Exception Entry via IST
+ */
+entry_ist:              push    $0                      // ERR
+entry_ist_err:          SAVE_GPR                        // GPR
+                        cld
+                        mov     %rsp, %rdi              // ARG1 = Exc_regs
+                        call    ist_handler
+                        LOAD_GPR
+                        IRET
+
+/*
+ * Exception Entry
+ */
+entry_exc:              push    $0                      // ERR
+entry_exc_err:          SAVE_STATE                      // GPR
+                        mov     %rbx, %rdi
                         call    exc_handler
-                        jmp     ret_from_interrupt
-
-EXCEPTION               0x0,    0
-EXCEPTION               0x1,    0
-TASKGATE
-EXCEPTION               0x3,    3
-EXCEPTION               0x4,    3
-EXCEPTION               0x5,    0
-EXCEPTION               0x6,    0
-EXCEPTION               0x7,    0
-TASKGATE
-TASKGATE
-EXCEPTION_ERROR         0xa,    0
-EXCEPTION_ERROR         0xb,    0
-EXCEPTION_ERROR         0xc,    0
-EXCEPTION_ERROR         0xd,    0
-EXCEPTION_ERROR         0xe,    0
-TASKGATE
-EXCEPTION               0x10,   0
-EXCEPTION_ERROR         0x11,   0
-EXCEPTION               0x12,   0
-EXCEPTION               0x13,   0
-.rept                   NUM_EXC - 0x14
-TASKGATE
-.endr
-
-/*
- * GSI Entries
- */
-.set                    VEC, NUM_EXC
-.rept                   NUM_GSI
-INTRGATE                0
-                        push    $VEC
-                        jmp     entry_gsi
-.set                    VEC, VEC + 1
-.endr
-
-entry_gsi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
-                        call    gsi_vector
-                        jmp     ret_from_interrupt
-
-/*
- * LVT Entries
- */
-.rept                   NUM_LVT
-INTRGATE                0
-                        push    $VEC
-                        jmp     entry_lvt
-.set                    VEC, VEC + 1
-.endr
-
-entry_lvt:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
-                        call    lvt_vector
-                        jmp     ret_from_interrupt
-
-/*
- * MSI Entries
- */
-.rept                   NUM_MSI
-INTRGATE                0
-                        push    $VEC
-                        jmp     entry_msi
-.set                    VEC, VEC + 1
-.endr
-
-entry_msi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
-                        call    msi_vector
-                        jmp     ret_from_interrupt
-
-/*
- * IPI Entries
- */
-.rept                   NUM_IPI
-INTRGATE                0
-                        push    $VEC
-                        jmp     entry_ipi
-.set                    VEC, VEC + 1
-.endr
-
-entry_ipi:              push    $0
-                        SAVE_STATE
-                        mov     OFS_VEC (%REG(bx)), %ARG_1
-                        call    ipi_vector
-                        jmp     ret_from_interrupt
-
-/*
- * Interrupt Return
- */
-ret_from_interrupt:     testb   $3, OFS_CS (%REG(bx))
+exit:                   testb   $3, OFS_CS(%rbx)
                         jnz     ret_user_iret
                         LOAD_GPR
-                        add     $(6 * SIZE), %REG(sp)
-                        RET_USER_EXC
+                        IRET
 
-#ifdef __i386__
-entry_sysenter_db:      mov     12(%esp), %esp
-                   lock orl     $HZD_STEP, (%esp)
-                        orl     $0x100, -12(%esp)
-                        jmp     1f
-#endif
+/*
+ * Interrupt Entry
+ */
+.macro                  INTERRUPT_ENTRY FUNC
+                        push    $0                      // ERR
+                        SAVE_STATE                      // GPR
+                        mov     OFS_VEC(%rbx), %rdi
+                        call    \FUNC
+                        jmp     exit
+.endm
+
+/*
+ * Interrupts
+ */
+.set                    VEC,    NUM_EXC
+
+entry_gsi:              INTERRUPT_ENTRY gsi_vector
+.rept                   NUM_GSI
+INTERRUPT               VEC,    entry_gsi
+.set                    VEC,    VEC + 1
+.endr
+
+entry_msi:              INTERRUPT_ENTRY msi_vector
+.rept                   NUM_MSI
+INTERRUPT               VEC,    entry_msi
+.set                    VEC,    VEC + 1
+.endr
+
+entry_lvt:              INTERRUPT_ENTRY lvt_vector
+.rept                   NUM_LVT
+INTERRUPT               VEC,    entry_lvt
+.set                    VEC,    VEC + 1
+.endr
+
+entry_ipi:              INTERRUPT_ENTRY ipi_vector
+.rept                   NUM_IPI
+INTERRUPT               VEC,    entry_ipi
+.set                    VEC,    VEC + 1
+.endr
 
 /*
  * System-Call Entry
  */
-.align                  4, 0x90
-.globl                  entry_sysenter
-entry_sysenter:         LOAD_KSP
-                        lea     -11*SIZE(%REG(sp)), %REG(sp)
+.balign                 4, 0x90
+.global                 entry_sys
+entry_sys:              mov     %rsp, %r11
+                        mov     tss_run + 4, %rsp
+                        lea     -7 * __SIZEOF_POINTER__(%rsp), %rsp
                         SAVE_GPR
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
-                        and     $0xf, %ARG_1
-                        jmp     *syscall(,%ARG_1,SIZE)
+                        and     $0xf, %rdi
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE - __SIZEOF_POINTER__, %rsp
+                        jmp     *syscall(, %rdi, __SIZEOF_POINTER__)
 
 /*
  * VMX Entry
  */
-.align                  4, 0x90
-.globl                  entry_vmx
+.balign                 4, 0x90
+.global                 entry_vmx
 entry_vmx:              SAVE_GPR
-                        mov     %cr2, %REG(ax)
-                        mov     %REG(ax), OFS_CR2 (%REG(sp))
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
+                        lea     CPU_LOCAL_STCK + PAGE_SIZE - __SIZEOF_POINTER__, %rsp
                         jmp     vmx_handler
