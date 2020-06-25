@@ -19,7 +19,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "ec.hpp"
 #include "gsi.hpp"
 #include "lapic.hpp"
@@ -46,7 +45,7 @@ void Ec::vmx_exception()
     switch (intr_info & 0x7ff) {
 
         default:
-            current->regs.dst_portal = Vmcs::VMX_EXC_NMI;
+            current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
             break;
 
         case 0x202:         // NMI
@@ -63,23 +62,16 @@ void Ec::vmx_exception()
 
 void Ec::vmx_extint()
 {
-    uint32 vector = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff;
-
-    if (vector >= VEC_IPI)
-        Lapic::ipi_vector (vector);
-    else if (vector >= VEC_MSI)
-        Dmar::vector (vector);
-    else if (vector >= VEC_LVT)
-        Lapic::lvt_vector (vector);
-    else if (vector >= VEC_GSI)
-        Gsi::vector (vector);
+    Gsi::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff);
 
     ret_user_vmresume();
 }
 
 void Ec::handle_vmx()
 {
-    Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
+    current->regs.cr2 = get_cr2();
+
+    Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
 
@@ -90,7 +82,7 @@ void Ec::handle_vmx()
         case Vmcs::VMX_EXTINT:      vmx_extint();
     }
 
-    current->regs.dst_portal = reason;
+    current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmresume>();
 }

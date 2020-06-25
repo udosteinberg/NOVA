@@ -23,6 +23,7 @@
 #include "bits.hpp"
 #include "ec.hpp"
 #include "elf.hpp"
+#include "entry.hpp"
 #include "hip.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
@@ -47,45 +48,37 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
 
     if (u) {
 
-        if (glb) {
-            regs.cs  = SEL_USER_CODE;
-            regs.ds  = SEL_USER_DATA;
-            regs.es  = SEL_USER_DATA;
-            regs.ss  = SEL_USER_DATA;
-            regs.REG(fl) = Cpu::EFL_IF;
-            regs.REG(sp) = s;
-        } else
-            regs.set_sp (s);
+        (glb ? exc_regs().rsp : exc_regs().sp()) = s;
 
         utcb = new Utcb;
 
         pd->Space_mem::insert (u, 0, Hpt::HPT_U | Hpt::HPT_W | Hpt::HPT_P, Buddy::ptr_to_phys (utcb));
 
-        regs.dst_portal = NUM_EXC - 2;
+        exc_regs().set_ep (NUM_EXC - 2);
 
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
 
     } else {
 
-        regs.dst_portal = NUM_VMI - 2;
+        exc_regs().set_ep (NUM_VMI - 2);
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
-            regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
+            regs.vmcs = new Vmcs (reinterpret_cast<mword>(&sys_regs() + 1),
                                   pd->Space_pio::walk(),
                                   pd->loc[c].root(),
                                   pd->ept.root());
 
-            regs.nst_ctrl<Vmcs>();
+//          regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p)", this, p, regs.vmcs);
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.REG(ax) = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.root()));
+            sys_regs().rax = Buddy::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.root()));
 
-            regs.nst_ctrl<Vmcb>();
+//          regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p)", this, p, regs.vmcb);
         }
@@ -106,29 +99,19 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->regs.clr_hazard (HZD_RECALL);
 
         if (func == ret_user_vmresume) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmresume>();
         }
 
         if (func == ret_user_vmrun) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmrun>();
         }
 
         if (func == ret_user_sysexit)
             current->redirect_to_iret();
 
-        current->regs.dst_portal = NUM_EXC - 1;
-        send_msg<ret_user_iret>();
-    }
-
-    if (hzd & HZD_STEP) {
-        current->regs.clr_hazard (HZD_STEP);
-
-        if (func == ret_user_sysexit)
-            current->redirect_to_iret();
-
-        current->regs.dst_portal = Cpu::EXC_DB;
+        current->exc_regs().set_ep (NUM_EXC - 1);
         send_msg<ret_user_iret>();
     }
 
@@ -142,11 +125,6 @@ void Ec::handle_hazard (mword hzd, void (*func)())
             current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
     }
 
-    if (hzd & HZD_DS_ES) {
-        Cpu::hazard &= ~HZD_DS_ES;
-        asm volatile ("mov %0, %%ds; mov %0, %%es" : : "r" (SEL_USER_DATA));
-    }
-
     if (hzd & HZD_FPU)
         if (current != fpowner)
             Fpu::disable();
@@ -154,23 +132,22 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_DS_ES | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR RET_USER_HYP) : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR) "mov %%r11, %%rsp; mov $0x202, %%r11; sysretq" : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
 
 void Ec::ret_user_iret()
 {
-    // No need to check HZD_DS_ES because IRET will reload both anyway
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_STEP | HZD_RCU | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR LOAD_SEG RET_USER_EXC) : : "m" (current->regs) : "memory");
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR IRET) : : "m" (current->regs) : "memory");
 
     UNREACHED;
 }
@@ -191,10 +168,10 @@ void Ec::ret_user_vmresume()
     if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
         set_cr2 (current->regs.cr2);
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
-                  "mov %1," EXPAND (PREG(sp);)
+                  "mov %1, %%rsp;"
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
@@ -213,15 +190,15 @@ void Ec::ret_user_vmrun()
         current->regs.vmcb->tlb_control = 1;
     }
 
-    asm volatile ("lea %0," EXPAND (PREG(sp); LOAD_GPR)
+    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "clgi;"
                   "sti;"
                   "vmload;"
                   "vmrun;"
                   "vmsave;"
                   EXPAND (SAVE_GPR)
-                  "mov %1," EXPAND (PREG(ax);)
-                  "mov %2," EXPAND (PREG(sp);)
+                  "mov %1, %%rax;"
+                  "mov %2, %%rsp;"
                   "vmload;"
                   "cli;"
                   "stgi;"
@@ -254,9 +231,8 @@ void Ec::root_invoke()
         die ("No ELF");
 
     unsigned count = e->ph_count;
-    current->regs.set_pt (Cpu::id);
-    current->regs.set_ip (e->entry);
-    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
+    current->exc_regs().ip() = e->entry;
+    current->exc_regs().sp() = USER_ADDR - PAGE_SIZE;
 
     ELF_PHDR *p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
@@ -290,24 +266,14 @@ void Ec::root_invoke()
     ret_user_sysexit();
 }
 
-void Ec::handle_tss()
+void Ec::die (char const *reason)
 {
-    Console::panic ("Task gate invoked");
-}
-
-void Ec::die (char const *reason, Exc_regs *r)
-{
-    if (current->utcb || current->pd == &Pd::kern)
-        trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               current, Sc::current, r->vec, r->cs, r->REG(ip), r->cr2, r->err, reason);
-    else
-        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR4:%#lx (%s)",
-               current, Sc::current, r->vec, r->cr0_shadow, r->cr4_shadow, reason);
+    trace (0, "Killed EC:%p (%s)", static_cast<void *>(current), reason);
 
     Ec *ec = current->rcap;
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::COM_ABT>) : dead;
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
 
     reply (dead);
 }
