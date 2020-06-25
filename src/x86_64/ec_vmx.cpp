@@ -79,7 +79,7 @@ void Ec::vmx_extint()
 
 void Ec::handle_vmx()
 {
-    Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
+    Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
 

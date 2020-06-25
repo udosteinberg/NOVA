@@ -52,7 +52,6 @@
         #define NOINLINE                __attribute__((noinline))
         #define NONNULL                 __attribute__((nonnull))
         #define PACKED                  __attribute__((packed))
-        #define REGPARM(X)              __attribute__((regparm(X)))
 
         #define SEC_DATA                __attribute__((section (".data"), used))
         #define SEC_HASH                __attribute__((section (".text"), used))

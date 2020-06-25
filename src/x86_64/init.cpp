@@ -28,8 +28,7 @@
 #include "idt.hpp"
 #include "string.hpp"
 
-extern "C"
-mword kern_ptab_setup()
+extern "C" mword kern_ptab_setup()
 {
     Hptp hpt;
 
@@ -49,8 +48,7 @@ mword kern_ptab_setup()
     return hpt.addr();
 }
 
-extern "C" REGPARM (1)
-void init (mword mbi)
+extern "C" void init (mword mbi)
 {
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
