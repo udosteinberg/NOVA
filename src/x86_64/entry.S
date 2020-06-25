@@ -60,12 +60,6 @@ handlers:
 
 .macro                  EXCEPTION VEC, DPL
 INTRGATE                \DPL
-#ifdef __i386__
-.if                     \VEC == 1
-                        testb   $3, 4(%REG(sp))
-                        jz      entry_sysenter_db
-.endif
-#endif
                         push    $\VEC
                         jmp     entry_exc
 .endm
@@ -73,11 +67,7 @@ INTRGATE                \DPL
 .macro                  EXCEPTION_ERROR VEC, DPL
 INTRGATE                \DPL
                         push    (%REG(sp))
-#ifdef __i386__
-                        movl    $\VEC, 4(%esp)
-#else
                         movq    $\VEC, 8(%rsp)
-#endif
                         jmp     entry_exc_error
 .endm
 
@@ -189,13 +179,6 @@ ret_from_interrupt:     testb   $3, OFS_CS (%REG(bx))
                         LOAD_GPR
                         add     $(6 * SIZE), %REG(sp)
                         RET_USER_EXC
-
-#ifdef __i386__
-entry_sysenter_db:      mov     12(%esp), %esp
-                   lock orl     $HZD_STEP, (%esp)
-                        orl     $0x100, -12(%esp)
-                        jmp     1f
-#endif
 
 /*
  * System-Call Entry
