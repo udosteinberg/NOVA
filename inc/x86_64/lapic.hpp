@@ -151,9 +151,7 @@ class Lapic
 
         static void send_ipi (unsigned, unsigned, Delivery_mode = DLV_FIXED, Shorthand = DSH_NONE);
 
-        REGPARM (1)
         static void lvt_vector (unsigned) asm ("lvt_vector");
 
-        REGPARM (1)
         static void ipi_vector (unsigned) asm ("ipi_vector");
 };
