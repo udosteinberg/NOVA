@@ -76,17 +76,6 @@ void Ec::handle_exc_nm()
     fpowner = current;
 }
 
-bool Ec::handle_exc_ts (Exc_regs *r)
-{
-    if (r->user())
-        return false;
-
-    // SYSENTER with EFLAGS.NT=1 and IRET faulted
-    r->REG(fl) &= ~Cpu::EFL_NT;
-
-    return true;
-}
-
 bool Ec::handle_exc_gp (Exc_regs *)
 {
     if (Cpu::hazard & HZD_TR) {
@@ -101,7 +90,7 @@ bool Ec::handle_exc_gp (Exc_regs *)
 
 bool Ec::handle_exc_pf (Exc_regs *r)
 {
-    mword addr = r->cr2;
+    mword addr = current->regs.cr2 = get_cr2();
 
     if (r->err & Hpt::ERR_U)
         return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
@@ -121,7 +110,7 @@ bool Ec::handle_exc_pf (Exc_regs *r)
         return true;
     }
 
-    die ("#PF (kernel)", r);
+    die ("#PF (kernel)");
 }
 
 void Ec::handle_exc (Exc_regs *r)
@@ -130,32 +119,37 @@ void Ec::handle_exc (Exc_regs *r)
 
     switch (r->vec) {
 
-        case Cpu::EXC_NM:
+        case EXC_NM:
             handle_exc_nm();
             return;
 
-        case Cpu::EXC_TS:
-            if (handle_exc_ts (r))
-                return;
-            break;
-
-        case Cpu::EXC_GP:
+        case EXC_GP:
             if (handle_exc_gp (r))
                 return;
             break;
 
-        case Cpu::EXC_PF:
+        case EXC_PF:
             if (handle_exc_pf (r))
                 return;
-            break;
-
-        case Cpu::EXC_MC:
-            Mca::vector();
             break;
     }
 
     if (r->user())
         send_msg<ret_user_iret>();
 
-    die ("EXC", r);
+    die ("EXC");
+}
+
+void Ec::handle_ist (Exc_regs *r)
+{
+    switch (r->vec) {
+
+        case EXC_NMI:
+            return;
+
+        case EXC_MC:
+            return Mca::vector();
+    }
+
+    die ("EXC");
 }

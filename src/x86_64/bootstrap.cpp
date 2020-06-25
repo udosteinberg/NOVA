@@ -24,8 +24,7 @@
 #include "hip.hpp"
 #include "msr.hpp"
 
-extern "C" [[noreturn]]
-void bootstrap()
+extern "C" [[noreturn]] void bootstrap()
 {
     static mword barrier;
 

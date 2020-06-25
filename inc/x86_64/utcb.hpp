@@ -69,16 +69,12 @@ class Utcb_data
                 };
 
                 mword           rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
-#ifdef __x86_64__
                 mword           r8,  r9,  r10, r11, r12, r13, r14, r15;
-#endif
                 uint64          qual[2];
                 uint32          ctrl[2];
                 uint64          reserved;
                 mword           cr0, cr2, cr3, cr4;
-#ifdef __x86_64__
                 mword           cr8, efer;
-#endif
                 mword           dr7, sysenter_cs, sysenter_rsp, sysenter_rip;
                 Utcb_segment    es, cs, ss, ds, fs, gs, ld, tr, gd, id;
                 uint64          tsc_val, tsc_off;
@@ -94,12 +90,12 @@ class Utcb : public Utcb_head, private Utcb_data
         static mword const words = (PAGE_SIZE - sizeof (Utcb_head)) / sizeof (mword);
 
     public:
-        [[nodiscard]] bool load_exc (Cpu_regs *);
-        [[nodiscard]] bool load_vmx (Cpu_regs *);
-        [[nodiscard]] bool load_svm (Cpu_regs *);
-        [[nodiscard]] bool save_exc (Cpu_regs *);
-        [[nodiscard]] bool save_vmx (Cpu_regs *);
-        [[nodiscard]] bool save_svm (Cpu_regs *);
+        [[nodiscard]] bool load_exc (Cpu_regs const &);
+        [[nodiscard]] bool load_vmx (Cpu_regs const &);
+        [[nodiscard]] bool load_svm (Cpu_regs const &);
+        [[nodiscard]] bool save_exc (Cpu_regs &) const;
+        [[nodiscard]] bool save_vmx (Cpu_regs &) const;
+        [[nodiscard]] bool save_svm (Cpu_regs &) const;
 
         inline mword ucnt() const { return static_cast<uint16>(items); }
         inline mword tcnt() const { return static_cast<uint16>(items >> 16); }

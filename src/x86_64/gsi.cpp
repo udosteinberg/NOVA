@@ -85,19 +85,61 @@ void Gsi::unmask (unsigned gsi)
         ioapic->set_irt (gsi, 0U << 16 | gsi_table[gsi].irt);
 }
 
-void Gsi::vector (unsigned vector)
+void Gsi::handle_ipi (unsigned n)
 {
-    unsigned gsi = vector - VEC_GSI;
+    assert (n < NUM_IPI);
 
-    if (gsi == Acpi::gsi)
+    Counter::ipi[n]++;
+
+    switch (n) {
+        case 0: Sc::rrq_handler(); break;
+        case 1: Sc::rke_handler(); break;
+    }
+}
+
+void Gsi::handle_lvt (unsigned n)
+{
+    assert (n < NUM_LVT);
+
+    Counter::lvt[n]++;
+
+    switch (n) {
+        case 0: Lapic::handle_timer(); break;
+        case 1: Lapic::handle_error(); break;
+        case 2: Lapic::handle_perfm(); break;
+        case 3: Lapic::handle_therm(); break;
+        case 4: Lapic::handle_cmchk(); break;
+    }
+}
+
+void Gsi::handle_gsi (unsigned n)
+{
+    assert (n < NUM_GSI);
+
+    Counter::gsi[n]++;
+
+    if (n == Acpi::gsi)
         Acpi::interrupt();
 
-    else if (gsi_table[gsi].trg)
-        mask (gsi);
+    else if (gsi_table[n].trg)
+        mask (n);
+
+    gsi_table[n].sm->up();
+}
+
+void Gsi::handler (unsigned v)
+{
+    if (v >= VEC_FLT)
+        Dmar::interrupt();
+
+    else if (v >= VEC_IPI)
+        handle_ipi (v - VEC_IPI);
+
+    else if (v >= VEC_LVT)
+        handle_lvt (v - VEC_LVT);
+
+    else if (v >= VEC_GSI)
+        handle_gsi (v - VEC_GSI);
 
     Lapic::eoi();
-
-    gsi_table[gsi].sm->up();
-
-    Counter::gsi[gsi]++;
 }

@@ -66,7 +66,7 @@ class Sm : public Kobject, public Queue<Ec>
                 }
             }
 
-            ec->release (Ec::sys_finish<Sys_regs::SUCCESS, true>);
+            ec->release (Ec::sys_finish<Status::SUCCESS, true>);
         }
 
         ALWAYS_INLINE
@@ -78,7 +78,7 @@ class Sm : public Kobject, public Queue<Ec>
                     return;
             }
 
-            ec->release (Ec::sys_finish<Sys_regs::COM_TIM>);
+            ec->release (Ec::sys_finish<Status::TIMEOUT>);
         }
 
         ALWAYS_INLINE

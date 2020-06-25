@@ -23,7 +23,7 @@
 #include "arch.hpp"
 #include "pte.hpp"
 
-class Hpt : public Pte<Hpt, mword, PTE_LEV, PTE_BPL, false>
+class Hpt : public Pte<Hpt, uint64, 4, 9, false>
 {
     private:
         ALWAYS_INLINE

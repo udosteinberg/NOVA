@@ -21,13 +21,18 @@
 #pragma once
 
 #include "assert.hpp"
-#include "config.hpp"
+#include "vectors.hpp"
 
 class Ioapic;
 class Sm;
 
 class Gsi
 {
+    private:
+        static void handle_ipi (unsigned);
+        static void handle_lvt (unsigned);
+        static void handle_gsi (unsigned);
+
     public:
         Sm *            sm;
         Ioapic *        ioapic;
@@ -56,6 +61,5 @@ class Gsi
             return irq_table[irq];
         }
 
-        REGPARM (1)
-        static void vector (unsigned) asm ("gsi_vector");
+        static void handler (unsigned) asm ("int_handler");
 };

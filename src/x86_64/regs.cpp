@@ -23,9 +23,9 @@
 #include "hip.hpp"
 #include "regs.hpp"
 
-template <> void Exc_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
+void Cpu_regs::svm_set_cpu_pri (uint32_t val) const
 {
-    unsigned const msk = !!cr0_msk<Vmcb>() << 0 | !!cr4_msk<Vmcb>() << 4;
+    unsigned const msk = !!msk_cr0<Vmcb>() << 0 | !!msk_cr4<Vmcb>() << 4;
 
     vmcb->npt_control  = 1;
     vmcb->intercept_cr = (msk << 16) | msk;
@@ -33,95 +33,41 @@ template <> void Exc_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
     vmcb->intercept_cpu[0] = val | Vmcb::force_ctrl0;
 }
 
-template <> void Exc_regs::set_cpu_ctrl1<Vmcb> (uint32 val)
+void Cpu_regs::svm_set_cpu_sec (uint32_t val) const
 {
     vmcb->intercept_cpu[1] = val | Vmcb::force_ctrl1;
 }
 
-template <> void Exc_regs::set_cpu_ctrl0<Vmcs> (uint32 val)
+void Cpu_regs::vmx_set_cpu_pri (uint32_t val) const
 {
-    Vmcs::write (Vmcs::CPU_EXEC_CTRL0, (val | Vmcs::ctrl_cpu[0].set) & Vmcs::ctrl_cpu[0].clr);
+    // Force CR8 load/store exiting if not using TPR shadowing
+    if (!(val & Vmcs::CPU_TPR_SHADOW))
+        val |= Vmcs::CPU_CR8_LOAD | Vmcs::CPU_CR8_STORE;
+
+    Vmcs::write (Vmcs::Encoding::CPU_EXEC_CTRL0, (val | Vmcs::ctrl_cpu[0].set) & Vmcs::ctrl_cpu[0].clr);
 }
 
-template <> void Exc_regs::set_cpu_ctrl1<Vmcs> (uint32 val)
+void Cpu_regs::vmx_set_cpu_sec (uint32_t val) const
 {
-    val |= Vmcs::CPU_EPT;
-
-    Vmcs::write (Vmcs::CPU_EXEC_CTRL1, (val | Vmcs::ctrl_cpu[1].set) & Vmcs::ctrl_cpu[1].clr);
+    Vmcs::write (Vmcs::Encoding::CPU_EXEC_CTRL1, (val | Vmcs::ctrl_cpu[1].set) & Vmcs::ctrl_cpu[1].clr);
 }
 
-template <> void Exc_regs::nst_ctrl<Vmcb>()
-{
-    mword cr0 = get_cr0<Vmcb>();
-    mword cr3 = get_cr3<Vmcb>();
-    mword cr4 = get_cr4<Vmcb>();
-    // nst_on = Vmcb::has_npt() && on;
-    set_cr0<Vmcb> (cr0);
-    set_cr3<Vmcb> (cr3);
-    set_cr4<Vmcb> (cr4);
-
-    set_cpu_ctrl0<Vmcb> (vmcb->intercept_cpu[0]);
-    set_cpu_ctrl1<Vmcb> (vmcb->intercept_cpu[1]);
-    set_exc<Vmcb>();
-}
-
-template <> void Exc_regs::nst_ctrl<Vmcs>()
-{
-    assert (Vmcs::current == vmcs);
-
-    mword cr0 = get_cr0<Vmcs>();
-    mword cr3 = get_cr3<Vmcs>();
-    mword cr4 = get_cr4<Vmcs>();
-    // nst_on = Vmcs::has_ept() && on;
-    set_cr0<Vmcs> (cr0);
-    set_cr3<Vmcs> (cr3);
-    set_cr4<Vmcs> (cr4);
-
-    set_cpu_ctrl0<Vmcs> (Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL0));
-    set_cpu_ctrl1<Vmcs> (Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL1));
-    set_exc<Vmcs>();
-
-    Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
-    Vmcs::write (Vmcs::CR4_MASK, cr4_msk<Vmcs>());
-}
-
-void Exc_regs::fpu_ctrl (bool on)
+void Cpu_regs::fpu_ctrl (bool on)
 {
     if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
         vmcs->make_current();
 
-        mword cr0 = get_cr0<Vmcs>();
-        fpu_on = on;
-        set_cr0<Vmcs> (cr0);
-
-        set_exc<Vmcs>();
-
-        Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
+        auto cr0 = vmx_get_gst_cr0();
+        exc.fpu_on = on;
+        vmx_set_gst_cr0 (cr0);
+        vmx_set_msk_cr0();
+        vmx_set_bmp_exc();
 
     } else {
 
-        mword cr0 = get_cr0<Vmcb>();
-        fpu_on = on;
-        set_cr0<Vmcb> (cr0);
-
-        set_exc<Vmcb>();
-
-        set_cpu_ctrl0<Vmcb> (vmcb->intercept_cpu[0]);
+        exc.fpu_on = on;
+        svm_set_bmp_exc();
+        svm_set_cpu_pri (vmcb->intercept_cpu[0]);
     }
-}
-
-template <> void Exc_regs::write_efer<Vmcb> (uint64 val)
-{
-    vmcb->efer = val;
-}
-
-template <> void Exc_regs::write_efer<Vmcs> (uint64 val)
-{
-    Vmcs::write (Vmcs::GUEST_EFER, val);
-
-    if (val & Cpu::EFER_LMA)
-        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
-    else
-        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
 }
