@@ -67,15 +67,15 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
     write (HOST_SEL_CS, SEL_KERN_CODE);
     write (HOST_SEL_SS, SEL_KERN_DATA);
-    write (HOST_SEL_DS, SEL_KERN_DATA);
-    write (HOST_SEL_ES, SEL_KERN_DATA);
+    write (HOST_SEL_DS, 0);
+    write (HOST_SEL_ES, 0);
+    write (HOST_SEL_FS, 0);
+    write (HOST_SEL_GS, 0);
     write (HOST_SEL_TR, SEL_TSS_RUN);
 
-#ifdef __x86_64__
     write (HOST_EFER, Msr::read<uint64>(Msr::IA32_EFER));
     exi |= EXI_LOAD_EFER | EXI_HOST_64;
     ent |= ENT_LOAD_EFER;
-#endif
 
     write (PIN_CONTROLS, (pin | ctrl_pin.set) & ctrl_pin.clr);
     write (EXI_CONTROLS, (exi | ctrl_exi.set) & ctrl_exi.clr);
@@ -89,9 +89,9 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (HOST_BASE_GDTR, reinterpret_cast<mword>(Gdt::gdt));
     write (HOST_BASE_IDTR, reinterpret_cast<mword>(Idt::idt));
 
-    write (HOST_SYSENTER_CS,  SEL_KERN_CODE);
-    write (HOST_SYSENTER_ESP, reinterpret_cast<mword>(&Tss::run.sp0));
-    write (HOST_SYSENTER_EIP, reinterpret_cast<mword>(&entry_sysenter));
+    write (HOST_SYSENTER_CS,  0);
+    write (HOST_SYSENTER_ESP, 0);
+    write (HOST_SYSENTER_EIP, 0);
 
     write (HOST_RSP, esp);
     write (HOST_RIP, reinterpret_cast<mword>(&entry_vmx));
