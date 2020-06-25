@@ -20,9 +20,9 @@
 
 #pragma once
 
-#include "config.hpp"
 #include "cpu.hpp"
 #include "memory.hpp"
+#include "vectors.hpp"
 
 class Counter
 {

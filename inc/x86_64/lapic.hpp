@@ -90,17 +90,6 @@ class Lapic
             write (reg, misc | dlv | vector);
         }
 
-        ALWAYS_INLINE
-        static inline void timer_handler();
-
-        ALWAYS_INLINE
-        static inline void error_handler();
-
-        ALWAYS_INLINE
-        static inline void perfm_handler();
-
-        ALWAYS_INLINE
-        static inline void therm_handler();
 
     public:
         static unsigned freq_tsc;
@@ -147,13 +136,13 @@ class Lapic
             return read (LAPIC_TMR_CCR);
         }
 
+        static void handle_timer();
+        static void handle_error();
+        static void handle_perfm();
+        static void handle_therm();
+        static void handle_cmchk();
+
         static void init();
 
         static void send_ipi (unsigned, unsigned, Delivery_mode = DLV_FIXED, Shorthand = DSH_NONE);
-
-        REGPARM (1)
-        static void lvt_vector (unsigned) asm ("lvt_vector");
-
-        REGPARM (1)
-        static void ipi_vector (unsigned) asm ("ipi_vector");
 };
