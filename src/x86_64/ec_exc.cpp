@@ -82,7 +82,7 @@ bool Ec::handle_exc_ts (Exc_regs *r)
         return false;
 
     // SYSENTER with EFLAGS.NT=1 and IRET faulted
-    r->REG(fl) &= ~Cpu::EFL_NT;
+    r->rfl &= ~Cpu::EFL_NT;
 
     return true;
 }

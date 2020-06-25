@@ -35,7 +35,6 @@ class Gdt : public Descriptor
             val[1] = static_cast<uint32>((base & 0xff000000) | gran | size | (limit & 0xf0000) | l << 21 | 1u << 15 | dpl << 13 | type | (base >> 16 & 0xff));
         }
 
-#ifdef __x86_64__
         ALWAYS_INLINE
         inline void set64 (Type type, Granularity gran, Size size, bool l, unsigned dpl, mword base, mword limit)
         {
@@ -43,7 +42,6 @@ class Gdt : public Descriptor
             (this + 1)->val[0] = static_cast<uint32>(base >> 32);
             (this + 1)->val[1] = 0;
         }
-#endif
 
     public:
         static Gdt gdt[SEL_MAX >> 3] CPULOCAL;

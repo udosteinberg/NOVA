@@ -21,13 +21,8 @@
 
 #include "memory.hpp"
 
-#ifdef __i386__
-OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")
-#else
 OUTPUT_FORMAT("elf64-x86-64")
 OUTPUT_ARCH("i386:x86-64")
-#endif
 ENTRY(__start_bsp)
 
 PHDRS
@@ -89,16 +84,12 @@ SECTIONS
         PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
 
         PROVIDE (PDBR  = . - OFFSET);
-#ifdef __i386__
-        PROVIDE (LVL2L = . - OFFSET);
-        PROVIDE (LVL2H = . - OFFSET); . += 4K;
-#else
         PROVIDE (LVL4  = . - OFFSET); . += 4K;
         PROVIDE (LVL3L = . - OFFSET); . += 4K;
         PROVIDE (LVL3H = . - OFFSET); . += 4K;
         PROVIDE (LVL2L = . - OFFSET); . += 4K;
         PROVIDE (LVL2H = . - OFFSET); . += 4K;
-#endif
+
         _mempool_f = .;
 
         . += 16M;
