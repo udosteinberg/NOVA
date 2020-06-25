@@ -56,6 +56,5 @@ class Gsi
             return irq_table[irq];
         }
 
-        REGPARM (1)
         static void vector (unsigned) asm ("gsi_vector");
 };

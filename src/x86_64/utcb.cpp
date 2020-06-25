@@ -27,35 +27,38 @@
 #include "vmx.hpp"
 #include "x86.hpp"
 
-bool Utcb::load_exc (Cpu_regs *regs)
+bool Utcb::load_exc (Cpu_regs const &c)
 {
-    mword m = regs->mtd;
+    auto const &e { c.exc };
+    auto const &s { e.sys };
+
+    mword m = c.mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->REG(ax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rax = s.rax;
+        rcx = s.rcx;
+        rdx = s.rdx;
+        rbx = s.rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = s.rbp;
+        rsi = s.rsi;
+        rdi = s.rdi;
     }
 
     if (m & Mtd::RSP)
-        rsp = regs->REG(sp);
+        rsp = e.rsp;
 
     if (m & Mtd::RIP_LEN)
-        rip = regs->REG(ip);
+        rip = e.rip;
 
     if (m & Mtd::RFLAGS)
-        rflags = regs->REG(fl);
+        rflags = e.rfl;
 
     if (m & Mtd::QUAL) {
-        qual[0] = regs->err;
-        qual[1] = regs->cr2;
+        qual[0] = e.err;
+        qual[1] = c.cr2;
     }
 
     barrier();
@@ -65,51 +68,56 @@ bool Utcb::load_exc (Cpu_regs *regs)
     return m & Mtd::FPU;
 }
 
-bool Utcb::save_exc (Cpu_regs *regs)
+bool Utcb::save_exc (Cpu_regs &c) const
 {
+    auto &e { c.exc };
+    auto &s { e.sys };
+
     if (mtd & Mtd::GPR_ACDB) {
-        regs->REG(ax) = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        s.rax = rax;
+        s.rcx = rcx;
+        s.rdx = rdx;
+        s.rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        s.rbp = rbp;
+        s.rsi = rsi;
+        s.rdi = rdi;
     }
 
     if (mtd & Mtd::RSP)
-        regs->REG(sp) = rsp;
+        e.rsp = rsp;
 
     if (mtd & Mtd::RIP_LEN)
-        regs->REG(ip) = rip;
+        e.rip = rip;
 
     if (mtd & Mtd::RFLAGS)
-        regs->REG(fl) = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+        e.rfl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
 
     return mtd & Mtd::FPU;
 }
 
-bool Utcb::load_vmx (Cpu_regs *regs)
+bool Utcb::load_vmx (Cpu_regs const &c)
 {
-    mword m = regs->mtd;
+    auto const &s { c.exc.sys };
+
+    mword m = c.mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = regs->REG(ax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rax = s.rax;
+        rcx = s.rcx;
+        rdx = s.rdx;
+        rbx = s.rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = s.rbp;
+        rsi = s.rsi;
+        rdi = s.rdi;
     }
 
-    regs->vmcs->make_current();
+    c.vmcs->make_current();
 
     if (m & Mtd::RSP)
         rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
@@ -150,10 +158,10 @@ bool Utcb::load_vmx (Cpu_regs *regs)
         id.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_IDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_IDTR), 0);
 
     if (m & Mtd::CR) {
-        cr0 = regs->get_cr0<Vmcs>();
-        cr2 = regs->get_cr2<Vmcs>();
-        cr3 = regs->get_cr3<Vmcs>();
-        cr4 = regs->get_cr4<Vmcs>();
+        cr0 = c.vmx_get_gst_cr0();
+        cr4 = c.vmx_get_gst_cr4();
+        cr2 = c.cr2;
+        cr3 = Vmcs::read<mword> (Vmcs::Encoding::GUEST_CR3);
     }
 
     if (m & Mtd::DR)
@@ -171,7 +179,7 @@ bool Utcb::load_vmx (Cpu_regs *regs)
     }
 
     if (m & Mtd::INJ) {
-        if (regs->dst_portal == 33 || regs->dst_portal == NUM_VMI - 1) {
+        if (c.exc.ep() == 33 || c.exc.ep() == NUM_VMI - 1) {
             intr_info  = Vmcs::read<uint32> (Vmcs::ENT_INTR_INFO);
             intr_error = Vmcs::read<uint32> (Vmcs::ENT_INTR_ERROR);
         } else {
@@ -187,13 +195,11 @@ bool Utcb::load_vmx (Cpu_regs *regs)
 
     if (m & Mtd::TSC) {
         tsc_val = rdtsc();
-        tsc_off = regs->tsc_offset;
+        tsc_off = c.tsc_offset;
     }
 
-#ifdef __x86_64__
     if (m & Mtd::EFER)
         efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
-#endif
 
     barrier();
     mtd = m;
@@ -202,22 +208,24 @@ bool Utcb::load_vmx (Cpu_regs *regs)
     return m & Mtd::FPU;
 }
 
-bool Utcb::save_vmx (Cpu_regs *regs)
+bool Utcb::save_vmx (Cpu_regs &c) const
 {
+    auto &s { c.exc.sys };
+
     if (mtd & Mtd::GPR_ACDB) {
-        regs->REG(ax) = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        s.rax = rax;
+        s.rcx = rcx;
+        s.rdx = rdx;
+        s.rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        s.rbp = rbp;
+        s.rsi = rsi;
+        s.rdi = rdi;
     }
 
-    regs->vmcs->make_current();
+    c.vmcs->make_current();
 
     if (mtd & Mtd::RSP)
         Vmcs::write (Vmcs::GUEST_RSP, rsp);
@@ -288,10 +296,10 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CR) {
-        regs->set_cr0<Vmcs> (cr0);
-        regs->set_cr2<Vmcs> (cr2);
-        regs->set_cr3<Vmcs> (cr3);
-        regs->set_cr4<Vmcs> (cr4);
+        c.vmx_set_gst_cr0 (cr0);
+        c.vmx_set_gst_cr4 (cr4);
+        c.cr2 = cr2;
+        Vmcs::write (Vmcs::Encoding::GUEST_CR3, cr3);
     }
 
     if (mtd & Mtd::DR)
@@ -304,8 +312,8 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::CTRL) {
-        regs->set_cpu_ctrl0<Vmcs> (ctrl[0]);
-        regs->set_cpu_ctrl1<Vmcs> (ctrl[1]);
+        c.vmx_set_cpu_pri (ctrl[0]);
+        c.vmx_set_cpu_sec (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {
@@ -322,7 +330,7 @@ bool Utcb::save_vmx (Cpu_regs *regs)
         else
             val &= ~Vmcs::CPU_NMI_WINDOW;
 
-        regs->set_cpu_ctrl0<Vmcs> (val);
+        c.vmx_set_cpu_pri (val);
 
         Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x3000);
         Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
@@ -334,113 +342,121 @@ bool Utcb::save_vmx (Cpu_regs *regs)
     }
 
     if (mtd & Mtd::TSC)
-        regs->add_tsc_offset (tsc_off);
+        c.add_tsc_offset (tsc_off);
 
-#ifdef __x86_64__
-    if (mtd & Mtd::EFER)
-        regs->write_efer<Vmcs> (efer);
-#endif
+    if (mtd & Mtd::EFER) {
+    
+        Vmcs::write (Vmcs::GUEST_EFER, efer);
+
+        auto ent { Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) };
+
+        if (efer & Cpu::EFER_LMA)
+            ent |= Vmcs::ENT_GUEST_64;
+        else
+            ent &= ~Vmcs::ENT_GUEST_64;
+
+        Vmcs::write (Vmcs::ENT_CONTROLS, ent);
+    }
 
     return mtd & Mtd::FPU;
 }
 
-bool Utcb::load_svm (Cpu_regs *regs)
+bool Utcb::load_svm (Cpu_regs const &c)
 {
-    Vmcb *const vmcb = regs->vmcb;
+    auto const &s { c.exc.sys };
+    auto const  v { c.vmcb };
 
-    mword m = regs->mtd;
+    mword m = c.mtd;
 
     if (m & Mtd::GPR_ACDB) {
-        rax = static_cast<mword>(vmcb->rax);
-        rcx = regs->REG(cx);
-        rdx = regs->REG(dx);
-        rbx = regs->REG(bx);
+        rax = v->rax;
+        rcx = s.rcx;
+        rdx = s.rdx;
+        rbx = s.rbx;
     }
 
     if (m & Mtd::GPR_BSD) {
-        rbp = regs->REG(bp);
-        rsi = regs->REG(si);
-        rdi = regs->REG(di);
+        rbp = s.rbp;
+        rsi = s.rsi;
+        rdi = s.rdi;
     }
 
     if (m & Mtd::RSP)
-        rsp = static_cast<mword>(vmcb->rsp);
+        rsp = v->rsp;
 
     if (m & Mtd::RIP_LEN)
-        rip = static_cast<mword>(vmcb->rip);
+        rip = v->rip;
 
     if (m & Mtd::RFLAGS)
-        rflags = static_cast<mword>(vmcb->rflags);
+        rflags = v->rflags;
 
     if (m & Mtd::DS_ES) {
-        ds = vmcb->ds;
-        es = vmcb->es;
+        ds = v->ds;
+        es = v->es;
     }
 
     if (m & Mtd::FS_GS) {
-        fs = vmcb->fs;
-        gs = vmcb->gs;
+        fs = v->fs;
+        gs = v->gs;
     }
 
     if (m & Mtd::CS_SS) {
-        cs = vmcb->cs;
-        ss = vmcb->ss;
+        cs = v->cs;
+        ss = v->ss;
     }
 
     if (m & Mtd::TR)
-        tr = vmcb->tr;
+        tr = v->tr;
 
     if (m & Mtd::LDTR)
-        ld = vmcb->ldtr;
+        ld = v->ldtr;
 
     if (m & Mtd::GDTR)
-        gd = vmcb->gdtr;
+        gd = v->gdtr;
 
     if (m & Mtd::IDTR)
-        id = vmcb->idtr;
+        id = v->idtr;
 
     if (m & Mtd::CR) {
-        cr0 = regs->get_cr0<Vmcb>();
-        cr2 = regs->get_cr2<Vmcb>();
-        cr3 = regs->get_cr3<Vmcb>();
-        cr4 = regs->get_cr4<Vmcb>();
+        cr0 = v->cr0;
+        cr2 = v->cr2;
+        cr3 = v->cr3;
+        cr4 = v->cr4;
     }
 
     if (m & Mtd::DR)
-        dr7 = static_cast<mword>(vmcb->dr7);
+        dr7 = v->dr7;
 
     if (m & Mtd::SYSENTER) {
-        sysenter_cs  = static_cast<mword>(vmcb->sysenter_cs);
-        sysenter_rsp = static_cast<mword>(vmcb->sysenter_esp);
-        sysenter_rip = static_cast<mword>(vmcb->sysenter_eip);
+        sysenter_cs  = v->sysenter_cs;
+        sysenter_rsp = v->sysenter_esp;
+        sysenter_rip = v->sysenter_eip;
     }
 
     if (m & Mtd::QUAL) {
-        qual[0] = vmcb->exitinfo1;
-        qual[1] = vmcb->exitinfo2;
+        qual[0] = v->exitinfo1;
+        qual[1] = v->exitinfo2;
     }
 
     if (m & Mtd::INJ) {
-        if (regs->dst_portal == NUM_VMI - 3 || regs->dst_portal == NUM_VMI - 1)
-            inj = vmcb->inj_control;
+        if (c.exc.ep() == NUM_VMI - 3 || c.exc.ep() == NUM_VMI - 1)
+            inj = v->inj_control;
         else
-            inj = vmcb->exitintinfo;
+            inj = v->exitintinfo;
     }
 
     if (m & Mtd::STA) {
-        intr_state = static_cast<uint32>(vmcb->int_shadow);
+        intr_state = static_cast<uint32>(v->int_shadow);
         actv_state = 0;
     }
 
     if (m & Mtd::TSC) {
         tsc_val = rdtsc();
-        tsc_off = regs->tsc_offset;
+        tsc_off = c.tsc_offset;
     }
 
-#ifdef __x86_64__
     if (m & Mtd::EFER)
-        efer = vmcb->efer;
-#endif
+        efer = v->efer;
 
     barrier();
     mtd = m;
@@ -449,103 +465,102 @@ bool Utcb::load_svm (Cpu_regs *regs)
     return m & Mtd::FPU;
 }
 
-bool Utcb::save_svm (Cpu_regs *regs)
+bool Utcb::save_svm (Cpu_regs &c) const
 {
-    Vmcb * const vmcb = regs->vmcb;
+    auto &s { c.exc.sys };
+    auto  v { c.vmcb };
 
     if (mtd & Mtd::GPR_ACDB) {
-        vmcb->rax = rax;
-        regs->REG(cx) = rcx;
-        regs->REG(dx) = rdx;
-        regs->REG(bx) = rbx;
+        v->rax = rax;
+        s.rcx = rcx;
+        s.rdx = rdx;
+        s.rbx = rbx;
     }
 
     if (mtd & Mtd::GPR_BSD) {
-        regs->REG(bp) = rbp;
-        regs->REG(si) = rsi;
-        regs->REG(di) = rdi;
+        s.rbp = rbp;
+        s.rsi = rsi;
+        s.rdi = rdi;
     }
 
     if (mtd & Mtd::RSP)
-        vmcb->rsp = rsp;
+        v->rsp = rsp;
 
     if (mtd & Mtd::RIP_LEN)
-        vmcb->rip = rip;
+        v->rip = rip;
 
     if (mtd & Mtd::RFLAGS)
-        vmcb->rflags = rflags;
+        v->rflags = rflags;
 
     if (mtd & Mtd::DS_ES) {
-        vmcb->ds = ds;
-        vmcb->es = es;
+        v->ds = ds;
+        v->es = es;
     }
 
     if (mtd & Mtd::FS_GS) {
-        vmcb->fs = fs;
-        vmcb->gs = gs;
+        v->fs = fs;
+        v->gs = gs;
     }
 
     if (mtd & Mtd::CS_SS) {
-        vmcb->cs = cs;
-        vmcb->ss = ss;
+        v->cs = cs;
+        v->ss = ss;
     }
 
     if (mtd & Mtd::TR)
-        vmcb->tr = tr;
+        v->tr = tr;
 
     if (mtd & Mtd::LDTR)
-        vmcb->ldtr = ld;
+        v->ldtr = ld;
 
     if (mtd & Mtd::GDTR)
-        vmcb->gdtr = gd;
+        v->gdtr = gd;
 
     if (mtd & Mtd::IDTR)
-        vmcb->idtr = id;
+        v->idtr = id;
 
     if (mtd & Mtd::CR) {
-        regs->set_cr0<Vmcb> (cr0);
-        regs->set_cr2<Vmcb> (cr2);
-        regs->set_cr3<Vmcb> (cr3);
-        regs->set_cr4<Vmcb> (cr4);
+        v->cr0 = cr0;
+        v->cr2 = cr2;
+        v->cr3 = cr3;
+        v->cr4 = cr4;
     }
 
     if (mtd & Mtd::DR)
-        vmcb->dr7 = dr7;
+        v->dr7 = dr7;
 
     if (mtd & Mtd::SYSENTER) {
-        vmcb->sysenter_cs  = sysenter_cs;
-        vmcb->sysenter_esp = sysenter_rsp;
-        vmcb->sysenter_eip = sysenter_rip;
+        v->sysenter_cs  = sysenter_cs;
+        v->sysenter_esp = sysenter_rsp;
+        v->sysenter_eip = sysenter_rip;
     }
 
     if (mtd & Mtd::CTRL) {
-        regs->set_cpu_ctrl0<Vmcb> (ctrl[0]);
-        regs->set_cpu_ctrl1<Vmcb> (ctrl[1]);
+        c.svm_set_cpu_pri (ctrl[0]);
+        c.svm_set_cpu_sec (ctrl[1]);
     }
 
     if (mtd & Mtd::INJ) {
 
         if (intr_info & 0x1000) {
-            vmcb->int_control      |=  (1ul << 8 | 1ul << 20);
-            vmcb->intercept_cpu[0] |=  Vmcb::CPU_VINTR;
+            v->int_control      |=  (1ul << 8 | 1ul << 20);
+            v->intercept_cpu[0] |=  Vmcb::CPU_VINTR;
         } else {
-            vmcb->int_control      &= ~(1ul << 8 | 1ul << 20);
-            vmcb->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
+            v->int_control      &= ~(1ul << 8 | 1ul << 20);
+            v->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
         }
 
-        vmcb->inj_control = inj & ~0x3000;
+        v->inj_control = inj & ~0x3000;
     }
 
     if (mtd & Mtd::STA)
-        vmcb->int_shadow = intr_state;
+        v->int_shadow = intr_state;
 
     if (mtd & Mtd::TSC)
-        regs->add_tsc_offset (tsc_off);
+        c.add_tsc_offset (tsc_off);
 
-#ifdef __x86_64__
     if (mtd & Mtd::EFER)
-        regs->write_efer<Vmcb> (efer);
-#endif
+        v->efer = efer;
 
     return mtd & Mtd::FPU;
 }

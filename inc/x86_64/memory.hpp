@@ -20,23 +20,17 @@
 
 #pragma once
 
+#define PTE_BPL         9
 #define PAGE_BITS       12
 #define PAGE_SIZE       (1 << PAGE_BITS)
 #define PAGE_MASK       (PAGE_SIZE - 1)
 
 #define LOAD_ADDR       0x200000
 
-#if     defined(__i386__)
-#define USER_ADDR       0xc0000000
-#define LINK_ADDR       0xc0000000
-#define CPU_LOCAL       0xcfc00000
-#define SPC_LOCAL       0xd0000000
-#elif   defined(__x86_64__)
 #define USER_ADDR       0x00007ffffffff000
 #define LINK_ADDR       0xffffffff81000000
 #define CPU_LOCAL       0xffffffffbfe00000
 #define SPC_LOCAL       0xffffffffc0000000
-#endif
 
 #define HV_GLOBAL_CPUS  (CPU_LOCAL - 0x1000000)
 
