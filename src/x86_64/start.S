@@ -43,17 +43,10 @@ __boot_header:          .long   0x1badb002
 __boot_gdt:             .word   0
                         .word   __boot_gdt__ - __boot_gdt - 1
                         .long   __boot_gdt
-#ifdef __x86_64__
                         .quad   0x00a09b0000000000
                         .quad   0x00a0930000000000
                         .quad   0x00a0fb0000000000
                         .quad   0x00a0f30000000000
-#else
-                        .quad   0x00cf9b000000ffff
-                        .quad   0x00cf93000000ffff
-                        .quad   0x00cffb000000ffff
-                        .quad   0x00cff3000000ffff
-#endif
 __boot_gdt__:
 
 .macro                  INIT_STATE
@@ -68,15 +61,11 @@ __boot_gdt__:
 .endm
 
 .macro                  INIT_PAGING
-#ifdef __x86_64__
                         mov     $0xc0000080, %ecx
                         rdmsr
                         or      $0x101, %eax
                         wrmsr
                         mov     $0x6b8, %edx
-#else
-                        mov     $0x698, %edx
-#endif
                         mov     %edx, %cr4
                         mov     $PDBR, %edx
                         mov     %edx, %cr3
@@ -105,7 +94,7 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
                         mov     $__start_ap, %esi
                         mov     $0x1000, %edi
                         rep     movsb
-#ifdef __x86_64__
+
                         mov     $(LVL3L + 0x27), %ecx
                         mov     %ecx, LVL4  + SIZE * (LOAD_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
                         mov     $(LVL2L + 0x27), %ecx
@@ -115,7 +104,7 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
                         mov     %ecx, LVL4  + SIZE * (LINK_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
                         mov     $(LVL2H + 0x27), %ecx
                         mov     %ecx, LVL3H + SIZE * (LINK_ADDR >> (2 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
-#endif
+
                         mov     $0xe3, %ecx
                         mov     $LVL2L, %edi
 1:                      mov     %ecx, (%edi)
@@ -139,21 +128,19 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
 /*
  * Common Startup Code
  */
-#ifdef __x86_64__
 .code64
-#endif
 
 __start_all:            INIT_STATE
-                        test    %REG(bx), %REG(bx)
+                        test    %rbx, %rbx
                         je      2f
 
-                        mov     %REG(bx), %ARG_1
+                        mov     %rbx, %rdi
                         call    init
                         jmp     3f
 
 1:                      pause
-2:                      xchg    %REG(bx), boot_lock
-                        test    %REG(bx), %REG(bx)
+2:                      xchg    %rbx, boot_lock
+                        test    %rbx, %rbx
                         je      1b
 
 3:                      call    kern_ptab_setup
@@ -161,6 +148,6 @@ __start_all:            INIT_STATE
 
 .text
 
-1:                      mov     %REG(ax), %cr3
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %REG(sp)
+1:                      mov     %rax, %cr3
+                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %rsp
                         jmp     bootstrap
