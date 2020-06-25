@@ -31,26 +31,21 @@
 class Sys_regs
 {
     public:
-        struct {
-#ifdef __x86_64__
-            mword   r15     { 0 };
-            mword   r14     { 0 };
-            mword   r13     { 0 };
-            mword   r12     { 0 };
-            mword   r11     { 0 };
-            mword   r10     { 0 };
-            mword   r9      { 0 };
-            mword   r8      { 0 };
-#endif
-            mword   REG(di) { 0 };
-            mword   REG(si) { 0 };
-            mword   REG(bp) { 0 };
-            mword   cr2     { 0 };
-            mword   REG(bx) { 0 };
-            mword   REG(dx) { 0 };
-            mword   REG(cx) { 0 };
-            mword   REG(ax) { 0 };
-        };
+        mword   rax { 0 };
+        mword   rcx { 0 };
+        mword   rdx { 0 };
+        mword   rbx { 0 };
+        mword   rbp { 0 };
+        mword   rsi { 0 };
+        mword   rdi { 0 };
+        mword   r8  { 0 };
+        mword   r9  { 0 };
+        mword   r10 { 0 };
+        mword   r11 { 0 };
+        mword   r12 { 0 };
+        mword   r13 { 0 };
+        mword   r14 { 0 };
+        mword   r15 { 0 };
 
         enum Status
         {
@@ -84,18 +79,15 @@ class Sys_regs
 class Exc_regs : public Sys_regs
 {
     public:
+        mword   cr2 { 0 };
         union {
             struct {
-                mword   gs;
-                mword   fs;
-                mword   es;
-                mword   ds;
                 mword   err;
                 mword   vec;
-                mword   REG(ip);
+                mword   rip;
                 mword   cs;
-                mword   REG(fl);
-                mword   REG(sp);
+                mword   rfl;
+                mword   rsp;
                 mword   ss;
             };
             struct {
@@ -103,11 +95,9 @@ class Exc_regs : public Sys_regs
                     Vmcs *  vmcs;
                     Vmcb *  vmcb;
                 };
-                mword   reserved1;
-                mword   reserved2;
+                mword   dst_portal;
                 mword   cr0_shadow;
                 mword   cr4_shadow;
-                mword   dst_portal;
                 uint8   fpu_on;
             };
         };

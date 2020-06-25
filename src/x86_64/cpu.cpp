@@ -157,22 +157,15 @@ void Cpu::setup_thermal()
 
 void Cpu::setup_sysenter()
 {
-#ifdef __i386__
-    Msr::write<mword>(Msr::IA32_SYSENTER_CS,  SEL_KERN_CODE);
-    Msr::write<mword>(Msr::IA32_SYSENTER_ESP, reinterpret_cast<mword>(&Tss::run.sp0));
-    Msr::write<mword>(Msr::IA32_SYSENTER_EIP, reinterpret_cast<mword>(&entry_sysenter));
-#else
-    Msr::write<mword>(Msr::IA32_STAR,  static_cast<mword>(SEL_USER_CODE) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
-    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sysenter));
+    Msr::write<mword>(Msr::IA32_SYSENTER_CS, 0);
+    Msr::write<mword>(Msr::IA32_STAR,  static_cast<mword>(SEL_USER_CODE32) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
+    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sys));
     Msr::write<mword>(Msr::IA32_FMASK, Cpu::EFL_DF | Cpu::EFL_IF);
-#endif
 }
 
 void Cpu::setup_pcid()
 {
-#ifdef __x86_64__
     if (EXPECT_FALSE (Cmdline::nopcid))
-#endif
         defeature (FEAT_PCID);
 
     if (EXPECT_FALSE (!feature (FEAT_PCID)))
