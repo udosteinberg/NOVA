@@ -432,8 +432,7 @@ void Ec::sys_sc_ctrl()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    uint32 dummy;
-    r->set_time (div64 (static_cast<Sc *>(cap.obj())->time * 1000, Lapic::freq_tsc, &dummy));
+    r->set_time (static_cast<Sc *>(cap.obj())->time * 1000 / Lapic::freq_tsc);
 
     sys_finish<Sys_regs::SUCCESS>();
 }
