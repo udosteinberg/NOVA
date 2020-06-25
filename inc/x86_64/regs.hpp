@@ -31,26 +31,22 @@
 class Sys_regs
 {
     public:
-        struct {
-#ifdef __x86_64__
-            mword   r15     { 0 };
-            mword   r14     { 0 };
-            mword   r13     { 0 };
-            mword   r12     { 0 };
-            mword   r11     { 0 };
-            mword   r10     { 0 };
-            mword   r9      { 0 };
-            mword   r8      { 0 };
-#endif
-            mword   REG(di) { 0 };
-            mword   REG(si) { 0 };
-            mword   REG(bp) { 0 };
-            mword   cr2     { 0 };
-            mword   REG(bx) { 0 };
-            mword   REG(dx) { 0 };
-            mword   REG(cx) { 0 };
-            mword   REG(ax) { 0 };
-        };
+        mword   r15         { 0 };
+        mword   r14         { 0 };
+        mword   r13         { 0 };
+        mword   r12         { 0 };
+        mword   r11         { 0 };
+        mword   r10         { 0 };
+        mword   r9          { 0 };
+        mword   r8          { 0 };
+        mword   rdi         { 0 };
+        mword   rsi         { 0 };
+        mword   rbp         { 0 };
+        mword   cr2         { 0 };
+        mword   rbx         { 0 };
+        mword   rdx         { 0 };
+        mword   rcx         { 0 };
+        mword   rax         { 0 };
 
         enum Status
         {
@@ -92,10 +88,10 @@ class Exc_regs : public Sys_regs
                 mword   ds;
                 mword   err;
                 mword   vec;
-                mword   REG(ip);
+                mword   rip;
                 mword   cs;
-                mword   REG(fl);
-                mword   REG(sp);
+                mword   rfl;
+                mword   rsp;
                 mword   ss;
             };
             struct {
