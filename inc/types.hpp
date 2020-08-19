@@ -33,3 +33,5 @@ typedef __INT64_TYPE__      int64_t;
 
 typedef __SIZE_TYPE__       size_t;
 typedef __UINTPTR_TYPE__    uintptr_t;
+
+enum class Uart_type { NONE, CDNS, GENI, IMX, MESON, MINI, NS16550, PL011, SCIF, };
