@@ -40,3 +40,5 @@ typedef __UINTPTR_TYPE__    uintptr_t;
 template<bool, class F, class T> struct conditional {};
 template<      class F, class T> struct conditional<false, F, T> { typedef F type; };
 template<      class F, class T> struct conditional<true,  F, T> { typedef T type; };
+
+enum class Uart_type { NONE, CDNS, GENI, IMX, MINI, PL011, NS16550, SCIF, };
