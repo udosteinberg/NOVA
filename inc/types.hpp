@@ -30,3 +30,5 @@ typedef unsigned long       Paddr;
 
 typedef __SIZE_TYPE__       size_t;
 typedef __UINTPTR_TYPE__    uintptr_t;
+
+enum class Uart_type { NONE, CDNS, GENI, IMX, MINI, PL011, NS16550, SCIF, };
