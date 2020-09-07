@@ -22,10 +22,14 @@
 
 #pragma once
 
+#include "arch.hpp"
 #include "atomic.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
+#include "extern.hpp"
 #include "macros.hpp"
+#include "msr.hpp"
+#include "selectors.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -81,6 +85,14 @@ class Cpu
             // 0x80000001.ECX
             CMP_LEGACY      = 7 * 32 +  1,
             SVM             = 7 * 32 +  2,
+        };
+
+        static inline constexpr Msr::State msr
+        {
+            .star  = static_cast<uint64>(SEL_USER_CODE) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32,
+            .lstar = reinterpret_cast<uint64>(&entry_sys),
+            .fmask = RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF,
+            .kernel_gs_base = 0,
         };
 
         static unsigned id                  CPULOCAL_HOT;
