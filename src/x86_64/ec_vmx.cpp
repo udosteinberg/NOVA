@@ -72,6 +72,11 @@ void Ec_arch::handle_vmx()
 {
     Ec *const self = current;
 
+    // IA32_KERNEL_GS_BASE can change without VM exit due to SWAPGS
+    self->regs.cpu.kernel_gs_base = Msr::read (Msr::Register::IA32_KERNEL_GS_BASE);
+
+    Cpu::State::make_current (self->regs.cpu, Cpu::hstate);     // Restore CPU host state
+
     Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::Encoding::EXI_REASON) & 0xff;
