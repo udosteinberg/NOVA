@@ -180,6 +180,15 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
 
     if (m & Mtd_arch::Item::EFER)
         efer = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER);
+
+    if (m & Mtd_arch::Item::SYSCALL) {
+        star  = r->msr.star;
+        lstar = r->msr.lstar;
+        fmask = r->msr.fmask;
+    }
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        kernel_gs_base = r->msr.kernel_gs_base;
 }
 
 bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
@@ -340,6 +349,15 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
         Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
 
+    if (m & Mtd_arch::Item::SYSCALL) {
+        r->msr.star  = star;
+        r->msr.lstar = lstar;
+        r->msr.fmask = fmask;
+    }
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        r->msr.kernel_gs_base = kernel_gs_base;
+
     if (m & Mtd_arch::Item::TLB)
         r->tlb_invalidate<Vmcs>();
 
@@ -440,6 +458,15 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const *r)
 
     if (m & Mtd_arch::Item::EFER)
         efer = vmcb->efer;
+
+    if (m & Mtd_arch::Item::SYSCALL) {
+        star  = vmcb->star;
+        lstar = vmcb->lstar;
+        fmask = vmcb->sfmask;
+    }
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        kernel_gs_base = vmcb->kernel_gs_base;
 }
 
 bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
@@ -539,6 +566,15 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
 
     if (m & Mtd_arch::Item::EFER)
         vmcb->efer = efer;
+
+    if (m & Mtd_arch::Item::SYSCALL) {
+        vmcb->star   = star;
+        vmcb->lstar  = lstar;
+        vmcb->sfmask = fmask;
+    }
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        vmcb->kernel_gs_base = kernel_gs_base;
 
     if (m & Mtd_arch::Item::TLB)
         r->tlb_invalidate<Vmcb>();

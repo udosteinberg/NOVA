@@ -22,6 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
+#include "msr.hpp"
 #include "selectors.hpp"
 #include "svm.hpp"
 #include "types.hpp"
@@ -106,6 +107,8 @@ class alignas (16) Cpu_regs : private Pad, public Exc_regs
             Vmcb * const    vmcb;
             Vmcs * const    vmcs;
         };
+
+        Msr::State          msr;
 
         inline Cpu_regs()         : vmcb (nullptr) {}
         inline Cpu_regs (Vmcb *v) : vmcb (v) {}

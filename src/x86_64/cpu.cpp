@@ -32,7 +32,6 @@
 #include "lapic.hpp"
 #include "lowlevel.hpp"
 #include "mca.hpp"
-#include "msr.hpp"
 #include "pd_kern.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -144,9 +143,10 @@ void Cpu::setup_msr()
         Msr::write (Msr::IA32_SYSENTER_CS, 0);
 
     if (EXPECT_TRUE (feature (Feature::LM))) {
-        Msr::write (Msr::IA32_STAR,  static_cast<uint64>(SEL_USER_CODE) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32);
-        Msr::write (Msr::IA32_LSTAR, reinterpret_cast<uint64>(&entry_sys));
-        Msr::write (Msr::IA32_FMASK, RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF);
+        Msr::write (Msr::IA32_STAR,  msr.star);
+        Msr::write (Msr::IA32_LSTAR, msr.lstar);
+        Msr::write (Msr::IA32_FMASK, msr.fmask);
+        Msr::write (Msr::IA32_KERNEL_GS_BASE, msr.kernel_gs_base);
     }
 
     if (EXPECT_TRUE (feature (Feature::RDT_M)))

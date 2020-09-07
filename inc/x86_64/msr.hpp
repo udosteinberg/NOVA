@@ -95,4 +95,25 @@ class Msr
         {
             asm volatile ("wrmsr" : : "d" (static_cast<uint32>(val >> 32)), "a" (static_cast<uint32>(val)), "c" (msr));
         }
+
+        struct State
+        {
+            uint64  star            { 0 };
+            uint64  lstar           { 0 };
+            uint64  fmask           { 0 };
+            uint64  kernel_gs_base  { 0 };
+
+            ALWAYS_INLINE
+            static inline void make_current (State const &o, State const &n)
+            {
+                if (EXPECT_FALSE (o.star != n.star))
+                    write (IA32_STAR, n.star);
+                if (EXPECT_FALSE (o.lstar != n.lstar))
+                    write (IA32_LSTAR, n.lstar);
+                if (EXPECT_FALSE (o.fmask != n.fmask))
+                    write (IA32_FMASK, n.fmask);
+                if (EXPECT_FALSE (o.kernel_gs_base != n.kernel_gs_base))
+                    write (IA32_KERNEL_GS_BASE, n.kernel_gs_base);
+            }
+        };
 };
