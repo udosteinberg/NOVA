@@ -21,8 +21,12 @@
 
 #pragma once
 
+#include "arch.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
+#include "extern.hpp"
+#include "msr.hpp"
+#include "selectors.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -67,6 +71,14 @@ class Cpu
             FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,
             FEAT_SVM            = 162,
+        };
+
+        static inline constexpr Msr::State msr
+        {
+            .star  = uint64 (SEL_USER_CODE) << 48 | uint64 (SEL_KERN_CODE) << 32,
+            .lstar = uint64 (&entry_sysenter),
+            .fmask = EFL_VIP | EFL_VIF | EFL_AC | EFL_VM | EFL_RF | EFL_NT | EFL_IOPL | EFL_DF | EFL_IF | EFL_TF,
+            .kernel_gs_base = 0,
         };
 
         static mword    boot_lock           asm ("boot_lock");

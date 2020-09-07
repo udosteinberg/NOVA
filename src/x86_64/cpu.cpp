@@ -24,14 +24,12 @@
 #include "cache.hpp"
 #include "cmdline.hpp"
 #include "counter.hpp"
-#include "extern.hpp"
 #include "gdt.hpp"
 #include "hazards.hpp"
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "lowlevel.hpp"
 #include "mca.hpp"
-#include "msr.hpp"
 #include "pd_kern.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -163,9 +161,10 @@ void Cpu::setup_thermal()
 
 void Cpu::setup_sysenter()
 {
-    Msr::write (Msr::IA32_STAR,  uint64 (SEL_USER_CODE) << 48 | uint64 (SEL_KERN_CODE) << 32);
-    Msr::write (Msr::IA32_LSTAR, uint64 (&entry_sysenter));
-    Msr::write (Msr::IA32_FMASK, EFL_VIP | EFL_VIF | EFL_AC | EFL_VM | EFL_RF | EFL_NT | EFL_IOPL | EFL_DF | EFL_IF | EFL_TF);
+    Msr::write (Msr::IA32_STAR,  msr.star);
+    Msr::write (Msr::IA32_LSTAR, msr.lstar);
+    Msr::write (Msr::IA32_FMASK, msr.fmask);
+    Msr::write (Msr::IA32_KERNEL_GS_BASE, msr.kernel_gs_base);
 }
 
 void Cpu::setup_pcid()
