@@ -70,6 +70,11 @@ void Ec_arch::handle_vmx()
 {
     Ec *const self { current };
 
+    // IA32_KERNEL_GS_BASE can change without VM exit due to SWAPGS
+    self->regs.gst_sys.kernel_gs_base = Msr::read (Msr::Reg64::IA32_KERNEL_GS_BASE);
+
+    Cpu::State_sys::make_current (self->regs.gst_sys, Cpu::hst_sys);    // Restore SYS host state
+
     Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
     auto reason { Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_REASON) & BIT_RANGE (7, 0) };
@@ -87,6 +92,8 @@ void Ec_arch::handle_vmx()
 void Ec_arch::failed_vmx()
 {
     Ec *const self { current };
+
+    Cpu::State_sys::make_current (self->regs.gst_sys, Cpu::hst_sys);    // Restore SYS host state
 
     trace (TRACE_ERROR, "VM entry failed with error %#x", Vmcs::read<uint32_t> (Vmcs::Encoding::VMX_INST_ERROR));
 
