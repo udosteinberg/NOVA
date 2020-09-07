@@ -290,6 +290,8 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
     if (EXPECT_FALSE (Cr::get_cr2() != self->exc_regs().cr2))
         Cr::set_cr2 (self->exc_regs().cr2);
 
+    Cpu::State_sys::make_current (Cpu::hst_sys, self->regs.gst_sys);    // Restore SYS guest state
+
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
                   "vmresume;"
