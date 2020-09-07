@@ -262,12 +262,16 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
     if (EXPECT_FALSE (get_cr2() != self->exc_regs().cr2))
         set_cr2 (self->exc_regs().cr2);
 
+    Msr::State::make_current (Cpu::msr, self->regs.msr);
+
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
                   "mov %1, %%rsp;"
                   : : "m" (self->exc_regs()), "i" (MMAP_CPU_STCK + PAGE_SIZE) : "memory");
+
+    Msr::State::make_current (self->regs.msr, Cpu::msr);
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::Encoding::VMX_INST_ERROR));
 
