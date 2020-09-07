@@ -179,6 +179,12 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
     if (m & Mtd_arch::Item::DR)
         dr7 = Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_DR7);
 
+    if (m & Mtd_arch::Item::SYSCALL) {
+        star  = c.cpu.star;
+        lstar = c.cpu.lstar;
+        fmask = c.cpu.fmask;
+    }
+
     if (m & Mtd_arch::Item::SYSENTER) {
         sysenter_cs  = Vmcs::read<uint32>    (Vmcs::Encoding::GUEST_SYSENTER_CS);
         sysenter_esp = Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_SYSENTER_ESP);
@@ -190,6 +196,9 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
 
     if (m & Mtd_arch::Item::EFER)
         efer = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER);
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        kernel_gs_base = c.cpu.kernel_gs_base;
 }
 
 bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
@@ -338,6 +347,12 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
     if (m & Mtd_arch::Item::DR)
         Vmcs::write (Vmcs::Encoding::GUEST_DR7, dr7);
 
+    if (m & Mtd_arch::Item::SYSCALL) {
+        c.cpu.star  = Cpu::State::constrain_star  (star);
+        c.cpu.lstar = Cpu::State::constrain_canon (lstar);
+        c.cpu.fmask = Cpu::State::constrain_fmask (fmask);
+    }
+
     if (m & Mtd_arch::Item::SYSENTER) {
         Vmcs::write (Vmcs::Encoding::GUEST_SYSENTER_CS,  sysenter_cs);
         Vmcs::write (Vmcs::Encoding::GUEST_SYSENTER_ESP, sysenter_esp);
@@ -360,6 +375,9 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
 
         Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        c.cpu.kernel_gs_base = Cpu::State::constrain_canon (kernel_gs_base);
 
     if (m & Mtd_arch::Item::TLB) {
 
@@ -467,6 +485,12 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
     if (m & Mtd_arch::Item::DR)
         dr7 = v->dr7;
 
+    if (m & Mtd_arch::Item::SYSCALL) {
+        star  = v->star;
+        lstar = v->lstar;
+        fmask = v->sfmask;
+    }
+
     if (m & Mtd_arch::Item::SYSENTER) {
         sysenter_cs  = v->sysenter_cs;
         sysenter_esp = v->sysenter_esp;
@@ -478,6 +502,9 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
 
     if (m & Mtd_arch::Item::EFER)
         efer = v->efer;
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        kernel_gs_base = v->kernel_gs_base;
 }
 
 bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
@@ -572,6 +599,12 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
     if (m & Mtd_arch::Item::DR)
         v->dr7 = dr7;
 
+    if (m & Mtd_arch::Item::SYSCALL) {
+        v->star   = Cpu::State::constrain_star  (star);
+        v->lstar  = Cpu::State::constrain_canon (lstar);
+        v->sfmask = Cpu::State::constrain_fmask (fmask);
+    }
+
     if (m & Mtd_arch::Item::SYSENTER) {
         v->sysenter_cs  = sysenter_cs;
         v->sysenter_esp = sysenter_esp;
@@ -583,6 +616,9 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
 
     if (m & Mtd_arch::Item::EFER)
         v->efer = efer;
+
+    if (m & Mtd_arch::Item::KERNEL_GS_BASE)
+        v->kernel_gs_base = Cpu::State::constrain_canon (kernel_gs_base);
 
     if (m & Mtd_arch::Item::TLB)
         if (v->asid)

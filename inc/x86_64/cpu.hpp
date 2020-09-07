@@ -122,6 +122,69 @@ class Cpu final
             uint64  lstar           { 0 };
             uint64  fmask           { 0 };
             uint64  kernel_gs_base  { 0 };
+
+            /*
+             * Switch SYSCALL state between guest/host
+             *
+             * VMM-provided guest state was sanitized by constrain_* functions below
+             *
+             * @param o     Old live state
+             * @param n     New live state
+             */
+            ALWAYS_INLINE
+            static inline void make_current (State const &o, State const &n)
+            {
+                if (EXPECT_FALSE (o.star != n.star))
+                    Msr::write (Msr::Register::IA32_STAR, n.star);
+
+                if (EXPECT_FALSE (o.lstar != n.lstar))
+                    Msr::write (Msr::Register::IA32_LSTAR, n.lstar);
+
+                if (EXPECT_FALSE (o.fmask != n.fmask))
+                    Msr::write (Msr::Register::IA32_FMASK, n.fmask);
+
+                if (EXPECT_FALSE (o.kernel_gs_base != n.kernel_gs_base))
+                    Msr::write (Msr::Register::IA32_KERNEL_GS_BASE, n.kernel_gs_base);
+            }
+
+            /*
+             * Canonicalize virtual address to ensure WRMSR does not fault
+             *
+             * @param v     Virtual address provided by VMM
+             * @return      Canonicalized virtual address
+             */
+            ALWAYS_INLINE
+            static inline uint64 constrain_canon (uint64 v)
+            {
+                static constexpr auto va_bits { 48 };
+
+                return static_cast<int64_t>(v) << (64 - va_bits) >> (64 - va_bits);
+            }
+
+            /*
+             * Constrain STAR value to ensure WRMSR does not fault
+             *
+             * @param v     STAR value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64 constrain_star (uint64 v)
+            {
+                return v & BIT64_RANGE (63, 32);
+            }
+
+            /*
+             * Constrain FMASK value to ensure WRMSR does not fault
+             *
+             * @param v     FMASK value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64 constrain_fmask (uint64 v)
+            {
+                return v & BIT64_RANGE (31, 0);
+            }
+
         } hstate {
             .star  = static_cast<uint64>(SEL_USER_CODE32) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32,
             .lstar = reinterpret_cast<uintptr_t>(&entry_sys),
