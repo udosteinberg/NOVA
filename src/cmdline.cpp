@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,28 +20,24 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "cmdline.hpp"
+#include "string.hpp"
 
-#include "compiler.hpp"
-#include "types.hpp"
-
-class Cmdline
+size_t Cmdline::arg_len (char const *&line)
 {
-    private:
-        static struct param_map
-        {
-            char   const *arg;
-            bool * const  ptr;
-        } map[];
+    for (; *line == ' '; line++) ;
 
-        static char *get_arg (char **line);
+    char const *p;
 
-    public:
-        static bool iommu;
-        static bool serial;
-        static bool nodl;
-        static bool nopcid;
-        static bool novpid;
+    for (p = line; *p && *p != ' '; p++) ;
 
-        static void init (mword);
-};
+    return static_cast<size_t>(p - line);
+}
+
+void Cmdline::parse (char const *line)
+{
+    for (size_t len; (len = arg_len (line)); line += len)
+        for (unsigned i = 0; i < sizeof (options) / sizeof (*options); i++)
+            if (!strncmp (options[i].str, line, len))
+                options[i].var = true;
+}
