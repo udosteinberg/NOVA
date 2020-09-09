@@ -31,6 +31,7 @@ class Cmdline
         static bool serial;
         static bool nodl;
         static bool nopcid;
+        static bool noquiesce;
         static bool novpid;
 
         static void parse (char const *);
@@ -46,6 +47,7 @@ class Cmdline
             { "serial",     serial      },
             { "nodl",       nodl        },
             { "nopcid",     nopcid      },
+            { "noquiesce",  noquiesce   },
             { "novpid",     novpid      },
         };
 

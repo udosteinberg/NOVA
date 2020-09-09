@@ -27,6 +27,7 @@ bool Cmdline::iommu     { false };
 bool Cmdline::serial    { false };
 bool Cmdline::nodl      { false };
 bool Cmdline::nopcid    { false };
+bool Cmdline::noquiesce { false };
 bool Cmdline::novpid    { false };
 
 size_t Cmdline::arg_len (char const *&line)
