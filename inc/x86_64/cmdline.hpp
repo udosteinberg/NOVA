@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,26 +22,32 @@
 
 #pragma once
 
-#include "compiler.hpp"
 #include "types.hpp"
 
 class Cmdline
 {
-    private:
-        static struct param_map
-        {
-            char   const *arg;
-            bool * const  ptr;
-        } map[];
-
-        static char *get_arg (char **line);
-
     public:
-        static bool iommu;
-        static bool serial;
-        static bool nodl;
-        static bool nopcid;
-        static bool novpid;
+        static inline bool iommu    { false };
+        static inline bool serial   { false };
+        static inline bool nodl     { false };
+        static inline bool nopcid   { false };
+        static inline bool novpid   { false };
 
-        static void init (mword);
+        static void parse (char const *);
+
+    private:
+        static constexpr struct
+        {
+            char const *    str;
+            bool &          var;
+        } options[] =
+        {
+            { "iommu",      iommu       },
+            { "serial",     serial      },
+            { "nodl",       nodl        },
+            { "nopcid",     nopcid      },
+            { "novpid",     novpid      },
+        };
+
+        static inline size_t arg_len (char const *&);
 };
