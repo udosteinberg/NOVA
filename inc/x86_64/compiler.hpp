@@ -73,6 +73,7 @@
         #define ALWAYS_INLINE           __attribute__((always_inline))
         #define CPULOCAL                __attribute__((section (".cpulocal,\"w\",@nobits#")))
         #define CPULOCAL_HOT            __attribute__((section (".cpulocal.hot,\"w\",@nobits#")))
+        #define EFICALL                 __attribute__((ms_abi))
         #define FORMAT(X,Y)             __attribute__((format (printf, (X),(Y))))
         #define INIT                    __attribute__((section (".init")))
         #define INIT_DATA               __attribute__((section (".init.data")))
