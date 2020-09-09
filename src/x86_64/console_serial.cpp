@@ -27,7 +27,7 @@ INIT_PRIORITY (PRIO_CONSOLE) Console_serial Console_serial::con;
 
 Console_serial::Console_serial()
 {
-    if (!Cmdline::serial)
+    if (Cmdline::nouart)
         return;
 
     char *mem = static_cast<char *>(Hpt::remap (0));

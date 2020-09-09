@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,45 +24,17 @@
 #include "hpt.hpp"
 #include "string.hpp"
 
-bool Cmdline::iommu;
-bool Cmdline::serial;
-bool Cmdline::nodl;
-bool Cmdline::nopcid;
-bool Cmdline::novpid;
-
-Cmdline::param_map Cmdline::map[] =
+void Cmdline::parse (char const *line)
 {
-    { "iommu",      &Cmdline::iommu     },
-    { "serial",     &Cmdline::serial    },
-    { "nodl",       &Cmdline::nodl      },
-    { "nopcid",     &Cmdline::nopcid    },
-    { "novpid",     &Cmdline::novpid    },
-};
-
-char *Cmdline::get_arg (char **line)
-{
-    for (; **line == ' '; ++*line) ;
-
-    if (!**line)
-        return nullptr;
-
-    char *arg = *line;
-
-    for (; **line != ' '; ++*line)
-        if (!**line)
-            return arg;
-
-    *(*line)++ = 0;
-
-    return arg;
+    for (size_t len; (len = arg_len (line)); line += len)
+        for (unsigned i { 0 }; i < sizeof (options) / sizeof (*options); i++)
+            if (!strncmp (options[i].str, line, len) && !options[i].str[len]) {
+                options[i].var = true;
+                break;
+            }
 }
 
-void Cmdline::init (mword addr)
+void Cmdline::init (Paddr addr)
 {
-    char *arg, *line = static_cast<char *>(Hpt::remap (addr));
-
-    while ((arg = get_arg (&line)))
-        for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
-            if (!strcmp (map[i].arg, arg))
-                *map[i].ptr = true;
+    parse (static_cast<char const *>(Hpt::remap (addr)));
 }
