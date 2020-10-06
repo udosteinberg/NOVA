@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 
 #define PTE_ATTR_P      BIT  (0)    // Present
 #define PTE_ATTR_nL     BIT  (1)    // Not Large
@@ -77,28 +78,192 @@
                         str     x1, [x0]
 .endm
 
+.macro                  RECTIME SYMBOL
+                        mrs     x14, cntpct_el0
+                        adr     x15, \SYMBOL - OFFSET
+                        str     x14, [x15]
+.endm
+
 /*
  * Initialization Code
  */
 .section .init
 
-__init_bsp:
+__init_bsp:             RECTIME multiboot_t0
+
+                        // Store boot parameters
+                        adr     x3, multiboot_p0 - OFFSET
+                        str     x0, [x3]
+                        adr     x3, multiboot_p1 - OFFSET
+                        str     x1, [x3]
+                        adr     x3, multiboot_p2 - OFFSET
+                        str     x2, [x3]
+
                         // Determine relocated addresses
                         adrp    x25, NOVA_HPAS
                         adrp    x26, PTAB_HPAS
                         adrp    x27, ZERO_HPAS
-                        adrp    x28, NOVA_HPAE
+                        mov     x28, xzr
                         mov     x29, LINK_ADDR
                         sub     x29, x29, x25
 
                         // Check load address alignment
                         ubfx    x2, x25, #0, #ALIGNMENT_NOVA
-                        cbz     x2, 1f
+                        cbz     x2, .Lmb2_launch
 
 .Lcrash:                // Crash and burn
                         ldr     lr, =0xd00d2badc0dedead
                         ret
-1:
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        ldr     x2, =MULTIBOOT_V2_LOADER
+                        cmp     x2, x0
+                        bne     .Lmb1_launch
+
+                        // Prepare tag loop
+                        mov     x3, x1
+                        mov     x0, xzr
+                        mov     x1, xzr
+                        ldr     w2, [x3]
+                        mov     x5, #8
+.Lmb2_nxt_tag:
+                        add     x5, x5, #15
+                        bic     x5, x5, #7
+                        subs    x2, x2, x5
+                        blo     .Lmb2_end
+                        adds    x3, x3, x5
+                        bcs     .Lcrash             // Crash if >= 2^64
+                        ldp     w4, w5, [x3, #-8]
+                        sub     x5, x5, #8
+                        cmp     x2, x5
+                        blo     .Lmb2_end
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_END
+                        beq     .Lmb2_end
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_CMD
+                        bne     .Lmb2_not_cmd
+                        cbz     x5, .Lmb2_end
+                        add     x4, x3, x5
+                        ldrb    w6, [x4, #-1]
+                        cbnz    w6, .Lmb2_end
+                        adr     x6, multiboot_cs - OFFSET
+                        str     x3, [x6]
+                        adr     x6, multiboot_ce - OFFSET
+                        str     x4, [x6]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmp     x4, #MULTIBOOT_V2_INFO_MOD_32
+                        bne     .Lmb2_not_mod_32
+                        cmp     x5, #8
+                        bls     .Lmb2_end
+                        adr     x6, multiboot_re - OFFSET
+                        ldr     x4, [x6]
+                        cbnz    x4, .Lmb2_nxt_tag
+                        ldr     w4, [x3, #4]
+                        str     x4, [x6]
+                        adr     x6, multiboot_rs - OFFSET
+                        ldr     w4, [x3, #0]
+                        str     x4, [x6]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_mod_32:
+                        cmp     x4, #MULTIBOOT_V2_INFO_SYS_64
+                        bne     .Lmb2_not_sys_64
+                        cmp     x5, #8
+                        bne     .Lmb2_end
+                        ldr     x1, [x3]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_sys_64:
+                        cmp     x4, #MULTIBOOT_V2_INFO_RSDP_2
+                        bne     .Lmb2_not_rsdp_2
+                        cmp     x5, #35
+                        bls     .Lmb2_end
+                        adr     x6, uefi_info - OFFSET
+                        str     x3, [x6]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_rsdp_2:
+                        cmp     x4, #MULTIBOOT_V2_INFO_IMG_64
+                        bne     .Lmb2_not_img_64
+                        cmp     x5, #8
+                        bne     .Lmb2_end
+                        ldr     x0, [x3]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_img_64:
+                        ldr     x6, =MULTIBOOT_V2_INFO_MOD_64
+                        cmp     x4, x6
+                        bne     .Lmb2_not_mod_64
+                        cmp     x5, #16
+                        bls     .Lmb2_end
+                        adr     x6, multiboot_re - OFFSET
+                        ldr     x4, [x6]
+                        cbnz    x4, .Lmb2_nxt_tag
+                        ldr     x4, [x3, #8]
+                        str     x4, [x6]
+                        adr     x6, multiboot_rs - OFFSET
+                        ldr     x4, [x3]
+                        str     x4, [x6]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_mod_64:
+                        ldr     x6, =MULTIBOOT_V2_INFO_KMEM
+                        cmp     x4, x6
+                        bne     .Lmb2_nxt_tag
+                        cmp     x5, #8
+                        bne     .Lmb2_end
+                        mov     x6, #(MMAP_GLB_MMIO - LINK_ADDR)
+                        adrp    x4, NOVA_HPAE
+                        sub     x4, x4, x25
+                        sub     x6, x6, x4
+                        ldr     x4, [x3]
+                        cmp     x4, x6
+                        csel    x28, x4, x6, lo
+                        bic     x28, x28, #OFFS_MASK (1)
+                        b       .Lmb2_nxt_tag
+.Lmb2_end:
+                        // UEFI init if applicable (guarantees we have >= 128K stack space)
+                        cbz     x0, .Lmb_end
+                        cbz     x1, .Lmb_end
+                        adr     x2, uefi_info - OFFSET
+                        adr     lr, .Lmb_end
+                        b       uefi_init
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        ldr     x2, =MULTIBOOT_V1_LOADER
+                        cmp     x2, x0
+                        bne     .Llgc_launch
+                        ldr     w0, [x1]
+
+                        tbz     x0, #MULTIBOOT_V1_INFO_CMD, .Lmb1_not_cmd
+                        ldr     w3, [x1, #16]
+                        adr     x5, multiboot_cs - OFFSET
+                        str     x3, [x5]
+                        adr     x5, multiboot_ce - OFFSET
+                        str     x3, [x5]                    // FIXME
+.Lmb1_not_cmd:
+                        tbz     x0, #MULTIBOOT_V1_INFO_MOD, .Lmb_end
+                        ldr     w3, [x1, #20]
+                        cbz     x3, .Lmb_end
+                        ldr     w3, [x1, #24]
+                        adr     x5, multiboot_re - OFFSET
+                        ldr     w4, [x3, #4]
+                        str     x4, [x5]
+                        adr     x5, multiboot_rs - OFFSET
+                        ldr     w4, [x3, #0]
+                        str     x4, [x5]
+                        b       .Lmb_end
+.Llgc_launch:
+                        // Legacy Launch
+                        adr     x5, multiboot_rs - OFFSET
+                        str     x1, [x5]
+.Lmb_end:
+                        RECTIME multiboot_t1
+
+                        // Compute image end address with heap extension
+                        adrp    x4, NOVA_HPAE
+                        adds    x28, x28, x4
+                        bcs     .Lcrash             // Crash if >= 2^64
+                        adr     x5, multiboot_ea - OFFSET
+                        str     x28, [x5]
+
                         // Determine SCTLR of current EL
                         SWITCH  .Lsctlr_el3, .Lsctlr_el2, .Lsctlr_el1
 .Lsctlr_el3:            mrs     x22, sctlr_el3
@@ -249,6 +414,8 @@ __init_spin:            mrs     x0, mpidr_el1
                         // Initialize kmem offset
                         adr     x0, __kmem_offset - OFFSET
                         str     x29, [x0]
+
+                        RECTIME multiboot_t2
 .Lnot_bsp_init:
                         // Switch to boot stack
                         adr     x0, STACK
