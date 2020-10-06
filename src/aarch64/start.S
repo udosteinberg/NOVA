@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 #include "paging.hpp"
 
 .globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp, __init_psci, __init_spin
@@ -76,6 +77,95 @@ __init_bsp:             // Store boot parameters
                         and     x2, x2, #BIT (PTE_BPL + PAGE_BITS) - 1
                         cbnz    x2, .
 
+                        // Multiboot v2 Launch
+5:                      ldr     x2, =MULTIBOOT_LOADER_MAGIC_V2
+                        cmp     x2, x0
+                        bne     5f
+                        ldr     w4, [x1]
+                        add     x3, x1, x4
+                        add     x2, x1, #8
+                        mov     x1, xzr
+                        mov     x0, xzr
+
+                        // Tag Loop
+1:                      ldr     w4, [x2]
+
+                        // Terminator
+                        cmp     x4, #0
+                        beq     4f
+
+                        // Command Line
+                        cmp     x4, #1
+                        bne     2f
+                        adr     x5, __boot_cl
+                        add     x4, x2, #8
+                        str     x4, [x5]
+                        b       3f
+2:
+                        // Modules
+                        cmp     x4, #3
+                        bne     2f
+                        adr     x5, __boot_ra
+                        ldr     x4, [x5]
+                        cbnz    x4, 3f
+                        ldr     w4, [x2, #8]
+                        str     x4, [x5]
+                        b       3f
+2:
+                        // EFI64 System Table
+                        cmp     x4, #12
+                        bne     2f
+                        ldr     x1, [x2, #8]
+                        b       3f
+2:
+                        // EFI64 Image Handle
+                        cmp     x4, #20
+                        bne     2f
+                        ldr     x0, [x2, #8]
+//                      b       3f
+2:
+                        // Next Tag
+3:                      ldr     w4, [x2, #4]
+                        add     x2, x2, x4
+                        add     x2, x2, #7
+                        and     x2, x2, #~7
+                        cmp     x2, x3
+                        blo     1b
+
+                        // Initialize UEFI
+4:                      cbz     x0, 6f
+                        cbz     x1, 6f
+                        adr     x2, __uefi_info
+                        bl      __uefi_init
+                        b       6f
+
+                        // Multiboot v1 Launch
+5:                      ldr     x2, =MULTIBOOT_LOADER_MAGIC_V1
+                        cmp     x2, x0
+                        bne     5f
+                        ldr     w3, [x1]
+
+                        // Command Line
+                        tbz     x3, #2, 2f
+                        adr     x5, __boot_cl
+                        ldr     w4, [x1, #16]
+                        str     x4, [x5]
+2:
+                        // Modules
+                        tbz     x3, #3, 2f
+                        adr     x5, __boot_ra
+                        ldr     w4, [x1, #20]
+                        cbz     x4, 2f
+                        ldr     w4, [x1, #24]
+                        ldr     w4, [x4]
+                        str     x4, [x5]
+2:
+                        b       6f
+
+                        // Legacy Launch
+5:                      adr     x5, __boot_ra
+                        str     x1, [x5]
+6:
                         // Clean to PoC
                         adrp    x0, NOVA_HPAS
                         adrp    x1, NOVA_HPAE
