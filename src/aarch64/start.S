@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 
 #define PTE_ATTR_P      BIT  (0)    // Present
 #define PTE_ATTR_nL     BIT  (1)    // Not Large
@@ -62,12 +63,27 @@
                         str     x1, [x0]
 .endm
 
+.macro                  RECTIME SYMBOL
+                        mrs     x14, cntpct_el0
+                        adr     x15, \SYMBOL - OFFSET
+                        str     x14, [x15]
+.endm
+
 /*
  * Initialization Code
  */
 .section .init
 
-__init_bsp:
+__init_bsp:             RECTIME multiboot_t0
+
+                        // Store boot parameters
+                        adr     x3, multiboot_p0 - OFFSET
+                        str     x0, [x3]
+                        adr     x3, multiboot_p1 - OFFSET
+                        str     x1, [x3]
+                        adr     x3, multiboot_p2 - OFFSET
+                        str     x2, [x3]
+
                         // Determine image boundaries
                         adrp    x22, NOVA_HPAS
                         adrp    x23, NOVA_HPAE
@@ -77,6 +93,104 @@ __init_bsp:
                         // Refuse invalid load address
                         and     x2, x22, #OFFS_MASK (1)
                         cbnz    x2, .
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        ldr     x2, =MULTIBOOT_V2_LOADER
+                        cmp     x2, x0
+                        bne     .Lmb1_launch
+
+                        // Prepare tag loop
+                        ldr     w4, [x1]            // Total Size
+                        add     x3, x1, #8          // Tag Ptr
+                        add     x2, x1, x4          // Tag End
+                        mov     x1, xzr             // EFI Sys
+                        mov     x0, xzr             // EFI Img
+.Lmb2_tag_loop:
+                        ldr     w4, [x3]
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_END
+                        beq     .Lmb2_end
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_CMD
+                        bne     .Lmb2_not_cmd
+                        adr     x5, multiboot_cl - OFFSET
+                        add     x4, x3, #8
+                        str     x4, [x5]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmp     x4, #MULTIBOOT_V2_INFO_MOD
+                        bne     .Lmb2_not_mod
+                        adr     x5, multiboot_ra - OFFSET
+                        ldr     x4, [x5]
+                        cbnz    x4, .Lmb2_nxt_tag
+                        ldr     w4, [x3, #8]
+                        str     x4, [x5]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_mod:
+                        cmp     x4, #MULTIBOOT_V2_INFO_SYS
+                        bne     .Lmb2_not_sys
+                        ldr     x1, [x3, #8]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_sys:
+                        cmp     x4, #MULTIBOOT_V2_INFO_IMG
+                        bne     .Lmb2_not_img
+                        ldr     x0, [x3, #8]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_img:
+                        ldr     x5, =MULTIBOOT_V2_INFO_KMEM
+                        cmp     x4, x5
+                        bne     .Lmb2_nxt_tag
+                        mov     x5, #0x20000000
+                        sub     x4, x23, x22
+                        sub     x5, x5, x4
+                        ldr     x4, [x3, #8]
+                        cmp     x4, x5
+                        csel    x4, x4, x5, lo
+                        bic     x4, x4, #OFFS_MASK (1)
+                        add     x23, x23, x4
+.Lmb2_nxt_tag:
+                        ldr     w4, [x3, #4]
+                        add     x3, x3, x4
+                        add     x3, x3, #7
+                        bic     x3, x3, #7
+                        cmp     x3, x2
+                        blo     .Lmb2_tag_loop
+.Lmb2_end:
+                        // Initialize UEFI
+                        cbz     x0, .Lmb_end
+                        cbz     x1, .Lmb_end
+                        adr     x2, uefi_info - OFFSET
+                        adr     lr, .Lmb_end
+                        b       uefi_init
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        ldr     x2, =MULTIBOOT_V1_LOADER
+                        cmp     x2, x0
+                        bne     .Llgc_launch
+                        ldr     w3, [x1]
+
+                        tbz     x3, #MULTIBOOT_V1_INFO_CMD, .Lmb1_not_cmd
+                        adr     x5, multiboot_cl - OFFSET
+                        ldr     w4, [x1, #16]
+                        str     x4, [x5]
+.Lmb1_not_cmd:
+                        tbz     x3, #MULTIBOOT_V1_INFO_MOD, .Lmb_end
+                        adr     x5, multiboot_ra - OFFSET
+                        ldr     w4, [x1, #20]
+                        cbz     x4, .Lmb_end
+                        ldr     w4, [x1, #24]
+                        ldr     w4, [x4]
+                        str     x4, [x5]
+.Llgc_launch:
+                        // Legacy Launch
+                        adr     x5, multiboot_ra - OFFSET
+                        str     x1, [x5]
+.Lmb_end:
+                        RECTIME multiboot_t1
+
+                        // Store image end address
+                        adr     x5, multiboot_ea - OFFSET
+                        str     x23, [x5]
 
                         // Clean image to PoC
                         mov     x0, x22
@@ -222,6 +336,8 @@ __init_spin:            mrs     x0, mpidr_el1
                         orr     x0, x0, #(SCTLR_I)
                         msr     sctlr_el2, x0
                         isb
+
+                        RECTIME multiboot_t2
 
                         // Switch to boot stack
                         adr     x0, STACK
