@@ -18,6 +18,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 
 #define PTE_ATTR_P      BIT  (0)    // Present
 #define PTE_ATTR_nL     BIT  (1)    // Not Large
@@ -81,7 +82,86 @@ __init_bsp:             // Store boot parameters
                         // Refuse invalid load address
                         and     x2, x2, #BIT (PTE_BPL + PAGE_BITS) - 1
                         cbnz    x2, .
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        ldr     x2, =MULTIBOOT_V2_LOADER
+                        cmp     x2, x0
+                        bne     .Lmb1_launch
 
+                        // Prepare tag loop
+                        ldr     w4, [x1]            // Total Size
+                        add     x3, x1, #8          // Tag Ptr
+                        add     x2, x1, x4          // Tag End
+                        mov     x1, xzr             // EFI Sys
+                        mov     x0, xzr             // EFI Img
+.Lmb2_tag_loop:
+                        ldr     w4, [x3]
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_END
+                        beq     .Lmb2_end
+
+                        cmp     x4, #MULTIBOOT_V2_INFO_CMD
+                        bne     .Lmb2_not_cmd
+                        adr     x5, __boot_cl
+                        add     x4, x3, #8
+                        str     x4, [x5]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmp     x4, #MULTIBOOT_V2_INFO_MOD
+                        bne     .Lmb2_not_mod
+                        adr     x5, __boot_ra
+                        ldr     x4, [x5]
+                        cbnz    x4, .Lmb2_nxt_tag
+                        ldr     w4, [x3, #8]
+                        str     x4, [x5]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_mod:
+                        cmp     x4, #MULTIBOOT_V2_INFO_SYS
+                        bne     .Lmb2_not_sys
+                        ldr     x1, [x3, #8]
+                        b       .Lmb2_nxt_tag
+.Lmb2_not_sys:
+                        cmp     x4, #MULTIBOOT_V2_INFO_IMG
+                        bne     .Lmb2_nxt_tag
+                        ldr     x0, [x3, #8]
+.Lmb2_nxt_tag:
+                        ldr     w4, [x3, #4]
+                        add     x3, x3, x4
+                        add     x3, x3, #7
+                        and     x3, x3, #~7
+                        cmp     x3, x2
+                        blo     .Lmb2_tag_loop
+.Lmb2_end:
+                        // Initialize UEFI
+                        cbz     x0, .Lmb_end
+                        cbz     x1, .Lmb_end
+                        adr     x2, __uefi_info
+                        adr     lr, .Lmb_end
+                        b       __uefi_init
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        ldr     x2, =MULTIBOOT_V1_LOADER
+                        cmp     x2, x0
+                        bne     .Llgc_launch
+                        ldr     w3, [x1]
+
+                        tbz     x3, #MULTIBOOT_V1_INFO_CMD, .Lmb1_not_cmd
+                        adr     x5, __boot_cl
+                        ldr     w4, [x1, #16]
+                        str     x4, [x5]
+.Lmb1_not_cmd:
+                        tbz     x3, #MULTIBOOT_V1_INFO_MOD, .Lmb_end
+                        adr     x5, __boot_ra
+                        ldr     w4, [x1, #20]
+                        cbz     x4, .Lmb_end
+                        ldr     w4, [x1, #24]
+                        ldr     w4, [x4]
+                        str     x4, [x5]
+.Llgc_launch:
+                        // Legacy Launch
+                        adr     x5, __boot_ra
+                        str     x1, [x5]
+.Lmb_end:
                         // Clean to PoC
                         adrp    x0, NOVA_HPAS
                         adrp    x1, NOVA_HPAE
