@@ -21,6 +21,7 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "types.hpp"
 
 template <typename T>
 ALWAYS_INLINE
@@ -47,4 +48,15 @@ static inline constexpr T gcd (T v1, T v2)
     }
 
     return v1;
+}
+
+/*
+ * Turns p into an "exposed" pointer. As a result, the standard allows
+ * integers to be converted to pointers of the same provenance as p.
+ */
+template <typename T>
+constexpr T *expose (T *p) noexcept
+{
+    [[maybe_unused]] auto x = reinterpret_cast<uintptr_t>(p);
+    return p;
 }
