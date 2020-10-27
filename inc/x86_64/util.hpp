@@ -19,6 +19,7 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "types.hpp"
 
 template <typename T>
 ALWAYS_INLINE
@@ -45,4 +46,27 @@ static inline T gcd (T v1, T v2)
     }
 
     return v1;
+}
+
+/*
+ * Converts from a pointer to some outer storage to a pointer to some inner
+ * storage that is contained in the outer storage.
+ *
+ * See std::launder (http://eel.is/c++draft/ptr.launder)
+ */
+template <typename T>
+constexpr T *launder (T *p) noexcept
+{
+    return __builtin_launder (p);
+}
+
+/*
+ * Turns p into an "exposed" pointer. As a result, the standard allows
+ * integers to be converted to pointers of the same provenance as p.
+ */
+template <typename T>
+constexpr T *expose (T *p) noexcept
+{
+    MAYBE_UNUSED auto x = reinterpret_cast<uintptr_t>(p);
+    return p;
 }
