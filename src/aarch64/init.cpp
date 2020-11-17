@@ -1,7 +1,7 @@
 /*
  * Initialization Code
  *
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,10 +19,13 @@
 #include "config.hpp"
 #include "console.hpp"
 #include "extern.hpp"
+#include "kmem.hpp"
 
 extern "C"
-void init()
+void init (uintptr_t offset)
 {
+    Kmem::init (offset);
+
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;

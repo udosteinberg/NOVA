@@ -25,6 +25,7 @@
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "kmem.hpp"
 #include "string.hpp"
 
 extern "C"
@@ -51,6 +52,8 @@ mword kern_ptab_setup()
 extern "C"
 void init (mword mbi)
 {
+    Kmem::init (OFFSET);
+
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
