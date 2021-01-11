@@ -24,10 +24,11 @@
 #include "kmem.hpp"
 #include "slab.hpp"
 #include "space_mem.hpp"
+#include "space_msr.hpp"
 #include "space_obj.hpp"
 #include "space_pio.hpp"
 
-class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
+class Pd : public Kobject, public Space_obj, public Space_mem, public Space_pio, public Space_msr
 {
     private:
         static Slab_cache cache;
@@ -38,7 +39,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 
         Pd (Pd *);
 
-        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), Space_pio (nullptr) {}
+        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
