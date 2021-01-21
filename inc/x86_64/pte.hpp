@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "atomic.hpp"
 #include "buddy.hpp"
 #include "kmem.hpp"
 #include "x86.hpp"
@@ -54,7 +53,7 @@ class Pte
         ALWAYS_INLINE
         inline bool set (E o, E v)
         {
-            bool b = Atomic::cmp_swap (val, o, v);
+            bool b = __atomic_compare_exchange_n (&val, &o, v, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 
             if (F && b)
                 flush (this);
