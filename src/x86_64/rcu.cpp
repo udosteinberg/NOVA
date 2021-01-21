@@ -18,7 +18,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.hpp"
 #include "barrier.hpp"
 #include "counter.hpp"
 #include "cpu.hpp"
@@ -51,7 +50,7 @@ void Rcu::start_batch (State s)
 {
     mword v, m = RCU_CMP | RCU_PND;
 
-    do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !Atomic::cmp_swap (state, v, v | s));
+    do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !__atomic_compare_exchange_n (&state, &v, v | s, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 
     if ((v ^ ~s) & m)
         return;
@@ -67,7 +66,7 @@ void Rcu::quiet()
 {
     Cpu::hazard &= ~HZD_RCU;
 
-    if (Atomic::sub (count, 1UL) == 0)
+    if (__atomic_sub_fetch (&count, 1, __ATOMIC_SEQ_CST) == 0)
         start_batch (RCU_CMP);
 }
 
