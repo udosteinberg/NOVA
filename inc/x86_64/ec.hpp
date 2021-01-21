@@ -167,7 +167,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         static inline Ec *remote (unsigned c)
         {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return __atomic_load_n (reinterpret_cast<decltype (current) *>(reinterpret_cast<uintptr_t>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE), __ATOMIC_RELAXED);
         }
 
         NOINLINE

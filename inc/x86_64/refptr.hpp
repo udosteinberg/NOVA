@@ -20,8 +20,6 @@
 
 #pragma once
 
-#include "atomic.hpp"
-
 class Refcount
 {
     private:
@@ -35,7 +33,7 @@ class Refcount
         inline bool add_ref()
         {
             for (uint32 r; (r = ref); )
-                if (Atomic::cmp_swap (ref, r, r + 1))
+                if (__atomic_compare_exchange_n (&ref, &r, r + 1, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
                     return true;
 
             return false;
@@ -44,7 +42,7 @@ class Refcount
         ALWAYS_INLINE
         inline bool del_ref()
         {
-            return Atomic::sub (ref, 1U) == 0;
+            return __atomic_sub_fetch (&ref, 1, __ATOMIC_SEQ_CST) == 0;
         }
 };
 

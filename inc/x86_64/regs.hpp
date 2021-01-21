@@ -22,7 +22,6 @@
 #pragma once
 
 #include "arch.hpp"
-#include "atomic.hpp"
 #include "hazards.hpp"
 #include "svm.hpp"
 #include "types.hpp"
@@ -252,10 +251,10 @@ class Cpu_regs : public Exc_regs
         inline mword hazard() const { return hzd; }
 
         ALWAYS_INLINE
-        inline void set_hazard (mword h) { Atomic::set_mask (hzd, h); }
+        inline void set_hazard (mword h) { __atomic_or_fetch (&hzd, h, __ATOMIC_SEQ_CST); }
 
         ALWAYS_INLINE
-        inline void clr_hazard (mword h) { Atomic::clr_mask (hzd, h); }
+        inline void clr_hazard (mword h) { __atomic_and_fetch (&hzd, ~h, __ATOMIC_SEQ_CST); }
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)

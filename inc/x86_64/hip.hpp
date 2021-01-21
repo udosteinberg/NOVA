@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "atomic.hpp"
 #include "config.hpp"
 #include "extern.hpp"
 
@@ -92,12 +91,12 @@ class Hip
 
         void set_feature (Feature f)
         {
-            Atomic::set_mask (api_flg, static_cast<typeof api_flg>(f));
+            __atomic_or_fetch (&api_flg, static_cast<decltype (api_flg)>(f), __ATOMIC_SEQ_CST);
         }
 
         void clr_feature (Feature f)
         {
-            Atomic::clr_mask (api_flg, static_cast<typeof api_flg>(f));
+            __atomic_and_fetch (&api_flg, ~static_cast<decltype (api_flg)>(f), __ATOMIC_SEQ_CST);
         }
 
         bool cpu_online (unsigned long cpu)
