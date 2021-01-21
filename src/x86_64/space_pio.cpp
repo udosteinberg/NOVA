@@ -44,9 +44,9 @@ void Space_pio::update (bool host, mword idx, mword attr)
     mword *m = static_cast<mword *>(Kmem::phys_to_ptr (walk (host, idx)));
 
     if (attr)
-        Atomic::clr_mask (*m, idx_to_mask (idx));
+        __atomic_and_fetch (m, ~idx_to_mask (idx), __ATOMIC_SEQ_CST);
     else
-        Atomic::set_mask (*m, idx_to_mask (idx));
+        __atomic_or_fetch (m, idx_to_mask (idx), __ATOMIC_SEQ_CST);
 }
 
 void Space_pio::update (Mdb *mdb, mword r)
