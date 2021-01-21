@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
@@ -26,7 +28,7 @@
 extern "C" NORETURN
 void bootstrap()
 {
-    static mword barrier;
+    static Atomic<unsigned> barrier { 0 };
 
     Cpu::init();
 
@@ -35,7 +37,7 @@ void bootstrap()
     Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
+    for (++barrier; barrier != Cpu::online; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 

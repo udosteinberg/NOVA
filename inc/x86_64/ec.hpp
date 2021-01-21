@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "counter.hpp"
 #include "fpu.hpp"
 #include "kmem.hpp"
@@ -56,6 +57,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             uint32  xcpu;
         };
         unsigned const evt;
+        Atomic<unsigned> hazard;
         Timeout_hypercall timeout;
 
         static Slab_cache cache;
@@ -108,6 +110,15 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         }
 
         ALWAYS_INLINE
+        inline bool tas_hazard (unsigned h) { return hazard.fetch_or (h) & h; }
+
+        ALWAYS_INLINE
+        inline void set_hazard (unsigned h) { hazard |= h; }
+
+        ALWAYS_INLINE
+        inline void clr_hazard (unsigned h) { hazard &= ~h; }
+
+        ALWAYS_INLINE
         inline void redirect_to_iret()
         {
             regs.rsp = regs.ARG_SP;
@@ -129,7 +140,8 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
         {
-            regs.add_tsc_offset (tsc);
+            regs.tsc_offset += tsc;
+            set_hazard (HZD_TSC);
         }
 
         ALWAYS_INLINE
