@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "crd.hpp"
 #include "kmem.hpp"
 #include "space_mem.hpp"
@@ -38,7 +39,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
-        static Pd *current CPULOCAL_HOT;
+        static Atomic<Pd *> current CPULOCAL;
         static Pd kern, root;
 
         Pd (Pd *);
