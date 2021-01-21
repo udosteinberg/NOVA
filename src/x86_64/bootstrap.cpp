@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
@@ -27,7 +28,7 @@
 extern "C" [[noreturn]]
 void bootstrap()
 {
-    static mword barrier;
+    static Atomic<unsigned> barrier { 0 };
 
     Cpu::init();
 
@@ -36,7 +37,7 @@ void bootstrap()
     Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
 
     // Barrier: wait for all ECs to arrive here
-    for (Atomic::add (barrier, 1UL); barrier != Cpu::online; pause()) ;
+    for (++barrier; barrier != Cpu::online; pause()) ;
 
     Msr::write<uint64>(Msr::IA32_TSC, 0);
 
