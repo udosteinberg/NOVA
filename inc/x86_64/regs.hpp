@@ -22,7 +22,6 @@
 #pragma once
 
 #include "arch.hpp"
-#include "atomic.hpp"
 #include "hazards.hpp"
 #include "svm.hpp"
 #include "types.hpp"
@@ -228,28 +227,9 @@ class Exc_regs : public Sys_regs
 
 class Cpu_regs : public Exc_regs
 {
-    private:
-        mword   hzd;
-
     public:
         uint64  tsc_offset;
         mword   mtd;
-
-        ALWAYS_INLINE
-        inline mword hazard() const { return hzd; }
-
-        ALWAYS_INLINE
-        inline void set_hazard (mword h) { Atomic::set_mask (hzd, h); }
-
-        ALWAYS_INLINE
-        inline void clr_hazard (mword h) { Atomic::clr_mask (hzd, h); }
-
-        ALWAYS_INLINE
-        inline void add_tsc_offset (uint64 tsc)
-        {
-            tsc_offset += tsc;
-            set_hazard (HZD_TSC);
-        }
 };
 
 template <> inline uint64 Exc_regs::get_g_efer<Vmcb>()         const { return vmcb->efer; }
