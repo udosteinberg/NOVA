@@ -129,7 +129,7 @@ class Exc_regs : public Sys_regs
             mword set = 0;
 
             if (!fpu_on)
-                set |= Cpu::CR0_TS;
+                set |= CR0_TS;
 
             return T::fix_cr0_set | set;
         }
@@ -194,7 +194,7 @@ class Exc_regs : public Sys_regs
         template <typename T>
         void set_cr0 (mword v)
         {
-            set_g_cr0<T> ((v & (~cr0_msk<T>() | Cpu::CR0_PE)) | (cr0_set<T>() & ~Cpu::CR0_PE));
+            set_g_cr0<T> ((v & (~cr0_msk<T>() | CR0_PE)) | (cr0_set<T>() & ~CR0_PE));
             set_s_cr0<T> (v);
         }
 
@@ -220,10 +220,10 @@ class Exc_regs : public Sys_regs
         template <typename T>
         void set_exc()
         {
-            uint32 val = 1U << Cpu::EXC_AC;
+            uint32 val = BIT (EXC_AC);
 
             if (!fpu_on)
-                val |= 1U << Cpu::EXC_NM;
+                val |= BIT (EXC_NM);
 
             set_e_bmp<T> (val);
         }

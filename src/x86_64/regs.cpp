@@ -120,7 +120,7 @@ template <> void Exc_regs::write_efer<Vmcs> (uint64 val)
 {
     Vmcs::write (Vmcs::GUEST_EFER, val);
 
-    if (val & Cpu::EFER_LMA)
+    if (val & EFER_LMA)
         Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
     else
         Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
