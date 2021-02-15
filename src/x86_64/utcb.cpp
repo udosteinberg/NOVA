@@ -106,7 +106,7 @@ bool Utcb::save_exc (Cpu_regs *regs)
         regs->rip = rip;
 
     if (mtd & Mtd::RFLAGS)
-        regs->rfl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+        regs->rfl = (rflags & ~(EFL_VIP | EFL_VIF | EFL_VM | EFL_RF | EFL_IOPL)) | EFL_IF;
 
     return mtd & Mtd::FPU;
 }
