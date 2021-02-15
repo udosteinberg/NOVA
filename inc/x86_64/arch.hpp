@@ -1,5 +1,5 @@
 /*
- * Architecture Definitions
+ * Architecture Definitions: x86
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "macros.hpp"
+
 #ifdef __ASSEMBLER__
 #define PREG(X)         %X
 #else
@@ -28,8 +30,8 @@
 #define WORD            .quad
 #define SIZE            8
 #define ELF_PHDR        Ph64
-#define ELF_CLASS       2
-#define ELF_MACHINE     62
+#define ELF_CLASS       EC_64
+#define ELF_MACHINE     EM_X86_64
 #define PTE_BPL         9
 #define PTE_LEV         4
 #define ARG_IP          rcx
@@ -85,3 +87,71 @@
                         sysretq;
 
 #define RET_USER_EXC    iretq;
+
+#define EXC_DB              1
+#define EXC_NM              7
+#define EXC_TS              10
+#define EXC_GP              13
+#define EXC_PF              14
+#define EXC_AC              17
+#define EXC_MC              18
+
+#define EFL_CF              BIT64  (0)              // Carry Flag
+#define EFL_PF              BIT64  (2)              // Parity Flag
+#define EFL_AF              BIT64  (4)              // Auxiliary Carry Flag
+#define EFL_ZF              BIT64  (6)              // Zero Flag
+#define EFL_SF              BIT64  (7)              // Sign Flag
+#define EFL_TF              BIT64  (8)              // Trap Flag
+#define EFL_IF              BIT64  (9)              // Interrupt Enable Flag
+#define EFL_DF              BIT64 (10)              // Direction Flag
+#define EFL_OF              BIT64 (11)              // Overflow Flag
+#define EFL_IOPL            BIT64_RANGE (13, 12)    // I/O Privilege Level
+#define EFL_NT              BIT64 (14)              // Nested Task Flag
+#define EFL_RF              BIT64 (16)              // Resume Flag
+#define EFL_VM              BIT64 (17)              // Virtual-8086 Mode Flag
+#define EFL_AC              BIT64 (18)              // Alignment Check Flag
+#define EFL_VIF             BIT64 (19)              // Virtual Interrupt Flag
+#define EFL_VIP             BIT64 (20)              // Virtual Interrupt Pending Flag
+#define EFL_ID              BIT64 (21)              // Identification Flag
+
+#define CR0_PE              BIT64  (0)              // Protection Enable
+#define CR0_MP              BIT64  (1)              // Monitor Coprocessor
+#define CR0_EM              BIT64  (2)              // Emulation
+#define CR0_TS              BIT64  (3)              // Task Switched
+#define CR0_ET              BIT64  (4)              // Extension Type
+#define CR0_NE              BIT64  (5)              // Numeric Error
+#define CR0_WP              BIT64 (16)              // Write Protect
+#define CR0_AM              BIT64 (18)              // Alignment Mask
+#define CR0_NW              BIT64 (29)              // Not Write-Through
+#define CR0_CD              BIT64 (30)              // Cache Disable
+#define CR0_PG              BIT64 (31)              // Paging
+
+#define CR4_VME             BIT64  (0)
+#define CR4_PVI             BIT64  (1)
+#define CR4_TSD             BIT64  (2)
+#define CR4_DE              BIT64  (3)
+#define CR4_PSE             BIT64  (4)
+#define CR4_PAE             BIT64  (5)
+#define CR4_MCE             BIT64  (6)
+#define CR4_PGE             BIT64  (7)
+#define CR4_PCE             BIT64  (8)
+#define CR4_OSFXSR          BIT64  (9)
+#define CR4_OSXMMEXCPT      BIT64 (10)
+#define CR4_UMIP            BIT64 (11)
+#define CR4_LA57            BIT64 (12)
+#define CR4_VMXE            BIT64 (13)
+#define CR4_SMXE            BIT64 (14)
+#define CR4_FSGSBASE        BIT64 (16)
+#define CR4_PCIDE           BIT64 (17)
+#define CR4_OSXSAVE         BIT64 (18)
+#define CR4_SMEP            BIT64 (20)
+#define CR4_SMAP            BIT64 (21)
+#define CR4_PKE             BIT64 (22)
+#define CR4_CET             BIT64 (23)
+#define CR4_PKS             BIT64 (24)
+
+#define EFER_SCE            BIT64  (0)
+#define EFER_LME            BIT64  (8)
+#define EFER_LMA            BIT64 (10)
+#define EFER_NXE            BIT64 (11)
+#define EFER_SVME           BIT64 (12)

@@ -52,7 +52,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
             regs.ds  = SEL_USER_DATA;
             regs.es  = SEL_USER_DATA;
             regs.ss  = SEL_USER_DATA;
-            regs.rfl = Cpu::EFL_IF;
+            regs.rfl = EFL_IF;
             regs.rsp = s;
         } else
             regs.set_sp (s);
@@ -128,7 +128,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         if (func == ret_user_sysexit)
             current->redirect_to_iret();
 
-        current->regs.dst_portal = Cpu::EXC_DB;
+        current->regs.dst_portal = EXC_DB;
         send_msg<ret_user_iret>();
     }
 
@@ -245,18 +245,17 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    Eh *e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_class != ELF_CLASS || e->ei_data != 1 || e->type != 2 || e->machine != ELF_MACHINE)
+    auto e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
+    if (!Hip::root_addr || !e->valid (Eh::ELF_CLASS, Eh::ELF_MACHINE))
         die ("No ELF");
 
-    unsigned count = e->ph_count;
     current->regs.set_pt (Cpu::id);
-    current->regs.set_ip (e->entry);
     current->regs.set_sp (USER_ADDR - PAGE_SIZE);
+    current->regs.set_ip (e->entry);
+    auto c = ACCESS_ONCE (e->ph_count);
+    auto p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + ACCESS_ONCE (e->ph_offset)));
 
-    ELF_PHDR *p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + e->ph_offset));
-
-    for (unsigned i = 0; i < count; i++, p++) {
+    for (unsigned i = 0; i < c; i++, p++) {
 
         if (p->type == 1) {
 
@@ -264,12 +263,12 @@ void Ec::root_invoke()
                             !!(p->flags & 0x2) << 1 |   // W
                             !!(p->flags & 0x1) << 2;    // X
 
-            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != (p->f_offs + Hip::root_addr) % PAGE_SIZE)
                 die ("Bad ELF");
 
             mword phys = align_dn (p->f_offs + Hip::root_addr, PAGE_SIZE);
             mword virt = align_dn (p->v_addr, PAGE_SIZE);
-            mword size = align_up (p->f_size, PAGE_SIZE);
+            mword size = align_up (p->v_addr + p->f_size, PAGE_SIZE) - virt;
 
             for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
                 Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = min (max_order (phys, size), max_order (virt, size))) - PAGE_BITS, attr);
