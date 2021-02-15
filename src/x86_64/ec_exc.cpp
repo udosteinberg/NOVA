@@ -118,21 +118,21 @@ void Ec::handle_exc (Exc_regs *r)
 {
     switch (r->vec) {
 
-        case Cpu::EXC_NM:
+        case EXC_NM:
             handle_exc_nm();
             return;
 
-        case Cpu::EXC_GP:
+        case EXC_GP:
             if (handle_exc_gp (r))
                 return;
             break;
 
-        case Cpu::EXC_PF:
+        case EXC_PF:
             if (handle_exc_pf (r))
                 return;
             break;
 
-        case Cpu::EXC_MC:
+        case EXC_MC:
             Mca::vector();
             break;
     }
