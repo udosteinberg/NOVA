@@ -66,7 +66,7 @@ struct Exc_regs
             uintptr_t   vec {};
             uintptr_t   rip {};
             uintptr_t   cs  { SEL_USER_CODE };
-            uintptr_t   rfl { Cpu::EFL_AC | Cpu::EFL_IF | Cpu::EFL_1 };
+            uintptr_t   rfl { RFL_AC | RFL_IF | RFL_1 };
             uintptr_t   rsp {};
             uintptr_t   ss  { SEL_USER_DATA };
         };
@@ -98,7 +98,7 @@ static_assert (__is_standard_layout (Exc_regs) && sizeof (Exc_regs) == __SIZEOF_
 class alignas (16) Cpu_regs final
 {
     private:
-        template<typename T> uintptr_t set_cr0() const { return T::fix_cr0_set | !exc.fpu_on * Cpu::CR0_TS; }
+        template<typename T> uintptr_t set_cr0() const { return T::fix_cr0_set | !exc.fpu_on * CR0_TS; }
         template<typename T> uintptr_t set_cr4() const { return T::fix_cr4_set; }
         template<typename T> uintptr_t msk_cr0() const { return T::fix_cr0_clr | set_cr0<T>(); }
         template<typename T> uintptr_t msk_cr4() const { return T::fix_cr4_clr | set_cr4<T>(); }
