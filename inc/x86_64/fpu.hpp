@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "arch.hpp"
 #include "cpu.hpp"
 #include "hazards.hpp"
 #include "lowlevel.hpp"
@@ -46,7 +47,7 @@ class Fpu
         static inline void enable() { asm volatile ("clts"); Cpu::hazard |= HZD_FPU; }
 
         ALWAYS_INLINE
-        static inline void disable() { set_cr0 (get_cr0() | Cpu::CR0_TS); Cpu::hazard &= ~HZD_FPU; }
+        static inline void disable() { set_cr0 (get_cr0() | CR0_TS); Cpu::hazard &= ~HZD_FPU; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

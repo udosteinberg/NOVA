@@ -223,16 +223,15 @@ void Ec::idle()
 void Ec::root_invoke()
 {
     auto e = static_cast<Eh const *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || !e->valid (Eh::Machine::X86_64))
+    if (!Hip::root_addr || !e->valid (ELF_MACHINE))
         die ("No ELF");
 
-    unsigned count = e->ph_count;
-    current->exc_regs().ip() = e->entry;
     current->exc_regs().sp() = USER_ADDR - PAGE_SIZE (0);
+    current->exc_regs().ip() = e->entry;
+    auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
+    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + __atomic_load_n (&e->ph_offset, __ATOMIC_RELAXED)));
 
-    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + e->ph_offset));
-
-    for (unsigned i = 0; i < count; i++, p++) {
+    for (unsigned i = 0; i < c; i++, p++) {
 
         if (p->type == 1) {
 
@@ -240,12 +239,12 @@ void Ec::root_invoke()
                             !!(p->flags & 0x2) << 1 |   // W
                             !!(p->flags & 0x1) << 2;    // X
 
-            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE (0) != p->f_offs % PAGE_SIZE (0))
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE (0) != (p->f_offs + Hip::root_addr) % PAGE_SIZE (0))
                 die ("Bad ELF");
 
             mword phys = aligned_dn (PAGE_SIZE (0), p->f_offs + Hip::root_addr);
             mword virt = aligned_dn (PAGE_SIZE (0), p->v_addr);
-            mword size = aligned_up (PAGE_SIZE (0), p->f_size);
+            mword size = aligned_up (PAGE_SIZE (0), p->v_addr + p->f_size) - virt;
 
             for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
                 Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = aligned_order (size, phys, virt)) - PAGE_BITS, attr);
