@@ -51,7 +51,7 @@ Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u,
         if (glb) {
             regs.cs  = SEL_USER_CODE64;
             regs.ss  = SEL_USER_DATA;
-            regs.rfl = Cpu::EFL_IF;
+            regs.rfl = RFL_IF;
             regs.rsp = s;
         } else
             regs.set_sp (s);
@@ -229,17 +229,16 @@ void Ec::idle()
 void Ec::root_invoke()
 {
     auto e = static_cast<Eh const *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || e->ei_magic != 0x464c457f || e->ei_class != ELF_CLASS || e->ei_data != 1 || e->type != 2 || e->machine != ELF_MACHINE)
+    if (!Hip::root_addr || !e->valid (Eh::ELF_MACHINE))
         die ("No ELF");
 
-    unsigned count = e->ph_count;
     current->regs.set_pt (Cpu::id);
-    current->regs.set_ip (e->entry);
     current->regs.set_sp (USER_ADDR - PAGE_SIZE);
+    current->regs.set_ip (e->entry);
+    auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
+    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + __atomic_load_n (&e->ph_offset, __ATOMIC_RELAXED)));
 
-    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + e->ph_offset));
-
-    for (unsigned i = 0; i < count; i++, p++) {
+    for (unsigned i = 0; i < c; i++, p++) {
 
         if (p->type == 1) {
 
@@ -247,12 +246,12 @@ void Ec::root_invoke()
                             !!(p->flags & 0x2) << 1 |   // W
                             !!(p->flags & 0x1) << 2;    // X
 
-            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != (p->f_offs + Hip::root_addr) % PAGE_SIZE)
                 die ("Bad ELF");
 
             mword phys = align_dn (p->f_offs + Hip::root_addr, PAGE_SIZE);
             mword virt = align_dn (p->v_addr, PAGE_SIZE);
-            mword size = align_up (p->f_size, PAGE_SIZE);
+            mword size = align_up (p->v_addr + p->f_size, PAGE_SIZE) - virt;
 
             for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
                 Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = min (max_order (phys, size), max_order (virt, size))) - PAGE_BITS, attr);
