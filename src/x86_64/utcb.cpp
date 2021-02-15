@@ -112,7 +112,7 @@ bool Utcb::save_exc (Cpu_regs &c) const
         e.rip = rip;
 
     if (mtd & Mtd::RFLAGS)
-        e.rfl = (rflags & ~(Cpu::EFL_VIP | Cpu::EFL_VIF | Cpu::EFL_VM | Cpu::EFL_RF | Cpu::EFL_IOPL)) | Cpu::EFL_IF;
+        e.rfl = (rflags & ~(RFL_VIP | RFL_VIF | RFL_VM | RFL_RF | RFL_IOPL)) | RFL_IF;
 
     return mtd & Mtd::FPU;
 }
@@ -392,7 +392,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
 
         auto ent { Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) };
 
-        if (efer & Cpu::EFER_LMA)
+        if (efer & EFER_LMA)
             ent |= Vmcs::ENT_GUEST_64;
         else
             ent &= ~Vmcs::ENT_GUEST_64;
