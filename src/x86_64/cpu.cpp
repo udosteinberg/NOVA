@@ -156,9 +156,9 @@ void Cpu::setup_thermal()
 void Cpu::setup_sysenter()
 {
     Msr::write<mword>(Msr::IA32_SYSENTER_CS, 0);
-    Msr::write<mword>(Msr::IA32_STAR,  static_cast<mword>(SEL_KERN_DATA) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
-    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sys));
-    Msr::write<mword>(Msr::IA32_FMASK, Cpu::EFL_DF | Cpu::EFL_IF);
+    Msr::write<mword>(Msr::IA32_STAR,  static_cast<uint64>(SEL_KERN_DATA) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32);
+    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<uint64>(&entry_sys));
+    Msr::write<mword>(Msr::IA32_FMASK, RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF);
 }
 
 void Cpu::setup_pcid()
@@ -169,7 +169,7 @@ void Cpu::setup_pcid()
     if (EXPECT_FALSE (!feature (FEAT_PCID)))
         return;
 
-    set_cr4 (get_cr4() | Cpu::CR4_PCIDE);
+    set_cr4 (get_cr4() | CR4_PCIDE);
 }
 
 void Cpu::init()
@@ -204,7 +204,7 @@ void Cpu::init()
     setup_pcid();
 
     if (EXPECT_TRUE (feature (FEAT_SMEP)))
-        set_cr4 (get_cr4() | Cpu::CR4_SMEP);
+        set_cr4 (get_cr4() | CR4_SMEP);
 
     Vmcs::init();
     Vmcb::init();
