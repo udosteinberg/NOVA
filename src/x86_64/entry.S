@@ -20,6 +20,7 @@
  *
  */
 
+#include "arch.hpp"
 #include "entry.hpp"
 #include "vectors.hpp"
 
@@ -78,27 +79,29 @@ INTRGATE                0
 /*
  * Exceptions
  */
-EXCEPTION               0x0,    0
-EXCEPTION               0x1,    0
+EXCEPTION               EXC_DE, 0
+EXCEPTION               EXC_DB, 0
 TASKGATE
-EXCEPTION               0x3,    3
-EXCEPTION               0x4,    3
-EXCEPTION               0x5,    0
-EXCEPTION               0x6,    0
-EXCEPTION               0x7,    0
+EXCEPTION               EXC_BP, 3
+EXCEPTION               EXC_OF, 3
+EXCEPTION               EXC_BR, 0
+EXCEPTION               EXC_UD, 0
+EXCEPTION               EXC_NM, 0
 TASKGATE
 TASKGATE
-EXCEPTION_ERROR         0xa,    0
-EXCEPTION_ERROR         0xb,    0
-EXCEPTION_ERROR         0xc,    0
-EXCEPTION_ERROR         0xd,    0
-EXCEPTION_ERROR         0xe,    0
+EXCEPTION_ERROR         EXC_TS, 0
+EXCEPTION_ERROR         EXC_NP, 0
+EXCEPTION_ERROR         EXC_SS, 0
+EXCEPTION_ERROR         EXC_GP, 0
+EXCEPTION_ERROR         EXC_PF, 0
 TASKGATE
-EXCEPTION               0x10,   0
-EXCEPTION_ERROR         0x11,   0
-EXCEPTION               0x12,   0
-EXCEPTION               0x13,   0
-.rept                   NUM_EXC - 0x14
+EXCEPTION               EXC_MF, 0
+EXCEPTION_ERROR         EXC_AC, 0
+EXCEPTION               EXC_MC, 0
+EXCEPTION               EXC_XM, 0
+EXCEPTION               EXC_VE, 0
+EXCEPTION_ERROR         EXC_CP, 0
+.rept                   NUM_EXC - 0x16
 TASKGATE
 .endr
 
