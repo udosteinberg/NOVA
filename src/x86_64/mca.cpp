@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "arch.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
 #include "lowlevel.hpp"
@@ -29,7 +30,7 @@ void Mca::init()
     if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCE)))
         return;
 
-    set_cr4 (get_cr4() | Cpu::CR4_MCE);
+    set_cr4 (get_cr4() | CR4_MCE);
 
     if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCA)))
         return;
