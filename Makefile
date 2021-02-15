@@ -64,7 +64,11 @@ SRC	:= hypervisor.ld $(sort $(notdir $(foreach dir,$(SRC_DIR),$(wildcard $(dir)/
 OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(SRC))))
 OBJ_DEP	:= $(OBJ:%.o=%.d)
 
+ifeq ($(ARCH),aarch64)
+HYP	:= $(BLD_DIR)/$(ARCH)-$(BOARD)-hypervisor
+else
 HYP	:= $(BLD_DIR)/$(ARCH)-hypervisor
+endif
 ELF	:= $(HYP).elf
 BIN	:= $(HYP).bin
 
@@ -88,7 +92,10 @@ VPATH	:= $(SRC_DIR)
 # Optimization options
 DFLAGS	:= -MP -MMD -pipe
 OFLAGS	:= -Os
-ifeq ($(ARCH),x86_64)
+ifeq ($(ARCH),aarch64)
+AFLAGS	:= -march=armv8-a -mcmodel=large -mgeneral-regs-only $(call check,-mno-outline-atomics) -mstrict-align
+DEFINES	+= BOARD_$(BOARD)
+else ifeq ($(ARCH),x86_64)
 AFLAGS	:= -m64 -march=core2 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mpreferred-stack-boundary=4
 else
 $(error $(ARCH) is not a valid architecture)
