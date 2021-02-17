@@ -21,12 +21,12 @@
 
 #include "acpi.hpp"
 #include "counter.hpp"
-#include "dmar.hpp"
 #include "idt.hpp"
 #include "interrupt.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 
@@ -96,7 +96,7 @@ void Interrupt::handle_gsi (unsigned gsi)
 void Interrupt::handler (unsigned v)
 {
     if (v >= VEC_FLT)
-        Dmar::interrupt();
+        Smmu::interrupt();
 
     else if (v >= VEC_IPI)
         handle_ipi (v - VEC_IPI);
@@ -119,7 +119,7 @@ void Interrupt::init (unsigned gsi, uint32_t &msi_addr, uint16_t &msi_data)
     auto const aid { Lapic::id[conf.cpu()] };
     auto const vec { static_cast<uint8_t>(VEC_GSI + gsi) };
 
-    Dmar::set_irt (gsi, src, aid, vec, conf.trg());
+    Smmu::set_irte (static_cast<uint16_t>(gsi), src, aid, vec, conf.trg());
 
     /* MSI Compatibility Format
      * ADDR: 0xfee[31:20] APICID[19:12] ---[11:5] 0[4] RH[3] DM[2] --[1:0]
@@ -144,12 +144,12 @@ void Interrupt::init (unsigned gsi, uint32_t &msi_addr, uint16_t &msi_data)
      */
 
     if (ioapic) {
-        ioapic->set_dst (gsi, Dmar::ire() ? gsi << 17 | BIT (16) : aid << 24);
+        ioapic->set_dst (gsi, Smmu::ir ? gsi << 17 | BIT (16) : aid << 24);
         ioapic->set_cfg (gsi, conf.msk(), conf.trg(), conf.pol());
         msi_addr = msi_data = 0;
     } else {
-        msi_addr = Lapic::msi_base | (Dmar::ire() ? BIT_RANGE (4, 3) : aid << 12);
-        msi_data = static_cast<uint16_t>(Dmar::ire() ? gsi : vec);
+        msi_addr = Lapic::msi_base | (Smmu::ir ? BIT_RANGE (4, 3) : aid << 12);
+        msi_data = static_cast<uint16_t>(Smmu::ir ? gsi : vec);
     }
 }
 
