@@ -102,7 +102,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
     }
 
     if (hzd & HZD_RECALL) {
-        current->regs.clr_hazard (HZD_RECALL);
+        current->clr_hazard (HZD_RECALL);
 
         if (func == ret_user_vmresume) {
             current->regs.dst_portal = NUM_VMI - 1;
@@ -122,7 +122,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
     }
 
     if (hzd & HZD_TSC) {
-        current->regs.clr_hazard (HZD_TSC);
+        current->clr_hazard (HZD_TSC);
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
@@ -138,7 +138,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
 void Ec::ret_user_sysexit()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->hazard) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_sysexit);
 
@@ -149,7 +149,7 @@ void Ec::ret_user_sysexit()
 
 void Ec::ret_user_iret()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->hazard) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_iret);
 
@@ -160,7 +160,7 @@ void Ec::ret_user_iret()
 
 void Ec::ret_user_vmresume()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->hazard) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmresume);
 
@@ -187,7 +187,7 @@ void Ec::ret_user_vmresume()
 
 void Ec::ret_user_vmrun()
 {
-    mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
+    mword hzd = (Cpu::hazard | current->hazard) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmrun);
 

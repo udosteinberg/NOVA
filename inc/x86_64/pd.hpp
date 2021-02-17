@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "crd.hpp"
 #include "space_mem.hpp"
 #include "space_obj.hpp"
@@ -37,7 +38,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
-        static Pd *current CPULOCAL_HOT;
+        static Atomic<Pd *> current CPULOCAL;
         static Pd kern, root;
 
         Pd (Pd *);
@@ -68,7 +69,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         ALWAYS_INLINE
         static inline Pd *remote (unsigned c)
         {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return reinterpret_cast<Pd *>(reinterpret_cast<uintptr_t>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
         }
 
         ALWAYS_INLINE
