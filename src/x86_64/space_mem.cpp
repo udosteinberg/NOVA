@@ -104,11 +104,11 @@ void Space_mem::shootdown()
             continue;
         }
 
-        unsigned ctr = Counter::remote (cpu, 1);
+        auto ctr = Counter::req[1].get (cpu);
 
         Lapic::send_ipi (cpu, VEC_IPI_RKE);
 
-        while (Counter::remote (cpu, 1) == ctr)
+        while (Counter::req[1].get (cpu) == ctr)
             pause();
     }
 }
