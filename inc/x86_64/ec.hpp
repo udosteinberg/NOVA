@@ -289,10 +289,10 @@ class Ec : public Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void sys_sm_ctrl();
 
         NORETURN
-        static void sys_assign_pci();
+        static void sys_assign_gsi();
 
         NORETURN
-        static void sys_assign_gsi();
+        static void sys_assign_dev();
 
         NORETURN
         static void idle();

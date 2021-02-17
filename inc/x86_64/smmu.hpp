@@ -1,10 +1,12 @@
 /*
- * DMA Remapping Unit (DMAR)
+ * System Memory Management Unit (Intel IOMMU)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,37 +27,38 @@
 #include "lowlevel.hpp"
 #include "memory.hpp"
 #include "slab.hpp"
+#include "spinlock.hpp"
 
 class Pd;
 
-class Dmar_qi
+class Smmu_qi
 {
     private:
         uint64 lo, hi;
 
     public:
-        Dmar_qi (uint64 l = 0, uint64 h = 0) : lo (l), hi (h) {}
+        Smmu_qi (uint64 l = 0, uint64 h = 0) : lo (l), hi (h) {}
 };
 
-class Dmar_qi_ctx : public Dmar_qi
+class Smmu_qi_ctx : public Smmu_qi
 {
     public:
-        Dmar_qi_ctx() : Dmar_qi (0x1 | 1UL << 4) {}
+        Smmu_qi_ctx() : Smmu_qi (0x1 | 1UL << 4) {}
 };
 
-class Dmar_qi_tlb : public Dmar_qi
+class Smmu_qi_tlb : public Smmu_qi
 {
     public:
-        Dmar_qi_tlb() : Dmar_qi (0x2 | 1UL << 4) {}
+        Smmu_qi_tlb() : Smmu_qi (0x2 | 1UL << 4) {}
 };
 
-class Dmar_qi_iec : public Dmar_qi
+class Smmu_qi_iec : public Smmu_qi
 {
     public:
-        Dmar_qi_iec() : Dmar_qi (0x4 | 1UL << 4) {}
+        Smmu_qi_iec() : Smmu_qi (0x4 | 1UL << 4) {}
 };
 
-class Dmar_ctx
+class Smmu_ctx
 {
     private:
         uint64 lo, hi;
@@ -70,11 +73,19 @@ class Dmar_ctx
         ALWAYS_INLINE
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::alloc (0, Buddy::Fill::BITS0), PAGE_SIZE); }
+        NODISCARD ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            auto ptr = Buddy::alloc (0, Buddy::Fill::BITS0);
+
+            if (EXPECT_TRUE (ptr))
+                flush (ptr, PAGE_SIZE);
+
+            return ptr;
+        }
 };
 
-class Dmar_irt
+class Smmu_irt
 {
     private:
         uint64 lo, hi;
@@ -83,28 +94,53 @@ class Dmar_irt
         ALWAYS_INLINE
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::alloc (0, Buddy::Fill::BITS0), PAGE_SIZE); }
+        NODISCARD ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            auto ptr = Buddy::alloc (0, Buddy::Fill::BITS0);
+
+            if (EXPECT_TRUE (ptr))
+                flush (ptr, PAGE_SIZE);
+
+            return ptr;
+        }
 };
 
-class Dmar : public List<Dmar>
+class Smmu : public List<Smmu>
 {
     private:
+        enum class Mode
+        {
+            LEGACY,
+            SCALABLE,
+        };
+
+        enum Cmd
+        {
+            GCMD_SIRTP  = 1UL << 24,
+            GCMD_IRE    = 1UL << 25,
+            GCMD_QIE    = 1UL << 26,
+            GCMD_SRTP   = 1UL << 30,
+            GCMD_TE     = 1UL << 31,
+        };
+
+        Paddr const         phys_base;
         mword const         reg_base;
+        Mode                mode;
         uint64              cap;
         uint64              ecap;
-        Dmar_qi *           invq;
+        Smmu_qi *           invq;
         unsigned            invq_idx;
+        Spinlock            lock;
 
-        static Dmar_ctx *   ctx;
-        static Dmar_irt *   irt;
-        static uint32       gcmd;
+        static inline Smmu_ctx *    ctx     { new Smmu_ctx };
+        static inline Smmu_irt *    irt     { new Smmu_irt };
+        static inline Smmu *        list    { nullptr };
+        static inline uint32        gcmd    { GCMD_TE };
+        static        Slab_cache    cache;
 
-        static Dmar *       list;
-        static Slab_cache   cache;
-
-        static unsigned const ord = 0;
-        static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Dmar_qi);
+        static constexpr unsigned ord = 0;
+        static constexpr unsigned cnt = (PAGE_SIZE << ord) / sizeof (Smmu_qi);
 
         enum Reg
         {
@@ -129,15 +165,6 @@ class Dmar : public List<Dmar>
         {
             REG_IVA     = 0x0,
             REG_IOTLB   = 0x8,
-        };
-
-        enum Cmd
-        {
-            GCMD_SIRTP  = 1UL << 24,
-            GCMD_IRE    = 1UL << 25,
-            GCMD_QIE    = 1UL << 26,
-            GCMD_SRTP   = 1UL << 30,
-            GCMD_TE     = 1UL << 31,
         };
 
         ALWAYS_INLINE
@@ -200,7 +227,7 @@ class Dmar : public List<Dmar>
         }
 
         ALWAYS_INLINE
-        inline void qi_submit (Dmar_qi const &q)
+        inline void qi_submit (Smmu_qi const &q)
         {
             invq[invq_idx] = q;
             invq_idx = (invq_idx + 1) % cnt;
@@ -217,8 +244,8 @@ class Dmar : public List<Dmar>
         inline void flush_ctx()
         {
             if (qi()) {
-                qi_submit (Dmar_qi_ctx());
-                qi_submit (Dmar_qi_tlb());
+                qi_submit (Smmu_qi_ctx());
+                qi_submit (Smmu_qi_tlb());
                 qi_wait();
             } else {
                 write<uint64>(REG_CCMD, 1ULL << 63 | 1ULL << 61);
@@ -233,10 +260,9 @@ class Dmar : public List<Dmar>
         void fault_handler();
 
     public:
-        Dmar (Paddr);
+        explicit Smmu (Paddr);
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        bool configure (Pd *, Space::Index, mword);
 
         ALWAYS_INLINE
         static inline void enable (unsigned flags)
@@ -244,8 +270,8 @@ class Dmar : public List<Dmar>
             if (!(flags & 1))
                 gcmd &= ~GCMD_IRE;
 
-            for (Dmar *dmar = list; dmar; dmar = dmar->next)
-                dmar->command (gcmd);
+            for (Smmu *smmu = list; smmu; smmu = smmu->next)
+                smmu->command (gcmd);
         }
 
         ALWAYS_INLINE
@@ -257,7 +283,20 @@ class Dmar : public List<Dmar>
         ALWAYS_INLINE
         static bool ire() { return gcmd & GCMD_IRE; }
 
-        void assign (unsigned long, Pd *);
-
         static void vector (unsigned) asm ("msi_vector");
+
+        static inline Smmu *lookup (Paddr p)
+        {
+            for (Smmu *smmu = list; smmu; smmu = smmu->next)
+                if (smmu->phys_base == p)
+                    return smmu;
+
+            return nullptr;
+        }
+
+        NODISCARD ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
 };

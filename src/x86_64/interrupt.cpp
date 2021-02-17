@@ -20,12 +20,12 @@
  */
 
 #include "counter.hpp"
-#include "dmar.hpp"
 #include "hazards.hpp"
 #include "interrupt.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 
@@ -114,7 +114,7 @@ void Interrupt::configure (unsigned gsi, unsigned flags, unsigned cpu, uint16 ri
     if (ioapic)
         rid = ioapic->get_rid();
 
-    Dmar::set_irt (gsi, rid, aid, VEC_GSI + gsi, trg);
+    Smmu::set_irt (gsi, rid, aid, VEC_GSI + gsi, trg);
 
     /* MSI Compatibility Format
      * ADDR: 0xfee[31:20] APICID[19:12] ---[11:5] 0[4] RH[3] DM[2] --[1:0]
@@ -138,12 +138,12 @@ void Interrupt::configure (unsigned gsi, unsigned flags, unsigned cpu, uint16 ri
      * 7:0 = VEC                => DATA[7:0]
      */
     if (ioapic) {
-        ioapic->set_rte_hi (gsi, Dmar::ire() ? gsi << 17 | BIT (16) : aid << 24);
+        ioapic->set_rte_hi (gsi, Smmu::ire() ? gsi << 17 | BIT (16) : aid << 24);
         ioapic->set_rte_lo (gsi, msk << 16 | int_table[gsi].rte);
         msi_addr = msi_data = 0;
     } else {
-        msi_addr = 0xfee << 20 | (Dmar::ire() ? BIT_RANGE (4, 3) : aid << 12);
-        msi_data = uint16 (Dmar::ire() ? gsi : VEC_GSI + gsi);
+        msi_addr = 0xfee << 20 | (Smmu::ire() ? BIT_RANGE (4, 3) : aid << 12);
+        msi_data = uint16 (Smmu::ire() ? gsi : VEC_GSI + gsi);
     }
 }
 
