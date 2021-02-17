@@ -141,7 +141,7 @@ void Lapic::lvt_vector (unsigned vector)
 
     eoi();
 
-    Counter::lvt[lvt]++;
+    Counter::loc[lvt].inc();
 }
 
 void Lapic::ipi_vector (unsigned vector)
@@ -155,5 +155,5 @@ void Lapic::ipi_vector (unsigned vector)
 
     eoi();
 
-    Counter::ipi[ipi]++;
+    Counter::req[ipi].inc();
 }
