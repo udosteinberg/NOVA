@@ -184,7 +184,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         {
             if (EXPECT_TRUE (cont != dead)) {
 
-                Counter::helping++;
+                Counter::helping.inc();
 
                 current->cont = c;
 
