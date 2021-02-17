@@ -222,11 +222,7 @@ void Ec::idle()
         if (EXPECT_FALSE (hzd))
             handle_hazard (hzd, idle);
 
-        uint64 t1 = rdtsc();
         asm volatile ("sti; hlt; cli" : : : "memory");
-        uint64 t2 = rdtsc();
-
-        Counter::cycles_idle += t2 - t1;
     }
 }
 

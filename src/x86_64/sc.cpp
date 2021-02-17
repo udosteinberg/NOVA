@@ -103,7 +103,7 @@ void Sc::ready_dequeue (uint64 t)
 
 void Sc::schedule (bool suspend)
 {
-    Counter::schedule++;
+    Counter::schedule.inc();
 
     assert (current);
     assert (suspend || !current->prev);
