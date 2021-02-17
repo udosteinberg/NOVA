@@ -280,10 +280,10 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void sys_sm_ctrl();
 
         [[noreturn]]
-        static void sys_assign_pci();
+        static void sys_assign_gsi();
 
         [[noreturn]]
-        static void sys_assign_gsi();
+        static void sys_assign_dev();
 
         [[noreturn]]
         static void idle();

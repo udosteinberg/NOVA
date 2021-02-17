@@ -28,6 +28,7 @@
 #include "kmem.hpp"
 #include "patch.hpp"
 #include "pic.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
 
@@ -79,6 +80,8 @@ void init (uintptr_t offset)
     Pic::init();
 
     Ioapic::init_all();
+
+    Smmu::init_all();
 
     Interrupt::init_all();
 }

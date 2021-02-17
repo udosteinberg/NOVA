@@ -22,8 +22,10 @@
 
 #include "kobject.hpp"
 #include "mtd.hpp"
+#include "slab.hpp"
 
 class Ec;
+class Pd;
 
 class Pt : public Kobject
 {

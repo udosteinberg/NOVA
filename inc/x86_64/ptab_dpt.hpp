@@ -40,7 +40,7 @@ class Dpt final : public Pte<Dpt, uint64, uint64>
         static constexpr unsigned ibits { 48 };
         static constexpr auto ptab_attr { ATTR_W | ATTR_R };
 
-        static inline bool noncoherent { true };
+        static inline bool noncoherent { false };
 
         // Attributes for PTEs referring to leaf pages
         static OAddr page_attr (unsigned l, Paging::Permissions pm, Memattr::Cacheability, Memattr::Shareability)
