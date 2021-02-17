@@ -341,9 +341,6 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::GUEST_ACTV_STATE, actv_state);
     }
 
-    if (mtd & Mtd::TSC)
-        c.add_tsc_offset (tsc_off);
-
     if (mtd & Mtd::EFER) {
 
         Vmcs::write (Vmcs::GUEST_EFER, efer);
@@ -555,9 +552,6 @@ bool Utcb::save_svm (Cpu_regs &c) const
 
     if (mtd & Mtd::STA)
         v->int_shadow = intr_state;
-
-    if (mtd & Mtd::TSC)
-        c.add_tsc_offset (tsc_off);
 
     if (mtd & Mtd::EFER)
         v->efer = efer;
