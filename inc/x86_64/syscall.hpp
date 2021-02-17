@@ -166,19 +166,6 @@ class Sys_sm_ctrl : public Sys_regs
         inline uint64 time() const { return static_cast<uint64>(ARG_2) << 32 | ARG_3; }
 };
 
-class Sys_assign_pci : public Sys_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_1 >> 8; }
-
-        ALWAYS_INLINE
-        inline mword dev() const { return ARG_2; }
-
-        ALWAYS_INLINE
-        inline mword hnt() const { return ARG_3; }
-};
-
 class Sys_assign_gsi : public Sys_regs
 {
     public:
@@ -197,4 +184,16 @@ class Sys_assign_gsi : public Sys_regs
             ARG_2 = static_cast<mword>(val >> 32);
             ARG_3 = static_cast<mword>(val);
         }
+};
+
+class Sys_assign_dev final : public Sys_regs
+{
+    public:
+        inline unsigned long pd() const { return ARG_1 >> 8; }
+
+        inline uintptr_t smmu() const { return ARG_2 & ~OFFS_MASK; }
+
+        inline Space::Index si() const { return Space::Index (ARG_2 & BIT_RANGE (1, 0)); }
+
+        inline uintptr_t dev() const { return ARG_3; }
 };
