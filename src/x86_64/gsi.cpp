@@ -89,7 +89,7 @@ void Gsi::handle_ipi (unsigned n)
 {
     assert (n < NUM_IPI);
 
-    Counter::ipi[n]++;
+    Counter::req[n].inc();
 
     switch (n) {
         case 0: Sc::rrq_handler(); break;
@@ -101,7 +101,7 @@ void Gsi::handle_lvt (unsigned n)
 {
     assert (n < NUM_LVT);
 
-    Counter::lvt[n]++;
+    Counter::loc[n].inc();
 
     switch (n) {
         case 0: Lapic::handle_timer(); break;
@@ -115,8 +115,6 @@ void Gsi::handle_lvt (unsigned n)
 void Gsi::handle_gsi (unsigned n)
 {
     assert (n < NUM_GSI);
-
-    Counter::gsi[n]++;
 
     if (n == Acpi::gsi)
         Acpi::interrupt();
