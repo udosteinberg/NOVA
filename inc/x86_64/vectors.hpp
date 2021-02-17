@@ -31,7 +31,7 @@
 #define VEC_LVT_PERFM   (VEC_LVT + 4)
 #define VEC_LVT_THERM   (VEC_LVT + 5)
 
-#define VEC_MSI_DMAR    (VEC_MSI + 0)
+#define VEC_MSI_SMMU    (VEC_MSI + 0)
 
 #define VEC_IPI_RRQ     (VEC_IPI + 0)
 #define VEC_IPI_RKE     (VEC_IPI + 1)
