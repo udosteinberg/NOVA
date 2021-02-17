@@ -25,7 +25,7 @@
 #include "memory.hpp"
 #include "slab.hpp"
 
-class Dmar;
+class Smmu;
 
 class Pci : public List<Pci>
 {
@@ -35,7 +35,7 @@ class Pci : public List<Pci>
         mword  const        reg_base;
         uint16 const        rid;
         uint16 const        lev;
-        Dmar *              dmar;
+        Smmu *              smmu;
 
         static unsigned     bus_base;
         static Paddr        cfg_base;
@@ -84,15 +84,15 @@ class Pci : public List<Pci>
         static inline void *operator new (size_t) { return cache.alloc(); }
 
         ALWAYS_INLINE
-        static inline void claim_all (Dmar *d)
+        static inline void claim_all (Smmu *s)
         {
             for (Pci *pci = list; pci; pci = pci->next)
-                if (!pci->dmar)
-                    pci->dmar = d;
+                if (!pci->smmu)
+                    pci->smmu = s;
         }
 
         ALWAYS_INLINE
-        static inline bool claim_dev (Dmar *d, unsigned r)
+        static inline bool claim_dev (Smmu *s, unsigned r)
         {
             Pci *pci = find_dev (r);
 
@@ -100,7 +100,7 @@ class Pci : public List<Pci>
                 return false;
 
             unsigned l = pci->lev;
-            do pci->dmar = d; while ((pci = pci->next) && pci->lev > l);
+            do pci->smmu = s; while ((pci = pci->next) && pci->lev > l);
 
             return true;
         }
@@ -114,10 +114,10 @@ class Pci : public List<Pci>
         }
 
         ALWAYS_INLINE
-        static inline Dmar *find_dmar (unsigned long r)
+        static inline Smmu *find_smmu (unsigned long r)
         {
             Pci *pci = find_dev (r);
 
-            return pci ? pci->dmar : nullptr;
+            return pci ? pci->smmu : nullptr;
         }
 };

@@ -20,14 +20,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "hip.hpp"
-#include "hpet.hpp"
 #include "interrupt.hpp"
 #include "lapic.hpp"
-#include "pci.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "syscall.hpp"
 #include "utcb.hpp"
@@ -430,35 +428,6 @@ void Ec::sys_sm_ctrl()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
-void Ec::sys_assign_pci()
-{
-    Sys_assign_pci *r = static_cast<Sys_assign_pci *>(current->sys_regs());
-
-    auto cap = current->pd->Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::ASSIGN))) {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
-        sys_finish<Sys_regs::BAD_CAP>();
-    }
-
-    uint64 phys; unsigned o, rid; Memattr ma;
-    if (EXPECT_FALSE (!Pd::current->Space_hst::lookup (r->dev(), phys, o, ma) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
-        sys_finish<Sys_regs::BAD_DEV>();
-    }
-
-    Dmar *dmar = Pci::find_dmar (r->hnt());
-    if (EXPECT_FALSE (!dmar)) {
-        trace (TRACE_ERROR, "%s: Invalid Hint (%#lx)", __func__, r->hnt());
-        sys_finish<Sys_regs::BAD_DEV>();
-    }
-
-    auto pd = static_cast<Pd *>(cap.obj());
-
-    dmar->assign (rid, pd);
-
-    sys_finish<Sys_regs::SUCCESS>();
-}
-
 void Ec::sys_assign_gsi()
 {
     Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(current->sys_regs());
@@ -494,6 +463,40 @@ void Ec::sys_assign_gsi()
     sys_finish<Sys_regs::SUCCESS>();
 }
 
+void Ec::sys_assign_dev()
+{
+    auto r = static_cast<Sys_assign_dev *>(current->sys_regs());
+
+    trace (TRACE_SYSCALL, "EC:%p %s PD:%#lx SMMU:%#lx DAD:%#lx", static_cast<void *>(current), __func__, r->pd(), r->smmu(), r->dad());
+
+    if (EXPECT_FALSE (current->pd != &Pd::root)) {
+        trace (TRACE_ERROR, "%s: Not Root PD", __func__);
+        sys_finish<Sys_regs::BAD_HYP>();
+    }
+
+    Smmu *smmu = Smmu::lookup (r->smmu());
+
+    if (EXPECT_FALSE (!smmu)) {
+        trace (TRACE_ERROR, "%s: Bad SMMU (%#lx)", __func__, r->smmu());
+        sys_finish<Sys_regs::BAD_DEV>();
+    }
+
+    auto cap = current->pd->Space_obj::lookup (r->pd());
+    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::ASSIGN))) {
+        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r->pd());
+        sys_finish<Sys_regs::BAD_CAP>();
+    }
+
+    auto pd = static_cast<Pd *>(cap.obj());
+
+    if (!smmu->configure (pd, r->dad())) {
+        trace (TRACE_ERROR, "%s: Bad Parameter for SI/DAD", __func__);
+        sys_finish<Sys_regs::BAD_PAR>();
+    }
+
+    sys_finish<Sys_regs::SUCCESS>();
+}
+
 extern "C"
 void (*const syscall[16])() =
 {
@@ -511,7 +514,7 @@ void (*const syscall[16])() =
     &Ec::sys_sm_ctrl,
     &Ec::sys_finish<Sys_regs::BAD_HYP>,
     &Ec::sys_assign_gsi,
-    &Ec::sys_assign_pci,
+    &Ec::sys_assign_dev,
     &Ec::sys_finish<Sys_regs::BAD_HYP>,
 };
 
