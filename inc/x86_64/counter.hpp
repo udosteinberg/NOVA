@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,25 +21,34 @@
 
 #pragma once
 
+#include "atomic.hpp"
+#include "compiler.hpp"
 #include "config.hpp"
-#include "cpu.hpp"
 #include "kmem.hpp"
 
 class Counter
 {
+    private:
+        Atomic<unsigned> val { 0 };
+
     public:
-        static unsigned ipi[NUM_IPI]    CPULOCAL;
-        static unsigned lvt[NUM_LVT]    CPULOCAL;
-        static unsigned gsi[NUM_GSI]    CPULOCAL;
-        static unsigned exc[NUM_EXC]    CPULOCAL;
-        static unsigned vmi[NUM_VMI]    CPULOCAL;
-        static unsigned schedule        CPULOCAL;
-        static unsigned helping         CPULOCAL;
-        static uint64   cycles_idle     CPULOCAL;
+        static Counter req[NUM_IPI] CPULOCAL;
+        static Counter loc[NUM_LVT] CPULOCAL;
+        static Counter gsi[NUM_GSI] CPULOCAL;
+        static Counter exc[NUM_EXC] CPULOCAL;
+        static Counter vmi[NUM_VMI] CPULOCAL;
+        static Counter schedule     CPULOCAL;
+        static Counter helping      CPULOCAL;
 
         ALWAYS_INLINE
-        static inline unsigned remote (unsigned c, unsigned i)
+        inline void inc()
         {
-            return *Kmem::loc_to_glob (ipi + i, c);
+            val = val + 1;
+        }
+
+        ALWAYS_INLINE
+        inline unsigned get (unsigned cpu) const
+        {
+            return *Kmem::loc_to_glob (&val, cpu);
         }
 };
