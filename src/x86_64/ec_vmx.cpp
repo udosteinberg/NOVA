@@ -19,10 +19,10 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "ec.hpp"
 #include "interrupt.hpp"
 #include "lapic.hpp"
+#include "smmu.hpp"
 #include "vectors.hpp"
 #include "vmx.hpp"
 
@@ -68,7 +68,7 @@ void Ec::vmx_extint()
     if (vector >= VEC_IPI)
         Interrupt::handle_ipi (vector);
     else if (vector >= VEC_MSI)
-        Dmar::vector (vector);
+        Smmu::vector (vector);
     else if (vector >= VEC_LVT)
         Interrupt::handle_lvt (vector);
     else if (vector >= VEC_GSI)

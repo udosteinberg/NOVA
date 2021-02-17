@@ -22,25 +22,25 @@
 
 #include "acpi_table_dmar.hpp"
 #include "cmdline.hpp"
-#include "dmar.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
 #include "pd.hpp"
+#include "smmu.hpp"
 
 void Acpi_dmar::parse() const
 {
-    Dmar *dmar = new Dmar (static_cast<Paddr>(phys));
+    Smmu *smmu = new Smmu (static_cast<Paddr>(phys));
 
     if (flags & 1)
-        Pci::claim_all (dmar);
+        Pci::claim_all (smmu);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(s) + s->length)) {
 
         switch (s->type) {
             case 1 ... 2:
-                Pci::claim_dev (dmar, s->rid());
+                Pci::claim_dev (smmu, s->rid());
                 break;
             case 3:
                 Ioapic::claim_dev (s->rid(), s->id);
@@ -59,16 +59,16 @@ void Acpi_rmrr::parse() const
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(s) + s->length)) {
 
-        Dmar *dmar = nullptr;
+        Smmu *smmu = nullptr;
 
         switch (s->type) {
             case 1:
-                dmar = Pci::find_dmar (s->rid());
+                smmu = Pci::find_smmu (s->rid());
                 break;
         }
 
-        if (dmar)
-            dmar->assign (s->rid(), &Pd::kern);
+        if (smmu)
+            smmu->configure (&Pd::kern, Space::Index::DMA_HST, s->rid());
     }
 }
 
@@ -88,7 +88,7 @@ void Acpi_table_dmar::parse() const
         }
     }
 
-    Dmar::enable (flags);
+    Smmu::enable (flags);
 
     Hip::hip->set_feature (Hip::FEAT_IOMMU);
 }
