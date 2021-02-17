@@ -22,7 +22,6 @@
 #pragma once
 
 #include "arch.hpp"
-#include "atomic.hpp"
 #include "hazards.hpp"
 #include "macros.hpp"
 #include "selectors.hpp"
@@ -113,20 +112,8 @@ class alignas (16) Cpu_regs final
             Vmcb *              vmcb;
             Vmcs *              vmcs;
         };
-        uintptr_t               hzd;
         uintptr_t               mtd;
         uint64_t                tsc_offset;
-
-        uintptr_t hazard() const { return hzd; }
-
-        void set_hazard (uintptr_t h) { Atomic::set_mask (hzd, h); }
-        void clr_hazard (uintptr_t h) { Atomic::clr_mask (hzd, h); }
-
-        void add_tsc_offset (uint64_t tsc)
-        {
-            tsc_offset += tsc;
-            set_hazard (HZD_TSC);
-        }
 
         void fpu_ctrl (bool);
         void svm_set_cpu_pri (uint32_t) const;

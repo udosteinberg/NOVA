@@ -20,13 +20,20 @@
 
 #pragma once
 
-#include "atomic.hpp"
 #include "types.hpp"
 
 class Cpuset
 {
     private:
         mword val;
+
+        template <typename T>
+        static inline bool test_set_bit (T &val, unsigned long bit)
+        {
+            bool ret;
+            asm volatile ("lock; bts%z1 %2, %1; setc %0" : "=q" (ret), "+m" (val) : "ir" (bit) : "cc");
+            return ret;
+        }
 
     public:
         ALWAYS_INLINE
@@ -36,11 +43,11 @@ class Cpuset
         inline bool chk (unsigned cpu) const { return val & 1UL << cpu; }
 
         ALWAYS_INLINE
-        inline bool set (unsigned cpu) { return !Atomic::test_set_bit (val, cpu); }
+        inline bool set (unsigned cpu) { return !test_set_bit (val, cpu); }
 
         ALWAYS_INLINE
-        inline void clr (unsigned cpu) { Atomic::clr_mask (val, 1UL << cpu); }
+        inline void clr (unsigned cpu) { __atomic_and_fetch (&val, ~(1UL << cpu), __ATOMIC_SEQ_CST); }
 
         ALWAYS_INLINE
-        inline void merge (Cpuset &s) { Atomic::set_mask (val, s.val); }
+        inline void merge (Cpuset &s) { __atomic_or_fetch (&val, s.val, __ATOMIC_SEQ_CST); }
 };
