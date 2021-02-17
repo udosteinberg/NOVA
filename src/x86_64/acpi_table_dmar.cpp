@@ -22,20 +22,20 @@
 
 #include "acpi_table_dmar.hpp"
 #include "cmdline.hpp"
-#include "dmar.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
+#include "smmu.hpp"
+#include "space_dma.hpp"
 #include "stdio.hpp"
 
 void Acpi_table_dmar::Remapping_drhd::parse() const
 {
-    auto const dmar { new Dmar (phys) };
+    auto const smmu { new Smmu (phys) };
 
     if (flags & Flags::INCLUDE_PCI_ALL)
-        Pci::claim_all (dmar);
+        Pci::claim_all (smmu);
 
     auto const addr { reinterpret_cast<uintptr_t>(this) };
 
@@ -48,7 +48,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
 
         switch (s->type) {
             case Scope::PCI_EP:
-            case Scope::PCI_SH: Pci::claim_dev (dmar, d); break;
+            case Scope::PCI_SH: Pci::claim_dev (smmu, d); break;
             case Scope::IOAPIC: Ioapic::claim_dev (d, s->id); break;
             case Scope::HPET: Hpet::claim_dev (d, s->id); break;
             default: break;
@@ -71,15 +71,15 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
 
         trace (TRACE_FIRM | TRACE_PARSE, "RMRR: %#010lx-%#010lx Scope Type %u Device %02x:%02x.%x", base, limit, s->type, s->b, s->d, s->f);
 
-        Dmar *dmar { nullptr };
+        Smmu *smmu { nullptr };
 
         switch (s->type) {
-            case Scope::PCI_EP: dmar = Pci::find_dmar (d); break;
+            case Scope::PCI_EP: smmu = Pci::find_smmu (d); break;
             default: break;
         }
 
-        if (dmar)
-            dmar->assign (d, &Pd::kern);
+        if (smmu && !smmu->configured (d))
+            smmu->configure (&Space_dma::nova, d, false);
 
         a += s->length;
     }
@@ -89,6 +89,9 @@ void Acpi_table_dmar::parse() const
 {
     if (EXPECT_FALSE (Cmdline::nosmmu))
         return;
+
+    if ((Smmu::ir = flags & Flags::INTR_REMAPPING))
+        Lapic::x2apic &= !(flags & Flags::X2APIC_OPT_OUT);
 
     auto const addr { reinterpret_cast<uintptr_t>(this) };
 
@@ -104,8 +107,6 @@ void Acpi_table_dmar::parse() const
 
         a += r->length;
     }
-
-    Dmar::enable (flags);
 
     Hip::hip->set_feature (Hip::FEAT_IOMMU);
 }
