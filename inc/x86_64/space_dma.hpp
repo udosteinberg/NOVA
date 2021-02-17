@@ -22,7 +22,7 @@
 #pragma once
 
 #include "ptab_dpt.hpp"
-#include "sdid.hpp"
+#include "smmu.hpp"
 #include "space_mem.hpp"
 
 class Space_dma : public Space_mem<Space_dma>
@@ -36,11 +36,11 @@ class Space_dma : public Space_mem<Space_dma>
 
         static constexpr auto num { BIT64 (Dptp::lev * Dptp::bpl) };
 
-        [[nodiscard]] inline auto get_ptab (unsigned l) { return dptp.root_init (true, l); }
+        [[nodiscard]] inline auto get_ptab (unsigned l) { return dptp.root_init (Smmu::nc, l); }
 
-        inline auto update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh) { return dptp.update (v, p, o, pm, ca, sh, true); }
+        inline auto update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh) { return dptp.update (v, p, o, pm, ca, sh, Smmu::nc); }
 
-        inline void sync() {}
+        inline void sync() { Smmu::invalidate_all (sdid); }
 
         inline auto get_sdid() const { return sdid; }
 
