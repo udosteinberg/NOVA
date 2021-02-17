@@ -98,6 +98,4 @@ void Gsi::vector (unsigned vector)
     Lapic::eoi();
 
     gsi_table[gsi].sm->up();
-
-    Counter::gsi[gsi]++;
 }

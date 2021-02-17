@@ -90,7 +90,7 @@ void Space_mem::update (Mdb *mdb, mword r)
 
 void Space_mem::shootdown()
 {
-    for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
+    for (cpu_t cpu { 0 }; cpu < NUM_CPU; cpu++) {
 
         if (!Hip::hip->cpu_online (cpu))
             continue;
@@ -105,11 +105,11 @@ void Space_mem::shootdown()
             continue;
         }
 
-        unsigned ctr = Counter::remote (cpu, 1);
+        auto ctr = Counter::req[1].get (cpu);
 
         Lapic::send_ipi (cpu, VEC_IPI_RKE);
 
-        while (Counter::remote (cpu, 1) == ctr)
+        while (Counter::req[1].get (cpu) == ctr)
             pause();
     }
 }
