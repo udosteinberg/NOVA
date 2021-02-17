@@ -83,7 +83,7 @@ void Ec::handle_vmx()
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
 
-    Counter::vmi[reason]++;
+    Counter::vmi[reason].inc();
 
     switch (reason) {
         case Vmcs::VMX_EXC_NMI:     vmx_exception();

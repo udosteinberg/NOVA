@@ -62,7 +62,7 @@ void Ec::handle_svm()
             break;
     }
 
-    Counter::vmi[reason]++;
+    Counter::vmi[reason].inc();
 
     switch (reason) {
 

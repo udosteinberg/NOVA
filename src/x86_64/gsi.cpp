@@ -99,5 +99,5 @@ void Gsi::vector (unsigned vector)
 
     gsi_table[gsi].sm->up();
 
-    Counter::gsi[gsi]++;
+    Counter::gsi[gsi].inc();
 }

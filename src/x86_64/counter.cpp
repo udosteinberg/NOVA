@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,11 +21,10 @@
 
 #include "counter.hpp"
 
-unsigned    Counter::ipi[NUM_IPI];
-unsigned    Counter::lvt[NUM_LVT];
-unsigned    Counter::gsi[NUM_GSI];
-unsigned    Counter::exc[NUM_EXC];
-unsigned    Counter::vmi[NUM_VMI];
-unsigned    Counter::schedule;
-unsigned    Counter::helping;
-uint64      Counter::cycles_idle;
+Counter Counter::req[NUM_IPI];
+Counter Counter::loc[NUM_LVT];
+Counter Counter::gsi[NUM_GSI];
+Counter Counter::exc[NUM_EXC];
+Counter Counter::vmi[NUM_VMI];
+Counter Counter::schedule;
+Counter Counter::helping;
