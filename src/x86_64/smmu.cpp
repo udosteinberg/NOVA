@@ -1,11 +1,12 @@
 /*
- * DMA Remapping Unit (DMAR)
+ * System Memory Management Unit (Intel IOMMU)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,21 +21,21 @@
  */
 
 #include "bits.hpp"
-#include "dmar.hpp"
 #include "lapic.hpp"
 #include "pd.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache  Dmar::cache (sizeof (Dmar), 8);
+Slab_cache  Smmu::cache (sizeof (Smmu), 8);
 
-Dmar *      Dmar::list;
-Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
-Dmar_irt *  Dmar::irt = new Dmar_irt;
-uint32      Dmar::gcmd = GCMD_TE;
+Smmu *      Smmu::list;
+Smmu_ctx *  Smmu::ctx = new Smmu_ctx;
+Smmu_irt *  Smmu::irt = new Smmu_irt;
+uint32      Smmu::gcmd = GCMD_TE;
 
-Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
+Smmu::Smmu (Paddr p) : List<Smmu> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Smmu_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
 {
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
@@ -45,7 +46,7 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
     Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
 
     write<uint32>(REG_FEADDR, 0xfee00000 | Cpu::apic_id[0] << 12);
-    write<uint32>(REG_FEDATA, VEC_MSI_DMAR);
+    write<uint32>(REG_FEDATA, VEC_MSI_SMMU);
     write<uint32>(REG_FECTL,  0);
 
     write<uint64>(REG_RTADDR, Buddy::ptr_to_phys (ctx));
@@ -65,15 +66,15 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
     }
 }
 
-void Dmar::assign (unsigned long rid, Pd *p)
+void Smmu::assign (unsigned long rid, Pd *p)
 {
     mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
 
-    Dmar_ctx *r = ctx + (rid >> 8);
+    Smmu_ctx *r = ctx + (rid >> 8);
     if (!r->present())
-        r->set (0, Buddy::ptr_to_phys (new Dmar_ctx) | 1);
+        r->set (0, Buddy::ptr_to_phys (new Smmu_ctx) | 1);
 
-    Dmar_ctx *c = static_cast<Dmar_ctx *>(Buddy::phys_to_ptr (r->addr())) + (rid & 0xff);
+    Smmu_ctx *c = static_cast<Smmu_ctx *>(Buddy::phys_to_ptr (r->addr())) + (rid & 0xff);
     if (c->present())
         c->set (0, 0);
 
@@ -82,14 +83,14 @@ void Dmar::assign (unsigned long rid, Pd *p)
     c->set (lev | p->did << 8, p->dpt.root (lev + 1) | 1);
 }
 
-void Dmar::fault_handler()
+void Smmu::fault_handler()
 {
     for (uint32 fsts; fsts = read<uint32>(REG_FSTS), fsts & 0xff;) {
 
         if (fsts & 0x2) {
             uint64 hi, lo;
             for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % nfr())
-                trace (TRACE_IOMMU, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
+                trace (TRACE_SMMU, "SMMU:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
                        this,
                        frr,
                        static_cast<uint32>(hi >> 32) & 0xff,
@@ -103,13 +104,13 @@ void Dmar::fault_handler()
     }
 }
 
-void Dmar::vector (unsigned vector)
+void Smmu::vector (unsigned vector)
 {
     unsigned msi = vector - VEC_MSI;
 
     if (EXPECT_TRUE (msi == 0))
-        for (Dmar *dmar = list; dmar; dmar = dmar->next)
-            dmar->fault_handler();
+        for (Smmu *smmu = list; smmu; smmu = smmu->next)
+            smmu->fault_handler();
 
     Lapic::eoi();
 }

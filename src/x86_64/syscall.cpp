@@ -20,7 +20,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "gsi.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
@@ -28,6 +27,7 @@
 #include "pci.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "syscall.hpp"
 #include "utcb.hpp"
@@ -498,13 +498,13 @@ void Ec::sys_assign_pci()
         sys_finish<Sys_regs::BAD_DEV>();
     }
 
-    Dmar *dmar = Pci::find_dmar (r->hnt());
-    if (EXPECT_FALSE (!dmar)) {
+    Smmu *smmu = Pci::find_smmu (r->hnt());
+    if (EXPECT_FALSE (!smmu)) {
         trace (TRACE_ERROR, "%s: Invalid Hint (%#lx)", __func__, r->hnt());
         sys_finish<Sys_regs::BAD_DEV>();
     }
 
-    dmar->assign (rid, static_cast<Pd *>(obj));
+    smmu->assign (rid, static_cast<Pd *>(obj));
 
     sys_finish<Sys_regs::SUCCESS>();
 }

@@ -38,7 +38,7 @@ do {                                                                \
  */
 enum {
     TRACE_CPU       = 1UL << 0,
-    TRACE_IOMMU     = 1UL << 1,
+    TRACE_SMMU      = 1UL << 1,
     TRACE_APIC      = 1UL << 2,
     TRACE_VMX       = 1UL << 4,
     TRACE_SVM       = 1UL << 5,
@@ -59,7 +59,7 @@ enum {
  */
 unsigned const trace_mask =
                             TRACE_CPU       |
-                            TRACE_IOMMU     |
+                            TRACE_SMMU      |
 #ifdef DEBUG
 //                            TRACE_APIC      |
 //                            TRACE_KEYB      |

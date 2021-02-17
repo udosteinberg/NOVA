@@ -1,10 +1,12 @@
 /*
- * DMA Remapping Unit (DMAR)
+ * System Memory Management Unit (Intel IOMMU)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -26,34 +28,34 @@
 
 class Pd;
 
-class Dmar_qi
+class Smmu_qi
 {
     private:
         uint64 lo, hi;
 
     public:
-        Dmar_qi (uint64 l = 0, uint64 h = 0) : lo (l), hi (h) {}
+        Smmu_qi (uint64 l = 0, uint64 h = 0) : lo (l), hi (h) {}
 };
 
-class Dmar_qi_ctx : public Dmar_qi
+class Smmu_qi_ctx : public Smmu_qi
 {
     public:
-        Dmar_qi_ctx() : Dmar_qi (0x1 | 1UL << 4) {}
+        Smmu_qi_ctx() : Smmu_qi (0x1 | 1UL << 4) {}
 };
 
-class Dmar_qi_tlb : public Dmar_qi
+class Smmu_qi_tlb : public Smmu_qi
 {
     public:
-        Dmar_qi_tlb() : Dmar_qi (0x2 | 1UL << 4) {}
+        Smmu_qi_tlb() : Smmu_qi (0x2 | 1UL << 4) {}
 };
 
-class Dmar_qi_iec : public Dmar_qi
+class Smmu_qi_iec : public Smmu_qi
 {
     public:
-        Dmar_qi_iec() : Dmar_qi (0x4 | 1UL << 4) {}
+        Smmu_qi_iec() : Smmu_qi (0x4 | 1UL << 4) {}
 };
 
-class Dmar_ctx
+class Smmu_ctx
 {
     private:
         uint64 lo, hi;
@@ -72,7 +74,7 @@ class Dmar_ctx
         static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
 };
 
-class Dmar_irt
+class Smmu_irt
 {
     private:
         uint64 lo, hi;
@@ -85,24 +87,24 @@ class Dmar_irt
         static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
 };
 
-class Dmar : public List<Dmar>
+class Smmu : public List<Smmu>
 {
     private:
         mword const         reg_base;
         uint64              cap;
         uint64              ecap;
-        Dmar_qi *           invq;
+        Smmu_qi *           invq;
         unsigned            invq_idx;
 
-        static Dmar_ctx *   ctx;
-        static Dmar_irt *   irt;
+        static Smmu_ctx *   ctx;
+        static Smmu_irt *   irt;
         static uint32       gcmd;
 
-        static Dmar *       list;
+        static Smmu *       list;
         static Slab_cache   cache;
 
         static unsigned const ord = 0;
-        static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Dmar_qi);
+        static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Smmu_qi);
 
         enum Reg
         {
@@ -198,7 +200,7 @@ class Dmar : public List<Dmar>
         }
 
         ALWAYS_INLINE
-        inline void qi_submit (Dmar_qi const &q)
+        inline void qi_submit (Smmu_qi const &q)
         {
             invq[invq_idx] = q;
             invq_idx = (invq_idx + 1) % cnt;
@@ -215,8 +217,8 @@ class Dmar : public List<Dmar>
         inline void flush_ctx()
         {
             if (qi()) {
-                qi_submit (Dmar_qi_ctx());
-                qi_submit (Dmar_qi_tlb());
+                qi_submit (Smmu_qi_ctx());
+                qi_submit (Smmu_qi_tlb());
                 qi_wait();
             } else {
                 write<uint64>(REG_CCMD, 1ULL << 63 | 1ULL << 61);
@@ -231,7 +233,7 @@ class Dmar : public List<Dmar>
         void fault_handler();
 
     public:
-        Dmar (Paddr);
+        Smmu (Paddr);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
@@ -242,8 +244,8 @@ class Dmar : public List<Dmar>
             if (!(flags & 1))
                 gcmd &= ~GCMD_IRE;
 
-            for (Dmar *dmar = list; dmar; dmar = dmar->next)
-                dmar->command (gcmd);
+            for (Smmu *smmu = list; smmu; smmu = smmu->next)
+                smmu->command (gcmd);
         }
 
         ALWAYS_INLINE

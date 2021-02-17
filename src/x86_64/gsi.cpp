@@ -20,11 +20,11 @@
  */
 
 #include "acpi.hpp"
-#include "dmar.hpp"
 #include "gsi.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "vectors.hpp"
 
 Gsi         Gsi::gsi_table[NUM_GSI];
@@ -56,15 +56,15 @@ uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic) {
-        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : aid);
+        ioapic->set_cpu (gsi, Smmu::ire() ? 0 : aid);
         ioapic->set_irt (gsi, gsi_table[gsi].irt);
         rid = ioapic->get_rid();
     } else {
-        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
-        msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
+        msi_addr = 0xfee00000 | (Smmu::ire() ? 3U << 3 : aid << 12);
+        msi_data = Smmu::ire() ? gsi : gsi_table[gsi].vec;
     }
 
-    Dmar::set_irt (gsi, rid, aid, VEC_GSI + gsi, gsi_table[gsi].trg);
+    Smmu::set_irt (gsi, rid, aid, VEC_GSI + gsi, gsi_table[gsi].trg);
 
     return static_cast<uint64>(msi_addr) << 32 | msi_data;
 }
