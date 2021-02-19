@@ -22,6 +22,7 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "kmem.hpp"
 
 class Ec;
 
@@ -69,9 +70,9 @@ class Sc : public Kobject
         Sc (Pd *, mword, Ec *, unsigned, unsigned, unsigned);
 
         ALWAYS_INLINE
-        static inline Rq *remote (unsigned long c)
+        static inline Rq *remote (unsigned c)
         {
-            return reinterpret_cast<typeof rq *>(reinterpret_cast<mword>(&rq) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return Kmem::loc_to_glob (&rq, c);
         }
 
         void remote_enqueue();
