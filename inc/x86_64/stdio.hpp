@@ -64,8 +64,6 @@ enum {
     TRACE_RCU       = BIT (16),
     TRACE_CREATE    = BIT (17),
     TRACE_DESTROY   = BIT (18),
-    TRACE_DEL       = BIT (19),
-    TRACE_REV       = BIT (20),
     TRACE_SYSCALL   = BIT (25),
     TRACE_EXCEPTION = BIT (26),
     TRACE_ROOT      = BIT (27),

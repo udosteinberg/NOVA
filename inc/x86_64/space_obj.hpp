@@ -21,11 +21,10 @@
 #pragma once
 
 #include "capability.hpp"
-#include "space.hpp"
 
 class Space_mem;
 
-class Space_obj : public Space
+class Space_obj
 {
     private:
         ALWAYS_INLINE
@@ -51,8 +50,6 @@ class Space_obj : public Space
         size_t lookup (mword, Capability &);
 
         Paddr walk (mword = 0);
-
-        void update (Mdb *, mword = 0);
 
         static void page_fault (mword, mword);
 
