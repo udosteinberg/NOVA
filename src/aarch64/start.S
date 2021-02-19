@@ -219,6 +219,10 @@ __init_bsp:
 .text
 
 .Lhigh:
+                        // Initialize kmem offset
+                        adr     x0, __kmem_offset
+                        str     x24, [x0]
+
                         // General initialization
                         bl      init
 
