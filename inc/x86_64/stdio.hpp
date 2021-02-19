@@ -24,15 +24,15 @@
 #include "console.hpp"
 #include "cpu.hpp"
 #include "lowlevel.hpp"
+#include "macros.hpp"
 #include "memory.hpp"
 
-#define trace(T,format,...)                                         \
-do {                                                                \
-    register mword __esp asm ("esp");                               \
-    if ((trace_mask & (T)) == (T)) [[unlikely]]                     \
-        Console::print ("[%2ld] " format,                           \
-                static_cast<long>(((__esp - 1) & ~PAGE_MASK) ==     \
-                CPU_LOCAL_STCK ? Cpu::id : ~0UL), ## __VA_ARGS__);  \
+static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_frame_address (0)); }
+
+#define trace(T,format,...)                         \
+do {                                                \
+    if ((trace_mask & (T)) == (T)) [[unlikely]]     \
+        Console::print ("[%3ld] " format, (stackptr() & ~PAGE_MASK) == CPU_LOCAL_STCK ? ACCESS_ONCE (Cpu::id) : ~0UL, ## __VA_ARGS__);  \
 } while (0)
 
 #define panic(format,...)                           \
@@ -45,44 +45,57 @@ do {                                                \
  * Definition of trace events
  */
 enum {
-    TRACE_CPU       = 1UL << 0,
-    TRACE_IOMMU     = 1UL << 1,
-    TRACE_APIC      = 1UL << 2,
-    TRACE_VMX       = 1UL << 4,
-    TRACE_SVM       = 1UL << 5,
-    TRACE_ACPI      = 1UL << 8,
-    TRACE_MEMORY    = 1UL << 13,
-    TRACE_PCI       = 1UL << 14,
-    TRACE_SCHEDULE  = 1UL << 16,
-    TRACE_DEL       = 1UL << 18,
-    TRACE_REV       = 1UL << 19,
-    TRACE_RCU       = 1UL << 20,
-    TRACE_FPU       = 1UL << 23,
-    TRACE_SYSCALL   = 1UL << 30,
-    TRACE_ERROR     = 1UL << 31,
+    TRACE_CPU       = BIT  (0),
+    TRACE_FPU       = BIT  (1),
+    TRACE_PWR       = BIT  (2),
+    TRACE_MCA       = BIT  (3),
+    TRACE_PCI       = BIT  (4),
+    TRACE_TPM       = BIT  (5),
+    TRACE_DRTM      = BIT  (6),
+    TRACE_INTR      = BIT  (7),
+    TRACE_TIMR      = BIT  (8),
+    TRACE_SMMU      = BIT  (9),
+    TRACE_VIRT      = BIT (10),
+    TRACE_FIRM      = BIT (11),
+    TRACE_PARSE     = BIT (12),
+    TRACE_MEMORY    = BIT (13),
+    TRACE_SCHEDULE  = BIT (14),
+    TRACE_DEL       = BIT (15),
+    TRACE_REV       = BIT (16),
+    TRACE_RCU       = BIT (17),
+    TRACE_CREATE    = BIT (18),
+    TRACE_DESTROY   = BIT (19),
+    TRACE_SYSCALL   = BIT (25),
+    TRACE_EXCEPTION = BIT (26),
+    TRACE_ROOT      = BIT (27),
+    TRACE_PERF      = BIT (28),
+    TRACE_CONT      = BIT (29),
+    TRACE_KILL      = BIT (30),
+    TRACE_ERROR     = BIT (31),
 };
 
 /*
  * Enabled trace events
  */
-unsigned const trace_mask =
-                            TRACE_CPU       |
-                            TRACE_IOMMU     |
+constexpr auto trace_mask
+{
+    TRACE_CPU       |
+    TRACE_PCI       |
+    TRACE_TPM       |
+    TRACE_DRTM      |
+    TRACE_SMMU      |
+    TRACE_FIRM      |
+    TRACE_ROOT      |
+    TRACE_PERF      |
+    TRACE_KILL      |
+    TRACE_ERROR     |
 #ifdef DEBUG
-//                            TRACE_APIC      |
-//                            TRACE_KEYB      |
-                            TRACE_VMX       |
-                            TRACE_SVM       |
-//                            TRACE_ACPI      |
-//                            TRACE_MEMORY    |
-//                            TRACE_PCI       |
-//                            TRACE_SCHEDULE  |
-//                            TRACE_VTLB      |
-//                            TRACE_DEL       |
-//                            TRACE_REV       |
-//                            TRACE_RCU       |
-//                            TRACE_FPU       |
-//                            TRACE_SYSCALL   |
-                            TRACE_ERROR     |
+    TRACE_FPU       |
+    TRACE_PWR       |
+    TRACE_MCA       |
+    TRACE_INTR      |
+    TRACE_TIMR      |
+    TRACE_VIRT      |
 #endif
-                            0;
+    0
+};
