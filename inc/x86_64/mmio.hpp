@@ -17,9 +17,7 @@
 
 #pragma once
 
-#include "bits.hpp"
-#include "memattr.hpp"
-#include "pd.hpp"
+#include "ptab_hpt.hpp"
 
 class Mmio
 {
@@ -31,23 +29,23 @@ class Mmio
         uintptr_t const mmio;       // MMIO Base
         size_t    const mmio_size;  // MMIO Size
 
-        static uintptr_t alloc_mmio (uintptr_t const phys, size_t const size, Memattr const)
+        static uintptr_t alloc_mmio (uintptr_t const phys, size_t const size, Memattr const a)
         {
             // Skip MMIO allocation if size is 0
             if (!size) [[unlikely]]
                 return 0;
 
             // Round physical address and size to full pages
-            auto p { aligned_dn (PAGE_SIZE (0), phys) };
-            auto s { aligned_up (PAGE_SIZE (0), phys + size) - p };
+            auto p { aligned_dn (Hpt::page_size (0), phys) };
+            auto s { aligned_up (Hpt::page_size (0), phys + size) - p };
 
             // Allocate MMIO region
             auto v { mmio_base.fetch_add (s) };
-            auto m { v | (phys & OFFS_MASK (0)) };
+            auto m { v | (phys & Hpt::offs_mask (0)) };
 
             // Map MMIO region
             for (unsigned o; s; s -= BITN (o), p += BITN (o), v += BITN (o))
-                Pd::kern.Space_mem::insert (v, (o = aligned_order (s, p, v)) - PAGE_BITS, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p);
+                Hptp::master_map (v, p, (o = aligned_order (s, p, v)) - PAGE_BITS, Paging::Permissions (Paging::G | Paging::W | Paging::R), a);
 
             return m;
         }
