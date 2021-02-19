@@ -495,8 +495,8 @@ void Ec::sys_assign_int()
         sys_finish<Status::BAD_CAP>();
     }
 
-    Paddr phys; unsigned rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || ((rid = Pci::phys_to_rid (phys)) == ~0U))) [[unlikely]] {
+    uint64 phys; unsigned o, rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
+    if (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys, o) || ((rid = Pci::phys_to_rid (phys)) == ~0U))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Status::BAD_DEV>();
     }

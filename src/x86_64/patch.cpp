@@ -16,12 +16,18 @@
  */
 
 #include "lapic.hpp"
+#include "memattr.hpp"
 #include "patch.hpp"
+#include "ptab_gst_amd.hpp"
+#include "ptab_hst.hpp"
 #include "string.hpp"
 
 void Patch::detect()
 {
     uint32_t eax, ebx, ecx, edx;
+
+    // Max leaf level and physical address bits reported by CPUID
+    unsigned mll { 1 }, pbits { 0 };
 
     Cpu::cpuid (0x0, eax, ebx, ecx, edx);
 
@@ -38,8 +44,25 @@ void Patch::detect()
 
     switch (static_cast<uint8_t>(eax)) {
         default:
+            Cpu::cpuid (0x80000008, eax, ebx, ecx, edx);
+            pbits = eax & BIT_RANGE (7, 0);
+            [[fallthrough]];
+        case 0x1 ... 0x7:
+            Cpu::cpuid (0x80000001, eax, ebx, ecx, edx);
+            mll = edx & BIT (26) ? 2 : 1;
+            [[fallthrough]];
+        case 0x0:
             break;
     }
+
+    // Set MLL for GST
+    Ptab_gst_amd::set_mll (mll);
+
+    // Set MLL for HST
+    Ptab_hst::set_mll (mll);
+
+    // Key ID bits reduce the usable physical address bits
+    Memattr::obits = min (max (pbits, Memattr::pbits_min), Memattr::pbits_max) - Memattr::kbits;
 }
 
 void Patch::init()

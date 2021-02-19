@@ -21,8 +21,8 @@
  */
 
 #include "cmdline.hpp"
-#include "hpt.hpp"
 #include "multiboot.hpp"
+#include "ptab_hst.hpp"
 #include "string.hpp"
 
 void Cmdline::parse (char const *line)
@@ -39,6 +39,6 @@ void Cmdline::init()
 {
     auto const len { Multiboot::ce - Multiboot::cs };
 
-    if (len)
-        parse (std::start_lifetime_as_array<char const> (Hpt::remap (Multiboot::cs), len));
+    if (len && len <= Pte_hst::page_size (Pte_hst::bpl))
+        parse (std::start_lifetime_as_array<char const> (Ptab_hst::map (MMAP_GLB_MAP0, Multiboot::cs), len));
 }

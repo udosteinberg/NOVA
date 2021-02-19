@@ -23,10 +23,8 @@
 #include "config.hpp"
 #include "cpu.hpp"
 #include "cpuset.hpp"
-#include "dpt.hpp"
-#include "ept.hpp"
-#include "hpt.hpp"
 #include "pcid.hpp"
+#include "ptab_tmp.hpp"
 #include "sdid.hpp"
 
 class Space_mem
@@ -36,12 +34,15 @@ class Space_mem
         uint16_t const sdid;
 
     public:
-        Hpt loc[NUM_CPU];
-        Hpt hpt;
-        Dpt dpt;
+        Ptab_hst loc[NUM_CPU];
+        Ptab_hst hst;
         union {
-            Ept ept;
-            Hpt npt;
+            Ptab_dma_amd dma_amd;
+            Ptab_dma_itl dma_itl;
+        };
+        union {
+            Ptab_gst_amd gst_amd;
+            Ptab_gst_itl gst_itl;
         };
 
         Cpuset cpus;
@@ -55,23 +56,15 @@ class Space_mem
         auto get_pcid() const { return pcid; }
         auto get_sdid() const { return sdid; }
 
-        ALWAYS_INLINE
-        inline size_t lookup (mword virt, Paddr &phys)
+        Paging::Permissions lookup (uint64_t v, uint64_t &p, unsigned &o)
         {
-            mword attr;
-            return hpt.lookup (virt, phys, attr);
+            Memattr ma;
+            return hst.lookup (v, p, o, ma);
         }
 
-        ALWAYS_INLINE
-        inline void insert (mword virt, unsigned o, mword attr, Paddr phys)
+        void update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma)
         {
-            hpt.update (virt, o, phys, attr);
-        }
-
-        ALWAYS_INLINE
-        inline Paddr replace (mword v, Paddr p)
-        {
-            return hpt.replace (v, p);
+            hst.update (v, p, o, pm, ma);
         }
 
         void insert_root (uint64_t, uint64_t, uintptr_t = 0x7);
