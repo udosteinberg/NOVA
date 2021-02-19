@@ -38,55 +38,6 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
-void Space_mem::update (Mdb *mdb, mword r)
-{
-    assert (this == mdb->space && this != &Pd::kern);
-
-    Lock_guard <Spinlock> guard (mdb->node_lock);
-
-    Paddr p = mdb->node_phys << PAGE_BITS;
-    mword b = mdb->node_base << PAGE_BITS;
-    mword o = mdb->node_order;
-    mword a = mdb->node_attr & ~r;
-    mword s = mdb->node_sub;
-
-    if (s & 1 && Dpt::ord != ~0UL) {
-        mword ord = min (o, Dpt::ord);
-        for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-            dpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r ? Dpt::TYPE_DN : Dpt::TYPE_UP);
-    }
-
-    if (s & 2) {
-        if (Vmcb::has_npt()) {
-            mword ord = min (o, Hpt::ord);
-            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                npt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
-        } else {
-            mword ord = min (o, Ept::ord);
-            for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-                ept.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r ? Ept::TYPE_DN : Ept::TYPE_UP);
-        }
-        if (r)
-            gtlb.merge (cpus);
-    }
-
-    if (mdb->node_base + (1UL << o) > USER_ADDR >> PAGE_BITS)
-        return;
-
-    mword ord = min (o, Hpt::ord);
-    for (unsigned long i = 0; i < 1UL << (o - ord); i++)
-        hpt.update (b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
-
-    if (r) {
-
-        for (unsigned i = 0; i < sizeof (loc) / sizeof (*loc); i++)
-            if (loc[i].addr())
-                loc[i].update (b, o, p, Hpt::hw_attr (a), Hpt::TYPE_DF);
-
-        htlb.merge (cpus);
-    }
-}
-
 void Space_mem::shootdown()
 {
     for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
@@ -113,7 +64,7 @@ void Space_mem::shootdown()
     }
 }
 
-void Space_mem::insert_root (uint64 s, uint64 e, mword a)
+void Space_mem::insert_root (uint64 s, uint64 e, mword)
 {
     for (uint64 p = s; p < e; s = p) {
 
@@ -129,7 +80,9 @@ void Space_mem::insert_root (uint64 s, uint64 e, mword a)
         if ((p = min (p, e)) > ~0UL)
             p = static_cast<uint64>(~0UL) + 1;
 
+#if 0   // FIXME
         addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
+#endif
     }
 }
 
@@ -137,13 +90,6 @@ bool Space_mem::insert_utcb (mword b)
 {
     if (!b)
         return true;
-
-    Mdb *mdb = new Mdb (this, 0, b >> PAGE_BITS, 0);
-
-    if (tree_insert (mdb))
-        return true;
-
-    delete mdb;
 
     return false;
 }
