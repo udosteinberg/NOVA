@@ -21,8 +21,8 @@
  */
 
 #include "cmdline.hpp"
-#include "hpt.hpp"
 #include "multiboot.hpp"
+#include "ptab_hpt.hpp"
 #include "string.hpp"
 
 size_t Cmdline::arg_len (char const *&line)
@@ -47,5 +47,5 @@ void Cmdline::parse (char const *line)
 void Cmdline::init()
 {
     if (Multiboot::cl)
-        parse (static_cast<char const *>(Hpt::remap (Multiboot::cl)));
+        parse (static_cast<char const *>(Hptp::map (MMAP_GLB_MAP0, Multiboot::cl)));
 }

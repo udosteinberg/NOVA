@@ -21,6 +21,7 @@
 #pragma once
 
 #include "acpi_gas.hpp"
+#include "ptab_hpt.hpp"
 
 class Acpi
 {

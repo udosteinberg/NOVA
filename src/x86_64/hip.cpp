@@ -23,8 +23,8 @@
 #include "cmdline.hpp"
 #include "cpu.hpp"
 #include "hip.hpp"
-#include "hpt.hpp"
 #include "multiboot.hpp"
+#include "ptab_hpt.hpp"
 #include "space_obj.hpp"
 #include "stc.hpp"
 

@@ -33,7 +33,7 @@ ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
 
 Pd::Pd (Pd *) : Kobject (Kobject::Type::PD)
 {
-    hpt = Hptp (Kmem::ptr_to_phys (&PTAB_HVAS));
+    hpt = Hptp::master;
 
     Space_mem::insert_root (0, LOAD_ADDR);
     Space_mem::insert_root (Multiboot::ea, USER_ADDR);

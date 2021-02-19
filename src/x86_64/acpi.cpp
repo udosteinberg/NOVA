@@ -27,9 +27,9 @@
 #include "acpi_rsdp.hpp"
 #include "acpi_rsdt.hpp"
 #include "assert.hpp"
-#include "hpt.hpp"
 #include "io.hpp"
 #include "lowlevel.hpp"
+#include "ptab_hpt.hpp"
 #include "stdio.hpp"
 
 Paddr       Acpi::dmar, Acpi::fadt, Acpi::hpet, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
@@ -56,20 +56,20 @@ void Acpi::setup()
     Acpi_rsdp::parse();
 
     if (xsdt)
-        static_cast<Acpi_table_rsdt *>(Hpt::remap (xsdt))->parse (xsdt, sizeof (uint64));
+        static_cast<Acpi_table_rsdt *>(Hptp::map (MMAP_GLB_MAP0, xsdt))->parse (xsdt, sizeof (uint64));
     else if (rsdt)
-        static_cast<Acpi_table_rsdt *>(Hpt::remap (rsdt))->parse (rsdt, sizeof (uint32));
+        static_cast<Acpi_table_rsdt *>(Hptp::map (MMAP_GLB_MAP0, rsdt))->parse (rsdt, sizeof (uint32));
 
     if (fadt)
-        static_cast<Acpi_table_fadt *>(Hpt::remap (fadt))->parse();
+        static_cast<Acpi_table_fadt *>(Hptp::map (MMAP_GLB_MAP0, fadt))->parse();
     if (hpet)
-        static_cast<Acpi_table_hpet *>(Hpt::remap (hpet))->parse();
+        static_cast<Acpi_table_hpet *>(Hptp::map (MMAP_GLB_MAP0, hpet))->parse();
     if (madt)
-        static_cast<Acpi_table_madt *>(Hpt::remap (madt))->parse();
+        static_cast<Acpi_table_madt *>(Hptp::map (MMAP_GLB_MAP0, madt))->parse();
     if (mcfg)
-        static_cast<Acpi_table_mcfg *>(Hpt::remap (mcfg))->parse();
+        static_cast<Acpi_table_mcfg *>(Hptp::map (MMAP_GLB_MAP0, mcfg))->parse();
     if (dmar)
-        static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
+        static_cast<Acpi_table_dmar *>(Hptp::map (MMAP_GLB_MAP0, dmar))->parse();
 
     write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
 

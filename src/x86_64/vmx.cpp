@@ -24,11 +24,11 @@
 #include "bits.hpp"
 #include "cmdline.hpp"
 #include "cr.hpp"
-#include "ept.hpp"
 #include "gdt.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
 #include "msr.hpp"
+#include "ptab_ept.hpp"
 #include "stdio.hpp"
 #include "tss.hpp"
 #include "util.hpp"
@@ -61,7 +61,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
     write (VPID, ++vpid_ctr);
 
-    write (EPTP, eptp | (Ept::max() - 1) << 3 | 6);
+    write (EPTP, eptp | (Ept::lev() - 1) << 3 | 6);
 
     write (IO_BITMAP_A, bmp);
     write (IO_BITMAP_B, bmp + PAGE_SIZE (0));
@@ -123,7 +123,7 @@ void Vmcs::init()
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read (Msr::Reg64::IA32_VMX_EPT_VPID);
     if (has_ept())
-        Ept::ord = min (Ept::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(ept_vpid.super)) + 2) * Ept::bpl() - 1);
+        Eptp::set_mll (static_cast<unsigned>(bit_scan_reverse (ept_vpid.super) + 1));
     if (has_urg())
         fix_cr0_set &= ~(CR0_PG | CR0_PE);
 
