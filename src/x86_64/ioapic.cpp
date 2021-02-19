@@ -35,7 +35,7 @@ Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List (list), reg_base (mmap |
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
 #endif
 
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK);
+    Hptp::master.update (reg_base, p & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     trace (TRACE_INTR, "APIC: %#010lx ID:%#x VER:%#x GSI:%u-%u", p, i, ver(), gsi_base, gsi_base + mre());
 }
