@@ -35,7 +35,11 @@ Smmu_itl::Smmu_itl (uint64_t p, pci_t t, Devtable *d, Entry_irt *i) : Smmu { p, 
                     cap { read (Reg64::CAP) }, ecap { read (Reg64::ECAP) },
                     dtbl { d }, irt { i }, invq { ord_inv }
 {
-    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_msb (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
+    // Set DPT maximum leaf level
+    Dptp_itl::set_mll (mll());
+
+    // Treat DPT as noncoherent if at least one SMMU requires it
+    Dpt_itl::noncoherent |= !feature (Ecap::PWC);
 
     // If the SMMU does not support interrupt remapping, then disable it
     ir &= feature (Ecap::IR);
@@ -101,7 +105,7 @@ Status Smmu_itl::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
 
     // Determine PTAB level, PTAB root, domain ID
     auto const ptl { lev() };
-    auto const ptr { Kmem::phys_to_ptr (p->dpt.root (ptl - 1)) };
+    auto const ptr { p->dpt_itl.root_init (ptl - 1) };
     auto const dom { p->get_sdid() };
 
     // Unable to lookup/allocate PTAB root

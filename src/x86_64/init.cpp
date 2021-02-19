@@ -23,7 +23,6 @@
 #include "cmdline.hpp"
 #include "compiler.hpp"
 #include "extern.hpp"
-#include "hpt.hpp"
 #include "ioapic.hpp"
 #include "interrupt.hpp"
 #include "patch.hpp"
@@ -32,27 +31,21 @@
 
 extern "C" uintptr_t kern_ptab_setup (apic_t)
 {
-    Hptp hpt;
+    Hptp hptp;
+
+    // Share global kernel memory
+    hptp.share_from_master (BASE_ADDR, MMAP_CPU);
 
     // Allocate and map cpu page
-    hpt.update (MMAP_CPU_DATA, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    hptp.update (MMAP_CPU_DATA, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
-    // Allocate and map data stack
-    hpt.update (MMAP_CPU_DSTB, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    // Allocate and map kernel data stack
+    hptp.update (MMAP_CPU_DSTB, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
-    // Allocate and map intr stack
-    hpt.update (MMAP_CPU_ISTB, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    // Allocate and map kernel intr stack
+    hptp.update (MMAP_CPU_ISTB, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
-    // Sync kernel code and data
-    hpt.sync_master_range (BASE_ADDR, MMAP_CPU);
-
-    return hpt.addr();
+    return hptp.root_addr();
 }
 
 extern "C" void preinit()

@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "cache.hpp"
 #include "intid.hpp"
+#include "ptab_dpt_itl.hpp"
 #include "smmu.hpp"
 
 class Smmu_itl final : public Smmu
@@ -235,7 +235,7 @@ class Smmu_itl final : public Smmu
                             return false;
 
                         // Make RTE update visible to non-coherent observers
-                        if (true) [[likely]]
+                        if (Dpt_itl::noncoherent) [[unlikely]]
                             Cache::data_clean (this);
 
                         return true;
@@ -261,7 +261,7 @@ class Smmu_itl final : public Smmu
                         Atomic128::exchange (val, o.val, n.val);
 
                         // Make CTE update visible to non-coherent observers
-                        if (true) [[likely]]
+                        if (Dpt_itl::noncoherent) [[unlikely]]
                             Cache::data_clean (this);
 
                         return o;
@@ -269,7 +269,7 @@ class Smmu_itl final : public Smmu
 
                     explicit constexpr Cte() = default;
 
-                    explicit Cte (void *ptr, unsigned ptl, uint16_t dom) : Entry { uint128_t { dom } << 72 | uint128_t { ptl - 2 } << 64 | Kmem::ptr_to_phys (ptr) | BIT (0) } {}
+                    explicit Cte (Atomic<Dpt_itl::Entry> *ptr, unsigned ptl, uint16_t dom) : Entry { uint128_t { dom } << 72 | uint128_t { ptl - 2 } << 64 | Kmem::ptr_to_phys (ptr) | BIT (0) } {}
                 };
 
                 static_assert (__is_standard_layout (Cte) && alignof (Cte) == alignof (Entry) && sizeof (Cte) == sizeof (Entry));
@@ -310,7 +310,7 @@ class Smmu_itl final : public Smmu
                 explicit Devtable()
                 {
                     // Make new Devtable visible to non-coherent observers
-                    if (true) [[likely]]
+                    if (Dpt_itl::noncoherent) [[unlikely]]
                         Cache::data_clean (this, sizeof (*this));
                 }
 
@@ -356,8 +356,8 @@ class Smmu_itl final : public Smmu
                     if (!__sync_bool_compare_and_swap (&val, val, static_cast<uint128_t>(hi) << 64 | lo)) [[unlikely]]
                         return false;
 
-                    // FIXME: Not needed when all SMMUs are coherent
-                    Cache::data_clean (this);
+                    if (Dpt_itl::noncoherent) [[unlikely]]
+                        Cache::data_clean (this);
 
                     return true;
                 }
@@ -366,8 +366,7 @@ class Smmu_itl final : public Smmu
                 {
                     auto const ptr { Buddy::alloc (order_p, Buddy::Fill::BITS0) };
 
-                    // FIXME: Not needed when all SMMUs are coherent
-                    if (ptr) [[likely]]
+                    if (Dpt_itl::noncoherent && ptr) [[unlikely]]
                         Cache::data_clean (ptr, PAGE_SIZE (0) << order_p);
 
                     return ptr;
