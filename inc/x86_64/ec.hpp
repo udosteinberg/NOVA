@@ -25,6 +25,7 @@
 #include "counter.hpp"
 #include "fpu.hpp"
 #include "kmem.hpp"
+#include "lock_guard.hpp"
 #include "mtd.hpp"
 #include "pd.hpp"
 #include "queue.hpp"
@@ -35,7 +36,7 @@
 
 class Utcb;
 
-class Ec : public Kobject, public Refcount, public Queue<Sc>
+class Ec : public Kobject, public Queue<Sc>
 {
     friend class Queue<Ec>;
 
@@ -44,7 +45,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         Cpu_regs    regs;
         Ec *        rcap;
         Utcb *      utcb;
-        Refptr<Pd>  pd;
+        Pd * const  pd;
         Ec *        partner;
         Ec *        prev;
         Ec *        next;
@@ -59,6 +60,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         unsigned const evt;
         Atomic<unsigned> hazard;
         Timeout_hypercall timeout;
+        Spinlock    lock;
 
         static Slab_cache cache;
 
@@ -301,10 +303,6 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         NORETURN
         static void root_invoke();
-
-        template <bool>
-        NORETURN
-        static void delegate();
 
         NORETURN
         static void dead() { die ("IPC Abort"); }
