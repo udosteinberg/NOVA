@@ -52,8 +52,6 @@ class Space_obj : public Space
 
         Paddr walk (mword = 0);
 
-        void update (Mdb *, mword = 0);
-
         static void page_fault (mword, mword);
 
         static bool insert_root (Kobject *);

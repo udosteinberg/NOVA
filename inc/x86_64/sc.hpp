@@ -31,7 +31,7 @@ class Sc : public Kobject
     friend class Queue<Sc>;
 
     public:
-        Refptr<Ec> const ec;
+        Ec * const ec;
         unsigned const cpu;
         unsigned const prio;
         uint64 const budget;

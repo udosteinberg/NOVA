@@ -40,12 +40,12 @@ Sc *Sc::list[Sc::priorities];
 
 unsigned Sc::prio_top;
 
-Sc::Sc (Pd *own, mword sel, Ec *e) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Timer::ms_to_ticks (1000)), left (0), prev (nullptr), next (nullptr)
+Sc::Sc (Pd *, mword sel, Ec *e) : Kobject (Kobject::Type::SC), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Timer::ms_to_ticks (1000)), left (0), prev (nullptr), next (nullptr)
 {
-    trace (TRACE_SYSCALL, "SC:%p created (PD:%p Kernel)", this, own);
+    trace (TRACE_SYSCALL, "SC:%p created (Kernel)", this);
 }
 
-Sc::Sc (Pd *own, mword sel, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (SC, static_cast<Space_obj *>(own), sel, 0x1), ec (e), cpu (c), prio (p), budget (Timer::ms_to_ticks (q)), left (0), prev (nullptr), next (nullptr)
+Sc::Sc (Pd *, mword, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (Kobject::Type::SC), ec (e), cpu (c), prio (p), budget (Timer::ms_to_ticks (q)), left (0), prev (nullptr), next (nullptr)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }
