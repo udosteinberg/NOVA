@@ -35,7 +35,7 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own))
 
     Mtrr::init();
 
-    Space_mem::insert_root (0, reinterpret_cast<mword>(&LINK_P));
+    Space_mem::insert_root (0, LOAD_ADDR);
     Space_mem::insert_root (reinterpret_cast<mword>(&LINK_E), 1ULL << 52);
 
     // HIP
