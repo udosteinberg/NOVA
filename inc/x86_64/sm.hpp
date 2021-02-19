@@ -26,7 +26,8 @@
 class Sm : public Kobject, public Queue<Ec>
 {
     private:
-        mword counter;
+        mword           counter;
+        Spinlock        lock;
 
         static Slab_cache cache;
 
