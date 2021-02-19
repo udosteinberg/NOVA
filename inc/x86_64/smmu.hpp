@@ -178,7 +178,7 @@ class Smmu : public List<Smmu>, protected Mmio
 
                         explicit constexpr Entry (uint64_t l, uint64_t h) : lo { l }, hi { h } {}
 
-                        [[nodiscard]] ALWAYS_INLINE static void *operator new[] (size_t s) noexcept { return Buddy::allocator.alloc (static_cast<unsigned short>(max (PAGE_BITS, bit_scan_msb (s)) - PAGE_BITS)); }
+                        [[nodiscard]] ALWAYS_INLINE static void *operator new[] (size_t s) noexcept { return Buddy::alloc (Buddy::size_to_ord (s)); }
                 };
 
                 static_assert (__is_standard_layout (Entry) && alignof (Entry) == 16 && sizeof (Entry) == 16);
