@@ -29,7 +29,7 @@
 
 INIT_PRIORITY (PRIO_SLAB) Slab_cache Smmu::cache { sizeof (Smmu), alignof (Smmu) };
 
-Smmu::Smmu (uint64_t p) : List { list }, Mmio { p, PAGE_SIZE (0) }, inv { static_cast<Inv *>(Buddy::allocator.alloc (ord, Buddy::Fill::FILL_0)) }
+Smmu::Smmu (uint64_t p) : List { list }, Mmio { p, PAGE_SIZE (0) }, inv { static_cast<Inv *>(Buddy::alloc (ord, Buddy::Fill::BITS0)) }
 {
     cap  = read (Reg64::CAP);
     ecap = read (Reg64::ECAP);

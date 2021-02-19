@@ -227,7 +227,7 @@ class Smmu final : public List<Smmu>, private Mmio
 
                 [[nodiscard]] static void *operator new (size_t) noexcept
                 {
-                    auto const ptr { Buddy::allocator.alloc (0, Buddy::Fill::FILL_0) };
+                    auto const ptr { Buddy::alloc (0, Buddy::Fill::BITS0) };
 
                     // FIXME: We want to use Cache::data_clean (ptr, size) here, but per-CPU line size is not available yet
                     if (ptr) [[likely]]
@@ -277,7 +277,7 @@ class Smmu final : public List<Smmu>, private Mmio
 
                 [[nodiscard]] static void *operator new (size_t) noexcept
                 {
-                    auto const ptr { Buddy::allocator.alloc (order_p, Buddy::Fill::FILL_0) };
+                    auto const ptr { Buddy::alloc (order_p, Buddy::Fill::BITS0) };
 
                     // FIXME: We want to use Cache::data_clean (ptr, size) here, but per-CPU line size is not available yet
                     if (ptr) [[likely]]
