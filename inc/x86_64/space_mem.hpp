@@ -26,9 +26,8 @@
 #include "dpt.hpp"
 #include "ept.hpp"
 #include "hpt.hpp"
-#include "space.hpp"
 
-class Space_mem : public Space
+class Space_mem
 {
     public:
         Hpt loc[NUM_CPU];
@@ -69,11 +68,9 @@ class Space_mem : public Space
             return hpt.replace (v, p);
         }
 
-        void insert_root (uint64, uint64, mword = 0x7);
+        void insert_root (uint64_t, uint64_t, uintptr_t = 0x7);
 
         bool insert_utcb (mword);
-
-        void update (Mdb *, mword = 0);
 
         static void shootdown();
 
