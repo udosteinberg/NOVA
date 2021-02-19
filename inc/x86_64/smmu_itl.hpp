@@ -32,7 +32,7 @@ class Smmu_itl final : public Smmu
 
     private:
         // Configurable Sizes
-        static constexpr unsigned short ord_inv { 0 };  // 4K
+        static constexpr Buddy::order_t ord_inv { 0 };  // 4K
 
         // Hardware Constraints
         static_assert (ord_inv <= 7, "INV queue must be <= 512K");
@@ -315,10 +315,10 @@ class Smmu_itl final : public Smmu
                 }
 
                 // Allocator
-                [[nodiscard]] static void *operator new (size_t) noexcept { return Buddy::allocator.alloc (0); }
+                [[nodiscard]] static void *operator new (size_t) noexcept { return Buddy::alloc (0); }
 
                 // Deallocator
-                static void operator delete (void *ptr) { Buddy::allocator.free (reinterpret_cast<uintptr_t>(ptr)); }
+                static void operator delete (void *ptr) { Buddy::free (ptr); }
 
             private:
                 // Device Table Entries
@@ -364,7 +364,7 @@ class Smmu_itl final : public Smmu
 
                 [[nodiscard]] static void *operator new (size_t) noexcept
                 {
-                    auto const ptr { Buddy::allocator.alloc (order_p, Buddy::Fill::FILL_0) };
+                    auto const ptr { Buddy::alloc (order_p, Buddy::Fill::BITS0) };
 
                     // FIXME: Not needed when all SMMUs are coherent
                     if (ptr) [[likely]]

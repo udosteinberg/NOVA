@@ -234,7 +234,7 @@ class Smmu : public List<Smmu>, protected Mmio
                 // Replace entry at hardware offset
                 void replace (unsigned offs, Entry &e) const { std::swap (ptr[hwi (offs)], e); }
 
-                explicit Queue (unsigned short o) : ptr { static_cast<Entry *>(Buddy::allocator.alloc (o)) }, ord { static_cast<unsigned>(bit_scan_msb ((PAGE_SIZE (0) << o) / sizeof (Entry))) }, swi { 0 } {}
+                explicit Queue (Buddy::order_t o) : ptr { static_cast<Entry *>(Buddy::alloc (o)) }, ord { static_cast<unsigned>(bit_scan_msb ((PAGE_SIZE (0) << o) / sizeof (Entry))) }, swi { 0 } {}
         };
 
         explicit Smmu (uint64_t p, size_t l, pci_t s) : Mmio { p, l, Memattr::dev() }, sbdf { s } {}
