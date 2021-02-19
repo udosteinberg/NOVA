@@ -28,6 +28,7 @@
 #include "hip.hpp"
 #include "idt.hpp"
 #include "lapic.hpp"
+#include "lowlevel.hpp"
 #include "mca.hpp"
 #include "msr.hpp"
 #include "pd.hpp"
@@ -194,11 +195,11 @@ void Cpu::init()
 
     Lapic::init();
 
-    Paddr phys; mword attr;
-    Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
-    Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys, attr);
-    Pd::kern.Space_mem::insert (CPU_GLOBL_DATA + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
-    Hpt::ord = min (Hpt::ord, feature (FEAT_1GB_PAGES) ? 26UL : 17UL);
+    uint64 phys; unsigned o; Memattr::Cacheability ca; Memattr::Shareability sh;
+    Pd::kern.Space_mem::loc[id] = Hptp::current();
+    Pd::kern.Space_mem::loc[id].lookup (CPU_LOCAL_DATA, phys, o, ca, sh);
+    Pd::kern.Space_mem::update (CPU_GLOBL_DATA + id * PAGE_SIZE, phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ca, sh);
+    Hpt::set_lps (feature (FEAT_1GB_PAGES) ? 3 : 2);
 
     if (EXPECT_TRUE (feature (FEAT_ACPI)))
         setup_thermal();

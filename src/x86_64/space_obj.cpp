@@ -28,13 +28,13 @@ Space_mem *Space_obj::space_mem()
 
 Paddr Space_obj::walk (mword idx)
 {
-    mword virt = idx_to_virt (idx); Paddr phys; void *ptr;
+    mword virt = idx_to_virt (idx); uint64 phys; unsigned o; void *ptr;
 
-    if (!space_mem()->lookup (virt, phys) || (phys & ~PAGE_MASK) == Kmem::ptr_to_phys (&PAGE_0)) {
+    if (!space_mem()->lookup (virt, phys, o) || (phys & ~PAGE_MASK) == Kmem::ptr_to_phys (&PAGE_0)) {
 
         Paddr p = Kmem::ptr_to_phys (ptr = Buddy::alloc (0, Buddy::Fill::BITS0));
 
-        if ((phys = space_mem()->replace (virt, p | Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P)) != p)
+        if ((phys = space_mem()->replace (virt, p, true)) != p)
             Buddy::free (ptr);
 
         phys |= virt & PAGE_MASK;
@@ -50,8 +50,8 @@ void Space_obj::update (mword idx, Capability cap)
 
 size_t Space_obj::lookup (mword idx, Capability &cap)
 {
-    Paddr phys;
-    if (!space_mem()->lookup (idx_to_virt (idx), phys) || (phys & ~PAGE_MASK) == Kmem::ptr_to_phys (&PAGE_0))
+    uint64 phys; unsigned o;
+    if (!space_mem()->lookup (idx_to_virt (idx), phys, o) || (phys & ~PAGE_MASK) == Kmem::ptr_to_phys (&PAGE_0))
         return 0;
 
     cap = *static_cast<Capability *>(Kmem::phys_to_ptr (phys));
@@ -66,8 +66,8 @@ bool Space_obj::insert_root (Kobject *)
 
 void Space_obj::page_fault (mword addr, mword error)
 {
-    assert (!(error & Hpt::ERR_W));
+    assert (!(error & Paging::ERR_W));
 
     if (!Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, CPU_LOCAL))
-        Pd::current->Space_mem::replace (addr, Kmem::ptr_to_phys (&PAGE_0) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
+        Pd::current->Space_mem::replace (addr, Kmem::ptr_to_phys (&PAGE_0), false);
 }

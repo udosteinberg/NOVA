@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,85 +22,69 @@
 #pragma once
 
 #include "buddy.hpp"
+#include "cache.hpp"
 #include "kmem.hpp"
-#include "lowlevel.hpp"
+#include "memattr.hpp"
+#include "paging.hpp"
+#include "util.hpp"
 
-template <typename P, typename E, unsigned L, unsigned B, bool F>
+template <typename PTT, unsigned L, unsigned B, typename I, typename O>
 class Pte
 {
-    protected:
-        E val;
-
-        P *walk (E, unsigned long, bool = true);
-
-        ALWAYS_INLINE
-        inline bool present() const { return val & P::PTE_P; }
-
-        ALWAYS_INLINE
-        inline bool super() const { return val & P::PTE_S; }
-
-        ALWAYS_INLINE
-        inline mword attr() const { return static_cast<mword>(val) & PAGE_MASK; }
-
-        ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & ~((1UL << order()) - 1); }
-
-        ALWAYS_INLINE
-        inline mword order() const { return PAGE_BITS; }
-
-        ALWAYS_INLINE
-        static inline mword order (mword) { return 0; }
-
-        ALWAYS_INLINE
-        inline bool set (E o, E v)
-        {
-            bool b = __atomic_compare_exchange_n (&val, &o, v, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-
-            if (F && b)
-                flush (this);
-
-            return b;
-        }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
-        {
-            void *p = Buddy::alloc (0, Buddy::Fill::BITS0);
-
-            if (F)
-                flush (p, PAGE_SIZE);
-
-            return p;
-        }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { Buddy::free (ptr); }
-
     public:
-        enum
+        typedef I IAddr;
+        typedef O OAddr;
+
+        static constexpr unsigned lev = L;
+        static constexpr unsigned bpl = B;
+
+        // 1GB (3), 2MB (2), 4KB (1)
+        static void set_lps (unsigned l) { lim = min (lim, l * bpl - 1); }
+
+        static OAddr page_size (unsigned o) { return 1UL << (o + PAGE_BITS); }
+        static OAddr page_mask (unsigned o) { return page_size (o) - 1; }
+
+        OAddr init_root (bool nc, unsigned l = L - 1)
         {
-            ERR_P   = 1UL << 0,
-            ERR_W   = 1UL << 1,
-            ERR_U   = 1UL << 2,
-        };
+            return Kmem::ptr_to_phys (walk (0, l, true, nc));
+        }
 
-        enum Type
+        Paging::Permissions lookup (IAddr, OAddr &, unsigned &, Memattr::Cacheability &, Memattr::Shareability &) const;
+
+        void update (IAddr, OAddr, unsigned, Paging::Permissions, Memattr::Cacheability, Memattr::Shareability, bool = false);
+
+    protected:
+        OAddr val;
+
+        OAddr addr (unsigned l = 0) const { return val & PTT::ADDR_MASK & ~page_mask (l * B); }
+
+        Pte() = default;
+
+        Pte (OAddr p, OAddr s, bool nc)
         {
-            TYPE_UP,
-            TYPE_DN,
-            TYPE_DF,
-        };
+            for (unsigned i = 0; i < 1UL << B; i++, p += s)
+                this[i].val = p;
 
-        ALWAYS_INLINE
-        static inline unsigned bpl() { return B; }
+            if (nc)
+                Cache::dcache_clean (this, PAGE_SIZE);
+        }
 
-        ALWAYS_INLINE
-        static inline unsigned max() { return L; }
+        PTT *walk (IAddr, unsigned, bool, bool = false);
 
-        ALWAYS_INLINE
-        inline E root (mword l = L - 1) { return Kmem::ptr_to_phys (walk (0, l)); }
+    private:
+        static unsigned lim;
 
-        size_t lookup (E, Paddr &, mword &);
+        void deallocate (unsigned);
 
-        void update (E, mword, E, mword, Type = TYPE_UP);
+        NODISCARD
+        static inline void *operator new (size_t) noexcept
+        {
+            return Buddy::alloc (0, Buddy::Fill::BITS0);
+        }
+
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                Buddy::free (ptr);
+        }
 };

@@ -59,7 +59,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
         utcb = new Utcb;
 
-        pd->Space_mem::insert (u, 0, Hpt::HPT_U | Hpt::HPT_W | Hpt::HPT_P, Kmem::ptr_to_phys (utcb));
+        pd->Space_mem::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 
         regs.dst_portal = NUM_EXC - 2;
 
@@ -73,8 +73,8 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
                                   pd->Space_pio::walk(),
-                                  pd->loc[c].root(),
-                                  pd->ept.root());
+                                  pd->loc[c].init_root (false),
+                                  pd->ept.init_root (false));
 
             regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
@@ -83,7 +83,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.root()));
+            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.init_root (false)));
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
@@ -235,7 +235,7 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    auto e = static_cast<Eh *>(Hpt::remap (Hip::root_addr));
+    auto e = static_cast<Eh *>(Hpt::map (Hip::root_addr));
     if (!Hip::root_addr || !e->valid (Eh::ELF_CLASS, Eh::ELF_MACHINE))
         die ("No ELF");
 
@@ -244,7 +244,7 @@ void Ec::root_invoke()
     current->regs.set_ip (e->entry);
 #if 0   // FIXME
     auto c = ACCESS_ONCE (e->ph_count);
-    auto p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + ACCESS_ONCE (e->ph_offset)));
+    auto p = static_cast<ELF_PHDR *>(Hpt::map (Hip::root_addr + ACCESS_ONCE (e->ph_offset)));
 
     for (unsigned i = 0; i < c; i++, p++) {
 

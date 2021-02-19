@@ -19,19 +19,20 @@
  */
 
 #include "assert.hpp"
+#include "atomic.hpp"
 #include "bits.hpp"
 #include "extern.hpp"
 #include "hpt.hpp"
 
 bool Hpt::sync_from (Hpt src, mword v, mword o)
 {
-    mword l = (bit_scan_reverse (v ^ o) - PAGE_BITS) / bpl();
+    unsigned l = (bit_scan_reverse (v ^ o) - PAGE_BITS) / bpl;
 
     Hpt *s = static_cast<Hpt *>(src.walk (v, l, false));
     if (!s)
         return false;
 
-    Hpt *d = static_cast<Hpt *>(walk (v, l));
+    Hpt *d = static_cast<Hpt *>(walk (v, l, true));
     assert (d);
 
     if (d->val == s->val)
@@ -44,37 +45,38 @@ bool Hpt::sync_from (Hpt src, mword v, mword o)
 
 void Hpt::sync_master_range (mword s, mword e)
 {
-    for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
+    for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl; s < e; s += 1UL << (l * bpl + PAGE_BITS))
         sync_from (Hptp (Kmem::ptr_to_phys (&PTAB_HVAS)), s, CPU_LOCAL);
 }
 
-Paddr Hpt::replace (mword v, mword p)
+Paddr Hpt::replace (mword v, mword p, bool w)
 {
-    Hpt o, *e = walk (v, 0); assert (e);
+    if (w)
+        p |= ATTR_nX | ATTR_D | ATTR_A | ATTR_W | ATTR_P;
+    else
+        p |= ATTR_nX | ATTR_A | ATTR_P;
 
-    do o = *e; while (o.val != p && !(o.attr() & HPT_W) && !e->set (o.val, p));
+    Hpt o, *e = walk (v, 0, true); assert (e);
+
+    do o = *e; while (o.val != p && !(o.val & ATTR_W) && !__atomic_compare_exchange_n (&e->val, &o.val, p, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 
     return e->addr();
 }
 
-void *Hpt::remap (Paddr phys)
+void *Hpt::map (OAddr p, bool w)
 {
-    Hptp hpt (current());
+    Hptp hpt = Hptp::current();
 
-    size_t size = 1UL << (bpl() + PAGE_BITS);
+    OAddr s = page_size (bpl);
+    OAddr o = page_mask (bpl) & p;
 
-    mword offset = phys & (size - 1);
+    p &= ~o;
 
-    phys &= ~offset;
+    hpt.update (SPC_LOCAL_REMAP,     p,     bpl, Paging::Permissions ((w ? Paging::W : 0) | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+    hpt.update (SPC_LOCAL_REMAP + s, p + s, bpl, Paging::Permissions ((w ? Paging::W : 0) | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
 
-    Paddr old; mword attr;
-    if (hpt.lookup (SPC_LOCAL_REMAP, old, attr)) {
-        hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP);
-        hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP + size);
-    }
+    hpt.flush (SPC_LOCAL_REMAP);
+    hpt.flush (SPC_LOCAL_REMAP + s);
 
-    hpt.update (SPC_LOCAL_REMAP,        bpl(), phys,        HPT_W | HPT_P);
-    hpt.update (SPC_LOCAL_REMAP + size, bpl(), phys + size, HPT_W | HPT_P);
-
-    return reinterpret_cast<void *>(SPC_LOCAL_REMAP + offset);
+    return reinterpret_cast<void *>(SPC_LOCAL_REMAP | o);
 }

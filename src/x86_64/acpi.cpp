@@ -56,20 +56,20 @@ void Acpi::setup()
     Acpi_rsdp::parse();
 
     if (xsdt)
-        static_cast<Acpi_table_rsdt *>(Hpt::remap (xsdt))->parse (xsdt, sizeof (uint64));
+        static_cast<Acpi_table_rsdt *>(Hpt::map (xsdt))->parse (xsdt, sizeof (uint64));
     else if (rsdt)
-        static_cast<Acpi_table_rsdt *>(Hpt::remap (rsdt))->parse (rsdt, sizeof (uint32));
+        static_cast<Acpi_table_rsdt *>(Hpt::map (rsdt))->parse (rsdt, sizeof (uint32));
 
     if (fadt)
-        static_cast<Acpi_table_fadt *>(Hpt::remap (fadt))->parse();
+        static_cast<Acpi_table_fadt *>(Hpt::map (fadt))->parse();
     if (hpet)
-        static_cast<Acpi_table_hpet *>(Hpt::remap (hpet))->parse();
+        static_cast<Acpi_table_hpet *>(Hpt::map (hpet))->parse();
     if (madt)
-        static_cast<Acpi_table_madt *>(Hpt::remap (madt))->parse();
+        static_cast<Acpi_table_madt *>(Hpt::map (madt))->parse();
     if (mcfg)
-        static_cast<Acpi_table_mcfg *>(Hpt::remap (mcfg))->parse();
+        static_cast<Acpi_table_mcfg *>(Hpt::map (mcfg))->parse();
     if (dmar)
-        static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
+        static_cast<Acpi_table_dmar *>(Hpt::map (dmar))->parse();
 
     write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
 
