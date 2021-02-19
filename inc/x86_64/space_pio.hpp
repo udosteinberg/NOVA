@@ -20,11 +20,9 @@
 
 #pragma once
 
-#include "space.hpp"
-
 class Space_mem;
 
-class Space_pio : public Space
+class Space_pio
 {
     private:
         Paddr hbmp, gbmp;
@@ -48,8 +46,6 @@ class Space_pio : public Space
 
     public:
         Paddr walk (bool = false, mword = 0);
-
-        void update (Mdb *, mword = 0);
 
         static void page_fault (mword, mword);
 };
