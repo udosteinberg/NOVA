@@ -22,6 +22,7 @@
 
 #include "atomic.hpp"
 #include "crd.hpp"
+#include "kmem.hpp"
 #include "space_mem.hpp"
 #include "space_obj.hpp"
 #include "space_pio.hpp"
@@ -69,7 +70,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         ALWAYS_INLINE
         static inline Pd *remote (unsigned c)
         {
-            return reinterpret_cast<Pd *>(reinterpret_cast<uintptr_t>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return *Kmem::loc_to_glob (c, &current);
         }
 
         ALWAYS_INLINE
