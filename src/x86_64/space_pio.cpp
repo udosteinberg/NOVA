@@ -34,7 +34,7 @@ Paddr Space_pio::walk (bool host, mword idx)
         bmp = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
 
         if (host)
-            space_mem()->insert (MMAP_SPC_PIO, 1, Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P, bmp);
+            space_mem()->update (MMAP_SPC_PIO, bmp, 1, Paging::Permissions (Paging::R | Paging::W), Memattr::ram());
     }
 
     return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE (0) - 1));
@@ -52,8 +52,8 @@ void Space_pio::update (bool host, mword idx, mword attr)
 
 void Space_pio::page_fault (mword addr, mword error)
 {
-    assert (!(error & Hpt::ERR_W));
+    assert (!(error & BIT (1)));
 
-    if (!Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
-        Pd::current->Space_mem::replace (addr, Kmem::ptr_to_phys (&PAGE_1) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
+    if (!Pd::current->Space_mem::loc[Cpu::id].share_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
+        Pd::current->Space_mem::update (addr, Kmem::ptr_to_phys (&PAGE_1), 0, Paging::R, Memattr::ram());
 }

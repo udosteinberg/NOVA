@@ -1,5 +1,5 @@
 /*
- * Protection Domain
+ * Page Table Entry (x86)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,30 +19,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "multiboot.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
+#pragma once
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 32);
+#include "ptab.hpp"
 
-Atomic<Pd *>    Pd::current { nullptr };
-ALIGNED(32) Pd  Pd::kern (&Pd::kern);
-ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
-
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD)
+template<typename T, typename I, typename O> class Pte : public Ptab<T, I, O>::Entry
 {
-    hpt = Hptp::master;
+    using E = typename Ptab<T, I, O>::Entry;
 
-    Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (Multiboot::ea, USER_ADDR);
+    public:
+        // Default TLB invalidation policy for x86 CPU (derived classes use overrides for deviations)
+        static constexpr bool inv_upgrade    { false };     // TLB self-heals for permission upgrades
+        static constexpr bool inv_splinter   { false };     // TLB produces multiple translation-identical entries
+        static constexpr bool inv_notpresent { false };     // TLB never caches not-present entries
 
-    // HIP
-    Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE (0), 1);
-
-#if 0   // FIXME
-    // I/O Ports
-    Space_pio::addreg (0, 1UL << 16, 7);
-#endif
-}
+        auto type (unsigned l) const { return E::val ? l && !(E::val & T::ATTR_S) ? E::Type::PTAB : E::Type::LEAF : E::Type::HOLE; }
+};
