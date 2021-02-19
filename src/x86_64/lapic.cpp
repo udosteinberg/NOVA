@@ -88,7 +88,7 @@ void Lapic::init()
         freq_tsc = (t2 - t1) / 10;
         freq_bus = (v1 - v2) / 10;
 
-        trace (TRACE_APIC, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
+        trace (TRACE_INTR, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
 
         send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
         Acpi::delay (1);
@@ -97,7 +97,7 @@ void Lapic::init()
 
     write (LAPIC_TMR_ICR, 0);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~PAGE_MASK, id(), version(), lvt_max(), freq_bus ? "OS" : "DL");
+    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~PAGE_MASK, id(), version(), lvt_max(), freq_bus ? "OS" : "DL");
 }
 
 void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
