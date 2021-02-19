@@ -21,22 +21,16 @@
 #pragma once
 
 #include "atomic.hpp"
-#include "crd.hpp"
 #include "kmem.hpp"
+#include "slab.hpp"
 #include "space_mem.hpp"
 #include "space_obj.hpp"
 #include "space_pio.hpp"
 
-class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, public Space_obj
+class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 {
     private:
         static Slab_cache cache;
-
-        [[nodiscard]]
-        mword clamp (mword,   mword &, mword, mword);
-
-        [[nodiscard]]
-        mword clamp (mword &, mword &, mword, mword, mword);
 
     public:
         static Atomic<Pd *> current CPULOCAL;
@@ -44,7 +38,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
 
         Pd (Pd *);
 
-        Pd (Pd *own, mword sel, mword a) : Kobject (PD, static_cast<Space_obj *>(own), sel, a) {}
+        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -72,30 +66,6 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         {
             return *Kmem::loc_to_glob (&current, c);
         }
-
-        ALWAYS_INLINE
-        inline Space *subspace (Crd::Type t)
-        {
-            switch (t) {
-                case Crd::MEM:  return static_cast<Space_mem *>(this);
-                case Crd::PIO:  return static_cast<Space_pio *>(this);
-                case Crd::OBJ:  return static_cast<Space_obj *>(this);
-            }
-
-            return nullptr;
-        }
-
-        template <typename>
-        void delegate (Pd *, mword, mword, mword, mword, mword = 0);
-
-        template <typename>
-        void revoke (mword, mword, mword, bool);
-
-        void xfer_items (Pd *, Crd, Crd, Xfer *, Xfer *, unsigned long);
-
-        void xlt_crd (Pd *, Crd, Crd &);
-        void del_crd (Pd *, Crd, Crd &, mword = 0, mword = 0);
-        void rev_crd (Crd, bool);
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

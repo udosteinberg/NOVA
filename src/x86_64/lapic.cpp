@@ -36,7 +36,10 @@ void Lapic::init()
 {
     Paddr apic_base = Msr::read<Paddr>(Msr::IA32_APIC_BASE);
 
+#if 0   // FIXME
     Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK (0));
+#endif
+
     Hptp (Hpt::current()).update (MMAP_CPU_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~OFFS_MASK (0));
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
