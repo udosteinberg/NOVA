@@ -33,7 +33,7 @@ Ioapic::Ioapic (uint64_t p, uint8_t i, unsigned g) : List (list), reg_base (mmap
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK (0));
 #endif
 
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK (0));
+    Hptp::master_map (reg_base, p & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
 }
 
 void Ioapic::init()

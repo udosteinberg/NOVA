@@ -1,10 +1,11 @@
 /*
- * DMA Page Table (DPT)
+ * Page Table Entry (x86)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,21 +21,19 @@
 
 #pragma once
 
-#include "pte.hpp"
+#include "ptab.hpp"
 
-class Dpt : public Pte<Dpt, uint64, 4, 9, true>
+template <typename T, typename I, typename O>
+class Pte : public Ptab<T, I, O>::Entry
 {
+    using E = typename Ptab<T, I, O>::Entry;
+
+    protected:
+        Pte() = default;
+        Pte (E e) : E (e) {}
+
     public:
-        static mword ord;
+        auto type (unsigned l) const { return E::val ? l && !(E::val & T::ATTR_S) ? E::Type::PTAB : E::Type::LEAF : E::Type::HOLE; }
 
-        enum
-        {
-            DPT_R   = 1UL << 0,
-            DPT_W   = 1UL << 1,
-            DPT_S   = 1UL << 7,
-
-            PTE_P   = DPT_R | DPT_W,
-            PTE_S   = DPT_S,
-            PTE_N   = DPT_R | DPT_W,
-        };
+        static inline void publish() {}
 };
