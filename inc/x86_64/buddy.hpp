@@ -76,13 +76,13 @@ class Buddy
         ALWAYS_INLINE
         inline mword virt_to_phys (mword virt)
         {
-            return virt - reinterpret_cast<mword>(&OFFSET);
+            return virt - OFFSET;
         }
 
         ALWAYS_INLINE
         inline mword phys_to_virt (mword phys)
         {
-            return phys + reinterpret_cast<mword>(&OFFSET);
+            return phys + OFFSET;
         }
 
     public:
@@ -100,16 +100,4 @@ class Buddy
         void *alloc (unsigned short ord, Fill fill = NOFILL);
 
         void free (mword addr);
-
-        ALWAYS_INLINE
-        static inline void *phys_to_ptr (Paddr phys)
-        {
-            return reinterpret_cast<void *>(allocator.phys_to_virt (static_cast<mword>(phys)));
-        }
-
-        ALWAYS_INLINE
-        static inline mword ptr_to_phys (void *virt)
-        {
-            return allocator.virt_to_phys (reinterpret_cast<mword>(virt));
-        }
 };
