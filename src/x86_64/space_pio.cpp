@@ -18,6 +18,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "extern.hpp"
 #include "pd.hpp"
 
 Space_mem *Space_pio::space_mem()
@@ -30,7 +31,7 @@ Paddr Space_pio::walk (bool host, mword idx)
     Paddr &bmp = host ? hbmp : gbmp;
 
     if (!bmp) {
-        bmp = Kmem::ptr_to_phys (Buddy::allocator.alloc (1, Buddy::FILL_1));
+        bmp = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
 
         if (host)
             space_mem()->insert (MMAP_SPC_IOP, 1, Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P, bmp);
