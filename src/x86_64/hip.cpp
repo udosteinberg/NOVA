@@ -23,8 +23,8 @@
 #include "cmdline.hpp"
 #include "cpu.hpp"
 #include "hip.hpp"
-#include "hpt.hpp"
 #include "lapic.hpp"
+#include "ptab_hpt.hpp"
 #include "space_obj.hpp"
 
 mword Hip::root_addr;
