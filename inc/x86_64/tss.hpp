@@ -22,6 +22,7 @@
 
 #include "compiler.hpp"
 #include "selectors.hpp"
+#include "types.hpp"
 
 class Tss
 {

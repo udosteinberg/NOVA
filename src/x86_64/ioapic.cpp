@@ -33,7 +33,7 @@ Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
 #endif
 
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
+    Hptp::master.update (reg_base, p & ~PAGE_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     trace (TRACE_INTR, "APIC: %#010lx ID:%#x VER:%#x PRQ:%u GSI:%u-%u", p, i, version(), prq(), gsi_base, gsi_base + irt_max());
 }

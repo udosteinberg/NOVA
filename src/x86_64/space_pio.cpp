@@ -34,7 +34,7 @@ Paddr Space_pio::walk (bool host, mword idx)
         bmp = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
 
         if (host)
-            space_mem()->insert (SPC_LOCAL_IOP, 1, Hpt::HPT_NX | Hpt::HPT_D | Hpt::HPT_A | Hpt::HPT_W | Hpt::HPT_P, bmp);
+            space_mem()->update (SPC_LOCAL_IOP, bmp, 1, Paging::Permissions (Paging::R | Paging::W), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
     }
 
     return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
@@ -52,8 +52,8 @@ void Space_pio::update (bool host, mword idx, mword attr)
 
 void Space_pio::page_fault (mword addr, mword error)
 {
-    assert (!(error & Hpt::ERR_W));
+    assert (!(error & Paging::ERR_W));
 
     if (!Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, CPU_LOCAL))
-        Pd::current->Space_mem::replace (addr, Kmem::ptr_to_phys (&PAGE_1) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
+        Pd::current->Space_mem::update (addr, Kmem::ptr_to_phys (&PAGE_1), 0, Paging::R, Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 }
