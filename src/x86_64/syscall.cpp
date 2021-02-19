@@ -415,7 +415,7 @@ void Ec::sys_ec_ctrl()
 
         ec->regs.set_hazard (HZD_RECALL);
 
-        if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
+        if (Cpu::id != ec->cpu && Ec::remote_current (ec->cpu) == ec)
             Lapic::send_ipi (ec->cpu, VEC_IPI_RKE);
     }
 
