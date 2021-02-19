@@ -20,7 +20,6 @@
 
 #include "acpi.hpp"
 #include "acpi_rsdt.hpp"
-#include "hpt.hpp"
 
 struct Acpi_table_rsdt::table_map Acpi_table_rsdt::map[] =
 {
@@ -44,7 +43,7 @@ void Acpi_table_rsdt::parse (Paddr addr, size_t size) const
 
     for (unsigned i = 0; i < count; i++) {
 
-        Acpi_table *acpi = static_cast<Acpi_table *>(Hpt::remap (table[i]));
+        Acpi_table *acpi = static_cast<Acpi_table *>(Hptp::map (table[i]));
 
         if (acpi->good_checksum (table[i]))
             for (unsigned j = 0; j < sizeof map / sizeof *map; j++)

@@ -41,7 +41,7 @@ void Lapic::init (uint32 clk, uint32 rat)
     Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK);
 #endif
 
-    Hptp (Hpt::current()).update (MMAP_CPU_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~OFFS_MASK);
+    Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | BIT (11));
 
@@ -78,7 +78,7 @@ void Lapic::init (uint32 clk, uint32 rat)
 
     if ((Cpu::bsp = apic_base & BIT (8))) {
 
-        memcpy (Hpt::remap (0x1000), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__desc_gdt__ - &__init_aps);
+        memcpy (Hptp::map (0x1000, true), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__desc_gdt__ - &__init_aps);
 
         send_exc (0, Delivery::DLV_INIT);
 
