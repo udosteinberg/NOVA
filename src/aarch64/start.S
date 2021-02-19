@@ -73,6 +73,15 @@ __init_bsp:             // Store boot parameters
                         stp     x0, x1, [x4], #16
                         stp     x2, x3, [x4]
 
+                        // Determine load offset
+                        adr     x2, NOVA_HPAS
+                        mov     x3, LINK_ADDR
+                        sub     x22, x3, x2
+
+                        // Refuse invalid load address
+                        and     x2, x2, #BIT (PTE_BPL + PAGE_BITS) - 1
+                        cbnz    x2, .
+
                         // Clean to PoC
                         adrp    x0, NOVA_HPAS
                         adrp    x1, NOVA_HPAE
@@ -230,6 +239,10 @@ __boot_ts:              .quad   0   // combined
 .text
 
 high:
+                        // Initialize kmem offset
+                        adr     x0, __kmem_offset
+                        str     x22, [x0]
+
                         // General initialization
                         bl      init
 
