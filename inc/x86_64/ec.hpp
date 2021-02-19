@@ -24,6 +24,7 @@
 
 #include "counter.hpp"
 #include "fpu.hpp"
+#include "kmem.hpp"
 #include "mtd.hpp"
 #include "pd.hpp"
 #include "queue.hpp"
@@ -149,6 +150,12 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
                 timeout.dequeue();
         }
 
+        ALWAYS_INLINE
+        static inline Ec *remote_current (unsigned cpu)
+        {
+            return *Kmem::loc_to_glob (&current, cpu);
+        }
+
         [[noreturn]] ALWAYS_INLINE
         inline void make_current()
         {
@@ -159,12 +166,6 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
             pd->make_current();
 
             asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
-        }
-
-        ALWAYS_INLINE
-        static inline Ec *remote (unsigned c)
-        {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
         }
 
         NOINLINE
