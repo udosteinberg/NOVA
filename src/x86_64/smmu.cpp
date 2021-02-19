@@ -53,7 +53,7 @@ Smmu *Smmu::setup (uint64_t phys, uint16_t seg)
         return nullptr;
 
     // Allocate invalidation queue
-    auto const inv { static_cast<Inv *>(Buddy::allocator.alloc (ord, Buddy::Fill::FILL_0)) };
+    auto const inv { static_cast<Inv *>(Buddy::alloc (ord, Buddy::Fill::BITS0)) };
     if (!inv) [[unlikely]]
         return nullptr;
 
