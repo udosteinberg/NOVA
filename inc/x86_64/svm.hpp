@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "kmem.hpp"
 #include "utcb.hpp"
 
 class Vmcb
@@ -123,7 +124,7 @@ class Vmcb
         ALWAYS_INLINE
         inline Vmcb()
         {
-            asm volatile ("vmsave" : : "a" (Buddy::ptr_to_phys (this)) : "memory");
+            asm volatile ("vmsave" : : "a" (Kmem::ptr_to_phys (this)) : "memory");
         }
 
         static bool has_npt() { return Vmcb::svm_feature & 1; }
