@@ -235,6 +235,10 @@ __init_bsp:
                         add     x4, x28, x29
                         DCACHE  zva, x24, x3, x4
 
+                        // Initialize kmem offset
+                        adr     x0, __kmem_offset - OFFSET
+                        str     x29, [x0]
+
                         // Switch to boot stack
                         adr     x0, STACK
                         mov     sp, x0
