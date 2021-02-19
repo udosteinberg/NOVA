@@ -114,7 +114,7 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
                         cmp     $LOAD_E, %ecx
                         jb      1b
 
-                        mov     $(LINK_P + 0x1e3), %ecx
+                        mov     $(LOAD_ADDR + 0x1e3), %ecx
                         mov     $(LVL2H + __SIZEOF_POINTER__ * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))), %edi
 1:                      mov     %ecx, (%edi)
                         add     $(1 << (PTE_BPL + PAGE_BITS)), %ecx
