@@ -35,12 +35,12 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, void (*f)(), unsigned c) : Kobject (EC, static_cast<Space_obj *>(own)), cont (f), utcb (nullptr), pd (own), prev (nullptr), next (nullptr), cpu (static_cast<uint16>(c)), glb (true), evt (0), timeout (this)
+Ec::Ec (Pd *own, void (*f)(), unsigned c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), utcb (nullptr), pd (own), prev (nullptr), next (nullptr), cpu (static_cast<uint16>(c)), glb (true), evt (0), timeout (this)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *own, mword sel, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword s) : Kobject (EC, static_cast<Space_obj *>(own), sel, 0xd), cont (f), pd (p), prev (nullptr), next (nullptr), cpu (static_cast<uint16>(c)), glb (!!f), evt (e), timeout (this)
+Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), pd (p), prev (nullptr), next (nullptr), cpu (static_cast<uint16>(c)), glb (!!f), evt (e), timeout (this)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
@@ -242,6 +242,7 @@ void Ec::root_invoke()
     current->regs.set_pt (Cpu::id);
     current->regs.set_sp (USER_ADDR - PAGE_SIZE);
     current->regs.set_ip (e->entry);
+#if 0   // FIXME
     auto c = ACCESS_ONCE (e->ph_count);
     auto p = static_cast<ELF_PHDR *>(Hpt::remap (Hip::root_addr + ACCESS_ONCE (e->ph_offset)));
 
@@ -267,6 +268,7 @@ void Ec::root_invoke()
 
     // Map hypervisor information page
     Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
+#endif
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);
