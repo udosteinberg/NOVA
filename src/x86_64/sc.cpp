@@ -21,6 +21,7 @@
 
 #include "ec.hpp"
 #include "interrupt.hpp"
+#include "lowlevel.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
 #include "timeout_budget.hpp"
