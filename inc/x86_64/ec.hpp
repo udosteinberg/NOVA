@@ -23,6 +23,7 @@
 
 #include "counter.hpp"
 #include "fpu.hpp"
+#include "kmem.hpp"
 #include "mtd.hpp"
 #include "pd.hpp"
 #include "queue.hpp"
@@ -164,7 +165,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
         ALWAYS_INLINE
         static inline Ec *remote (unsigned c)
         {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return *Kmem::loc_to_glob (&current, c);
         }
 
         NOINLINE
