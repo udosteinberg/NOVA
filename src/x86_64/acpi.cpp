@@ -96,7 +96,7 @@ void Acpi::setup()
 
     for (; tmr_ovf = read (PM_TMR) >> tmr_msb(), read (PM1_STS) & PM1_STS_TMR; write (PM1_STS, PM1_STS_TMR)) ;
 
-    trace (TRACE_ACPI, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
+    trace (TRACE_FIRM, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
 }
 
 unsigned Acpi::read (Register reg)
