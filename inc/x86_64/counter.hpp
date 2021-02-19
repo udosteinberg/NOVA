@@ -21,7 +21,7 @@
 #pragma once
 
 #include "cpu.hpp"
-#include "memory.hpp"
+#include "kmem.hpp"
 #include "vectors.hpp"
 
 class Counter
@@ -39,6 +39,6 @@ class Counter
         ALWAYS_INLINE
         static inline unsigned remote (unsigned c, unsigned i)
         {
-            return *reinterpret_cast<volatile unsigned *>(reinterpret_cast<mword>(ipi + i) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return *Kmem::loc_to_glb (c, ipi + i);
         }
 };

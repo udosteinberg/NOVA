@@ -38,7 +38,6 @@ extern char PDBR;
 extern char LINK_P;
 extern char LINK_E;
 extern char LOAD_E;
-extern char OFFSET;
 
 extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
 
