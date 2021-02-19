@@ -18,10 +18,13 @@
 #include "arch.hpp"
 #include "console.hpp"
 #include "extern.hpp"
+#include "kmem.hpp"
 
 extern "C"
-void init()
+void init (uintptr_t offset)
 {
+    Kmem::init (offset);
+
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
     for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
