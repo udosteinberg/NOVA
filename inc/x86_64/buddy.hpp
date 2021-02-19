@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,84 +21,93 @@
 
 #pragma once
 
-#include "extern.hpp"
+#include "arch.hpp"
 #include "memory.hpp"
+#include "queue.hpp"
 #include "spinlock.hpp"
+#include "types.hpp"
 
-class Buddy
+class Buddy final
 {
     private:
-        class Block
+        using Order = uint8;
+        using Index = unsigned long;
+
+        // Valid orders range from 0 (PAGE_SIZE) to PTE_BPL (SUPERPAGE_SIZE)
+        static constexpr Order orders { PTE_BPL + 1 };
+
+        class Block final : public Queue<Block>::Element
         {
             public:
-                Block *         prev;
-                Block *         next;
-                unsigned short  ord;
-                unsigned short  tag;
-
-                enum {
-                    Used  = 0,
-                    Free  = 1
+                enum class Tag : uint8
+                {
+                    USED,
+                    FREE,
                 };
+
+                Order   ord { 0 };
+                Tag     tag { Tag::USED };
         };
 
-        Spinlock        lock;
-        signed long     max_idx;
-        signed long     min_idx;
-        mword           base;
-        mword           order;
-        Block *         index;
-        Block *         head;
-
-        ALWAYS_INLINE
-        inline signed long block_to_index (Block *b)
+        class Freelist final
         {
-            return b - index;
-        }
+            private:
+                Queue<Block> list[orders];
 
-        ALWAYS_INLINE
-        inline Block *index_to_block (signed long i)
-        {
-            return index + i;
-        }
+            public:
+                inline void enqueue (Block *b)  { list[b->ord].enqueue_head (b); }
+                inline void dequeue (Block *b)  { list[b->ord].dequeue (b); }
+                inline auto dequeue (Order o)   { return list[o].dequeue_head(); }
+        };
 
-        ALWAYS_INLINE
-        inline signed long page_to_index (mword l_addr)
+        class Waitlist final
         {
-            return l_addr / PAGE_SIZE - base / PAGE_SIZE;
-        }
+            private:
+                Queue<Block> list;
 
-        ALWAYS_INLINE
-        inline mword index_to_page (signed long i)
-        {
-            return base + i * PAGE_SIZE;
-        }
+            public:
+                inline void enqueue (Block *b)  { list.enqueue_head (b); }
+                inline auto dequeue()           { return list.dequeue_head(); }
+        };
 
-        ALWAYS_INLINE
-        inline mword virt_to_phys (mword virt)
-        {
-            return virt - OFFSET;
-        }
+        static inline Spinlock      lock;               // Allocator Spinlock
+        static inline Index         min_idx;            // Minimum Block Index
+        static inline Index         max_idx;            // Maximum Block Index
+        static inline uintptr_t     mem_base;           // Base of Memory Pool
+        static inline Block *       blk_base;           // Base of Block Array
+        static inline Freelist      freelist;           // Block Freelist
 
-        ALWAYS_INLINE
-        inline mword phys_to_virt (mword phys)
-        {
-            return phys + OFFSET;
-        }
+        static Waitlist waitlist    CPULOCAL;           // Block Waitlist (per Core)
+
+        static inline bool is_valid (Index x)           { return x >= min_idx && x < max_idx; }
+
+        static inline auto index_to_block (Index x)     { return blk_base + x; }
+        static inline auto block_to_index (Block *x)    { return static_cast<Index>(x - blk_base); }
+
+        static inline auto index_to_page (Index x)      { return mem_base + x * PAGE_SIZE; }
+        static inline auto page_to_index (uintptr_t x)  { return static_cast<Index>((x - mem_base) / PAGE_SIZE); }
+
+        NONNULL
+        static void coalesce (Block *);
 
     public:
-        enum Fill
+        enum class Fill
         {
-            NOFILL,
-            FILL_0,
-            FILL_1
+            NONE,
+            BITS0,
+            BITS1,
         };
 
-        static Buddy allocator;
+        static void init();
 
-        Buddy (mword phys, mword virt, mword f_addr, size_t size);
+        [[nodiscard]]
+        static void *alloc (Order, Fill = Fill::NONE);
 
-        void *alloc (unsigned short ord, Fill fill = NOFILL);
+        NONNULL
+        static void free (void *);
 
-        void free (mword addr);
+        NONNULL
+        static void wait (void *);
+
+        static inline void free_wait() { for (Block *b; (b = waitlist.dequeue()); coalesce (b)); }
 };
