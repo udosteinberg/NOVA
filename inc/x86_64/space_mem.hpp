@@ -23,19 +23,19 @@
 #include "config.hpp"
 #include "cpu.hpp"
 #include "cpuset.hpp"
-#include "dpt.hpp"
-#include "ept.hpp"
-#include "hpt.hpp"
+#include "ptab_dpt.hpp"
+#include "ptab_ept.hpp"
+#include "ptab_hpt.hpp"
 
 class Space_mem
 {
     public:
-        Hpt loc[NUM_CPU];
-        Hpt hpt;
-        Dpt dpt;
+        Hptp loc[NUM_CPU];
+        Hptp hpt;
+        Dptp dpt;
         union {
-            Ept ept;
-            Hpt npt;
+            Eptp ept;
+            Hptp npt;
         };
 
         mword did;
@@ -49,23 +49,15 @@ class Space_mem
         ALWAYS_INLINE
         inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
 
-        ALWAYS_INLINE
-        inline size_t lookup (mword virt, Paddr &phys)
+        Paging::Permissions lookup (uint64_t v, uint64_t &p, unsigned &o)
         {
-            mword attr;
-            return hpt.lookup (virt, phys, attr);
+            Memattr ma;
+            return hpt.lookup (v, p, o, ma);
         }
 
-        ALWAYS_INLINE
-        inline void insert (mword virt, unsigned o, mword attr, Paddr phys)
+        void update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma)
         {
-            hpt.update (virt, o, phys, attr);
-        }
-
-        ALWAYS_INLINE
-        inline Paddr replace (mword v, Paddr p)
-        {
-            return hpt.replace (v, p);
+            hpt.update (v, p, o, pm, ma);
         }
 
         void insert_root (uint64_t, uint64_t, mword = 0x7);

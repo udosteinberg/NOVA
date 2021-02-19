@@ -22,7 +22,7 @@
 
 #include "cmdline.hpp"
 #include "extern.hpp"
-#include "hpt.hpp"
+#include "ptab_hpt.hpp"
 #include "string.hpp"
 
 size_t Cmdline::arg_len (char const *&line)
@@ -49,5 +49,5 @@ void Cmdline::init()
     auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
 
     if (addr)
-        parse (static_cast<char const *>(Hpt::remap (addr)));
+        parse (static_cast<char const *>(Hptp::map (Hptp::Remap::MAP0, addr)));
 }

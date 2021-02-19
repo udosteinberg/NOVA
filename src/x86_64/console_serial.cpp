@@ -20,8 +20,8 @@
 
 #include "cmdline.hpp"
 #include "console_serial.hpp"
-#include "hpt.hpp"
 #include "lowlevel.hpp"
+#include "ptab_hpt.hpp"
 
 INIT_PRIORITY (PRIO_CONSOLE) Console_serial Console_serial::con;
 
@@ -30,7 +30,7 @@ Console_serial::Console_serial()
     if (Cmdline::nouart)
         return;
 
-    char *mem = static_cast<char *>(Hpt::remap (0));
+    char *mem = static_cast<char *>(Hptp::map (Hptp::Remap::MAP0, 0));
     if (!(base = *reinterpret_cast<uint16 *>(mem + 0x400)) &&
         !(base = *reinterpret_cast<uint16 *>(mem + 0x402)))
         return;

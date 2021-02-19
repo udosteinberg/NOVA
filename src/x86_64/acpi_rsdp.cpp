@@ -18,7 +18,7 @@
 
 #include "acpi.hpp"
 #include "acpi_rsdp.hpp"
-#include "hpt.hpp"
+#include "ptab_hpt.hpp"
 
 Acpi_rsdp *Acpi_rsdp::find (mword start, unsigned len)
 {
@@ -35,7 +35,7 @@ void Acpi_rsdp::parse()
 {
     Acpi_rsdp *rsdp;
 
-    mword map = reinterpret_cast<mword>(Hpt::remap (0));
+    mword map = reinterpret_cast<mword>(Hptp::map (Hptp::Remap::MAP0, 0));
 
     if (!(rsdp = Acpi_rsdp::find (map + (*reinterpret_cast<uint16 *>(map + 0x40e) << 4), 0x400)) &&
         !(rsdp = Acpi_rsdp::find (map + 0xe0000, 0x20000)))

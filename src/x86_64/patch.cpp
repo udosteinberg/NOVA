@@ -17,7 +17,9 @@
 
 #include "assert.hpp"
 #include "lapic.hpp"
+#include "memattr.hpp"
 #include "patch.hpp"
+#include "ptab_hpt.hpp"
 #include "string.hpp"
 
 void Patch::init()
@@ -41,6 +43,14 @@ void Patch::init()
 
     switch (static_cast<uint8_t>(eax)) {
         default:
+            Cpu::cpuid (0x80000008, eax, ebx, ecx, edx);
+            Memattr::obits = (BIT_RANGE (7, 0) & eax) - Memattr::kbits;
+            [[fallthrough]];
+        case 0x1 ... 0x7:
+            Cpu::cpuid (0x80000001, eax, ebx, ecx, edx);
+            Hptp::set_mll (edx & BIT (26) ? 2 : 1);
+            [[fallthrough]];
+        case 0x0:
             break;
     }
 
