@@ -1,10 +1,7 @@
 /*
- * Task State Segment (TSS)
+ * Page Table Templates
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,14 +15,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "memory.hpp"
-#include "tss.hpp"
+#pragma once
 
-ALIGNED(8) Tss Tss::run;
-ALIGNED(8) Tss Tss::dbf;
+#include "ptab_dpt.hpp"
+#include "ptab_ept.hpp"
+#include "ptab_hpt.hpp"
 
-void Tss::build()
-{
-    run.sp0     = MMAP_CPU_STCK + PAGE_SIZE;
-    run.iobm    = static_cast<uint16>(MMAP_SPC_IOP - reinterpret_cast<mword>(&run));
-}
+template class Pagetable<Dpt, uint64, uint64, 4, 3, true>;
+template class Pagetable<Ept, uint64, uint64, 4, 3, false>;
+template class Pagetable<Hpt, uint64, uint64, 4, 3, false>;
