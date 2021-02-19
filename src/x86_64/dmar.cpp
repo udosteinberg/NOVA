@@ -34,7 +34,7 @@ Dmar_ctx *  Dmar::ctx = new Dmar_ctx;
 Dmar_irt *  Dmar::irt = new Dmar_irt;
 uint32      Dmar::gcmd = GCMD_TE;
 
-Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & OFFS_MASK)), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
+Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & OFFS_MASK)), invq (static_cast<Dmar_qi *>(Buddy::alloc (ord, Buddy::Fill::BITS0))), invq_idx (0)
 {
 #if 0   // FIXME
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
