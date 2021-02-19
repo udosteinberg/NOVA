@@ -31,7 +31,7 @@ class Pt : public Kobject
         static Slab_cache cache;
 
     public:
-        Refptr<Ec> const ec;
+        Ec * const ec;
         Mtd        const mtd;
         mword      const ip;
         mword      id;

@@ -24,7 +24,7 @@
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sm::cache (sizeof (Sm), 32);
 
-Sm::Sm (Pd *own, mword sel, mword cnt) : Kobject (Kobject::Type::SM, static_cast<Space_obj *>(own), sel, 0x3), counter (cnt)
+Sm::Sm (Pd *, mword, mword cnt) : Kobject (Kobject::Type::SM), counter (cnt)
 {
     trace (TRACE_SYSCALL, "SM:%p created (CNT:%lu)", this, cnt);
 }

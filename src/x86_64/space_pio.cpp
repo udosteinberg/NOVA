@@ -49,20 +49,6 @@ void Space_pio::update (bool host, mword idx, mword attr)
         __atomic_or_fetch (m, idx_to_mask (idx), __ATOMIC_SEQ_CST);
 }
 
-void Space_pio::update (Mdb *mdb, mword r)
-{
-    assert (this == mdb->space && this != &Pd::kern);
-
-    Lock_guard <Spinlock> guard (mdb->node_lock);
-
-    if (mdb->node_sub & 2)
-        for (unsigned long i = 0; i < (1UL << mdb->node_order); i++)
-            update (false, mdb->node_base + i, mdb->node_attr & ~r);
-
-    for (unsigned long i = 0; i < (1UL << mdb->node_order); i++)
-        update (true, mdb->node_base + i, mdb->node_attr & ~r);
-}
-
 void Space_pio::page_fault (mword addr, mword error)
 {
     assert (!(error & Hpt::ERR_W));

@@ -29,7 +29,10 @@ Ioapic *Ioapic::list;
 
 Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base ((hwdev_addr -= PAGE_SIZE (0)) | (p & OFFS_MASK (0))), gsi_base (g), id (i), rid (0)
 {
+#if 0   // FIXME
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK (0));
+#endif
+
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK (0));
 
     trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
