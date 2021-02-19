@@ -27,7 +27,6 @@
 #include "mmio.hpp"
 #include "pci.hpp"
 #include "sdid.hpp"
-#include "status.hpp"
 #include "wait.hpp"
 
 class Smmu final : public List<Smmu>, private Mmio

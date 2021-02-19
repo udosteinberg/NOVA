@@ -31,6 +31,6 @@ class Mmio
         explicit Mmio (uintptr_t p, size_t s) : phys { p }, mmio { mmio_base.fetch_add (s) | (p & OFFS_MASK (0)) }
         {
             // FIXME: Order 0 hardcoded. Make it based on s
-            Pd::kern.Space_mem::insert (mmio, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, phys & ~OFFS_MASK (0));
+            Hptp::master_map (mmio, phys & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
         }
 };

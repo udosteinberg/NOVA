@@ -34,7 +34,11 @@ Smmu::Smmu (uint64_t p) : List { list }, Mmio { p, PAGE_SIZE (0) }, inv { static
     cap  = read (Reg64::CAP);
     ecap = read (Reg64::ECAP);
 
-    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_msb (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
+    // DPT maximum leaf level: 1 + { 1 (1GB), 0 (2MB), -1 (4KB) }
+    Dptp::set_mll (1 + bit_scan_msb (cap >> 34 & BIT_RANGE (1, 0)));
+
+    // Treat DPT as noncoherent if at least one SMMU requires it
+    Dpt::noncoherent |= !feature (Ecap::PWC);
 
     // If the SMMU does not support interrupt remapping, then disable it
     ir &= feature (Ecap::IR);
@@ -72,6 +76,10 @@ bool Smmu::configure (Pd *p, uintptr_t dad, bool invalidate)
     auto const lev { bit_scan_msb (cap >> 8 & BIT_RANGE (4, 0)) };
 
     auto const sdid { p->get_sdid() };
+    auto const ptab { p->dpt.root_init (lev + 1) };
+
+    if (!ptab) [[unlikely]]
+        return false;
 
     uint16_t zap;
 
@@ -91,7 +99,7 @@ bool Smmu::configure (Pd *p, uintptr_t dad, bool invalidate)
         else
             c->set (0, 0);
 
-        c->set (sdid << 8 | lev, p->dpt.root (lev + 1) | BIT (0));
+        c->set (sdid << 8 | lev, Kmem::ptr_to_phys (ptab) | BIT (0));
     }
 
     if (invalidate) [[likely]]
