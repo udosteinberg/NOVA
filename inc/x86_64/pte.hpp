@@ -22,6 +22,7 @@
 
 #include "atomic.hpp"
 #include "buddy.hpp"
+#include "kmem.hpp"
 #include "x86.hpp"
 
 template <typename P, typename E, unsigned L, unsigned B, bool F>
@@ -97,7 +98,7 @@ class Pte
         static inline unsigned max() { return L; }
 
         ALWAYS_INLINE
-        inline E root (mword l = L - 1) { return Buddy::ptr_to_phys (walk (0, l)); }
+        inline E root (mword l = L - 1) { return Kmem::ptr_to_phys (walk (0, l)); }
 
         size_t lookup (E, Paddr &, mword &);
 
