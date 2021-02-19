@@ -21,6 +21,7 @@
 #pragma once
 
 #include "buddy.hpp"
+#include "cache.hpp"
 #include "kmem.hpp"
 #include "lowlevel.hpp"
 
@@ -56,7 +57,7 @@ class Pte
             bool b = __atomic_compare_exchange_n (&val, &o, v, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 
             if (F && b)
-                flush (this);
+                Cache::data_clean (this);
 
             return b;
         }
@@ -67,7 +68,7 @@ class Pte
             void *p = Buddy::allocator.alloc (0, Buddy::FILL_0);
 
             if (F)
-                flush (p, PAGE_SIZE (0));
+                Cache::data_clean (p, PAGE_SIZE (0));
 
             return p;
         }
