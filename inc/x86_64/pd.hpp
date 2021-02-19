@@ -21,6 +21,7 @@
 #pragma once
 
 #include "crd.hpp"
+#include "kmem.hpp"
 #include "space_mem.hpp"
 #include "space_obj.hpp"
 #include "space_pio.hpp"
@@ -68,7 +69,7 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         ALWAYS_INLINE
         static inline Pd *remote (unsigned c)
         {
-            return *reinterpret_cast<volatile typeof current *>(reinterpret_cast<mword>(&current) - CPU_LOCAL_DATA + HV_GLOBAL_CPUS + c * PAGE_SIZE);
+            return *Kmem::loc_to_glob (&current, c);
         }
 
         ALWAYS_INLINE

@@ -31,7 +31,9 @@
 #define CPU_LOCAL       0xffffffffbfe00000
 #define SPC_LOCAL       0xffffffffc0000000
 
-#define HV_GLOBAL_CPUS  (CPU_LOCAL - 0x1000000)
+#define OFFSET          (LINK_ADDR - LOAD_ADDR)
+
+#define CPU_GLOBL_DATA  (CPU_LOCAL - 0x1000000)
 
 #define CPU_LOCAL_STCK  (SPC_LOCAL - PAGE_SIZE * 3)
 #define CPU_LOCAL_APIC  (SPC_LOCAL - PAGE_SIZE * 2)
