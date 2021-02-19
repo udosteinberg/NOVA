@@ -16,6 +16,7 @@
  */
 
 #include "arch.hpp"
+#include "buddy.hpp"
 #include "config.hpp"
 #include "console.hpp"
 #include "extern.hpp"
@@ -25,6 +26,8 @@ extern "C"
 void init (uintptr_t offset)
 {
     Kmem::init (offset);
+
+    Buddy::init();
 
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
