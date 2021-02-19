@@ -32,6 +32,6 @@ Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base
     Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
 
-    trace (TRACE_APIC, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
+    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
            p, i, version(), irt_max(), prq(), gsi_base);
 }
