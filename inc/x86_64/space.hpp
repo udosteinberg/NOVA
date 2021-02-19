@@ -1,10 +1,7 @@
 /*
- * Generic Space
+ * Space
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,62 +17,24 @@
 
 #pragma once
 
-#include "bits.hpp"
-#include "lock_guard.hpp"
-#include "mdb.hpp"
-
 class Space
 {
-    private:
-        Spinlock    lock;
-        Avl *       tree;
-
     public:
-        Space() : tree (nullptr) {}
-
-        Mdb *tree_lookup (mword idx, bool next = false)
+        enum class Type
         {
-            Lock_guard <Spinlock> guard (lock);
-            return Mdb::lookup (tree, idx, next);
-        }
+            OBJ     = 0,
+            MEM     = 1,
+            PIO     = 2,
+        };
 
-        static bool tree_insert (Mdb *node)
+        enum class Index
         {
-            Lock_guard <Spinlock> guard (node->space->lock);
-            return Mdb::insert<Mdb> (&node->space->tree, node);
-        }
+            CPU_HST = 0,
+            CPU_GST = 1,
+            DMA_HST = 2,
+            DMA_GST = 3,
+        };
 
-        static bool tree_remove (Mdb *node)
-        {
-            Lock_guard <Spinlock> guard (node->space->lock);
-            return Mdb::remove<Mdb> (&node->space->tree, node);
-        }
-
-        void addreg (mword addr, size_t size, mword attr, mword type = 0)
-        {
-            Lock_guard <Spinlock> guard (lock);
-
-            for (mword o; size; size -= 1UL << o, addr += 1UL << o)
-                Mdb::insert<Mdb> (&tree, new Mdb (nullptr, addr, addr, (o = max_order (addr, size)), attr, type));
-        }
-
-        void delreg (mword addr)
-        {
-            Mdb *node;
-
-            {   Lock_guard <Spinlock> guard (lock);
-
-                if (!(node = Mdb::lookup (tree, addr >>= PAGE_BITS, false)))
-                    return;
-
-                Mdb::remove<Mdb> (&tree, node);
-            }
-
-            mword next = addr + 1, base = node->node_base, last = base + (1UL << node->node_order);
-
-            addreg (base, addr - base, node->node_attr, node->node_type);
-            addreg (next, last - next, node->node_attr, node->node_type);
-
-            delete node;
-        }
+        static inline bool is_gst (Index i) { return unsigned (i) & 1; }
+        static inline bool is_dma (Index i) { return unsigned (i) & 2; }
 };
