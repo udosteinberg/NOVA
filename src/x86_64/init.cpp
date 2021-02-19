@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,6 +26,7 @@
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "kmem.hpp"
 #include "string.hpp"
 
 extern "C"
@@ -34,12 +36,12 @@ mword kern_ptab_setup()
 
     // Allocate and map cpu page
     hpt.update (CPU_LOCAL_DATA, 0,
-                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map kernel stack
     hpt.update (CPU_LOCAL_STCK, 0,
-                Buddy::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
@@ -51,6 +53,8 @@ mword kern_ptab_setup()
 extern "C"
 void init (mword mbi)
 {
+    Kmem::init (OFFSET);
+
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
