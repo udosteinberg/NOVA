@@ -22,10 +22,10 @@
 #pragma once
 
 #include "macros.hpp"
-#include "mdb.hpp"
+#include "rcu.hpp"
 #include "refcnt.hpp"
 
-class Kobject : public Refcnt, public Mdb
+class Kobject : public Refcnt, public Rcu::Element
 {
     friend class Capability;
 
@@ -70,7 +70,5 @@ class Kobject : public Refcnt, public Mdb
         Subtype const   subtype;
 
     protected:
-        Spinlock        lock;
-
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, 0, a), type { t }, subtype { Subtype::NONE } { ref_inc(); }
+        explicit Kobject (Type t, Subtype s = Subtype::NONE) : type { t }, subtype { s } {}
 };

@@ -36,7 +36,10 @@ uint32      Dmar::gcmd = GCMD_TE;
 
 Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE (0)) | (p & OFFS_MASK (0))), invq (static_cast<Dmar_qi *>(Buddy::allocator.alloc (ord, Buddy::FILL_0))), invq_idx (0)
 {
+#if 0   // FIXME
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK (0));
+#endif
+
     Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK (0));
 
     cap  = read<uint64>(REG_CAP);
