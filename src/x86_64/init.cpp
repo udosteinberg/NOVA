@@ -23,7 +23,6 @@
 #include "cmdline.hpp"
 #include "compiler.hpp"
 #include "extern.hpp"
-#include "hpt.hpp"
 #include "ioapic.hpp"
 #include "interrupt.hpp"
 #include "kmem.hpp"
@@ -32,24 +31,24 @@
 #include "string.hpp"
 
 extern "C"
-mword kern_ptab_setup()
+Hpt::OAddr kern_ptab_setup()
 {
-    Hptp hpt;
-
-    // Allocate and map cpu page
-    hpt.update (MMAP_CPU_DATA, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
-
-    // Allocate and map kernel stack
-    hpt.update (MMAP_CPU_STCK, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    Hptp hptp;
 
     // Sync kernel code and data
-    hpt.sync_master_range (LINK_ADDR, MMAP_CPU);
+    hptp.sync_from_master (LINK_ADDR, MMAP_CPU);
 
-    return hpt.addr();
+    // Allocate and map cpu page
+    hptp.update (MMAP_CPU_DATA, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+
+    // Allocate and map kernel stack
+    hptp.update (MMAP_CPU_STCK, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R),
+                 Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+
+    return hptp.root_addr();
 }
 
 extern "C"
@@ -67,7 +66,7 @@ void init (uintptr_t offset)
 
     auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
     if (addr)
-        Cmdline::parse (static_cast<char const *>(Hpt::remap (addr)));
+        Cmdline::parse (static_cast<char const *>(Hptp::map (addr)));
 
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
 
