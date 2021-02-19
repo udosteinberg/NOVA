@@ -97,7 +97,7 @@ void Pte<P,E,L,B,F>::update (E v, mword o, E p, mword a, Type t)
     }
 
     if (F)
-        flush (e, n * sizeof (E));
+        Cache::data_clean (e, n * sizeof (E));
 }
 
 template class Pte<Dpt, uint64, 4, 9, true>;
