@@ -89,8 +89,6 @@ SECTIONS
         . = ALIGN(4K) + 4K;
         PROVIDE_HIDDEN (STACK = . - OFFSET);
 
-        _mempool_l = .; PROVIDE_HIDDEN (_mempool_p = _mempool_l - OFFSET);
-
         PROVIDE_HIDDEN (PAGE_0 = .); . += 4K;
         PROVIDE_HIDDEN (PAGE_1 = .); . += 4K;
         PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
@@ -108,11 +106,9 @@ SECTIONS
 
         . = ALIGN(4K);
 
-        PROVIDE_HIDDEN (_mempool_f = .);
+        PROVIDE_HIDDEN (KMEM_HVAS = .);
 
         . = ALIGN (ABSOLUTE (.) + 30M, PAGE_SIZE (1));
-
-        PROVIDE_HIDDEN (_mempool_e = .);
 
     } : kern
 
