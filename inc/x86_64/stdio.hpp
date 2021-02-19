@@ -59,8 +59,6 @@ enum {
     TRACE_PARSE     = BIT (11),
     TRACE_MEMORY    = BIT (12),
     TRACE_SCHEDULE  = BIT (13),
-    TRACE_DEL       = BIT (15),
-    TRACE_REV       = BIT (16),
     TRACE_RCU       = BIT (17),
     TRACE_CREATE    = BIT (18),
     TRACE_DESTROY   = BIT (19),
