@@ -15,7 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.hpp"
+#include "buddy.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 #include "kmem.hpp"
@@ -24,6 +24,8 @@ extern "C"
 void init (uintptr_t offset)
 {
     Kmem::init (offset);
+
+    Buddy::init();
 
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
