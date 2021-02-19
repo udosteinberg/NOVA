@@ -21,6 +21,7 @@
  */
 
 #include "bits.hpp"
+#include "cache.hpp"
 #include "cmdline.hpp"
 #include "counter.hpp"
 #include "gdt.hpp"
@@ -108,6 +109,7 @@ void Cpu::check_features()
             brand    =  ebx & 0xff;
             top      =  ebx >> 24;
             tpp      =  ebx >> 16 & 0xff;
+            Cache::init (8 * (ebx >> 8 & 0xff));
     }
 
     patch = static_cast<unsigned>(Msr::read (Msr::IA32_BIOS_SIGN_ID) >> 32);

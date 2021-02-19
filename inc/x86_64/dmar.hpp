@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "cache.hpp"
 #include "list.hpp"
 #include "lowlevel.hpp"
 #include "slab.hpp"
@@ -66,10 +67,20 @@ class Dmar_ctx
         inline Paddr addr() const { return static_cast<Paddr>(lo) & ~OFFS_MASK; }
 
         ALWAYS_INLINE
-        inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
+        inline void set (uint64 h, uint64 l) { hi = h; lo = l; Cache::data_clean (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t)
+        {
+            auto ptr = Buddy::allocator.alloc (0, Buddy::FILL_0);
+
+            // FIXME: We want to use Cache::data_clean (ptr, PAGE_SIZE) here, but per-CPU line size is not available yet
+            if (EXPECT_TRUE (ptr))
+                for (auto p = static_cast<char *>(ptr); p < static_cast<char *>(ptr) + PAGE_SIZE; p += 32)
+                    Cache::data_clean (p);
+
+            return ptr;
+        }
 };
 
 class Dmar_irt
@@ -79,10 +90,20 @@ class Dmar_irt
 
     public:
         ALWAYS_INLINE
-        inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
+        inline void set (uint64 h, uint64 l) { hi = h; lo = l; Cache::data_clean (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t)
+        {
+            auto ptr = Buddy::allocator.alloc (0, Buddy::FILL_0);
+
+            // FIXME: We want to use Cache::data_clean (ptr, PAGE_SIZE) here, but per-CPU line size is not available yet
+            if (EXPECT_TRUE (ptr))
+                for (auto p = static_cast<char *>(ptr); p < static_cast<char *>(ptr) + PAGE_SIZE; p += 32)
+                    Cache::data_clean (p);
+
+            return ptr;
+        }
 };
 
 class Dmar : public List<Dmar>
