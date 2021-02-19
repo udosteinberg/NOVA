@@ -42,10 +42,8 @@ SECTIONS
     . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
 
     PROVIDE (LOAD_E = .);
-    OFFSET = LINK_ADDR - ALIGN (4M);
-    PROVIDE (LINK_P = LINK_ADDR - OFFSET);
 
-    .text LINK_ADDR : AT (ADDR (.text) - OFFSET)
+    .text . + OFFSET : AT (ADDR (.text) - OFFSET)
     {
         *(.text.hot .text.hot.*)
         *(.text .text.* .gnu.linkonce.t.*)
