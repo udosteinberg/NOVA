@@ -19,6 +19,7 @@
  */
 
 #include "ec.hpp"
+#include "extern.hpp"
 #include "gdt.hpp"
 #include "mca.hpp"
 #include "stdio.hpp"
