@@ -29,6 +29,10 @@ INIT_PRIORITY (PRIO_LOCAL) Rcu::List_elem Rcu::elem_next;
 INIT_PRIORITY (PRIO_LOCAL) Rcu::List_elem Rcu::elem_curr;
 INIT_PRIORITY (PRIO_LOCAL) Rcu::List_elem Rcu::elem_done;
 
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List_page Rcu::page_next;
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List_page Rcu::page_curr;
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List_page Rcu::page_done;
+
 Rcu::Epoch Rcu::epoch_l { 0 };
 Rcu::Epoch Rcu::epoch_c { 0 };
 
@@ -88,13 +92,15 @@ void Rcu::check()
         Cpu::hazard |= HZD_RCU;
     }
 
-    // Check if the current callbacks have completed
+    // Check if the current callbacks and pages have completed
     if (complete (e, epoch_c)) {
         elem_done = std::move (elem_curr);
+        page_done = std::move (page_curr);
 
-        // Check if the next callbacks can be submitted
-        if (elem_next) {
+        // Check if the next callbacks and pages can be submitted
+        if (elem_next || page_next) {
             elem_curr = std::move (elem_next);
+            page_curr = std::move (page_next);
 
             // Associate them with the next epoch
             epoch_c = g + 1;
@@ -107,4 +113,8 @@ void Rcu::check()
     // Check if done callbacks can be invoked
     if (elem_done)
         elem_done.drain();
+
+    // Check if done pages can be freed
+    if (page_done)
+        page_done.drain();
 }

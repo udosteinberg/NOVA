@@ -22,6 +22,7 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "compiler.hpp"
+#include "extern.hpp"
 #include "hpt.hpp"
 #include "ioapic.hpp"
 #include "interrupt.hpp"
@@ -35,17 +36,17 @@ extern "C" uintptr_t kern_ptab_setup (apic_t)
 
     // Allocate and map cpu page
     hpt.update (MMAP_CPU_DATA, 0,
-                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map data stack
     hpt.update (MMAP_CPU_DSTB, 0,
-                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Allocate and map intr stack
     hpt.update (MMAP_CPU_ISTB, 0,
-                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
@@ -62,6 +63,7 @@ extern "C" void preinit()
 extern "C" void init()
 {
     Patch::init();
+    Buddy::init();
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE (0));

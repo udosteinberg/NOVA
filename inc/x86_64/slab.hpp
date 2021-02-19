@@ -67,13 +67,13 @@ class Slab
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            return Buddy::allocator.alloc (0, Buddy::FILL_0);
+            return Buddy::alloc (0, Buddy::Fill::BITS0);
         }
 
         ALWAYS_INLINE
         static inline void operator delete (void *ptr)
         {
-            Buddy::allocator.free (reinterpret_cast<mword>(ptr));
+            Buddy::free (ptr);
         }
 
         Slab (Slab_cache *slab_cache);
