@@ -15,13 +15,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.hpp"
+#include "buddy.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 
 extern "C"
 void init()
 {
+    Buddy::init();
+
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
     for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
