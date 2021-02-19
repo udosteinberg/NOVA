@@ -22,7 +22,6 @@
 #pragma once
 
 #include "buddy.hpp"
-#include "crd.hpp"
 #include "util.hpp"
 
 class Cpu_regs;
@@ -50,7 +49,6 @@ class Utcb_head
         mword items;
 
     public:
-        Crd     xlt, del;
         mword   tls;
 };
 
@@ -118,9 +116,6 @@ class Utcb : public Utcb_head, private Utcb_data
                 dst->mr[i] = mr[i];
 #endif
         }
-
-        ALWAYS_INLINE
-        inline Xfer *xfer() { return reinterpret_cast<Xfer *>(this) + PAGE_SIZE / sizeof (Xfer) - 1; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

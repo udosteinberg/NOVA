@@ -21,7 +21,9 @@
 
 #pragma once
 
+#include "mtd.hpp"
 #include "qpd.hpp"
+#include "regs.hpp"
 
 class Sys_call : public Sys_regs
 {
@@ -45,9 +47,6 @@ class Sys_create_pd : public Sys_regs
 
         ALWAYS_INLINE
         inline unsigned long pd() const { return ARG_2; }
-
-        ALWAYS_INLINE
-        inline Crd crd() const { return Crd (ARG_3); }
 };
 
 class Sys_create_ec : public Sys_regs
@@ -118,20 +117,6 @@ class Sys_create_sm : public Sys_regs
 
         ALWAYS_INLINE
         inline mword cnt() const { return ARG_3; }
-};
-
-class Sys_revoke : public Sys_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline Crd crd() const { return Crd (ARG_2); }
-};
-
-class Sys_lookup : public Sys_regs
-{
-    public:
-        ALWAYS_INLINE
-        inline Crd & crd() { return reinterpret_cast<Crd &>(ARG_2); }
 };
 
 class Sys_ec_ctrl : public Sys_regs
