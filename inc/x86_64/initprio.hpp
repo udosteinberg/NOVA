@@ -25,7 +25,7 @@
 #define AFTER(X)        ((X) + 1)
 
 #define PRIO_LIMIT      100
-#define PRIO_BUDDY      AFTER (PRIO_LIMIT)
-#define PRIO_SLAB       AFTER (PRIO_BUDDY)
+#define PRIO_PTAB       AFTER (PRIO_LIMIT)
+#define PRIO_SLAB       AFTER (PRIO_PTAB)
 #define PRIO_CONSOLE    65533
 #define PRIO_LOCAL      65534
