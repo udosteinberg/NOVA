@@ -1,10 +1,6 @@
 /*
- * Low-Level Functions
+ * Cache Maintenance
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -19,25 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "cache.hpp"
 
-#include "compiler.hpp"
-
-[[noreturn]] ALWAYS_INLINE
-inline void shutdown()
-{
-    for (;;)
-        asm volatile ("cli; hlt");
-}
-
-ALWAYS_INLINE
-static inline void pause()
-{
-    asm volatile ("pause" : : : "memory");
-}
-
-ALWAYS_INLINE
-static inline auto rdtsc()
-{
-    return __builtin_ia32_rdtsc();
-}
+unsigned Cache::dcache_line_size { 0 };
+unsigned Cache::icache_line_size { 0 };
