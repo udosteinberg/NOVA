@@ -29,6 +29,7 @@
 #include "hip.hpp"
 #include "idt.hpp"
 #include "lapic.hpp"
+#include "lowlevel.hpp"
 #include "mca.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
@@ -196,11 +197,11 @@ void Cpu::init()
 
     Lapic::init (clk, rat);
 
-    Paddr phys; mword attr;
-    Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
-    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, attr);
-    Pd::kern.Space_mem::insert (MMAP_GLB_DATA + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
-    Hpt::ord = min (Hpt::ord, feature (FEAT_1GB_PAGES) ? 26UL : 17UL);
+    uint64 phys; unsigned o; Memattr ma;
+    Pd::kern.Space_mem::loc[id] = Hptp::current();
+    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
+    Hptp::master_map (MMAP_GLB_DATA + id * PAGE_SIZE, phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
+    Hptp::set_leaf_max (feature (FEAT_1GB_PAGES) ? 3 : 2);
 
     setup_msr();
 

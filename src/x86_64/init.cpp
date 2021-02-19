@@ -23,7 +23,6 @@
 #include "cmdline.hpp"
 #include "compiler.hpp"
 #include "extern.hpp"
-#include "hpt.hpp"
 #include "ioapic.hpp"
 #include "interrupt.hpp"
 #include "kmem.hpp"
@@ -33,24 +32,22 @@
 #include "string.hpp"
 
 extern "C"
-mword kern_ptab_setup()
+Hpt::OAddr kern_ptab_setup()
 {
-    Hptp hpt;
+    Hptp hptp;
+
+    // Share kernel code and data
+    hptp.share_from_master (LINK_ADDR, MMAP_CPU);
 
     // Allocate and map cpu page
-    hpt.update (MMAP_CPU_DATA, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    hptp.update (MMAP_CPU_DATA, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
-    // Allocate and map kernel stack
-    hpt.update (MMAP_CPU_DSTK, 0,
-                Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)),
-                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+    // Allocate and map kernel data stack
+    hptp.update (MMAP_CPU_DSTK, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
+                 Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
-    // Sync kernel code and data
-    hpt.sync_master_range (LINK_ADDR, MMAP_CPU);
-
-    return hpt.addr();
+    return hptp.root_addr();
 }
 
 extern "C"

@@ -17,6 +17,7 @@
 
 #include "assert.hpp"
 #include "cpu.hpp"
+#include "memattr.hpp"
 #include "patch.hpp"
 #include "string.hpp"
 
@@ -37,6 +38,10 @@ void Patch::init()
 
     switch (static_cast<uint8>(eax)) {
         default:
+            Cpu::cpuid (0x80000008, eax, ebx, ecx, edx);
+            Memattr::obits = (BIT_RANGE (7, 0) & eax) - Memattr::kbits;
+            [[fallthrough]];
+        case 0x0 ... 0x7:
             break;
     }
 

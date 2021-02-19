@@ -40,12 +40,12 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
     Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
 #endif
 
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK);
+    Hptp::master_map (reg_base, p & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
 
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);
 
-    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_reverse (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
+    Dptp::set_leaf_max (static_cast<unsigned>(bit_scan_reverse (cap >> 34 & 0xf) + 2));
 
     write<uint32>(REG_FEADDR, 0xfee00000 | Cpu::apic_id[0] << 12);
     write<uint32>(REG_FEDATA, VEC_FLT);
@@ -70,7 +70,11 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | 
 
 void Dmar::assign (unsigned long rid, Pd *p)
 {
-    mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
+    auto lev = static_cast<unsigned>(bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f));
+
+    auto ptab = p->dpt.root_init (lev + 1);
+    if (!ptab)
+        return;
 
     Dmar_ctx *r = ctx + (rid >> 8);
     if (!r->present())
@@ -82,7 +86,7 @@ void Dmar::assign (unsigned long rid, Pd *p)
 
     flush_ctx();
 
-    c->set (lev | p->did << 8, p->dpt.root (lev + 1) | 1);
+    c->set (lev | p->did << 8, Kmem::ptr_to_phys (ptab) | 1);
 }
 
 void Dmar::fault_handler()
