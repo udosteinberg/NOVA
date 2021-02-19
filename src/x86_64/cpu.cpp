@@ -298,11 +298,10 @@ void Cpu::init()
 
     Lapic::init (clk, rat);
 
-    mword attr;
-    Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
-    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys_local, attr);
-    Pd::kern.Space_mem::insert (MMAP_GLB_CPUS + id * PAGE_SIZE (0), 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys_local);
-    Hpt::ord = min (Hpt::ord, feature (Feature::GB_PAGES) ? 26UL : 17UL);
+    unsigned o; Memattr ma;
+    Pd::kern.Space_mem::loc[id] = Hptp::current();
+    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys_local, o, ma);
+    Hptp::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys_local, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
 
     setup_msr();
 
