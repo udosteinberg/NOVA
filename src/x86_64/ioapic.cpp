@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "extern.hpp"
 #include "ioapic.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"

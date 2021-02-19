@@ -72,7 +72,7 @@ class Dmar_ctx
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            auto ptr = Buddy::allocator.alloc (0, Buddy::FILL_0);
+            auto ptr = Buddy::alloc (0, Buddy::Fill::BITS0);
 
             // FIXME: We want to use Cache::data_clean (ptr, PAGE_SIZE) here, but per-CPU line size is not available yet
             if (EXPECT_TRUE (ptr))
@@ -95,7 +95,7 @@ class Dmar_irt
         ALWAYS_INLINE
         static inline void *operator new (size_t)
         {
-            auto ptr = Buddy::allocator.alloc (0, Buddy::FILL_0);
+            auto ptr = Buddy::alloc (0, Buddy::Fill::BITS0);
 
             // FIXME: We want to use Cache::data_clean (ptr, PAGE_SIZE) here, but per-CPU line size is not available yet
             if (EXPECT_TRUE (ptr))
