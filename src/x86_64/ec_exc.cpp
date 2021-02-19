@@ -92,10 +92,10 @@ bool Ec::handle_exc_pf (Exc_regs *r)
 {
     mword addr = r->cr2;
 
-    if (r->err & Hpt::ERR_U)
-        return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
+    if (r->err & BIT (2))       // User-mode access
+        return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].share_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
 
-    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp (Kmem::ptr_to_phys (&PTAB_HVAS)), addr, MMAP_CPU))
+    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].share_from_master (addr))
         return true;
 
     // Kernel fault in PIO space
