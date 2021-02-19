@@ -23,9 +23,9 @@
 #include "acpi.hpp"
 #include "barrier.hpp"
 #include "extern.hpp"
-#include "hpt.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
+#include "ptab_hpt.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
@@ -41,7 +41,7 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 #endif
 
     // Map MMIO region
-    Hptp (Hpt::current()).update (MMAP_CPU_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~OFFS_MASK (0));
+    Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
 
     // Determine CPU number from the APIC ID of the currently enabled interface
     Cpu::id = lookup (apic_base & BIT (10) ? read_x2apic (Reg32::IDR) : read_legacy (Reg32::IDR) >> 24);
@@ -81,7 +81,7 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
         extern char __init_aps, __init_aps__;
 
-        memcpy (Hpt::remap (0x1000), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__init_aps__ - &__init_aps);
+        memcpy (Hptp::map (MMAP_GLB_MAP0, 0x1000, Paging::W), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__init_aps__ - &__init_aps);
 
         send_exc (0, Delivery::DLV_INIT);
 

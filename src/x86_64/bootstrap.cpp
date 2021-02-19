@@ -22,6 +22,7 @@
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
+#include "lowlevel.hpp"
 
 extern "C" [[noreturn]]
 void bootstrap()
