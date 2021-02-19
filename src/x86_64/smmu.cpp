@@ -32,7 +32,11 @@ INIT_PRIORITY (PRIO_SLAB) Slab_cache Smmu::Grp::cache { sizeof (Smmu::Grp), alig
 
 Smmu::Smmu (uint64_t p, Grp *g, Inv *q) : List { list }, Mmio { p, PAGE_SIZE (0) }, cap { read (Reg64::CAP) }, ecap { read (Reg64::ECAP) }, grp { g }, inv { q }
 {
-    Dpt::ord = min (Dpt::ord, static_cast<mword>(bit_scan_msb (static_cast<mword>(cap >> 34) & 0xf) + 2) * Dpt::bpl() - 1);
+    // Set DPT maximum leaf level
+    Dptp::set_mll (mll());
+
+    // Treat DPT as noncoherent if at least one SMMU requires it
+    Dpt::noncoherent |= !feature (Ecap::PWC);
 
     // If the SMMU does not support interrupt remapping, then disable it
     ir &= feature (Ecap::IR);
@@ -95,6 +99,10 @@ Status Smmu::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
 
     auto const rlev { lev() };
     auto const sdid { p->get_sdid() };
+    auto const ptab { p->dpt.root_init (rlev - 1) };
+
+    if (!ptab) [[unlikely]]
+        return Status::BAD_PAR;
 
     // Determine root table slot
     auto const ctx { grp->ctx + Pci::bus (src) };
@@ -115,7 +123,7 @@ Status Smmu::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
         else
             c->set (0, 0);
 
-        c->set (sdid << 8 | (rlev - 2), p->dpt.root (rlev - 1) | BIT (0));
+        c->set (sdid << 8 | (rlev - 2), Kmem::ptr_to_phys (ptab) | BIT (0));
     }
 
     if (invalidate) [[likely]]
