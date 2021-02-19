@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,20 +21,15 @@
 
 #pragma once
 
-#include "mdb.hpp"
-#include "refptr.hpp"
+#include "macros.hpp"
+#include "types.hpp"
 
-class Kobject : public Mdb
+class Kobject
 {
-    private:
-        uint8 objtype;
-
-        static void free (Rcu_elem *) {}
+    friend class Capability;
 
     protected:
-        Spinlock lock;
-
-        enum Type
+        enum class Type : uint8
         {
             PD,
             EC,
@@ -43,12 +38,21 @@ class Kobject : public Mdb
             SM,
         };
 
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
+        enum class Subtype : uint8
+        {
+            NONE            = 0,
+
+            EC_LOCAL        = 0,
+            EC_GLOBAL       = 1,
+            EC_VCPU_REAL    = 2,
+            EC_VCPU_OFFS    = 3,
+        };
+
+        Type    const   type;
+        Subtype const   subtype;
 
     public:
-        ALWAYS_INLINE
-        inline Type type() const
-        {
-            return Type (objtype);
-        }
+        static constexpr auto alignment { BIT (5) };
+
+        inline explicit Kobject (Type t, Subtype s = Subtype::NONE) : type (t), subtype (s) {}
 };
