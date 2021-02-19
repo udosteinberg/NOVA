@@ -23,33 +23,11 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
-template <typename T>
-ALWAYS_INLINE
-static inline void flush (T t)
-{
-    asm volatile ("clflush %0" : : "m" (*t) : "memory");
-}
-
-ALWAYS_INLINE NONNULL
-inline void *flush (void *d, size_t n)
-{
-    for (char *p = static_cast<char *>(d); p < static_cast<char *>(d) + n; p += 32)
-        flush (p);
-
-    return d;
-}
-
 NORETURN ALWAYS_INLINE
 inline void shutdown()
 {
     for (;;)
         asm volatile ("cli; hlt");
-}
-
-ALWAYS_INLINE
-static inline void wbinvd()
-{
-    asm volatile ("wbinvd" : : : "memory");
 }
 
 ALWAYS_INLINE
