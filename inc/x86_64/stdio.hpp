@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,59 +23,63 @@
 
 #include "console.hpp"
 #include "cpu.hpp"
+#include "macros.hpp"
 #include "memory.hpp"
 
-#define trace(T,format,...)                                         \
-do {                                                                \
-    register mword __esp asm ("esp");                               \
-    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))                   \
-        Console::print ("[%2ld] " format,                           \
-                static_cast<long>(((__esp - 1) & ~PAGE_MASK) ==     \
-                CPU_LOCAL_STCK ? Cpu::id : ~0UL), ## __VA_ARGS__);  \
+static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_frame_address (0)); }
+
+#define trace(T,format,...)                         \
+do {                                                \
+    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))   \
+        Console::print ("[%2ld] " format, static_cast<long>(((stackptr() - 1) & ~PAGE_MASK) == CPU_LOCAL_STCK ? ACCESS_ONCE (Cpu::id) : ~0UL), ## __VA_ARGS__);   \
 } while (0)
 
 /*
  * Definition of trace events
  */
 enum {
-    TRACE_CPU       = 1UL << 0,
-    TRACE_IOMMU     = 1UL << 1,
-    TRACE_APIC      = 1UL << 2,
-    TRACE_VMX       = 1UL << 4,
-    TRACE_SVM       = 1UL << 5,
-    TRACE_ACPI      = 1UL << 8,
-    TRACE_MEMORY    = 1UL << 13,
-    TRACE_PCI       = 1UL << 14,
-    TRACE_SCHEDULE  = 1UL << 16,
-    TRACE_DEL       = 1UL << 18,
-    TRACE_REV       = 1UL << 19,
-    TRACE_RCU       = 1UL << 20,
-    TRACE_FPU       = 1UL << 23,
-    TRACE_SYSCALL   = 1UL << 30,
-    TRACE_ERROR     = 1UL << 31,
+    TRACE_CPU       = BIT  (0),
+    TRACE_SMMU      = BIT  (1),
+    TRACE_TIMR      = BIT  (2),
+    TRACE_INTR      = BIT  (3),
+    TRACE_VIRT      = BIT  (6),
+    TRACE_FIRM      = BIT  (7),
+    TRACE_DRTM      = BIT  (8),
+    TRACE_ROOT      = BIT (11),
+    TRACE_PTE       = BIT (12),
+    TRACE_MEMORY    = BIT (13),
+    TRACE_PCI       = BIT (14),
+    TRACE_SCHEDULE  = BIT (16),
+    TRACE_DEL       = BIT (18),
+    TRACE_REV       = BIT (19),
+    TRACE_RCU       = BIT (20),
+    TRACE_FPU       = BIT (23),
+    TRACE_PERF      = BIT (24),
+    TRACE_CONT      = BIT (25),
+    TRACE_PARSE     = BIT (26),
+    TRACE_CREATE    = BIT (27),
+    TRACE_SYSCALL   = BIT (28),
+    TRACE_EXCEPTION = BIT (29),
+    TRACE_ERROR     = BIT (30),
+    TRACE_KILL      = BIT (31),
 };
 
 /*
  * Enabled trace events
  */
-unsigned const trace_mask =
-                            TRACE_CPU       |
-                            TRACE_IOMMU     |
+constexpr auto trace_mask   { TRACE_CPU     |
+                              TRACE_FPU     |
+                              TRACE_PCI     |
+                              TRACE_SMMU    |
+                              TRACE_TIMR    |
+                              TRACE_INTR    |
+                              TRACE_VIRT    |
+                              TRACE_FIRM    |
+                              TRACE_DRTM    |
+                              TRACE_ROOT    |
+                              TRACE_PERF    |
+                              TRACE_KILL    |
 #ifdef DEBUG
-//                            TRACE_APIC      |
-//                            TRACE_KEYB      |
-                            TRACE_VMX       |
-                            TRACE_SVM       |
-//                            TRACE_ACPI      |
-//                            TRACE_MEMORY    |
-//                            TRACE_PCI       |
-//                            TRACE_SCHEDULE  |
-//                            TRACE_VTLB      |
-//                            TRACE_DEL       |
-//                            TRACE_REV       |
-//                            TRACE_RCU       |
-//                            TRACE_FPU       |
-//                            TRACE_SYSCALL   |
-                            TRACE_ERROR     |
+                              TRACE_ERROR   |
 #endif
-                            0;
+                              0 };
