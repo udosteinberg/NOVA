@@ -50,8 +50,6 @@ enum {
     TRACE_MEMORY    = BIT (13),
     TRACE_PCI       = BIT (14),
     TRACE_SCHEDULE  = BIT (16),
-    TRACE_DEL       = BIT (18),
-    TRACE_REV       = BIT (19),
     TRACE_RCU       = BIT (20),
     TRACE_FPU       = BIT (23),
     TRACE_PERF      = BIT (24),
