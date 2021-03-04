@@ -23,13 +23,12 @@
 
 #include "compiler.hpp"
 #include "kmem.hpp"
+#include "queue.hpp"
 
 class Ec;
 
-class Sc : public Kobject
+class Sc : public Kobject, public Queue<Sc>::Element
 {
-    friend class Queue<Sc>;
-
     public:
         Ec * const ec;
         unsigned const cpu;
@@ -39,7 +38,6 @@ class Sc : public Kobject
 
     private:
         uint64 left;
-        Sc *prev, *next;
         uint64 tsc;
 
         static unsigned const priorities = 128;
@@ -47,16 +45,16 @@ class Sc : public Kobject
         static Slab_cache cache;
 
         static struct Rq {
+            Queue<Sc>   queue;
             Spinlock    lock;
-            Sc *        queue;
         } rq CPULOCAL;
 
-        static Sc *list[priorities] CPULOCAL;
+        static Queue<Sc> list[priorities] CPULOCAL;
 
         static unsigned prio_top CPULOCAL;
 
         void ready_enqueue (uint64);
-        void ready_dequeue (uint64);
+        static Sc *ready_dequeue (uint64);
 
     public:
         static Sc *     current     CPULOCAL_HOT;
