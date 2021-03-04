@@ -37,12 +37,12 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), utcb (nullptr), pd (own), prev (nullptr), next (nullptr), cpu (c), glb (true), evt (0), timeout (this)
+Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), utcb (nullptr), pd (own), cpu (c), glb (true), evt (0), timeout (this)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), pd (p), prev (nullptr), next (nullptr), cpu (c), glb (!!f), evt (e), timeout (this)
+Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), pd (p), cpu (c), glb (!!f), evt (e), timeout (this)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_mem::init (c);
