@@ -23,7 +23,7 @@
 
 #include "ec.hpp"
 
-class Sm : public Kobject, public Queue<Ec>
+class Sm : public Kobject, private Queue<Ec>
 {
     friend class Interrupt;
 
@@ -48,7 +48,7 @@ class Sm : public Kobject, public Queue<Ec>
                     return;
                 }
 
-                enqueue (ec);
+                enqueue_tail (ec);
             }
 
             ec->set_timeout (t, this);
@@ -63,7 +63,7 @@ class Sm : public Kobject, public Queue<Ec>
 
             {   Lock_guard <Spinlock> guard (lock);
 
-                if (!dequeue (ec = head())) {
+                if (!(ec = dequeue_head())) {
                     counter++;
                     return;
                 }
@@ -77,8 +77,10 @@ class Sm : public Kobject, public Queue<Ec>
         {
             {   Lock_guard <Spinlock> guard (lock);
 
-                if (!dequeue (ec))
+                if (!ec->blocked())
                     return;
+
+                dequeue (ec);
             }
 
             ec->release (Ec::sys_finish<Status::TIMEOUT>);
