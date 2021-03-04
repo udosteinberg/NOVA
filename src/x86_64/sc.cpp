@@ -34,17 +34,16 @@ Sc::Rq Sc::rq;
 Sc *        Sc::current;
 unsigned    Sc::ctr_link;
 unsigned    Sc::ctr_loop;
-
-Sc *Sc::list[Sc::priorities];
+Queue<Sc>   Sc::list[priorities];
 
 unsigned Sc::prio_top;
 
-Sc::Sc (Pd *, mword sel, Ec *e) : Kobject (Kobject::Type::SC), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Timer::ms_to_ticks (1000)), left (0), prev (nullptr), next (nullptr)
+Sc::Sc (Pd *, mword sel, Ec *e) : Kobject (Kobject::Type::SC), ec (e), cpu (static_cast<unsigned>(sel)), prio (0), budget (Timer::ms_to_ticks (1000)), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (Kernel)", this);
 }
 
-Sc::Sc (Pd *, mword, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (Kobject::Type::SC), ec (e), cpu (c), prio (p), budget (Timer::ms_to_ticks (q)), left (0), prev (nullptr), next (nullptr)
+Sc::Sc (Pd *, mword, Ec *e, unsigned c, unsigned p, unsigned q) : Kobject (Kobject::Type::SC), ec (e), cpu (c), prio (p), budget (Timer::ms_to_ticks (q)), left (0)
 {
     trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
 }
@@ -57,17 +56,7 @@ void Sc::ready_enqueue (uint64 t)
     if (prio > prio_top)
         prio_top = prio;
 
-    if (!list[prio])
-        list[prio] = prev = next = this;
-    else {
-        next = list[prio];
-        prev = list[prio]->prev;
-        next->prev = prev->next = this;
-        if (left)
-            list[prio] = this;
-    }
-
-    trace (TRACE_SCHEDULE, "ENQ:%p (%llu) PRIO:%#x TOP:%#x %s", this, left, prio, prio_top, prio > current->prio ? "reschedule" : "");
+    list[prio].enqueue (this, left);
 
     if (prio > current->prio || (this != current && prio == current->prio && left))
         Cpu::hazard |= HZD_SCHED;
@@ -78,35 +67,30 @@ void Sc::ready_enqueue (uint64 t)
     tsc = t;
 }
 
-void Sc::ready_dequeue (uint64 t)
+Sc * Sc::ready_dequeue (uint64 t)
 {
-    assert (prio < priorities);
-    assert (cpu == Cpu::id);
-    assert (prev && next);
+    auto sc = list[prio_top].dequeue_head();
 
-    if (list[prio] == this)
-        list[prio] = next == this ? nullptr : next;
+    assert (sc);
+    assert (sc->prio < priorities);
+    assert (sc->cpu == Cpu::id);
 
-    next->prev = prev;
-    prev->next = next;
-    prev = next = nullptr;
-
-    while (!list[prio_top] && prio_top)
+    while (list[prio_top].empty() && prio_top)
         prio_top--;
 
-    trace (TRACE_SCHEDULE, "DEQ:%p (%llu) PRIO:%#x TOP:%#x", this, left, prio, prio_top);
+    sc->ec->add_tsc_offset (sc->tsc - t);
 
-    ec->add_tsc_offset (tsc - t);
+    sc->tsc = t;
 
-    tsc = t;
+    return sc;
 }
 
-void Sc::schedule (bool suspend)
+void Sc::schedule (bool blocked)
 {
     Counter::schedule.inc();
 
     assert (current);
-    assert (suspend || !current->prev);
+    assert (blocked || !current->queued());
 
     uint64 t = rdtsc();
     uint64 d = Timeout_budget::timeout.dequeue();
@@ -116,40 +100,33 @@ void Sc::schedule (bool suspend)
 
     Cpu::hazard &= ~HZD_SCHED;
 
-    if (EXPECT_TRUE (!suspend))
+    if (EXPECT_TRUE (!blocked))
         current->ready_enqueue (t);
 
-    Sc *sc = list[prio_top];
-    assert (sc);
-
-    Timeout_budget::timeout.enqueue (t + sc->left);
-
     ctr_loop = 0;
+    current = ready_dequeue (t);
 
-    current = sc;
-    sc->ready_dequeue (t);
-    sc->ec->activate();
+    Timeout_budget::timeout.enqueue (t + current->left);
+    current->ec->activate();
 }
 
 void Sc::remote_enqueue()
 {
     if (Cpu::id == cpu)
-        ready_enqueue (rdtsc());
+        return ready_enqueue (rdtsc());
 
-    else {
-        Sc::Rq *r = remote (cpu);
+    bool ipi;
+
+    {
+        auto r = remote (cpu);
 
         Lock_guard <Spinlock> guard (r->lock);
 
-        if (r->queue) {
-            next = r->queue;
-            prev = r->queue->prev;
-            next->prev = prev->next = this;
-        } else {
-            r->queue = prev = next = this;
-            Interrupt::send_cpu (Interrupt::Request::RRQ, cpu);
-        }
+        ipi = r->queue.enqueue_tail (this);
     }
+
+    if (ipi)
+        Interrupt::send_cpu (Interrupt::Request::RRQ, cpu);
 }
 
 void Sc::rrq_handler()
@@ -158,17 +135,5 @@ void Sc::rrq_handler()
 
     Lock_guard <Spinlock> guard (rq.lock);
 
-    for (Sc *ptr = rq.queue; ptr; ) {
-
-        ptr->next->prev = ptr->prev;
-        ptr->prev->next = ptr->next;
-
-        Sc *sc = ptr;
-
-        ptr = ptr->next == ptr ? nullptr : ptr->next;
-
-        sc->ready_enqueue (t);
-    }
-
-    rq.queue = nullptr;
+    for (Sc *sc; (sc = rq.queue.dequeue_head()); sc->ready_enqueue (t)) ;
 }
