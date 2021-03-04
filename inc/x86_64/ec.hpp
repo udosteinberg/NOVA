@@ -38,10 +38,8 @@
 
 class Utcb;
 
-class Ec : public Kobject, public Queue<Sc>
+class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 {
-    friend class Queue<Ec>;
-
     private:
         void        (*cont)() ALIGNED (16);
         Cpu_regs    regs;
@@ -49,8 +47,6 @@ class Ec : public Kobject, public Queue<Sc>
         Utcb *      utcb;
         Pd * const  pd;
         Ec *        partner;
-        Ec *        prev;
-        Ec *        next;
         Fpu *       fpu;
         union {
             struct {
@@ -149,7 +145,7 @@ class Ec : public Kobject, public Queue<Sc>
         }
 
         ALWAYS_INLINE
-        inline bool blocked() const { return next || !cont; }
+        inline bool blocked() const { return queued() || !cont; }
 
         ALWAYS_INLINE
         inline void set_timeout (uint64 t, Sm *s)
@@ -206,7 +202,7 @@ class Ec : public Kobject, public Queue<Sc>
                 if (!blocked())
                     return;
 
-                enqueue (Sc::current);
+                enqueue_tail (Sc::current);
             }
 
             Sc::schedule (true);
@@ -219,7 +215,7 @@ class Ec : public Kobject, public Queue<Sc>
 
             Lock_guard <Spinlock> guard (lock);
 
-            for (Sc *s; dequeue (s = head()); s->remote_enqueue()) ;
+            for (Sc *sc; (sc = dequeue_head()); sc->remote_enqueue()) ;
         }
 
         [[noreturn]] HOT
