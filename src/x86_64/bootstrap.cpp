@@ -30,7 +30,7 @@ void bootstrap()
 
     // Create idle EC
     Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
-    Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
+    Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current);
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
