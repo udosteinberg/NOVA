@@ -116,12 +116,6 @@ bool Ec::handle_exc_pf (Exc_regs *r)
         return true;
     }
 
-    // Kernel fault in OBJ space
-    if (addr >= SPC_LOCAL_OBJ) {
-        Space_obj::page_fault (addr, r->err);
-        return true;
-    }
-
     die ("#PF (kernel)", r);
 }
 

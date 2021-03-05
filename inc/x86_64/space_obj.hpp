@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,39 +21,31 @@
 
 #pragma once
 
+#include "bits.hpp"
 #include "capability.hpp"
+#include "macros.hpp"
+#include "memory.hpp"
 #include "space.hpp"
-
-class Space_mem;
+#include "status.hpp"
 
 class Space_obj : public Space
 {
     private:
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (unsigned long idx)
-        {
-            return SPC_LOCAL_OBJ + (idx % caps) * sizeof (Capability);
-        }
+        struct Captable;
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
+        static constexpr unsigned lev = 2;
+        static constexpr unsigned bpl = bit_scan_reverse (PAGE_SIZE / sizeof (Capability));
 
-        void update (mword, Capability);
+        Captable *root { nullptr };
+
+        Capability *walk (unsigned long, bool);
 
     public:
-        static unsigned const caps = (END_SPACE_LIM - SPC_LOCAL_OBJ) / sizeof (Capability);
+        static constexpr unsigned long num = BIT64 (lev * bpl);
 
-        ALWAYS_INLINE
-        static inline Capability lookup (unsigned long idx)
-        {
-            return *reinterpret_cast<Capability *>(idx_to_virt (idx));
-        }
+        ~Space_obj();
 
-        size_t lookup (mword, Capability &);
-
-        Paddr walk (mword = 0);
-
-        static void page_fault (mword, mword);
-
-        static bool insert_root (Kobject *);
+        Capability lookup (unsigned long) const;
+        Status     update (unsigned long, Capability, Capability &);
+        Status     insert (unsigned long, Capability);
 };
