@@ -41,7 +41,7 @@ void Hip::build (mword)
     mem_size   = static_cast<uint16>(sizeof (Hip_mem));
     api_flg    = FEAT_VMX | FEAT_SVM;
     api_ver    = CFG_VER;
-    sel_num    = Space_obj::caps;
+    sel_num    = Space_obj::selectors;
     sel_gsi    = NUM_GSI;
     sel_exc    = NUM_EXC;
     sel_vmi    = NUM_VMI;

@@ -29,9 +29,6 @@
 #define PAGE_SIZE       BITN (PAGE_BITS)
 #define OFFS_MASK       (PAGE_SIZE - 1)
 
-#define END_SPACE_LIM   (~0UL + 1)
-#define MMAP_SPC_OBJ    (END_SPACE_LIM - 0x20000000)
-
 // Space-Local Area           [--PTE--]---      // ^39 ^30 ^21 ^12
 #define MMAP_SPC_PIO_E  0xffffffffc0002000      // 511 511 000 002
 #define MMAP_SPC_PIO    0xffffffffc0000000      // 511 511 000 000
