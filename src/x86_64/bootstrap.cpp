@@ -40,7 +40,7 @@ void bootstrap()
 
         // Create idle EC
         Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
-        Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
+        Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current);
 
         // Create root EC
         if (Cpu::bsp) {
