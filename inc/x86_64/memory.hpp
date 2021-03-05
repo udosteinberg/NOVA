@@ -33,9 +33,6 @@
 
 #define VIRT_ADDR(L3,L2,L1,L0)  (VALN_SHIFT (0xffff, LEVL_BITS (4)) | VALN_SHIFT (L3, LEVL_BITS (3)) | VALN_SHIFT (L2, LEVL_BITS (2)) | VALN_SHIFT (L1, LEVL_BITS (1)) | VALN_SHIFT (L0, LEVL_BITS (0)))
 
-#define END_SPACE_LIM   (~0UL + 1)
-#define MMAP_SPC_OBJ    (END_SPACE_LIM - 0x20000000)
-
 // Space-Local Area
 #define MMAP_SPC_PIO_E  VIRT_ADDR (511, 511,   0,   2)
 #define MMAP_SPC_PIO    VIRT_ADDR (511, 511,   0,   0)
