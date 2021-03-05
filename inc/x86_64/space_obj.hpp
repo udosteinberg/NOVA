@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,38 +21,98 @@
 
 #pragma once
 
+#include "bits.hpp"
+#include "buddy.hpp"
 #include "capability.hpp"
+#include "space.hpp"
+#include "status.hpp"
 
-class Space_mem;
-
-class Space_obj
+class Space_obj : public Space
 {
+    friend class Pd;
+
     private:
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (unsigned long idx)
+        using entry_t = Atomic<uintptr_t>;
+
+        static constexpr auto lev { 2 };
+        static constexpr auto bpl { bit_scan_msb (PAGE_SIZE (0) / sizeof (entry_t)) };
+
+        static auto table (uintptr_t ptr) { return reinterpret_cast<Captable *>(ptr); }
+
+        struct Captable
         {
-            return MMAP_SPC_OBJ + (idx % caps) * sizeof (Capability);
-        }
+            static constexpr auto entries { BIT (bpl) };
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
+            entry_t slot[entries] {};
 
-        void update (mword, Capability);
+            /*
+             * Allocate a Captable
+             *
+             * @return      Pointer to the Captable (allocation success) or nullptr (allocation failure)
+             */
+            [[nodiscard]] static void *operator new (size_t) noexcept
+            {
+                return Buddy::alloc (0);
+            }
+
+            /*
+             * Deallocate a Captable
+             *
+             * @param ptr   Pointer to the Captable
+             */
+            NONNULL static void operator delete (void *ptr)
+            {
+                Buddy::free (ptr);
+            }
+
+            /*
+             * Deallocate a Captable subtree
+             *
+             * @param l     Subtree level
+             */
+            void deallocate (unsigned l) const
+            {
+                if (l)
+                    for (unsigned i { 0 }; i < entries; i++)
+                        if (uintptr_t ptr { slot[i] })
+                            table (ptr)->deallocate (l - 1);
+
+                delete this;
+            }
+        };
+
+        static_assert (sizeof (Captable) == PAGE_SIZE (0));
+
+        entry_t root {};
+
+        ~Space_obj();
+
+        entry_t *walk (unsigned long, bool);
 
     public:
-        static unsigned const caps = (END_SPACE_LIM - MMAP_SPC_OBJ) / sizeof (Capability);
+        static Space_obj nova;
 
-        ALWAYS_INLINE
-        static inline Capability lookup (unsigned long idx)
+        static constexpr uint8_t mco { bpl };
+        static constexpr uint8_t sbw { bpl * lev };
+        static constexpr auto selectors { BIT64 (sbw) };
+
+        enum Selector
         {
-            return *reinterpret_cast<Capability *>(idx_to_virt (idx));
-        }
+            NOVA_CON = selectors - 1,
+            NOVA_OBJ = selectors - 2,
+            NOVA_HST = selectors - 3,
+            NOVA_PIO = selectors - 4,
+            NOVA_MSR = selectors - 5,
+            ROOT_OBJ = selectors - 6,
+            ROOT_HST = selectors - 7,
+            ROOT_PIO = selectors - 8,
+            ROOT_PD  = selectors - 9,
+            NOVA_CPU = 0,
+        };
 
-        size_t lookup (mword, Capability &);
+        Capability lookup (unsigned long) const;
+        Status     update (unsigned long, Capability);
+        Status     insert (unsigned long, Capability);
 
-        Paddr walk (mword = 0);
-
-        static void page_fault (mword, mword);
-
-        static bool insert_root (Kobject *);
+        Status delegate (Space_obj const *, unsigned long, unsigned long, unsigned, unsigned);
 };
