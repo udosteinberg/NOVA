@@ -267,9 +267,10 @@ void Ec::root_invoke()
     Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
 #endif
 
-    Space_obj::insert_root (Pd::current);
-    Space_obj::insert_root (Ec::current);
-    Space_obj::insert_root (Sc::current);
+    current->pd->Space_obj::insert (Space_obj::selectors - 1, Capability (&Pd::kern,   static_cast<unsigned>(Capability::Perm_pd::CTRL)));
+    current->pd->Space_obj::insert (Space_obj::selectors - 2, Capability (current->pd, static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
+    current->pd->Space_obj::insert (Space_obj::selectors - 3, Capability (Ec::current, static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
+    current->pd->Space_obj::insert (Space_obj::selectors - 4, Capability (Sc::current, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
 
     Console::flush();
 

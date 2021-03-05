@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,38 +21,53 @@
 
 #pragma once
 
+#include "atomic.hpp"
+#include "bits.hpp"
 #include "capability.hpp"
+#include "macros.hpp"
+#include "memory.hpp"
+#include "space.hpp"
+#include "status.hpp"
 
-class Space_mem;
-
-class Space_obj
+class Space_obj : public Space
 {
+    friend class Pd;
+
     private:
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (unsigned long idx)
-        {
-            return MMAP_SPC_OBJ + (idx % caps) * sizeof (Capability);
-        }
+        struct Captable;
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
+        Atomic<Captable *> root { nullptr };
 
-        void update (mword, Capability);
+        static constexpr auto lev { 2 };
+        static constexpr auto bpl { bit_scan_reverse (PAGE_SIZE (0) / sizeof (Captable *)) };
+
+        ~Space_obj();
+
+        Atomic<Capability> *walk (unsigned long, bool);
 
     public:
-        static unsigned const caps = (END_SPACE_LIM - MMAP_SPC_OBJ) / sizeof (Capability);
+        static Space_obj nova;
 
-        ALWAYS_INLINE
-        static inline Capability lookup (unsigned long idx)
+        static constexpr auto selectors { BIT64 (lev * bpl) };
+        static constexpr auto max_order { bpl };
+
+        enum Selector
         {
-            return *reinterpret_cast<Capability *>(idx_to_virt (idx));
-        }
+            NOVA_CON = selectors - 1,
+            NOVA_OBJ = selectors - 2,
+            NOVA_HST = selectors - 3,
+            NOVA_PIO = selectors - 4,
+            NOVA_MSR = selectors - 5,
+            ROOT_OBJ = selectors - 6,
+            ROOT_HST = selectors - 7,
+            ROOT_PIO = selectors - 8,
+            NOVA_INT = BIT (16),
+            NOVA_CPU = 0,
+        };
 
-        size_t lookup (mword, Capability &);
+        Capability lookup (unsigned long) const;
+        Status     update (unsigned long, Capability, Capability &);
+        Status     insert (unsigned long, Capability);
 
-        Paddr walk (mword = 0);
-
-        static void page_fault (mword, mword);
-
-        static bool insert_root (Kobject *);
+        Status delegate (Space_obj const *, unsigned long, unsigned long, unsigned, unsigned);
 };
