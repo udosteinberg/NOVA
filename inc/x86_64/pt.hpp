@@ -21,7 +21,7 @@
 #pragma once
 
 #include "kobject.hpp"
-#include "mtd.hpp"
+#include "mtd_arch.hpp"
 #include "slab.hpp"
 
 class Ec;
@@ -34,7 +34,7 @@ class Pt : public Kobject
 
     public:
         Ec * const ec;
-        Mtd        const mtd;
+        Mtd_arch   const mtd;
         mword      const ip;
         mword      id;
 
