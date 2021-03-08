@@ -73,7 +73,7 @@ void Ec::send_msg()
     if (EXPECT_TRUE (!ec->cont)) {
         current->cont = C;
         current->set_partner (ec);
-        current->regs.mtd = pt->mtd.val;
+        current->regs.mtd = pt->mtd;
         ec->cont = recv_kern;
         ec->regs.set_pt (pt->id);
         ec->regs.set_ip (pt->ip);
