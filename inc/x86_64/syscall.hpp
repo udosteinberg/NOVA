@@ -100,7 +100,7 @@ class Sys_create_pt : public Sys_regs
         inline unsigned long ec() const { return ARG_3; }
 
         ALWAYS_INLINE
-        inline Mtd mtd() const { return Mtd (ARG_4); }
+        inline auto mtd() const { return Mtd_arch (static_cast<uint32> (ARG_4)); }
 
         ALWAYS_INLINE
         inline mword eip() const { return ARG_5; }
