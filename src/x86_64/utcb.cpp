@@ -23,7 +23,7 @@
 #include "config.hpp"
 #include "cpu.hpp"
 #include "lowlevel.hpp"
-#include "mtd.hpp"
+#include "mtd_arch.hpp"
 #include "regs.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
@@ -35,21 +35,18 @@ bool Utcb::load_exc (Cpu_regs const &c)
 
     mword m = c.mtd;
 
-    if (m & Mtd::GPR_0_3) {
+    if (m & Mtd_arch::GPR_0_7) {
         rax = s.rax;
         rcx = s.rcx;
         rdx = s.rdx;
         rbx = s.rbx;
-    }
-
-    if (m & Mtd::GPR_4_7) {
         rsp = e.rsp;
         rbp = s.rbp;
         rsi = s.rsi;
         rdi = s.rdi;
     }
 
-    if (m & Mtd::GPR_8_15) {
+    if (m & Mtd_arch::GPR_8_15) {
         r8  = s.r8;
         r9  = s.r9;
         r10 = s.r10;
@@ -60,13 +57,13 @@ bool Utcb::load_exc (Cpu_regs const &c)
         r15 = s.r15;
     }
 
-    if (m & Mtd::RIP_LEN)
+    if (m & Mtd_arch::RIP)
         rip = e.rip;
 
-    if (m & Mtd::RFLAGS)
+    if (m & Mtd_arch::RFLAGS)
         rflags = e.rfl;
 
-    if (m & Mtd::QUAL) {
+    if (m & Mtd_arch::QUAL) {
         qual[0] = e.err;
         qual[1] = c.cr2;
     }
@@ -75,7 +72,7 @@ bool Utcb::load_exc (Cpu_regs const &c)
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 
-    return m & Mtd::FPU;
+    return m & Mtd_arch::FPU;
 }
 
 bool Utcb::save_exc (Cpu_regs &c) const
@@ -83,21 +80,18 @@ bool Utcb::save_exc (Cpu_regs &c) const
     auto &e { c.exc };
     auto &s { e.sys };
 
-    if (mtd & Mtd::GPR_0_3) {
+    if (mtd & Mtd_arch::GPR_0_7) {
         s.rax = rax;
         s.rcx = rcx;
         s.rdx = rdx;
         s.rbx = rbx;
-    }
-
-    if (mtd & Mtd::GPR_4_7) {
         e.rsp = rsp;
         s.rbp = rbp;
         s.rsi = rsi;
         s.rdi = rdi;
     }
 
-    if (mtd & Mtd::GPR_8_15) {
+    if (mtd & Mtd_arch::GPR_8_15) {
         s.r8  = r8;
         s.r9  = r9;
         s.r10 = r10;
@@ -108,13 +102,13 @@ bool Utcb::save_exc (Cpu_regs &c) const
         s.r15 = r15;
     }
 
-    if (mtd & Mtd::RIP_LEN)
+    if (mtd & Mtd_arch::RIP)
         e.rip = rip;
 
-    if (mtd & Mtd::RFLAGS)
+    if (mtd & Mtd_arch::RFLAGS)
         e.rfl = (rflags & ~(RFL_VIP | RFL_VIF | RFL_VM | RFL_RF | RFL_IOPL)) | RFL_IF;
 
-    return mtd & Mtd::FPU;
+    return mtd & Mtd_arch::FPU;
 }
 
 bool Utcb::load_vmx (Cpu_regs const &c)
@@ -125,21 +119,18 @@ bool Utcb::load_vmx (Cpu_regs const &c)
 
     mword m = c.mtd;
 
-    if (m & Mtd::GPR_0_3) {
+    if (m & Mtd_arch::GPR_0_7) {
         rax = s.rax;
         rcx = s.rcx;
         rdx = s.rdx;
         rbx = s.rbx;
-    }
-
-    if (m & Mtd::GPR_4_7) {
         rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
         rbp = s.rbp;
         rsi = s.rsi;
         rdi = s.rdi;
     }
 
-    if (m & Mtd::GPR_8_15) {
+    if (m & Mtd_arch::GPR_8_15) {
         r8  = s.r8;
         r9  = s.r9;
         r10 = s.r10;
@@ -150,42 +141,42 @@ bool Utcb::load_vmx (Cpu_regs const &c)
         r15 = s.r15;
     }
 
-    if (m & Mtd::RIP_LEN) {
+    if (m & Mtd_arch::RIP) {
         rip      = Vmcs::read<mword>  (Vmcs::GUEST_RIP);
         inst_len = Vmcs::read<uint32> (Vmcs::EXI_INST_LEN);
     }
 
-    if (m & Mtd::RFLAGS)
+    if (m & Mtd_arch::RFLAGS)
         rflags = Vmcs::read<mword> (Vmcs::GUEST_RFLAGS);
 
-    if (m & Mtd::DS_ES) {
+    if (m & Mtd_arch::DS_ES) {
         ds.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_DS), Vmcs::read<mword> (Vmcs::GUEST_BASE_DS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_DS), Vmcs::read<uint32> (Vmcs::GUEST_AR_DS));
         es.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_ES), Vmcs::read<mword> (Vmcs::GUEST_BASE_ES), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_ES), Vmcs::read<uint32> (Vmcs::GUEST_AR_ES));
     }
 
-    if (m & Mtd::FS_GS) {
+    if (m & Mtd_arch::FS_GS) {
         fs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_FS), Vmcs::read<mword> (Vmcs::GUEST_BASE_FS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_FS), Vmcs::read<uint32> (Vmcs::GUEST_AR_FS));
         gs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_GS), Vmcs::read<mword> (Vmcs::GUEST_BASE_GS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GS), Vmcs::read<uint32> (Vmcs::GUEST_AR_GS));
     }
 
-    if (m & Mtd::CS_SS) {
+    if (m & Mtd_arch::CS_SS) {
         cs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_CS), Vmcs::read<mword> (Vmcs::GUEST_BASE_CS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_CS), Vmcs::read<uint32> (Vmcs::GUEST_AR_CS));
         ss.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_SS), Vmcs::read<mword> (Vmcs::GUEST_BASE_SS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_SS), Vmcs::read<uint32> (Vmcs::GUEST_AR_SS));
     }
 
-    if (m & Mtd::TR)
+    if (m & Mtd_arch::TR)
         tr.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_TR), Vmcs::read<mword> (Vmcs::GUEST_BASE_TR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_TR), Vmcs::read<uint32> (Vmcs::GUEST_AR_TR));
 
-    if (m & Mtd::LDTR)
+    if (m & Mtd_arch::LDTR)
         ld.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_LDTR), Vmcs::read<mword> (Vmcs::GUEST_BASE_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_AR_LDTR));
 
-    if (m & Mtd::GDTR)
+    if (m & Mtd_arch::GDTR)
         gd.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_GDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GDTR), 0);
 
-    if (m & Mtd::IDTR)
+    if (m & Mtd_arch::IDTR)
         id.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_IDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_IDTR), 0);
 
-    if (m & Mtd::CR) {
+    if (m & Mtd_arch::CR) {
         cr0 = c.vmx_get_gst_cr0();
         cr4 = c.vmx_get_gst_cr4();
         cr2 = c.cr2;
@@ -196,21 +187,21 @@ bool Utcb::load_vmx (Cpu_regs const &c)
         pdpte[3] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE3);
     }
 
-    if (m & Mtd::DR)
+    if (m & Mtd_arch::DR)
         dr7 = Vmcs::read<mword> (Vmcs::GUEST_DR7);
 
-    if (m & Mtd::SYSENTER) {
+    if (m & Mtd_arch::SYSENTER) {
         sysenter_cs  = Vmcs::read<uint32> (Vmcs::GUEST_SYSENTER_CS);
         sysenter_rsp = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_ESP);
         sysenter_rip = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_EIP);
     }
 
-    if (m & Mtd::QUAL) {
+    if (m & Mtd_arch::QUAL) {
         qual[0] = Vmcs::read<mword>  (Vmcs::EXI_QUALIFICATION);
         qual[1] = Vmcs::read<uint64> (Vmcs::INFO_PHYS_ADDR);
     }
 
-    if (m & Mtd::INJ) {
+    if (m & Mtd_arch::INJ) {
         if (c.exc.ep() == 33 || c.exc.ep() == NUM_VMI - 1) {
             intr_info  = Vmcs::read<uint32> (Vmcs::ENT_INTR_INFO);
             intr_error = Vmcs::read<uint32> (Vmcs::ENT_INTR_ERROR);
@@ -220,24 +211,19 @@ bool Utcb::load_vmx (Cpu_regs const &c)
         }
     }
 
-    if (m & Mtd::STA) {
+    if (m & Mtd_arch::STA) {
         intr_state = Vmcs::read<uint32> (Vmcs::GUEST_INTR_STATE);
         actv_state = Vmcs::read<uint32> (Vmcs::GUEST_ACTV_STATE);
     }
 
-    if (m & Mtd::TSC) {
-        tsc_val = rdtsc();
-        tsc_off = c.tsc_offset;
-    }
-
-    if (m & Mtd::EFER)
+    if (m & Mtd_arch::EFER)
         efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
 
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 
-    return m & Mtd::FPU;
+    return m & Mtd_arch::FPU;
 }
 
 bool Utcb::save_vmx (Cpu_regs &c) const
@@ -246,21 +232,18 @@ bool Utcb::save_vmx (Cpu_regs &c) const
 
     c.vmcs->make_current();
 
-    if (mtd & Mtd::GPR_0_3) {
+    if (mtd & Mtd_arch::GPR_0_7) {
         s.rax = rax;
         s.rcx = rcx;
         s.rdx = rdx;
         s.rbx = rbx;
-    }
-
-    if (mtd & Mtd::GPR_4_7) {
         Vmcs::write (Vmcs::GUEST_RSP, rsp);
         s.rbp = rbp;
         s.rsi = rsi;
         s.rdi = rdi;
     }
 
-    if (mtd & Mtd::GPR_8_15) {
+    if (mtd & Mtd_arch::GPR_8_15) {
         s.r8  = r8;
         s.r9  = r9;
         s.r10 = r10;
@@ -271,15 +254,15 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         s.r15 = r15;
     }
 
-    if (mtd & Mtd::RIP_LEN) {
+    if (mtd & Mtd_arch::RIP) {
         Vmcs::write (Vmcs::GUEST_RIP, rip);
         Vmcs::write (Vmcs::ENT_INST_LEN, static_cast<uint32> (inst_len));
     }
 
-    if (mtd & Mtd::RFLAGS)
+    if (mtd & Mtd_arch::RFLAGS)
         Vmcs::write (Vmcs::GUEST_RFLAGS, rflags);
 
-    if (mtd & Mtd::DS_ES) {
+    if (mtd & Mtd_arch::DS_ES) {
         Vmcs::write (Vmcs::GUEST_SEL_DS,   ds.sel);
         Vmcs::write (Vmcs::GUEST_BASE_DS,  static_cast<mword>(ds.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_DS, ds.limit);
@@ -290,7 +273,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::GUEST_AR_ES,   (es.ar << 4 & 0x1f000) | (es.ar & 0xff));
     }
 
-    if (mtd & Mtd::FS_GS) {
+    if (mtd & Mtd_arch::FS_GS) {
         Vmcs::write (Vmcs::GUEST_SEL_FS,   fs.sel);
         Vmcs::write (Vmcs::GUEST_BASE_FS,  static_cast<mword>(fs.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_FS, fs.limit);
@@ -301,7 +284,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::GUEST_AR_GS,   (gs.ar << 4 & 0x1f000) | (gs.ar & 0xff));
     }
 
-    if (mtd & Mtd::CS_SS) {
+    if (mtd & Mtd_arch::CS_SS) {
         Vmcs::write (Vmcs::GUEST_SEL_CS,   cs.sel);
         Vmcs::write (Vmcs::GUEST_BASE_CS,  static_cast<mword>(cs.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_CS, cs.limit);
@@ -312,31 +295,31 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::GUEST_AR_SS,   (ss.ar << 4 & 0x1f000) | (ss.ar & 0xff));
     }
 
-    if (mtd & Mtd::TR) {
+    if (mtd & Mtd_arch::TR) {
         Vmcs::write (Vmcs::GUEST_SEL_TR,     tr.sel);
         Vmcs::write (Vmcs::GUEST_BASE_TR,    static_cast<mword>(tr.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_TR,   tr.limit);
         Vmcs::write (Vmcs::GUEST_AR_TR,     (tr.ar << 4 & 0x1f000) | (tr.ar & 0xff));
     }
 
-    if (mtd & Mtd::LDTR) {
+    if (mtd & Mtd_arch::LDTR) {
         Vmcs::write (Vmcs::GUEST_SEL_LDTR,   ld.sel);
         Vmcs::write (Vmcs::GUEST_BASE_LDTR,  static_cast<mword>(ld.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_LDTR, ld.limit);
         Vmcs::write (Vmcs::GUEST_AR_LDTR,   (ld.ar << 4 & 0x1f000) | (ld.ar & 0xff));
     }
 
-    if (mtd & Mtd::GDTR) {
+    if (mtd & Mtd_arch::GDTR) {
         Vmcs::write (Vmcs::GUEST_BASE_GDTR,  static_cast<mword>(gd.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_GDTR, gd.limit);
     }
 
-    if (mtd & Mtd::IDTR) {
+    if (mtd & Mtd_arch::IDTR) {
         Vmcs::write (Vmcs::GUEST_BASE_IDTR,  static_cast<mword>(id.base));
         Vmcs::write (Vmcs::GUEST_LIMIT_IDTR, id.limit);
     }
 
-    if (mtd & Mtd::CR) {
+    if (mtd & Mtd_arch::CR) {
         c.vmx_set_gst_cr0 (cr0);
         c.vmx_set_gst_cr4 (cr4);
         c.cr2 = cr2;
@@ -347,21 +330,21 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::GUEST_PDPTE3, pdpte[3]);
     }
 
-    if (mtd & Mtd::DR)
+    if (mtd & Mtd_arch::DR)
         Vmcs::write (Vmcs::GUEST_DR7, dr7);
 
-    if (mtd & Mtd::SYSENTER) {
+    if (mtd & Mtd_arch::SYSENTER) {
         Vmcs::write (Vmcs::GUEST_SYSENTER_CS,  sysenter_cs);
         Vmcs::write (Vmcs::GUEST_SYSENTER_ESP, sysenter_rsp);
         Vmcs::write (Vmcs::GUEST_SYSENTER_EIP, sysenter_rip);
     }
 
-    if (mtd & Mtd::CTRL) {
+    if (mtd & Mtd_arch::CTRL) {
         c.vmx_set_cpu_pri (ctrl[0]);
         c.vmx_set_cpu_sec (ctrl[1]);
     }
 
-    if (mtd & Mtd::INJ) {
+    if (mtd & Mtd_arch::INJ) {
 
         uint32 val = Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL0);
 
@@ -381,12 +364,12 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
     }
 
-    if (mtd & Mtd::STA) {
+    if (mtd & Mtd_arch::STA) {
         Vmcs::write (Vmcs::GUEST_INTR_STATE, intr_state);
         Vmcs::write (Vmcs::GUEST_ACTV_STATE, actv_state);
     }
 
-    if (mtd & Mtd::EFER) {
+    if (mtd & Mtd_arch::EFER) {
 
         Vmcs::write (Vmcs::GUEST_EFER, efer);
 
@@ -400,7 +383,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         Vmcs::write (Vmcs::ENT_CONTROLS, ent);
     }
 
-    return mtd & Mtd::FPU;
+    return mtd & Mtd_arch::FPU;
 }
 
 bool Utcb::load_svm (Cpu_regs const &c)
@@ -410,21 +393,18 @@ bool Utcb::load_svm (Cpu_regs const &c)
 
     mword m = c.mtd;
 
-    if (m & Mtd::GPR_0_3) {
+    if (m & Mtd_arch::GPR_0_7) {
         rax = v->rax;
         rcx = s.rcx;
         rdx = s.rdx;
         rbx = s.rbx;
-    }
-
-    if (m & Mtd::GPR_4_7) {
         rsp = v->rsp;
         rbp = s.rbp;
         rsi = s.rsi;
         rdi = s.rdi;
     }
 
-    if (m & Mtd::GPR_8_15) {
+    if (m & Mtd_arch::GPR_8_15) {
         r8  = s.r8;
         r9  = s.r9;
         r10 = s.r10;
@@ -435,85 +415,80 @@ bool Utcb::load_svm (Cpu_regs const &c)
         r15 = s.r15;
     }
 
-    if (m & Mtd::RIP_LEN)
+    if (m & Mtd_arch::RIP)
         rip = v->rip;
 
-    if (m & Mtd::RFLAGS)
+    if (m & Mtd_arch::RFLAGS)
         rflags = v->rflags;
 
-    if (m & Mtd::DS_ES) {
+    if (m & Mtd_arch::DS_ES) {
         ds = v->ds;
         es = v->es;
     }
 
-    if (m & Mtd::FS_GS) {
+    if (m & Mtd_arch::FS_GS) {
         fs = v->fs;
         gs = v->gs;
     }
 
-    if (m & Mtd::CS_SS) {
+    if (m & Mtd_arch::CS_SS) {
         cs = v->cs;
         ss = v->ss;
     }
 
-    if (m & Mtd::TR)
+    if (m & Mtd_arch::TR)
         tr = v->tr;
 
-    if (m & Mtd::LDTR)
+    if (m & Mtd_arch::LDTR)
         ld = v->ldtr;
 
-    if (m & Mtd::GDTR)
+    if (m & Mtd_arch::GDTR)
         gd = v->gdtr;
 
-    if (m & Mtd::IDTR)
+    if (m & Mtd_arch::IDTR)
         id = v->idtr;
 
-    if (m & Mtd::CR) {
+    if (m & Mtd_arch::CR) {
         cr0 = v->cr0;
         cr2 = v->cr2;
         cr3 = v->cr3;
         cr4 = v->cr4;
     }
 
-    if (m & Mtd::DR)
+    if (m & Mtd_arch::DR)
         dr7 = v->dr7;
 
-    if (m & Mtd::SYSENTER) {
+    if (m & Mtd_arch::SYSENTER) {
         sysenter_cs  = v->sysenter_cs;
         sysenter_rsp = v->sysenter_esp;
         sysenter_rip = v->sysenter_eip;
     }
 
-    if (m & Mtd::QUAL) {
+    if (m & Mtd_arch::QUAL) {
         qual[0] = v->exitinfo1;
         qual[1] = v->exitinfo2;
     }
 
-    if (m & Mtd::INJ) {
+    if (m & Mtd_arch::INJ) {
         if (c.exc.ep() == NUM_VMI - 3 || c.exc.ep() == NUM_VMI - 1)
             inj = v->inj_control;
         else
             inj = v->exitintinfo;
     }
 
-    if (m & Mtd::STA) {
+    if (m & Mtd_arch::STA) {
         intr_state = static_cast<uint32>(v->int_shadow);
         actv_state = 0;
     }
 
-    if (m & Mtd::TSC) {
-        tsc_val = rdtsc();
-        tsc_off = c.tsc_offset;
-    }
-
-    if (m & Mtd::EFER)
+    if (m & Mtd_arch::EFER)
         efer = v->efer;
 
     barrier();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 
-    return m & Mtd::FPU;
+    return m & Mtd_arch::FPU;
 }
 
 bool Utcb::save_svm (Cpu_regs &c) const
@@ -521,21 +496,18 @@ bool Utcb::save_svm (Cpu_regs &c) const
     auto &s { c.exc.sys };
     auto  v { c.vmcb };
 
-    if (mtd & Mtd::GPR_0_3) {
+    if (mtd & Mtd_arch::GPR_0_7) {
         v->rax = rax;
         s.rcx = rcx;
         s.rdx = rdx;
         s.rbx = rbx;
-    }
-
-    if (mtd & Mtd::GPR_4_7) {
         v->rsp = rsp;
         s.rbp = rbp;
         s.rsi = rsi;
         s.rdi = rdi;
     }
 
-    if (mtd & Mtd::GPR_8_15) {
+    if (mtd & Mtd_arch::GPR_8_15) {
         s.r8  = r8;
         s.r9  = r9;
         s.r10 = r10;
@@ -546,61 +518,61 @@ bool Utcb::save_svm (Cpu_regs &c) const
         s.r15 = r15;
     }
 
-    if (mtd & Mtd::RIP_LEN)
+    if (mtd & Mtd_arch::RIP)
         v->rip = rip;
 
-    if (mtd & Mtd::RFLAGS)
+    if (mtd & Mtd_arch::RFLAGS)
         v->rflags = rflags;
 
-    if (mtd & Mtd::DS_ES) {
+    if (mtd & Mtd_arch::DS_ES) {
         v->ds = ds;
         v->es = es;
     }
 
-    if (mtd & Mtd::FS_GS) {
+    if (mtd & Mtd_arch::FS_GS) {
         v->fs = fs;
         v->gs = gs;
     }
 
-    if (mtd & Mtd::CS_SS) {
+    if (mtd & Mtd_arch::CS_SS) {
         v->cs = cs;
         v->ss = ss;
     }
 
-    if (mtd & Mtd::TR)
+    if (mtd & Mtd_arch::TR)
         v->tr = tr;
 
-    if (mtd & Mtd::LDTR)
+    if (mtd & Mtd_arch::LDTR)
         v->ldtr = ld;
 
-    if (mtd & Mtd::GDTR)
+    if (mtd & Mtd_arch::GDTR)
         v->gdtr = gd;
 
-    if (mtd & Mtd::IDTR)
+    if (mtd & Mtd_arch::IDTR)
         v->idtr = id;
 
-    if (mtd & Mtd::CR) {
+    if (mtd & Mtd_arch::CR) {
         v->cr0 = cr0;
         v->cr2 = cr2;
         v->cr3 = cr3;
         v->cr4 = cr4;
     }
 
-    if (mtd & Mtd::DR)
+    if (mtd & Mtd_arch::DR)
         v->dr7 = dr7;
 
-    if (mtd & Mtd::SYSENTER) {
+    if (mtd & Mtd_arch::SYSENTER) {
         v->sysenter_cs  = sysenter_cs;
         v->sysenter_esp = sysenter_rsp;
         v->sysenter_eip = sysenter_rip;
     }
 
-    if (mtd & Mtd::CTRL) {
+    if (mtd & Mtd_arch::CTRL) {
         c.svm_set_cpu_pri (ctrl[0]);
         c.svm_set_cpu_sec (ctrl[1]);
     }
 
-    if (mtd & Mtd::INJ) {
+    if (mtd & Mtd_arch::INJ) {
 
         if (intr_info & 0x1000) {
             v->int_control      |=  (1ul << 8 | 1ul << 20);
@@ -613,11 +585,11 @@ bool Utcb::save_svm (Cpu_regs &c) const
         v->inj_control = inj & ~0x3000;
     }
 
-    if (mtd & Mtd::STA)
+    if (mtd & Mtd_arch::STA)
         v->int_shadow = intr_state;
 
-    if (mtd & Mtd::EFER)
+    if (mtd & Mtd_arch::EFER)
         v->efer = efer;
 
-    return mtd & Mtd::FPU;
+    return mtd & Mtd_arch::FPU;
 }
