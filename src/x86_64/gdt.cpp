@@ -23,18 +23,14 @@
 #include "memory.hpp"
 #include "tss.hpp"
 
-ALIGNED(8) Gdt Gdt::gdt[SEL_MAX >> 3];
+ALIGNED(8) Gdt Gdt::gdt;
 
 void Gdt::build()
 {
-    Size s = BIT_16;
-    bool l = true;
+    gdt.kern_code = Descriptor_gdt_seg { Descriptor_gdt_seg::Type::CODE_XRA, 0 };
+    gdt.kern_data = Descriptor_gdt_seg { Descriptor_gdt_seg::Type::DATA_RWA, 0 };
+    gdt.user_data = Descriptor_gdt_seg { Descriptor_gdt_seg::Type::DATA_RWA, 3 };
+    gdt.user_code = Descriptor_gdt_seg { Descriptor_gdt_seg::Type::CODE_XRA, 3 };
 
-    gdt[SEL_KERN_CODE >> 3].set32 (CODE_XRA, PAGES, s, l, 0, 0, ~0ul);
-    gdt[SEL_KERN_DATA >> 3].set32 (DATA_RWA, PAGES, s, l, 0, 0, ~0ul);
-
-    gdt[SEL_USER_DATA >> 3].set32 (DATA_RWA, PAGES, s, l, 3, 0, ~0ul);
-    gdt[SEL_USER_CODE >> 3].set32 (CODE_XRA, PAGES, s, l, 3, 0, ~0ul);
-
-    gdt[SEL_TSS_RUN >> 3].set64 (SYS_TSS, BYTES, BIT_16, false, 0, reinterpret_cast<mword>(&Tss::run), MMAP_SPC_PIO_E - reinterpret_cast<mword>(&Tss::run));
+    gdt.tss_run = Descriptor_gdt_sys { Descriptor_gdt_sys::Type::SYS_TSS, reinterpret_cast<uint64_t>(&Tss::run), static_cast<uint32_t>(MMAP_SPC_PIO_E - reinterpret_cast<uintptr_t>(&Tss::run)) };
 }
