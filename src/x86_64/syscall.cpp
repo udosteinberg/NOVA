@@ -87,7 +87,7 @@ void Ec::send_msg()
 
 void Ec::sys_call()
 {
-    Sys_call *s = static_cast<Sys_call *>(&current->sys_regs());
+    auto s = static_cast<Sys_ipc_call *>(&current->sys_regs());
 
     auto cap = current->pd->Space_obj::lookup (s->pt());
     if (!cap.validate (Capability::Perm_pt::CALL)) [[unlikely]]
@@ -108,7 +108,7 @@ void Ec::sys_call()
         ec->make_current();
     }
 
-    if (!(s->flags() & Sys_call::DISABLE_BLOCKING)) [[likely]]
+    if (!s->timeout()) [[likely]]
         ec->help (sys_call);
 
     sys_finish<Status::TIMEOUT>();
@@ -118,17 +118,14 @@ void Ec::recv_kern()
 {
     Ec *ec = current->rcap;
 
-    bool fpu = false;
+    auto const mtd { static_cast<Sys_ipc_reply *>(&current->sys_regs())->mtd_a() };
 
     if (ec->cont == ret_user_iret)
-        fpu = current->utcb->load_exc (ec->cpu_regs());
+        current->utcb->arch()->load_exc (mtd, ec->cpu_regs());
     else if (ec->cont == ret_user_vmresume)
-        fpu = current->utcb->load_vmx (ec->cpu_regs());
+        current->utcb->arch()->load_vmx (mtd, ec->cpu_regs());
     else if (ec->cont == ret_user_vmrun)
-        fpu = current->utcb->load_svm (ec->cpu_regs());
-
-    if (fpu) [[unlikely]]
-        ec->transfer_fpu (current);
+        current->utcb->arch()->load_svm (mtd, ec->cpu_regs());
 
     ret_user_sysexit();
 }
@@ -137,7 +134,9 @@ void Ec::recv_user()
 {
     Ec *ec = current->rcap;
 
-    ec->utcb->save (current->utcb);
+    auto const mtd { static_cast<Sys_ipc_reply *>(&current->sys_regs())->mtd_u() };
+
+    ec->utcb->copy (mtd, current->utcb);
 
     ret_user_sysexit();
 }
@@ -159,25 +158,24 @@ void Ec::reply (void (*c)())
 
 void Ec::sys_reply()
 {
+    auto r = static_cast<Sys_ipc_reply *>(&current->sys_regs());
+
     Ec *ec = current->rcap;
 
     if (ec) [[likely]] {
 
         Utcb *src = current->utcb;
 
-        bool fpu = false;
-
-        if (ec->cont == ret_user_sysexit) [[likely]]
-            src->save (ec->utcb);
+        if (ec->cont == ret_user_sysexit) [[likely]] {
+            ec->sys_regs().ARG_2 = r->mtd_u();
+            src->copy (r->mtd_u(), ec->utcb);
+        }
         else if (ec->cont == ret_user_iret)
-            fpu = src->save_exc (ec->cpu_regs());
+            src->arch()->save_exc (r->mtd_a(), ec->cpu_regs());
         else if (ec->cont == ret_user_vmresume)
-            fpu = src->save_vmx (ec->cpu_regs());
+            src->arch()->save_vmx (r->mtd_a(), ec->cpu_regs());
         else if (ec->cont == ret_user_vmrun)
-            fpu = src->save_svm (ec->cpu_regs());
-
-        if (fpu) [[unlikely]]
-            current->transfer_fpu (ec);
+            src->arch()->save_svm (r->mtd_a(), ec->cpu_regs());
     }
 
     reply();
