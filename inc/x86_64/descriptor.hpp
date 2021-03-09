@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -69,11 +71,11 @@ class Descriptor
 class Pseudo_descriptor
 {
     private:
-        uint16  limit;
-        mword   base;
+        uint16      limit;
+        uintptr_t   base;
 
     public:
         ALWAYS_INLINE
-        inline Pseudo_descriptor (mword l, mword b) : limit (static_cast<uint16>(l)), base (b) {}
+        inline Pseudo_descriptor (void *b, size_t l) : limit (static_cast<uint16>(l - 1)), base (reinterpret_cast<uintptr_t>(b)) {}
 };
 #pragma pack()
