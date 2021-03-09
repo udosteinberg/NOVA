@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -51,7 +52,8 @@ class Gdt : public Descriptor
         ALWAYS_INLINE
         static inline void load()
         {
-            asm volatile ("lgdt %0" : : "m" (Pseudo_descriptor (sizeof (gdt) - 1, reinterpret_cast<mword>(gdt))));
+            Pseudo_descriptor d { gdt, sizeof (gdt) };
+            asm volatile ("lgdt %0" : : "m" (d));
         }
 
         ALWAYS_INLINE
