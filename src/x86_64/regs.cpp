@@ -108,18 +108,3 @@ void Exc_regs::fpu_ctrl (bool on)
         set_cpu_ctrl0<Vmcb> (vmcb->intercept_cpu[0]);
     }
 }
-
-template <> void Exc_regs::write_efer<Vmcb> (uint64 val)
-{
-    vmcb->efer = val;
-}
-
-template <> void Exc_regs::write_efer<Vmcs> (uint64 val)
-{
-    Vmcs::write (Vmcs::Encoding::GUEST_EFER, val);
-
-    if (val & EFER_LMA)
-        Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::Encoding::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
-    else
-        Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::Encoding::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
-}
