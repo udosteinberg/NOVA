@@ -21,22 +21,26 @@
 
 #pragma once
 
-#include "mtd.hpp"
+#include "mtd_arch.hpp"
 #include "qpd.hpp"
 #include "regs.hpp"
 
-class Sys_call : public Sys_regs
+class Sys_ipc_call final : public Sys_regs
 {
     public:
-        enum
-        {
-            DISABLE_BLOCKING    = 1ul << 0,
-            DISABLE_DONATION    = 1ul << 1,
-            DISABLE_REPLYCAP    = 1ul << 2
-        };
+        inline bool timeout() const { return flags() & BIT (0); }
 
-        ALWAYS_INLINE
         inline unsigned long pt() const { return ARG_1 >> 8; }
+
+        inline Mtd_user mtd() const { return Mtd_user (uint32 (ARG_2)); }
+};
+
+class Sys_ipc_reply final : public Sys_regs
+{
+    public:
+        inline Mtd_arch mtd_a() const { return Mtd_arch (uint32 (ARG_2)); }
+
+        inline Mtd_user mtd_u() const { return Mtd_user (uint32 (ARG_2)); }
 };
 
 class Sys_create_pd : public Sys_regs
