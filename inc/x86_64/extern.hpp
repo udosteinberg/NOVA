@@ -36,5 +36,5 @@ extern void (*CTORS_S)(), (*CTORS_E)(), (*CTORS_C)(), (*CTORS_L)();
 
 extern char entry_sys;
 extern char entry_vmx;
-extern mword handlers[];
+extern uintptr_t handlers[];
 extern mword hwdev_addr;
