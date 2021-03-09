@@ -57,9 +57,3 @@ class Barrier final
          */
         static void fmb() { asm volatile ("mfence" : : : "memory"); }
 };
-
-ALWAYS_INLINE
-inline void barrier()
-{
-    asm volatile ("" : : : "memory");
-}
