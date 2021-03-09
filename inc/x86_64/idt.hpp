@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,17 +24,17 @@
 #include "descriptor.hpp"
 #include "vectors.hpp"
 
-class Idt : public Descriptor
+class Idt final : private Descriptor
 {
     private:
-        uint32 val[sizeof (mword) / 2];
+        uint32_t val[sizeof (uintptr_t) / 2];
 
         ALWAYS_INLINE
-        inline void set (Type type, unsigned dpl, unsigned selector, mword offset)
+        inline void set (Type type, unsigned dpl, unsigned selector, uintptr_t offset)
         {
-            val[0] = static_cast<uint32>(selector << 16 | (offset & 0xffff));
-            val[1] = static_cast<uint32>((offset & 0xffff0000) | 1u << 15 | dpl << 13 | type);
-            val[2] = static_cast<uint32>(offset >> 32);
+            val[0] = static_cast<uint32_t>(selector << 16 | (offset & 0xffff));
+            val[1] = static_cast<uint32_t>((offset & 0xffff0000) | 1u << 15 | dpl << 13 | type);
+            val[2] = static_cast<uint32_t>(offset >> 32);
         }
 
     public:
@@ -44,6 +45,7 @@ class Idt : public Descriptor
         ALWAYS_INLINE
         static inline void load()
         {
-            asm volatile ("lidt %0" : : "m" (Pseudo_descriptor (sizeof (idt) - 1, reinterpret_cast<mword>(idt))));
+            Pseudo_descriptor d { idt, sizeof (idt) };
+            asm volatile ("lidt %0" : : "m" (d));
         }
 };
