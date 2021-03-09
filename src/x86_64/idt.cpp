@@ -4,6 +4,9 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -21,12 +24,10 @@
 #include "idt.hpp"
 #include "selectors.hpp"
 
-ALIGNED(8) Idt Idt::idt[VEC_MAX];
-
 void Idt::build()
 {
-    mword *ptr = handlers;
+    uintptr_t *ptr { handlers };
 
-    for (unsigned vector = 0; vector < VEC_MAX; vector++, ptr++)
-        idt[vector].set (SYS_INTR_GATE, *ptr & IDT_USER ? 3 : 0, SEL_KERN_CODE, *ptr & ~IDT_MASK);
+    for (unsigned vector { 0 }; vector < sizeof (idt) / sizeof (*idt); vector++, ptr++)
+        idt[vector] = Descriptor_idt { *ptr & IDT_USER ? 3U : 0U, *ptr & IDT_IST1 ? 1U : 0U, SEL_KERN_CODE, *ptr & ~IDT_MASK };
 }

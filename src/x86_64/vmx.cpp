@@ -85,7 +85,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp, uint16 vpid) : rev (ba
     write (HOST_CR4, Cr::get_cr4());
 
     write (HOST_BASE_TR,   reinterpret_cast<mword>(&Tss::run));
-    write (HOST_BASE_GDTR, reinterpret_cast<mword>(Gdt::gdt));
+    write (HOST_BASE_GDTR, reinterpret_cast<mword>(&Gdt::gdt));
     write (HOST_BASE_IDTR, reinterpret_cast<mword>(Idt::idt));
 
     write (HOST_SYSENTER_CS,  0);

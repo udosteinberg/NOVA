@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,40 +24,32 @@
 #include "descriptor.hpp"
 #include "selectors.hpp"
 
-class Gdt : public Descriptor
+class Gdt final
 {
     private:
-        uint32 val[2];
-
-        ALWAYS_INLINE
-        inline void set32 (Type type, Granularity gran, Size size, bool l, unsigned dpl, mword base, mword limit)
-        {
-            val[0] = static_cast<uint32>(base << 16 | (limit & 0xffff));
-            val[1] = static_cast<uint32>((base & 0xff000000) | gran | size | (limit & 0xf0000) | l << 21 | 1u << 15 | dpl << 13 | type | (base >> 16 & 0xff));
-        }
-
-        ALWAYS_INLINE
-        inline void set64 (Type type, Granularity gran, Size size, bool l, unsigned dpl, mword base, mword limit)
-        {
-            set32 (type, gran, size, l, dpl, base, limit);
-            (this + 1)->val[0] = static_cast<uint32>(base >> 32);
-            (this + 1)->val[1] = 0;
-        }
+        Descriptor_gdt_seg null;        // 0x0
+        Descriptor_gdt_seg kern_code;   // 0x8
+        Descriptor_gdt_seg kern_data;   // 0x10
+        Descriptor_gdt_seg user_data;   // 0x18
+        Descriptor_gdt_seg user_code;   // 0x20
+        Descriptor_gdt_seg unused;      // 0x28
+        Descriptor_gdt_sys tss_run;     // 0x30
 
     public:
-        static Gdt gdt[SEL_MAX >> 3] CPULOCAL;
+        static Gdt gdt CPULOCAL;
 
         static void build();
 
-        ALWAYS_INLINE
-        static inline void load()
+        static void load()
         {
-            asm volatile ("lgdt %0" : : "m" (Pseudo_descriptor (sizeof (gdt) - 1, reinterpret_cast<mword>(gdt))));
+            Pseudo_descriptor const d { &gdt, sizeof (gdt) };
+            asm volatile ("lgdt %0" : : "m" (d));
         }
 
-        ALWAYS_INLINE
-        static inline void unbusy_tss()
+        static void unbusy_tss()
         {
-            gdt[SEL_TSS_RUN >> 3].val[1] &= ~0x200;
+            gdt.tss_run.val[1] &= ~BIT (9);
         }
 };
+
+static_assert (__is_standard_layout (Gdt) && sizeof (Gdt) == SEL_MAX);
