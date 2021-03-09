@@ -115,8 +115,6 @@ class Exc_regs : public Sys_regs
         template <typename T> ALWAYS_INLINE inline void  set_e_bmp (uint32) const;
 
     protected:
-        template <typename T> ALWAYS_INLINE inline uint64 get_g_efer() const;
-
         template <typename T>
         mword cr0_set() const
         {
@@ -221,8 +219,6 @@ class Exc_regs : public Sys_regs
 
             set_e_bmp<T> (val);
         }
-
-        template <typename T> void write_efer (uint64);
 };
 
 class Cpu_regs : public Exc_regs
@@ -232,9 +228,6 @@ class Cpu_regs : public Exc_regs
         mword   mtd;
         Hazard  hazard { 0 };
 };
-
-template <> inline uint64 Exc_regs::get_g_efer<Vmcb>()         const { return vmcb->efer; }
-template <> inline uint64 Exc_regs::get_g_efer<Vmcs>()         const { return Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER); }
 
 template <> inline mword  Exc_regs::get_g_cr0<Vmcb>()          const { return static_cast<mword>(vmcb->cr0); }
 template <> inline mword  Exc_regs::get_g_cr2<Vmcb>()          const { return static_cast<mword>(vmcb->cr2); }
