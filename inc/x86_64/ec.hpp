@@ -119,8 +119,8 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         ALWAYS_INLINE
         inline void redirect_to_iret()
         {
-            regs.rsp = regs.ARG_SP;
-            regs.rip = regs.ARG_IP;
+            regs.rsp = regs.sp();
+            regs.rip = regs.ip();
         }
 
         void load_fpu();
@@ -228,7 +228,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         NORETURN
         static void ret_user_vmrun();
 
-        template <Sys_regs::Status S, bool T = false>
+        template <Status S, bool T = false>
         NOINLINE NORETURN
         static void sys_finish();
 
@@ -276,19 +276,25 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void sys_lookup();
 
         NORETURN
-        static void sys_ec_ctrl();
+        static void sys_ctrl_pd();
 
         NORETURN
-        static void sys_sc_ctrl();
+        static void sys_ctrl_ec();
 
         NORETURN
-        static void sys_pt_ctrl();
+        static void sys_ctrl_sc();
 
         NORETURN
-        static void sys_sm_ctrl();
+        static void sys_ctrl_pt();
 
         NORETURN
-        static void sys_assign_gsi();
+        static void sys_ctrl_sm();
+
+        NORETURN
+        static void sys_ctrl_pm();
+
+        NORETURN
+        static void sys_assign_int();
 
         NORETURN
         static void sys_assign_dev();
