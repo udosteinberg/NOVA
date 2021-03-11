@@ -20,75 +20,85 @@
  */
 
 #include "config.hpp"
-#include "lowlevel.hpp"
-#include "mtd_arch.hpp"
+#include "event.hpp"
 #include "regs.hpp"
+#include "space_gst.hpp"
+#include "space_msr.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
+#include "vpid.hpp"
 
-void Utcb_arch::load_exc (Mtd_arch const m, Cpu_regs const *r)
+void Utcb_arch::load_exc (Mtd_arch const m, Exc_regs const &e)
 {
+    auto const &s { e.sys };
+
     if (m & Mtd_arch::Item::GPR_0_7) {
-        rax = r->rax; rcx = r->rcx; rdx = r->rdx; rbx = r->rbx;
-        rsp = r->rsp; rbp = r->rbp; rsi = r->rsi; rdi = r->rdi;
+        rax = s.rax; rcx = s.rcx; rdx = s.rdx; rbx = s.rbx;
+        rsp = e.rsp; rbp = s.rbp; rsi = s.rsi; rdi = s.rdi;
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r8  = r->r8;  r9  = r->r9;  r10 = r->r10; r11 = r->r11;
-        r12 = r->r12; r13 = r->r13; r14 = r->r14; r15 = r->r15;
+        r8  = s.r8;  r9  = s.r9;  r10 = s.r10; r11 = s.r11;
+        r12 = s.r12; r13 = s.r13; r14 = s.r14; r15 = s.r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
-        rfl = r->rfl;
+        rfl = e.rfl;
 
     if (m & Mtd_arch::Item::RIP)
-        rip = r->rip;
+        rip = e.rip;
 
     if (m & Mtd_arch::Item::QUAL) {
-        qual[0] = r->err;
-        qual[1] = r->cr2;
+        qual[0] = e.err;
+        qual[1] = e.cr2;
     }
 }
 
-bool Utcb_arch::save_exc (Mtd_arch const m, Cpu_regs *r) const
+bool Utcb_arch::save_exc (Mtd_arch const m, Exc_regs &e) const
 {
+    auto &s { e.sys };
+
     if (m & Mtd_arch::Item::POISON)
         return false;
 
     if (m & Mtd_arch::Item::GPR_0_7) {
-        r->rax = rax; r->rcx = rcx; r->rdx = rdx; r->rbx = rbx;
-        r->rsp = rsp; r->rbp = rbp; r->rsi = rsi; r->rdi = rdi;
+        s.rax = rax; s.rcx = rcx; s.rdx = rdx; s.rbx = rbx;
+        e.rsp = rsp; s.rbp = rbp; s.rsi = rsi; s.rdi = rdi;
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r->r8  = r8;  r->r9  = r9;  r->r10 = r10; r->r11 = r11;
-        r->r12 = r12; r->r13 = r13; r->r14 = r14; r->r15 = r15;
+        s.r8  = r8;  s.r9  = r9;  s.r10 = r10; s.r11 = r11;
+        s.r12 = r12; s.r13 = r13; s.r14 = r14; s.r15 = r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
-        r->rfl = (rfl & ~(RFL_VIP | RFL_VIF | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL)) | RFL_AC | RFL_IF;
+        e.rfl = (rfl & ~(RFL_VIP | RFL_VIF | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL)) | RFL_AC | RFL_IF | RFL_1;
 
     if (m & Mtd_arch::Item::RIP)
-        r->rip = rip;
+        e.rip = rip;
 
     // QUAL state is read-only
 
     return true;
 }
 
-void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
+void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
 {
-    r->vmcs->make_current();
+    auto const &s { c.exc.sys };
+
+    c.vmcs->make_current();
 
     if (m & Mtd_arch::Item::GPR_0_7) {
-        rax = r->rax; rcx = r->rcx; rdx = r->rdx; rbx = r->rbx;
-        rbp = r->rbp; rsi = r->rsi; rdi = r->rdi;
+        rax = s.rax; rcx = s.rcx; rdx = s.rdx; rbx = s.rbx;
+        rbp = s.rbp; rsi = s.rsi; rdi = s.rdi;
         rsp = Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_RSP);
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r8  = r->r8;  r9  = r->r9;  r10 = r->r10; r11 = r->r11;
-        r12 = r->r12; r13 = r->r13; r14 = r->r14; r15 = r->r15;
+        r8  = s.r8;  r9  = s.r9;  r10 = s.r10; r11 = s.r11;
+        r12 = s.r12; r13 = s.r13; r14 = s.r14; r15 = s.r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
@@ -114,7 +124,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
     // CTRL and TPR state is write-only
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == 33 || r->dst_portal == NUM_VMI - 1) {
+        if (c.exc.ep() == 33 || c.exc.ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info = Vmcs::read<uint32> (Vmcs::Encoding::INJ_EVENT_IDENT);
             intr_errc = Vmcs::read<uint32> (Vmcs::Encoding::INJ_EVENT_ERROR);
         } else {
@@ -160,9 +170,9 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
     }
 
     if (m & Mtd_arch::Item::CR) {
-        cr0 = r->get_cr0<Vmcs>();
-        cr4 = r->get_cr4<Vmcs>();
-        cr2 = r->cr2;
+        cr0 = c.vmx_get_gst_cr0();
+        cr4 = c.vmx_get_gst_cr4();
+        cr2 = c.exc.cr2;
         cr3 = Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_CR3);
     }
 
@@ -182,22 +192,24 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
         efer = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER);
 }
 
-bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
+bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
 {
-    r->vmcs->make_current();
+    auto &s { c.exc.sys };
+
+    c.vmcs->make_current();
 
     if (m & Mtd_arch::Item::POISON)
         return false;
 
     if (m & Mtd_arch::Item::GPR_0_7) {
-        r->rax = rax; r->rcx = rcx; r->rdx = rdx; r->rbx = rbx;
-        r->rbp = rbp; r->rsi = rsi; r->rdi = rdi;
+        s.rax = rax; s.rcx = rcx; s.rdx = rdx; s.rbx = rbx;
+        s.rbp = rbp; s.rsi = rsi; s.rdi = rdi;
         Vmcs::write (Vmcs::Encoding::GUEST_RSP, rsp);
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r->r8  = r8;  r->r9  = r9;  r->r10 = r10; r->r11 = r11;
-        r->r12 = r12; r->r13 = r13; r->r14 = r14; r->r15 = r15;
+        s.r8  = r8;  s.r9  = r9;  s.r10 = r10; s.r11 = r11;
+        s.r12 = r12; s.r13 = r13; s.r14 = r14; s.r15 = r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
@@ -216,8 +228,15 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
     // QUAL state is read-only
 
     if (m & Mtd_arch::Item::CTRL) {
-        r->set_cpu_ctrl0<Vmcs> (ctrl_pri);
-        r->set_cpu_ctrl1<Vmcs> (ctrl_sec);
+        c.exc.intcpt_cr0 = intcpt_cr0;
+        c.exc.intcpt_cr4 = intcpt_cr4;
+        c.exc.intcpt_exc = intcpt_exc;
+        c.vmx_set_msk_cr0();
+        c.vmx_set_msk_cr4();
+        c.vmx_set_bmp_exc();
+        c.vmx_set_cpu_pri (ctrl_pri);
+        c.vmx_set_cpu_sec (ctrl_sec);
+        c.vmx_set_cpu_ter (ctrl_ter);
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MASK,  pfe_mask);
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MATCH, pfe_match);
     }
@@ -239,7 +258,7 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
         else
             val &= ~Vmcs::CPU_NMI_WINDOW;
 
-        r->set_cpu_ctrl0<Vmcs> (val);
+        c.vmx_set_cpu_pri (val);
 
         Vmcs::write (Vmcs::Encoding::INJ_EVENT_IDENT, intr_info & ~0x3000);
         Vmcs::write (Vmcs::Encoding::INJ_EVENT_ERROR, intr_errc);
@@ -310,9 +329,9 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
     }
 
     if (m & Mtd_arch::Item::CR) {
-        r->set_cr0<Vmcs> (cr0);
-        r->set_cr4<Vmcs> (cr4);
-        r->cr2 = cr2;
+        c.vmx_set_gst_cr0 (cr0);
+        c.vmx_set_gst_cr4 (cr4);
+        c.exc.cr2 = cr2;
         Vmcs::write (Vmcs::Encoding::GUEST_CR3, cr3);
     }
 
@@ -342,136 +361,157 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
         Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
 
+    if (m & Mtd_arch::Item::TLB) {
+
+        auto vpid = Vmcs::vpid();
+
+        if (vpid)
+            Vpid::invalidate (Vmcs::has_invvpid_sgl() ? Invvpid::Type::SGL : Invvpid::Type::ALL, vpid);
+    }
+
+    if (m & Mtd_arch::Item::SPACES) {
+        Vmcs::write (Vmcs::Encoding::EPTP,        c.gst->get_phys() | (Eptp::lev - 1) << 3 | CA_TYPE_MEM_WB);
+        Vmcs::write (Vmcs::Encoding::BITMAP_IO_A, c.pio->get_phys());
+        Vmcs::write (Vmcs::Encoding::BITMAP_IO_B, c.pio->get_phys() + PAGE_SIZE);
+        Vmcs::write (Vmcs::Encoding::BITMAP_MSR,  c.msr->get_phys());
+    }
+
     return true;
 }
 
-void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const *r)
+void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
 {
-    Vmcb const *const vmcb = r->vmcb;
+    auto const &s { c.exc.sys };
+    auto const  v { c.vmcb };
 
     if (m & Mtd_arch::Item::GPR_0_7) {
-        rax = vmcb->rax; rcx = r->rcx; rdx = r->rdx; rbx = r->rbx;
-        rsp = vmcb->rsp; rbp = r->rbp; rsi = r->rsi; rdi = r->rdi;
+        rax = v->rax; rcx = s.rcx; rdx = s.rdx; rbx = s.rbx;
+        rsp = v->rsp; rbp = s.rbp; rsi = s.rsi; rdi = s.rdi;
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r8  = r->r8;  r9  = r->r9;  r10 = r->r10; r11 = r->r11;
-        r12 = r->r12; r13 = r->r13; r14 = r->r14; r15 = r->r15;
+        r8  = s.r8;  r9  = s.r9;  r10 = s.r10; r11 = s.r11;
+        r12 = s.r12; r13 = s.r13; r14 = s.r14; r15 = s.r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
-        rfl = vmcb->rflags;
+        rfl = v->rflags;
 
     if (m & Mtd_arch::Item::RIP)
-        rip = vmcb->rip;
+        rip = v->rip;
 
     if (m & Mtd_arch::Item::STA) {
-        intr_state = static_cast<uint32>(vmcb->int_shadow);
+        intr_state = static_cast<uint32>(v->int_shadow);
         actv_state = 0;
     }
 
     if (m & Mtd_arch::Item::QUAL) {
-        qual[0] = vmcb->exitinfo1;
-        qual[1] = vmcb->exitinfo2;
+        qual[0] = v->exitinfo1;
+        qual[1] = v->exitinfo2;
     }
 
     // CTRL and TPR state is write-only
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == NUM_VMI - 3 || r->dst_portal == NUM_VMI - 1) {
-            intr_info = static_cast<uint32>(vmcb->inj_control);
-            intr_errc = static_cast<uint32>(vmcb->inj_control >> 32);
+        if (c.exc.ep() == NUM_VMI - 3 || c.exc.ep() == Event::gst_arch + Event::Selector::RECALL) {
+            intr_info = static_cast<uint32>(v->inj_control);
+            intr_errc = static_cast<uint32>(v->inj_control >> 32);
         } else {
-            intr_info = static_cast<uint32>(vmcb->exitcode);
-            intr_errc = static_cast<uint32>(vmcb->exitinfo1);
-            vect_info = static_cast<uint32>(vmcb->exitintinfo);
-            vect_errc = static_cast<uint32>(vmcb->exitintinfo >> 32);
+            intr_info = static_cast<uint32>(v->exitcode);
+            intr_errc = static_cast<uint32>(v->exitinfo1);
+            vect_info = static_cast<uint32>(v->exitintinfo);
+            vect_errc = static_cast<uint32>(v->exitintinfo >> 32);
         }
     }
 
     if (m & Mtd_arch::Item::CS_SS) {
-        cs = vmcb->cs;
-        ss = vmcb->ss;
+        cs = v->cs;
+        ss = v->ss;
     }
 
     if (m & Mtd_arch::Item::DS_ES) {
-        ds = vmcb->ds;
-        es = vmcb->es;
+        ds = v->ds;
+        es = v->es;
     }
 
     if (m & Mtd_arch::Item::FS_GS) {
-        fs = vmcb->fs;
-        gs = vmcb->gs;
+        fs = v->fs;
+        gs = v->gs;
     }
 
     if (m & Mtd_arch::Item::TR)
-        tr = vmcb->tr;
+        tr = v->tr;
 
     if (m & Mtd_arch::Item::LDTR)
-        ld = vmcb->ldtr;
+        ld = v->ldtr;
 
     if (m & Mtd_arch::Item::GDTR)
-        gd = vmcb->gdtr;
+        gd = v->gdtr;
 
     if (m & Mtd_arch::Item::IDTR)
-        id = vmcb->idtr;
+        id = v->idtr;
 
     // PDPTE registers are not used
 
     if (m & Mtd_arch::Item::CR) {
-        cr0 = r->get_cr0<Vmcb>();
-        cr4 = r->get_cr4<Vmcb>();
-        cr2 = vmcb->cr2;
-        cr3 = vmcb->cr3;
+        cr0 = v->cr0;
+        cr2 = v->cr2;
+        cr3 = v->cr3;
+        cr4 = v->cr4;
     }
 
     if (m & Mtd_arch::Item::DR)
-        dr7 = vmcb->dr7;
+        dr7 = v->dr7;
 
     if (m & Mtd_arch::Item::SYSENTER) {
-        sysenter_cs  = vmcb->sysenter_cs;
-        sysenter_esp = vmcb->sysenter_esp;
-        sysenter_eip = vmcb->sysenter_eip;
+        sysenter_cs  = v->sysenter_cs;
+        sysenter_esp = v->sysenter_esp;
+        sysenter_eip = v->sysenter_eip;
     }
 
     if (m & Mtd_arch::Item::PAT)
-        pat = vmcb->g_pat;
+        pat = v->g_pat;
 
     if (m & Mtd_arch::Item::EFER)
-        efer = vmcb->efer;
+        efer = v->efer;
 }
 
-bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
+bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
 {
-    Vmcb * const vmcb = r->vmcb;
+    auto &s { c.exc.sys };
+    auto  v { c.vmcb };
 
     if (m & Mtd_arch::Item::POISON)
         return false;
 
     if (m & Mtd_arch::Item::GPR_0_7) {
-        vmcb->rax = rax; r->rcx = rcx; r->rdx = rdx; r->rbx = rbx;
-        vmcb->rsp = rsp; r->rbp = rbp; r->rsi = rsi; r->rdi = rdi;
+        v->rax = rax; s.rcx = rcx; s.rdx = rdx; s.rbx = rbx;
+        v->rsp = rsp; s.rbp = rbp; s.rsi = rsi; s.rdi = rdi;
     }
 
     if (m & Mtd_arch::Item::GPR_8_15) {
-        r->r8  = r8;  r->r9  = r9;  r->r10 = r10; r->r11 = r11;
-        r->r12 = r12; r->r13 = r13; r->r14 = r14; r->r15 = r15;
+        s.r8  = r8;  s.r9  = r9;  s.r10 = r10; s.r11 = r11;
+        s.r12 = r12; s.r13 = r13; s.r14 = r14; s.r15 = r15;
     }
 
     if (m & Mtd_arch::Item::RFLAGS)
-        vmcb->rflags = rfl;
+        v->rflags = rfl;
 
     if (m & Mtd_arch::Item::RIP)
-        vmcb->rip = rip;
+        v->rip = rip;
 
     if (m & Mtd_arch::Item::STA)
-        vmcb->int_shadow = intr_state;
+        v->int_shadow = intr_state;
 
     // QUAL state is read-only
 
     if (m & Mtd_arch::Item::CTRL) {
-        r->set_cpu_ctrl0<Vmcb> (ctrl_pri);
-        r->set_cpu_ctrl1<Vmcb> (ctrl_sec);
+        c.exc.intcpt_cr0 = intcpt_cr0;
+        c.exc.intcpt_cr4 = intcpt_cr4;
+        c.exc.intcpt_exc = intcpt_exc;
+        c.svm_set_bmp_exc();
+        c.svm_set_cpu_pri (ctrl_pri);
+        c.svm_set_cpu_sec (ctrl_sec);
     }
 
     // TPR threshold is not used
@@ -479,66 +519,76 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
     if (m & Mtd_arch::Item::INJ) {
 
         if (intr_info & 0x1000) {
-            vmcb->int_control      |=  (1ul << 8 | 1ul << 20);
-            vmcb->intercept_cpu[0] |=  Vmcb::CPU_VINTR;
+            v->int_control      |=  (1ul << 8 | 1ul << 20);
+            v->intercept_cpu[0] |=  Vmcb::CPU_VINTR;
         } else {
-            vmcb->int_control      &= ~(1ul << 8 | 1ul << 20);
-            vmcb->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
+            v->int_control      &= ~(1ul << 8 | 1ul << 20);
+            v->intercept_cpu[0] &= ~Vmcb::CPU_VINTR;
         }
 
-        vmcb->inj_control = static_cast<uint64>(intr_errc) << 32 | (intr_info & ~0x3000);
+        v->inj_control = static_cast<uint64>(intr_errc) << 32 | (intr_info & ~0x3000);
     }
 
     if (m & Mtd_arch::Item::CS_SS) {
-        vmcb->cs = cs;
-        vmcb->ss = ss;
+        v->cs = cs;
+        v->ss = ss;
     }
 
     if (m & Mtd_arch::Item::DS_ES) {
-        vmcb->ds = ds;
-        vmcb->es = es;
+        v->ds = ds;
+        v->es = es;
     }
 
     if (m & Mtd_arch::Item::FS_GS) {
-        vmcb->fs = fs;
-        vmcb->gs = gs;
+        v->fs = fs;
+        v->gs = gs;
     }
 
     if (m & Mtd_arch::Item::TR)
-        vmcb->tr = tr;
+        v->tr = tr;
 
     if (m & Mtd_arch::Item::LDTR)
-        vmcb->ldtr = ld;
+        v->ldtr = ld;
 
     if (m & Mtd_arch::Item::GDTR)
-        vmcb->gdtr = gd;
+        v->gdtr = gd;
 
     if (m & Mtd_arch::Item::IDTR)
-        vmcb->idtr = id;
+        v->idtr = id;
 
     // PDPTE registers are not used
 
     if (m & Mtd_arch::Item::CR) {
-        r->set_cr0<Vmcb> (cr0);
-        r->set_cr4<Vmcb> (cr4);
-        vmcb->cr2 = cr2;
-        vmcb->cr3 = cr3;
+        v->cr0 = cr0;
+        v->cr2 = cr2;
+        v->cr3 = cr3;
+        v->cr4 = cr4;
     }
 
     if (m & Mtd_arch::Item::DR)
-        vmcb->dr7 = dr7;
+        v->dr7 = dr7;
 
     if (m & Mtd_arch::Item::SYSENTER) {
-        vmcb->sysenter_cs  = sysenter_cs;
-        vmcb->sysenter_esp = sysenter_esp;
-        vmcb->sysenter_eip = sysenter_eip;
+        v->sysenter_cs  = sysenter_cs;
+        v->sysenter_esp = sysenter_esp;
+        v->sysenter_eip = sysenter_eip;
     }
 
     if (m & Mtd_arch::Item::PAT)
-        vmcb->g_pat = pat;
+        v->g_pat = pat;
 
     if (m & Mtd_arch::Item::EFER)
-        vmcb->efer = efer;
+        v->efer = efer;
+
+    if (m & Mtd_arch::Item::TLB)
+        if (v->asid)
+            v->tlb_control = 3;
+
+    if (m & Mtd_arch::Item::SPACES) {
+        v->npt_cr3  = c.gst->get_phys();
+        v->base_io  = c.pio->get_phys();
+        v->base_msr = c.msr->get_phys();
+    }
 
     return true;
 }

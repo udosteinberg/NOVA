@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -36,7 +36,7 @@ void Ec::svm_exception (mword reason)
     switch (reason) {
 
         default:
-            current->regs.dst_portal = reason;
+            current->exc_regs().set_ep (reason);
             break;
 
         case 0x47:          // #NM
@@ -72,7 +72,7 @@ void Ec::handle_svm()
             ret_user_vmrun();
     }
 
-    current->regs.dst_portal = reason;
+    current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmrun>();
 }
