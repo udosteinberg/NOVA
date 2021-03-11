@@ -56,7 +56,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
             };
             uint32  xcpu;
         };
-        unsigned const evt;
+        uintptr_t const evt;
         Timeout_hypercall timeout;
         Spinlock    lock;
 
@@ -122,17 +122,20 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 
         void transfer_fpu (Ec *);
 
+        [[noreturn]]
+        void sys_finish_status (Status);
+
     public:
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
         Ec (Pd *, void (*)(), cpu_t);
-        Ec (Pd *, mword, Pd *, void (*)(), cpu_t, unsigned, mword, mword);
+        Ec (Pd *, mword, Pd *, void (*)(), cpu_t, uintptr_t, mword, mword);
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
         {
-            regs.tsc_offset += tsc;
+            regs.exc.offset_tsc += tsc;
             regs.hazard.set (Hazard::TSC);
         }
 
@@ -165,7 +168,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 
             Tss::run.rsp[0] = reinterpret_cast<uintptr_t>(&exc_regs() + 1);
 
-            pd->make_current();
+            regs.get_hst()->make_current();
 
             asm volatile ("lea %0, %%rsp; jmp *%1" : : "m" (DSTK_TOP), "q" (cont) : "memory"); UNREACHED;
         }
@@ -268,16 +271,22 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void sys_lookup();
 
         [[noreturn]]
-        static void sys_ec_ctrl();
+        static void sys_ctrl_pd();
 
         [[noreturn]]
-        static void sys_sc_ctrl();
+        static void sys_ctrl_ec();
 
         [[noreturn]]
-        static void sys_pt_ctrl();
+        static void sys_ctrl_sc();
 
         [[noreturn]]
-        static void sys_sm_ctrl();
+        static void sys_ctrl_pt();
+
+        [[noreturn]]
+        static void sys_ctrl_sm();
+
+        [[noreturn]]
+        static void sys_ctrl_hw();
 
         [[noreturn]]
         static void sys_assign_int();
