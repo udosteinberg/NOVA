@@ -20,6 +20,7 @@
  */
 
 #include "config.hpp"
+#include "event.hpp"
 #include "lowlevel.hpp"
 #include "mtd_arch.hpp"
 #include "regs.hpp"
@@ -112,7 +113,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
     }
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == 33 || r->dst_portal == NUM_VMI - 1) {
+        if (r->ep() == 33 || r->ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info  = Vmcs::read<uint32> (Vmcs::Encoding::ENT_INTR_INFO);
             intr_error = Vmcs::read<uint32> (Vmcs::Encoding::ENT_INTR_ERROR);
         } else {
@@ -358,7 +359,7 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const *r)
     }
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == NUM_VMI - 3 || r->dst_portal == NUM_VMI - 1)
+        if (r->ep() == NUM_VMI - 3 || r->ep() == Event::gst_arch + Event::Selector::RECALL)
             inj = vmcb->inj_control;
         else
             inj = vmcb->exitintinfo;

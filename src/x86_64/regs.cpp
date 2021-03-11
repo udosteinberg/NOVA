@@ -24,13 +24,13 @@
 #include "regs.hpp"
 #include "vpid.hpp"
 
-template <> void Exc_regs::tlb_flush<Vmcb>(bool full) const
+template <> void Cpu_regs::tlb_flush<Vmcb>(bool full) const
 {
     if (vmcb->asid)
         vmcb->tlb_control = full ? 3 : 7;
 }
 
-template <> void Exc_regs::tlb_flush<Vmcs>(bool full) const
+template <> void Cpu_regs::tlb_flush<Vmcs>(bool full) const
 {
     auto vpid = Vmcs::vpid();
 
@@ -38,7 +38,7 @@ template <> void Exc_regs::tlb_flush<Vmcs>(bool full) const
         Vpid::flush (full ? Invvpid::CONTEXT_GLOBAL : Invvpid::CONTEXT_NOGLOBAL, vpid);
 }
 
-template <> void Exc_regs::tlb_flush<Vmcs>(mword addr) const
+template <> void Cpu_regs::tlb_flush<Vmcs>(mword addr) const
 {
     auto vpid = Vmcs::vpid();
 
@@ -46,7 +46,7 @@ template <> void Exc_regs::tlb_flush<Vmcs>(mword addr) const
         Vpid::flush (Invvpid::ADDRESS, vpid, addr);
 }
 
-template <> void Exc_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
+template <> void Cpu_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
 {
     unsigned const msk = !!cr0_msk<Vmcb>() << 0 | !!cr4_msk<Vmcb>() << 4;
 
@@ -56,22 +56,22 @@ template <> void Exc_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
     vmcb->intercept_cpu[0] = val | Vmcb::force_ctrl0;
 }
 
-template <> void Exc_regs::set_cpu_ctrl1<Vmcb> (uint32 val)
+template <> void Cpu_regs::set_cpu_ctrl1<Vmcb> (uint32 val)
 {
     vmcb->intercept_cpu[1] = val | Vmcb::force_ctrl1;
 }
 
-template <> void Exc_regs::set_cpu_ctrl0<Vmcs> (uint32 val)
+template <> void Cpu_regs::set_cpu_ctrl0<Vmcs> (uint32 val)
 {
     Vmcs::write (Vmcs::Encoding::CPU_CONTROLS0, (val | Vmcs::ctrl_cpu[0].set) & Vmcs::ctrl_cpu[0].clr);
 }
 
-template <> void Exc_regs::set_cpu_ctrl1<Vmcs> (uint32 val)
+template <> void Cpu_regs::set_cpu_ctrl1<Vmcs> (uint32 val)
 {
     Vmcs::write (Vmcs::Encoding::CPU_CONTROLS1, (val | Vmcs::ctrl_cpu[1].set) & Vmcs::ctrl_cpu[1].clr);
 }
 
-template <> void Exc_regs::nst_ctrl<Vmcb>()
+template <> void Cpu_regs::nst_ctrl<Vmcb>()
 {
     mword cr0 = get_cr0<Vmcb>();
     mword cr3 = get_cr3<Vmcb>();
@@ -86,7 +86,7 @@ template <> void Exc_regs::nst_ctrl<Vmcb>()
     set_exc<Vmcb>();
 }
 
-template <> void Exc_regs::nst_ctrl<Vmcs>()
+template <> void Cpu_regs::nst_ctrl<Vmcs>()
 {
     assert (Vmcs::current == vmcs);
 
@@ -106,7 +106,7 @@ template <> void Exc_regs::nst_ctrl<Vmcs>()
     Vmcs::write (Vmcs::Encoding::CR4_MASK, cr4_msk<Vmcs>());
 }
 
-void Exc_regs::fpu_ctrl (bool on)
+void Cpu_regs::fpu_ctrl (bool on)
 {
     if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
@@ -132,12 +132,12 @@ void Exc_regs::fpu_ctrl (bool on)
     }
 }
 
-template <> void Exc_regs::write_efer<Vmcb> (uint64 val)
+template <> void Cpu_regs::write_efer<Vmcb> (uint64 val)
 {
     vmcb->efer = val;
 }
 
-template <> void Exc_regs::write_efer<Vmcs> (uint64 val)
+template <> void Cpu_regs::write_efer<Vmcs> (uint64 val)
 {
     Vmcs::write (Vmcs::Encoding::GUEST_EFER, val);
 

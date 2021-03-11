@@ -55,19 +55,19 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
             regs.rfl = EFL_IF;
             regs.rsp = s;
         } else
-            regs.set_sp (s);
+            regs.sp() = s;
 
         utcb = new Utcb;
 
         pd->Space_mem::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 
-        regs.dst_portal = NUM_EXC - 2;
+        regs.set_ep (NUM_EXC - 2);
 
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
 
     } else {
 
-        regs.dst_portal = NUM_VMI - 2;
+        regs.set_ep (NUM_VMI - 2);
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
@@ -109,19 +109,19 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->clr_hazard (HZD_RECALL);
 
         if (func == ret_user_vmresume) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->regs.set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmresume>();
         }
 
         if (func == ret_user_vmrun) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->regs.set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmrun>();
         }
 
         if (func == ret_user_sysexit)
             current->redirect_to_iret();
 
-        current->regs.dst_portal = NUM_EXC - 1;
+        current->regs.set_ep (NUM_EXC - 1);
         send_msg<ret_user_iret>();
     }
 
@@ -242,9 +242,9 @@ void Ec::root_invoke()
     if (!Hip::root_addr || !e->valid (Eh::ELF_CLASS, Eh::ELF_MACHINE))
         die ("No ELF");
 
-    current->regs.set_pt (Cpu::id);
-    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
-    current->regs.set_ip (e->entry);
+    current->regs.p0() = Cpu::id;
+    current->regs.sp() = USER_ADDR - PAGE_SIZE;
+    current->regs.ip() = e->entry;
 #if 0   // FIXME
     auto c = ACCESS_ONCE (e->ph_count);
     auto p = static_cast<ELF_PHDR *>(Hpt::map (Hip::root_addr + ACCESS_ONCE (e->ph_offset)));
@@ -295,7 +295,7 @@ void Ec::die (char const *reason, Exc_regs *r)
     Ec *ec = current->rcap;
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::COM_ABT>) : dead;
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
 
     reply (dead);
 }
