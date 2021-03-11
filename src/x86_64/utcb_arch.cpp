@@ -20,6 +20,7 @@
  */
 
 #include "config.hpp"
+#include "event.hpp"
 #include "lowlevel.hpp"
 #include "mtd_arch.hpp"
 #include "regs.hpp"
@@ -113,7 +114,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const *r)
     }
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == 33 || r->dst_portal == NUM_VMI - 1) {
+        if (r->ep() == 33 || r->ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info = Vmcs::read<uint32> (Vmcs::Encoding::ENT_INTR_INFO);
             intr_errc = Vmcs::read<uint32> (Vmcs::Encoding::ENT_INTR_ERROR);
         } else {
@@ -210,7 +211,7 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
     if (m & Mtd_arch::Item::CTRL) {
         r->set_cpu_ctrl0<Vmcs> (ctrl0);
         r->set_cpu_ctrl1<Vmcs> (ctrl1);
-//      r->set_exc<Vmcs> (exc_bitmap);
+        r->set_exc<Vmcs> (exc_bitmap);
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MASK,  pfe_mask);
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MATCH, pfe_match);
     }
@@ -339,6 +340,9 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs *r) const
         Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
 
+    if (m & Mtd_arch::Item::TLB)
+        r->tlb_invalidate<Vmcs>();
+
     return true;
 }
 
@@ -375,7 +379,7 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const *r)
     }
 
     if (m & Mtd_arch::Item::INJ) {
-        if (r->dst_portal == NUM_VMI - 3 || r->dst_portal == NUM_VMI - 1) {
+        if (r->ep() == NUM_VMI - 3 || r->ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info = static_cast<uint32>(vmcb->inj_control);
             intr_errc = static_cast<uint32>(vmcb->inj_control >> 32);
         } else {
@@ -464,7 +468,7 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
     if (m & Mtd_arch::Item::CTRL) {
         r->set_cpu_ctrl0<Vmcb> (ctrl0);
         r->set_cpu_ctrl1<Vmcb> (ctrl1);
-//      r->set_exc<Vmcb> (exc_bitmap);
+        r->set_exc<Vmcb> (exc_bitmap);
     }
 
     // QUAL state is read-only
@@ -535,6 +539,9 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs *r) const
 
     if (m & Mtd_arch::Item::EFER)
         vmcb->efer = efer;
+
+    if (m & Mtd_arch::Item::TLB)
+        r->tlb_invalidate<Vmcb>();
 
     return true;
 }
