@@ -19,7 +19,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.hpp"
 #include "hip.hpp"
 #include "regs.hpp"
 
@@ -50,6 +49,11 @@ void Cpu_regs::vmx_set_cpu_pri (uint32_t val) const
 void Cpu_regs::vmx_set_cpu_sec (uint32_t val) const
 {
     Vmcs::write<Vmcs::Encoding::CPU_CONTROLS_SEC>((val | Vmcs::cpu_sec_set) & Vmcs::cpu_sec_clr);
+}
+
+void Cpu_regs::vmx_set_cpu_ter (uint64_t val) const
+{
+    Vmcs::write<Vmcs::Encoding::CPU_CONTROLS_TER>((val | Vmcs::cpu_ter_set) & Vmcs::cpu_ter_clr);
 }
 
 void Cpu_regs::fpu_ctrl (bool on)
