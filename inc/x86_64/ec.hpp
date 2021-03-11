@@ -86,11 +86,9 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         NOINLINE
         static void handle_hazard (mword, void (*)());
 
-        ALWAYS_INLINE
-        inline Sys_regs *sys_regs() { return &regs; }
-
-        ALWAYS_INLINE
-        inline Exc_regs *exc_regs() { return &regs; }
+        ALWAYS_INLINE inline Cpu_regs &cpu_regs() { return regs; }
+        ALWAYS_INLINE inline Exc_regs &exc_regs() { return regs.exc; }
+        ALWAYS_INLINE inline Sys_regs &sys_regs() { return regs.exc.sys; }
 
         ALWAYS_INLINE
         inline void set_partner (Ec *p)
@@ -121,8 +119,8 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         ALWAYS_INLINE
         inline void redirect_to_iret()
         {
-            regs.rsp = regs.ARG_SP;
-            regs.rip = regs.ARG_IP;
+            exc_regs().rsp = exc_regs().sp();
+            exc_regs().rip = exc_regs().ip();
         }
 
         void load_fpu();
@@ -140,7 +138,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
         {
-            regs.tsc_offset += tsc;
+            regs.exc.offset_tsc += tsc;
             set_hazard (HZD_TSC);
         }
 
@@ -165,7 +163,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         {
             current = this;
 
-            Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
+            Tss::run.sp0 = reinterpret_cast<uintptr_t>(&exc_regs() + 1);
 
             pd->make_current();
 
@@ -230,7 +228,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         [[noreturn]]
         static void ret_user_vmrun();
 
-        template <Sys_regs::Status S, bool T = false>
+        template <Status S, bool T = false>
         [[noreturn]] NOINLINE
         static void sys_finish();
 
@@ -278,19 +276,25 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void sys_lookup();
 
         [[noreturn]]
-        static void sys_ec_ctrl();
+        static void sys_ctrl_pd();
 
         [[noreturn]]
-        static void sys_sc_ctrl();
+        static void sys_ctrl_ec();
 
         [[noreturn]]
-        static void sys_pt_ctrl();
+        static void sys_ctrl_sc();
 
         [[noreturn]]
-        static void sys_sm_ctrl();
+        static void sys_ctrl_pt();
 
         [[noreturn]]
-        static void sys_assign_gsi();
+        static void sys_ctrl_sm();
+
+        [[noreturn]]
+        static void sys_ctrl_pm();
+
+        [[noreturn]]
+        static void sys_assign_int();
 
         [[noreturn]]
         static void sys_assign_dev();
@@ -305,7 +309,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void dead() { die ("IPC Abort"); }
 
         [[noreturn]]
-        static void die (char const *, Exc_regs * = &current->regs);
+        static void die (char const *, Exc_regs * = &current->exc_regs());
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

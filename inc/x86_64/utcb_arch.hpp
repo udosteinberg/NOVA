@@ -24,6 +24,7 @@
 #include "mtd_arch.hpp"
 
 class Cpu_regs;
+class Exc_regs;
 
 class Utcb_segment
 {
@@ -64,12 +65,12 @@ class Utcb_arch
         uint64          kernel_gs_base;
 
     public:
-        void load_exc (Mtd_arch, Cpu_regs const *);
-        void load_vmx (Mtd_arch, Cpu_regs const *);
-        void load_svm (Mtd_arch, Cpu_regs const *);
-        bool save_exc (Mtd_arch, Cpu_regs *) const;
-        bool save_vmx (Mtd_arch, Cpu_regs *) const;
-        bool save_svm (Mtd_arch, Cpu_regs *) const;
+        void load_exc (Mtd_arch const, Exc_regs const &);
+        void load_vmx (Mtd_arch const, Cpu_regs const &);
+        void load_svm (Mtd_arch const, Cpu_regs const &);
+        bool save_exc (Mtd_arch const, Exc_regs &) const;
+        bool save_vmx (Mtd_arch const, Cpu_regs &) const;
+        bool save_svm (Mtd_arch const, Cpu_regs &) const;
 };
 
 static_assert (__is_standard_layout (Utcb_arch) && sizeof (Utcb_arch) == 0x238);
