@@ -20,11 +20,15 @@
  */
 
 #include "config.hpp"
-#include "lowlevel.hpp"
-#include "mtd_arch.hpp"
+#include "event.hpp"
 #include "regs.hpp"
+#include "space_gst.hpp"
+#include "space_msr.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
+#include "vpid.hpp"
 
 void Utcb_arch::load_exc (Mtd_arch const m, Cpu_regs const &c)
 {
@@ -123,7 +127,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
     // CTRL and TPR state is write-only
 
     if (m & Mtd_arch::Item::INJ) {
-        if (c.exc.ep() == 33 || c.exc.ep() == NUM_VMI - 1) {
+        if (c.exc.ep() == Vmcs::Reason::VMX_FAIL_STATE || c.exc.ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info = Vmcs::read<uint32_t> (Vmcs::Encoding::INJ_EVENT_IDENT);
             intr_errc = Vmcs::read<uint32_t> (Vmcs::Encoding::INJ_EVENT_ERROR);
         } else {
@@ -227,8 +231,30 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
     // QUAL state is read-only
 
     if (m & Mtd_arch::Item::CTRL) {
+
+        // Update CR0_READ_SHADOW if any CR0 bits change ownership G => H
+        if (~c.exc.intcpt_cr0 & intcpt_cr0) [[unlikely]]
+            c.vmx_set_rsh_cr0 (c.vmx_get_gst_cr0());
+
+        // Update CR4_READ_SHADOW if any CR4 bits change ownership G => H
+        if (~c.exc.intcpt_cr4 & intcpt_cr4) [[unlikely]]
+            c.vmx_set_rsh_cr4 (c.vmx_get_gst_cr4());
+
+        // Update VMM intercepts
+        c.exc.intcpt_cr0 = intcpt_cr0;
+        c.exc.intcpt_cr4 = intcpt_cr4;
+        c.exc.intcpt_exc = intcpt_exc;
+
+        // Update G/H ownership
+        c.vmx_set_msk_cr0();
+        c.vmx_set_msk_cr4();
+        c.vmx_set_bmp_exc();
+
+        // Update execution controls
         c.vmx_set_cpu_pri (ctrl_pri);
         c.vmx_set_cpu_sec (ctrl_sec);
+        c.vmx_set_cpu_ter (ctrl_ter);
+
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MASK,  pfe_mask);
         Vmcs::write (Vmcs::Encoding::PF_ERROR_MATCH, pfe_match);
     }
@@ -353,6 +379,21 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
         Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
 
+    if (m & Mtd_arch::Item::TLB) {
+
+        auto vpid = Vmcs::vpid();
+
+        if (vpid)
+            Vpid::invalidate (Vmcs::has_invvpid_sgl() ? Invvpid::Type::SGL : Invvpid::Type::ALL, vpid);
+    }
+
+    if (m & Mtd_arch::Item::SPACES) {
+        Vmcs::write (Vmcs::Encoding::EPTP,        c.gst->get_phys() | (Ept::lev() - 1) << 3 | CA_TYPE_MEM_WB);
+        Vmcs::write (Vmcs::Encoding::BITMAP_IO_A, c.pio->get_phys());
+        Vmcs::write (Vmcs::Encoding::BITMAP_IO_B, c.pio->get_phys() + PAGE_SIZE (0));
+        Vmcs::write (Vmcs::Encoding::BITMAP_MSR,  c.msr->get_phys());
+    }
+
     return true;
 }
 
@@ -391,7 +432,7 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
     // CTRL and TPR state is write-only
 
     if (m & Mtd_arch::Item::INJ) {
-        if (c.exc.ep() == NUM_VMI - 3 || c.exc.ep() == NUM_VMI - 1) {
+        if (c.exc.ep() == NUM_VMI - 3 || c.exc.ep() == Event::gst_arch + Event::Selector::RECALL) {
             intr_info = static_cast<uint32_t>(v->inj_control);
             intr_errc = static_cast<uint32_t>(v->inj_control >> 32);
         } else {
@@ -484,6 +525,10 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
     // QUAL state is read-only
 
     if (m & Mtd_arch::Item::CTRL) {
+        c.exc.intcpt_cr0 = intcpt_cr0;
+        c.exc.intcpt_cr4 = intcpt_cr4;
+        c.exc.intcpt_exc = intcpt_exc;
+        c.svm_set_bmp_exc();
         c.svm_set_cpu_pri (ctrl_pri);
         c.svm_set_cpu_sec (ctrl_sec);
     }
@@ -553,6 +598,16 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
 
     if (m & Mtd_arch::Item::EFER)
         v->efer = efer;
+
+    if (m & Mtd_arch::Item::TLB)
+        if (v->asid)
+            v->tlb_control = 3;
+
+    if (m & Mtd_arch::Item::SPACES) {
+        v->npt_cr3  = c.gst->get_phys();
+        v->base_io  = c.pio->get_phys();
+        v->base_msr = c.msr->get_phys();
+    }
 
     return true;
 }
