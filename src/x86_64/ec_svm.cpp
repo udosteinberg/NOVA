@@ -36,7 +36,7 @@ void Ec::svm_exception (uint64_t reason)
     switch (reason) {
 
         default:
-            current->regs.dst_portal = reason;
+            current->exc_regs().set_ep (reason);
             break;
 
         case 0x47:          // #NM
@@ -72,7 +72,7 @@ void Ec::handle_svm()
             ret_user_vmrun();
     }
 
-    current->regs.dst_portal = reason;
+    current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmrun>();
 }
