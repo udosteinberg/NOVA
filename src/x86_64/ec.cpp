@@ -48,47 +48,41 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
     if (u) {
 
-        if (glb) {
-            regs.cs  = SEL_USER_CODE64;
-            regs.ss  = SEL_USER_DATA;
-            regs.rfl = RFL_IF;
-            regs.rsp = s;
-        } else
-            regs.set_sp (s);
+        (glb ? exc_regs().rsp : exc_regs().sp()) = s;
 
         utcb = new Utcb;
 
         pd->Space_mem::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 
-        regs.dst_portal = NUM_EXC - 2;
+        exc_regs().set_ep (NUM_EXC - 2);
 
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
 
     } else {
 
-        regs.dst_portal = NUM_VMI - 2;
+        exc_regs().set_ep (NUM_VMI - 2);
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
             regs.vmcs = new Vmcs;
             regs.vmcs->init (pd->Space_pio::bmp_gst(),
                              pd->Space_msr::bmp_gst(),
-                             reinterpret_cast<mword>(sys_regs() + 1),
+                             reinterpret_cast<uintptr_t>(&sys_regs() + 1),
                              Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
                              Kmem::ptr_to_phys (pd->ept.root_init (false)),
                              pd->vpid());
 
-            regs.nst_ctrl<Vmcs>();
+//          regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p)", this, p, regs.vmcs);
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
-                                                                Kmem::ptr_to_phys (pd->npt.root_init (false))));
+            sys_regs().rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
+                                                                      Kmem::ptr_to_phys (pd->npt.root_init (false))));
 
-            regs.nst_ctrl<Vmcb>();
+//          regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p)", this, p, regs.vmcb);
         }
@@ -109,19 +103,19 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->clr_hazard (HZD_RECALL);
 
         if (func == ret_user_vmresume) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmresume>();
         }
 
         if (func == ret_user_vmrun) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmrun>();
         }
 
         if (func == ret_user_sysexit)
             current->redirect_to_iret();
 
-        current->regs.dst_portal = NUM_EXC - 1;
+        current->exc_regs().set_ep (NUM_EXC - 1);
         send_msg<ret_user_iret>();
     }
 
@@ -130,9 +124,9 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.tsc_offset);
+            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.exc.offset_tsc);
         } else
-            current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
+            current->regs.vmcb->tsc_offset = current->regs.exc.offset_tsc;
     }
 
     if (hzd & HZD_FPU)
@@ -175,8 +169,8 @@ void Ec::ret_user_vmresume()
         Pd::current->ept.invalidate();
     }
 
-    if (EXPECT_FALSE (Cr::get_cr2() != current->regs.cr2))
-        Cr::set_cr2 (current->regs.cr2);
+    if (EXPECT_FALSE (Cr::get_cr2() != current->exc_regs().cr2))
+        Cr::set_cr2 (current->exc_regs().cr2);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
@@ -236,10 +230,10 @@ void Ec::root_invoke()
     if (!Hip::root_addr || !e->valid (Eh::ELF_MACHINE))
         die ("No ELF");
 
-    current->regs.set_pt (Cpu::id);
-    current->regs.set_sp (USER_ADDR - PAGE_SIZE);
-    current->regs.set_ip (e->entry);
 #if 0   // FIXME
+    current->regs.p0() = Cpu::id;
+    current->regs.sp() = USER_ADDR - PAGE_SIZE;
+    current->regs.ip() = e->entry;
     auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
     auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + __atomic_load_n (&e->ph_offset, __ATOMIC_RELAXED)));
 
@@ -283,13 +277,13 @@ void Ec::die (char const *reason, Exc_regs *r)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                current, Sc::current, r->vec, r->cs, r->rip, r->cr2, r->err, reason);
     else
-        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR4:%#lx (%s)",
-               current, Sc::current, r->vec, r->cr0_shadow, r->cr4_shadow, reason);
+        trace (0, "Killed EC:%p SC:%p V:%#lx (%s)",
+               current, Sc::current, r->vec, reason);
 
     Ec *ec = current->rcap;
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::COM_ABT>) : dead;
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
 
     reply (dead);
 }

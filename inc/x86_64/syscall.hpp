@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,183 +22,177 @@
 
 #pragma once
 
+#include "abi.hpp"
 #include "mtd_arch.hpp"
 #include "qpd.hpp"
 #include "regs.hpp"
 
-class Sys_ipc_call final : public Sys_regs
+struct Sys_ipc_call final : private Sys_abi
 {
-    public:
-        inline bool timeout() const { return flags() & BIT (0); }
+    inline Sys_ipc_call (Sys_regs &r) : Sys_abi (r) {}
 
-        inline unsigned long pt() const { return ARG_1 >> 8; }
+    inline bool timeout() const { return flags() & BIT (0); }
 
-        inline Mtd_user mtd() const { return Mtd_user (uint32 (ARG_2)); }
+    inline unsigned long pt() const { return p0() >> 8; }
+
+    inline Mtd_user mtd() const { return Mtd_user (uint32 (p1())); }
 };
 
-class Sys_ipc_reply final : public Sys_regs
+struct Sys_ipc_reply final : private Sys_abi
 {
-    public:
-        inline Mtd_arch mtd_a() const { return Mtd_arch (uint32 (ARG_2)); }
+    inline Sys_ipc_reply (Sys_regs &r) : Sys_abi (r) {}
 
-        inline Mtd_user mtd_u() const { return Mtd_user (uint32 (ARG_2)); }
+    inline Mtd_arch mtd_a() const { return Mtd_arch (uint32 (p1())); }
+
+    inline Mtd_user mtd_u() const { return Mtd_user (uint32 (p1())); }
 };
 
-class Sys_create_pd : public Sys_regs
+struct Sys_create_pd final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sel() const { return ARG_1 >> 8; }
+    inline Sys_create_pd (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_2; }
+    inline unsigned long sel() const { return p0() >> 8; }
+
+    inline unsigned long pd() const { return p1(); }
 };
 
-class Sys_create_ec : public Sys_regs
+struct Sys_create_ec final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sel() const { return ARG_1 >> 8; }
+    inline Sys_create_ec (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_2; }
+    inline bool type() const { return flags() & BIT (0); }
 
-        ALWAYS_INLINE
-        inline unsigned cpu() const { return ARG_3 & 0xfff; }
+    inline unsigned long sel() const { return p0() >> 8; }
 
-        ALWAYS_INLINE
-        inline mword utcb() const { return ARG_3 & ~0xfff; }
+    inline unsigned long pd() const { return p1(); }
 
-        ALWAYS_INLINE
-        inline mword esp() const { return ARG_4; }
+    inline unsigned cpu() const { return p2() & 0xfff; }
 
-        ALWAYS_INLINE
-        inline unsigned evt() const { return static_cast<unsigned>(ARG_5); }
+    inline mword utcb() const { return p2() & ~0xfff; }
+
+    inline mword esp() const { return p3(); }
+
+    inline unsigned evt() const { return static_cast<unsigned>(p4()); }
 };
 
-class Sys_create_sc : public Sys_regs
+struct Sys_create_sc final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sel() const { return ARG_1 >> 8; }
+    inline Sys_create_sc (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_2; }
+    inline unsigned long sel() const { return p0() >> 8; }
 
-        ALWAYS_INLINE
-        inline unsigned long ec() const { return ARG_3; }
+    inline unsigned long pd() const { return p1(); }
 
-        ALWAYS_INLINE
-        inline Qpd qpd() const { return Qpd (ARG_4); }
+    inline unsigned long ec() const { return p2(); }
+
+    inline Qpd qpd() const { return Qpd (p3()); }
 };
 
-class Sys_create_pt : public Sys_regs
+struct Sys_create_pt final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sel() const { return ARG_1 >> 8; }
+    inline Sys_create_pt (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_2; }
+    inline unsigned long sel() const { return p0() >> 8; }
 
-        ALWAYS_INLINE
-        inline unsigned long ec() const { return ARG_3; }
+    inline unsigned long pd() const { return p1(); }
 
-        ALWAYS_INLINE
-        inline auto mtd() const { return Mtd_arch (static_cast<uint32> (ARG_4)); }
+    inline unsigned long ec() const { return p2(); }
 
-        ALWAYS_INLINE
-        inline mword eip() const { return ARG_5; }
+    inline auto mtd() const { return Mtd_arch (static_cast<uint32> (p3())); }
+
+    inline mword eip() const { return p4(); }
 };
 
-class Sys_create_sm : public Sys_regs
+struct Sys_create_sm final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sel() const { return ARG_1 >> 8; }
+    inline Sys_create_sm (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_2; }
+    inline unsigned long sel() const { return p0() >> 8; }
 
-        ALWAYS_INLINE
-        inline mword cnt() const { return ARG_3; }
+    inline unsigned long pd() const { return p1(); }
+
+    inline mword cnt() const { return p2(); }
 };
 
-class Sys_ec_ctrl : public Sys_regs
+struct Sys_ctrl_ec final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long ec() const { return ARG_1 >> 8; }
+    inline Sys_ctrl_ec (Sys_regs &r) : Sys_abi (r) {}
+
+    inline unsigned long ec() const { return p0() >> 8; }
 };
 
-class Sys_sc_ctrl : public Sys_regs
+struct Sys_ctrl_sc final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sc() const { return ARG_1 >> 8; }
+    inline Sys_ctrl_sc (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline void set_time (uint64 val)
-        {
-            ARG_2 = static_cast<mword>(val >> 32);
-            ARG_3 = static_cast<mword>(val);
-        }
+    inline unsigned long sc() const { return p0() >> 8; }
+
+    inline void set_time (uint64 val)
+    {
+        p1() = static_cast<mword>(val >> 32);
+        p2() = static_cast<mword>(val);
+    }
 };
 
-class Sys_pt_ctrl : public Sys_regs
+struct Sys_ctrl_pt final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long pt() const { return ARG_1 >> 8; }
+    inline Sys_ctrl_pt (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline mword id() const { return ARG_2; }
+    inline unsigned long pt() const { return p0() >> 8; }
+
+    inline mword id() const { return p1(); }
 };
 
-class Sys_sm_ctrl : public Sys_regs
+struct Sys_ctrl_sm final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sm() const { return ARG_1 >> 8; }
+    inline Sys_ctrl_sm (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline unsigned op() const { return flags() & 0x1; }
+    inline unsigned long sm() const { return p0() >> 8; }
 
-        ALWAYS_INLINE
-        inline unsigned zc() const { return flags() & 0x2; }
+    inline unsigned op() const { return flags() & 0x1; }
 
-        ALWAYS_INLINE
-        inline uint64 time() const { return static_cast<uint64>(ARG_2) << 32 | ARG_3; }
+    inline unsigned zc() const { return flags() & 0x2; }
+
+    inline uint64 time() const { return static_cast<uint64>(p1()) << 32 | p2(); }
 };
 
-class Sys_assign_gsi : public Sys_regs
+struct Sys_ctrl_hw final : private Sys_abi
 {
-    public:
-        ALWAYS_INLINE
-        inline unsigned long sm() const { return ARG_1 >> 8; }
+    inline Sys_ctrl_hw (Sys_regs &r) : Sys_abi (r) {}
 
-        ALWAYS_INLINE
-        inline mword dev() const { return ARG_2; }
+    inline auto op() const { return flags(); }
 
-        ALWAYS_INLINE
-        inline unsigned cpu() const { return static_cast<unsigned>(ARG_3); }
-
-        ALWAYS_INLINE
-        inline void set_msi (uint64 val)
-        {
-            ARG_2 = static_cast<mword>(val >> 32);
-            ARG_3 = static_cast<mword>(val);
-        }
+    inline auto desc() const { return p0() >> 8; }
 };
 
-class Sys_assign_dev final : public Sys_regs
+struct Sys_assign_int final : private Sys_abi
 {
-    public:
-        inline unsigned long pd() const { return ARG_1 >> 8; }
+    inline Sys_assign_int (Sys_regs &r) : Sys_abi (r) {}
 
-        inline uintptr_t smmu() const { return ARG_2 & ~OFFS_MASK; }
+    inline auto flg() const { return flags(); }
 
-        inline Space::Index si() const { return Space::Index (ARG_2 & BIT_RANGE (1, 0)); }
+    inline unsigned long sm() const { return p0() >> 8; }
 
-        inline uintptr_t dad() const { return ARG_3; }
+    inline auto dev() const { return p1(); }
+
+    inline unsigned cpu() const { return static_cast<unsigned>(p2()); }
+
+    inline void set_msi (uint64 val)
+    {
+        p1() = static_cast<mword>(val >> 32);
+        p2() = static_cast<mword>(val);
+    }
+};
+
+struct Sys_assign_dev final : private Sys_abi
+{
+    inline Sys_assign_dev (Sys_regs &r) : Sys_abi (r) {}
+
+    inline unsigned long pd() const { return p0() >> 8; }
+
+    inline uintptr_t smmu() const { return p1() & ~OFFS_MASK; }
+
+    inline Space::Index si() const { return Space::Index (p1() & BIT_RANGE (1, 0)); }
+
+    inline auto dad() const { return p2(); }
 };

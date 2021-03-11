@@ -43,7 +43,7 @@ void Ec::vmx_exception()
     switch (intr_info & 0x7ff) {
 
         default:
-            current->regs.dst_portal = Vmcs::VMX_EXC_NMI;
+            current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
             break;
 
         case 0x202:         // NMI
@@ -78,7 +78,7 @@ void Ec::handle_vmx()
         case Vmcs::VMX_EXTINT:      vmx_extint();
     }
 
-    current->regs.dst_portal = reason;
+    current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmresume>();
 }
