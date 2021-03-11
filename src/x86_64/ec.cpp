@@ -20,6 +20,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "abi.hpp"
 #include "bits.hpp"
 #include "ec.hpp"
 #include "elf.hpp"
@@ -38,56 +39,50 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), utcb (nullptr), pd (own), cpu (c), glb (true), evt (0), timeout (this)
+Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), regs (own, own, own), utcb (nullptr), pd (own), cpu (c), glb (true), evt (0), timeout (this)
 {
     trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
 }
 
-Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), pd (p), cpu (c), glb (!!f), evt (e), timeout (this)
+Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), regs (p, p, p), pd (p), cpu (c), glb (!!f), evt (e), timeout (this)
 {
     // Make sure we have a PTAB for this CPU in the PD
     pd->Space_hst::init (cpu_t (c));
 
     if (u) {
 
-        if (glb) {
-            regs.cs  = SEL_USER_CODE;
-            regs.ss  = SEL_USER_DATA;
-            regs.rfl = RFL_IF;
-            regs.rsp = s;
-        } else
-            regs.set_sp (s);
+        (glb ? exc_regs().rsp : exc_regs().sp()) = s;
 
         utcb = new Utcb;
 
         pd->Space_hst::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
 
-        regs.dst_portal = NUM_EXC - 2;
+        exc_regs().set_ep (NUM_EXC - 2);
 
         trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
 
     } else {
 
-        regs.dst_portal = NUM_VMI - 2;
+        exc_regs().set_ep (NUM_VMI - 2);
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
             regs.vmcs = new Vmcs;
-            regs.vmcs->init (0, reinterpret_cast<mword>(sys_regs() + 1),
+            regs.vmcs->init (0, reinterpret_cast<uintptr_t>(&sys_regs() + 1),
                              Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
                              0, Vpid::alloc (cpu));
 
-            regs.nst_ctrl<Vmcs>();
+//          regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p)", this, p, regs.vmcs);
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
-                                                                pd->Space_gst::get_phys()));
+            sys_regs().rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
+                                                                      pd->Space_gst::get_phys()));
 
-            regs.nst_ctrl<Vmcb>();
+//          regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
             trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p)", this, p, regs.vmcb);
         }
@@ -108,19 +103,19 @@ void Ec::handle_hazard (mword hzd, void (*func)())
         current->regs.hazard.clr (Hazard::RECALL);
 
         if (func == ret_user_vmresume) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmresume>();
         }
 
         if (func == ret_user_vmrun) {
-            current->regs.dst_portal = NUM_VMI - 1;
+            current->exc_regs().set_ep (NUM_VMI - 1);
             send_msg<ret_user_vmrun>();
         }
 
         if (func == ret_user_sysexit)
             current->redirect_to_iret();
 
-        current->regs.dst_portal = NUM_EXC - 1;
+        current->exc_regs().set_ep (NUM_EXC - 1);
         send_msg<ret_user_iret>();
     }
 
@@ -129,9 +124,9 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.tsc_offset);
+            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.exc.offset_tsc);
         } else
-            current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
+            current->regs.vmcb->tsc_offset = current->regs.exc.offset_tsc;
     }
 
     if (hzd & Hazard::FPU)
@@ -174,8 +169,8 @@ void Ec::ret_user_vmresume()
         Pd::current->Space_gst::invalidate();
     }
 
-    if (EXPECT_FALSE (Cr::get_cr2() != current->regs.cr2))
-        Cr::set_cr2 (current->regs.cr2);
+    if (EXPECT_FALSE (Cr::get_cr2() != current->exc_regs().cr2))
+        Cr::set_cr2 (current->exc_regs().cr2);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
@@ -234,9 +229,14 @@ void Ec::root_invoke()
     if (!Multiboot::ra || !e->valid (ELF_MACHINE))
         die ("No ELF");
 
-    current->regs.set_pt (Cpu::id);
-    current->regs.set_sp (USER_ADDR - PAGE_SIZE (0));
-    current->regs.set_ip (e->entry);
+    auto const abi { Sys_abi (current->sys_regs()) };
+
+    abi.p0() = Multiboot::p0;
+    abi.p1() = Multiboot::p1;
+    abi.p2() = Multiboot::p2;
+
+    current->exc_regs().ip() = e->entry;
+    current->exc_regs().sp() = USER_ADDR - PAGE_SIZE (0);
 
 #if 0   // FIXME
     auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
@@ -282,13 +282,13 @@ void Ec::die (char const *reason, Exc_regs *r)
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                current, Sc::current, r->vec, r->cs, r->rip, r->cr2, r->err, reason);
     else
-        trace (0, "Killed EC:%p SC:%p V:%#lx CR0:%#lx CR4:%#lx (%s)",
-               current, Sc::current, r->vec, r->cr0_shadow, r->cr4_shadow, reason);
+        trace (0, "Killed EC:%p SC:%p V:%#lx (%s)",
+               current, Sc::current, r->vec, reason);
 
     Ec *ec = current->rcap;
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Sys_regs::COM_ABT>) : dead;
+        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
 
     reply (dead);
 }

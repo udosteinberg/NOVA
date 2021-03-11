@@ -24,13 +24,6 @@
 #define BFD_ARCH            "i386:x86-64"
 #define BFD_FORMAT          "elf64-x86-64"
 #define ELF_MACHINE         Eh::Machine::X86_64
-#define ARG_IP              rcx
-#define ARG_SP              r11
-#define ARG_1               rdi
-#define ARG_2               rsi
-#define ARG_3               rdx
-#define ARG_4               rax
-#define ARG_5               r8
 
 #define EXC_DE              0                       // Divide Error
 #define EXC_DB              1                       // Debug Exception
