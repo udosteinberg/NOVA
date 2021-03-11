@@ -24,6 +24,11 @@
 #include "arch.hpp"
 #include "hazard.hpp"
 #include "selectors.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
+#include "space_msr.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 #include "svm.hpp"
 #include "types.hpp"
 #include "vmx.hpp"
@@ -45,12 +50,6 @@ struct Sys_regs
     uintptr_t   r13 {};
     uintptr_t   r14 {};
     uintptr_t   r15 {};
-
-    unsigned flags() const { return ARG_1 >> 4 & BIT_RANGE (3, 0); }
-
-    void set_pt (uintptr_t pt) { ARG_1 = pt; }
-    void set_ip (uintptr_t ip) { ARG_IP = ip; }
-    void set_sp (uintptr_t sp) { ARG_SP = sp; }
 };
 
 static_assert (__is_standard_layout (Sys_regs) && sizeof (Sys_regs) == __SIZEOF_POINTER__ * 15);
@@ -111,9 +110,22 @@ class alignas (16) Cpu_regs final
             Vmcb *              vmcb;
             Vmcs *              vmcs;
         };
-        uintptr_t               mtd;
-        uint64_t                tsc_offset;
+        Space_obj * const       obj;
+        Space_hst * const       hst;
+        Space_gst *             gst     { nullptr };
+        Space_pio *             pio     { nullptr };
+        Space_msr *             msr     { nullptr };
         Hazard                  hazard  { 0 };
+
+        Cpu_regs (Space_obj *o, Space_hst *h, Space_pio *p = nullptr) : vmcb (nullptr), obj (o), hst (h), pio (p) {}
+        Cpu_regs (Space_obj *o, Space_hst *h, Vmcb *v) : vmcb (v), obj (o), hst (h), hazard (Hazard::ILLEGAL) {}
+        Cpu_regs (Space_obj *o, Space_hst *h, Vmcs *v) : vmcs (v), obj (o), hst (h), hazard (Hazard::ILLEGAL) {}
+
+        Space_obj *get_obj() const { return obj; }
+        Space_hst *get_hst() const { return hst; }
+        Space_gst *get_gst() const { return gst; }
+        Space_pio *get_pio() const { return pio; }
+        Space_msr *get_msr() const { return msr; }
 
         void fpu_ctrl (bool);
         void svm_set_cpu_pri (uint32_t) const;
