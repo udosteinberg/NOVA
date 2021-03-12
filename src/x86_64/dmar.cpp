@@ -72,7 +72,7 @@ void Dmar::assign (unsigned long rid, Pd *p)
 {
     auto lev = static_cast<unsigned>(bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f));
 
-    auto ptab = p->dpt.root_init (lev + 1);
+    auto ptab = p->Space_dma::get_ptab (lev + 1);
     if (!ptab)
         return;
 
