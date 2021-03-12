@@ -21,6 +21,16 @@
 
 #pragma once
 
-class Space
+#include "pd.hpp"
+
+class Space : public Kobject
 {
+    private:
+        Pd *const pd;
+
+    protected:
+        inline Space (Kobject::Subtype s, Pd *p) : Kobject (Kobject::Type::PD, s), pd (p) {}
+
+    public:
+        inline auto get_pd() const { return pd; }
 };

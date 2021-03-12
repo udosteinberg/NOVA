@@ -27,6 +27,12 @@
 #include "pt.hpp"
 #include "sm.hpp"
 #include "smmu.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
+#include "space_msr.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 #include "stdio.hpp"
 #include "syscall.hpp"
 #include "utcb.hpp"
@@ -67,7 +73,7 @@ void Ec::send_msg()
 {
     auto r = current->exc_regs();
 
-    auto cap = current->pd->Space_obj::lookup (current->evt + r.ep());
+    auto cap = current->get_obj()->lookup (current->evt + r.ep());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pt::EVENT)))
         die ("PT not found");
 
@@ -97,7 +103,7 @@ void Ec::sys_call()
 {
     Sys_ipc_call r { current->sys_regs() };
 
-    auto cap = current->pd->Space_obj::lookup (r.pt());
+    auto cap = current->get_obj()->lookup (r.pt());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pt::CALL)))
         sys_finish<Status::BAD_CAP>();
 
@@ -183,9 +189,9 @@ void Ec::sys_reply()
         else if (ec->cont == ret_user_iret)
             src->arch()->save_exc (r.mtd_a(), ec->exc_regs());
         else if (ec->cont == ret_user_vmresume)
-            src->arch()->save_vmx (r.mtd_a(), ec->cpu_regs());
+            src->arch()->save_vmx (r.mtd_a(), ec->cpu_regs(), current->get_obj());
         else if (ec->cont == ret_user_vmrun)
-            src->arch()->save_svm (r.mtd_a(), ec->cpu_regs());
+            src->arch()->save_svm (r.mtd_a(), ec->cpu_regs(), current->get_obj());
     }
 
     reply();
@@ -195,22 +201,29 @@ void Ec::sys_create_pd()
 {
     Sys_create_pd r { current->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s PD:%#lx", current, __func__, r.sel());
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx (OP:%u)", static_cast<void *>(current), __func__, r.sel(), r.pd(), r.op());
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::PD))) {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP>();
+    auto const cpd { current->get_obj()->lookup (r.pd()) };
+
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::PD)))
+        current->sys_finish_status (Status::BAD_CAP);
+
+    auto const pd { static_cast<Pd *>(cpd.obj()) };
+
+    Status s;
+
+    switch (static_cast<Kobject::Subtype>(r.op())) {
+        default: s = Status::BAD_PAR; break;
+        case Kobject::Subtype::PD:  Pd::create_pd  (s, current->get_obj(), r.sel(), cpd.prm()); break;
+        case Kobject::Subtype::OBJ: pd->create_obj (s, current->get_obj(), r.sel()); break;
+        case Kobject::Subtype::HST: pd->create_hst (s, current->get_obj(), r.sel()); break;
+        case Kobject::Subtype::GST: pd->create_gst (s, current->get_obj(), r.sel()); break;
+        case Kobject::Subtype::DMA: pd->create_dma (s, current->get_obj(), r.sel()); break;
+        case Kobject::Subtype::PIO: pd->create_pio (s, current->get_obj(), r.sel()); break;
+        case Kobject::Subtype::MSR: pd->create_msr (s, current->get_obj(), r.sel()); break;
     }
 
-    auto pd = new Pd (Pd::current, r.sel(), cap.prm());
-    if (current->pd->Space_obj::insert (r.sel(), Capability (pd, cap.prm())) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        delete pd;
-        sys_finish<Status::BAD_CAP>();
-    }
-
-    sys_finish<Status::SUCCESS>();
+    current->sys_finish_status (s);
 }
 
 void Ec::sys_create_ec()
@@ -234,16 +247,16 @@ void Ec::sys_create_ec()
         sys_finish<Status::BAD_FTR>();
     }
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC_PT_SM))) {
+    auto cap = current->get_obj()->lookup (r.pd());
+    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
         sys_finish<Status::BAD_CAP>();
     }
     auto pd = static_cast<Pd *>(cap.obj());
 
-    auto ec = new Ec (Pd::current, r.sel(), pd, r.type() ? static_cast<void (*)()>(send_msg<ret_user_iret>) : nullptr, r.cpu(), r.evt(), r.utcb(), r.esp());
+    auto ec = new Ec (pd->get_obj(), pd->get_hst(), pd->get_pio(), r.sel(), r.type() ? static_cast<void (*)()>(send_msg<ret_user_iret>) : nullptr, r.cpu(), r.evt(), r.utcb(), r.esp());
 
-    if (current->pd->Space_obj::insert (r.sel(), Capability (ec, static_cast<unsigned>(Capability::Perm_ec::DEFINED))) != Status::SUCCESS) {
+    if (current->get_obj()->insert (r.sel(), Capability (ec, static_cast<unsigned>(Capability::Perm_ec::DEFINED))) != Status::SUCCESS) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
         delete ec;
         sys_finish<Status::BAD_CAP>();
@@ -258,19 +271,19 @@ void Ec::sys_create_sc()
 
     trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx EC:%#lx P:%#x Q:%#x", current, __func__, r.sel(), r.ec(), r.qpd().prio(), r.qpd().quantum());
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::SC))) {
+    auto cpd { current->get_obj()->lookup (r.pd()) };
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::SC))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
         sys_finish<Status::BAD_CAP>();
     }
 
-    cap = current->pd->Space_obj::lookup (r.ec());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_ec::BIND_SC))) {
+    auto cec { current->get_obj()->lookup (r.ec()) };
+    if (EXPECT_FALSE (!cec.validate (Capability::Perm_ec::BIND_SC))) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r.ec());
         sys_finish<Status::BAD_CAP>();
     }
 
-    auto ec = static_cast<Ec *>(cap.obj());
+    auto ec = static_cast<Ec *>(cec.obj());
 
     if (EXPECT_FALSE (!ec->glb)) {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
@@ -282,8 +295,8 @@ void Ec::sys_create_sc()
         sys_finish<Status::BAD_PAR>();
     }
 
-    auto sc = new Sc (Pd::current, r.sel(), ec, ec->cpu, r.qpd().prio(), r.qpd().quantum());
-    if (current->pd->Space_obj::insert (r.sel(), Capability (sc, static_cast<unsigned>(Capability::Perm_sc::DEFINED))) != Status::SUCCESS) {
+    auto sc = new Sc (current->pd, r.sel(), ec, ec->cpu, r.qpd().prio(), r.qpd().quantum());
+    if (current->get_obj()->insert (r.sel(), Capability (sc, static_cast<unsigned>(Capability::Perm_sc::DEFINED))) != Status::SUCCESS) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
         delete sc;
         sys_finish<Status::BAD_CAP>();
@@ -300,27 +313,27 @@ void Ec::sys_create_pt()
 
     trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx EC:%#lx EIP:%#lx", current, __func__, r.sel(), r.ec(), r.eip());
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC_PT_SM))) {
+    auto cpd { current->get_obj()->lookup (r.pd()) };
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::PT))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
         sys_finish<Status::BAD_CAP>();
     }
 
-    cap = current->pd->Space_obj::lookup (r.ec());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_ec::BIND_PT))) {
+    auto cec { current->get_obj()->lookup (r.ec()) };
+    if (EXPECT_FALSE (!cec.validate (Capability::Perm_ec::BIND_PT))) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r.ec());
         sys_finish<Status::BAD_CAP>();
     }
 
-    auto ec = static_cast<Ec *>(cap.obj());
+    auto ec = static_cast<Ec *>(cec.obj());
 
     if (EXPECT_FALSE (ec->glb)) {
         trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
         sys_finish<Status::BAD_CAP>();
     }
 
-    auto pt = new Pt (Pd::current, r.sel(), ec, r.mtd(), r.eip());
-    if (current->pd->Space_obj::insert (r.sel(), Capability (pt, static_cast<unsigned>(Capability::Perm_pt::DEFINED))) != Status::SUCCESS) {
+    auto pt = new Pt (current->pd, r.sel(), ec, r.mtd(), r.eip());
+    if (current->get_obj()->insert (r.sel(), Capability (pt, static_cast<unsigned>(Capability::Perm_pt::DEFINED))) != Status::SUCCESS) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
         delete pt;
         sys_finish<Status::BAD_CAP>();
@@ -335,14 +348,14 @@ void Ec::sys_create_sm()
 
     trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CNT:%lu", current, __func__, r.sel(), r.cnt());
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC_PT_SM))) {
+    auto cap = current->get_obj()->lookup (r.pd());
+    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::SM))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
         sys_finish<Status::BAD_CAP>();
     }
 
-    auto sm = new Sm (Pd::current, r.sel(), r.cnt());
-    if (current->pd->Space_obj::insert (r.sel(), Capability (sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED))) != Status::SUCCESS) {
+    auto sm = new Sm (current->pd, r.sel(), r.cnt());
+    if (current->get_obj()->insert (r.sel(), Capability (sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED))) != Status::SUCCESS) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
         delete sm;
         sys_finish<Status::BAD_CAP>();
@@ -351,13 +364,51 @@ void Ec::sys_create_sm()
     sys_finish<Status::SUCCESS>();
 }
 
+void Ec::sys_ctrl_pd()
+{
+    Sys_ctrl_pd r { current->sys_regs() };
+
+    trace (TRACE_SYSCALL, "EC:%p %s SRC:%#lx DST:%#lx SSB:%#lx DSB:%#lx ORD:%u PMM:%#x", static_cast<void *>(current), __func__, r.src(), r.dst(), r.ssb(), r.dsb(), r.ord(), r.pmm());
+
+    if (EXPECT_FALSE ((r.ssb() | r.dsb()) & (BITN (r.ord()) - 1)))
+        current->sys_finish_status (Status::BAD_PAR);
+
+    auto const cst { current->get_obj()->lookup (r.src()) };
+    auto const cdt { current->get_obj()->lookup (r.dst()) };
+
+    Kobject::Subtype st, dt;
+
+    if (EXPECT_TRUE (Capability::validate_take_grant (cst, cdt, st, dt))) {
+
+        if (st == Kobject::Subtype::HST) {
+            if (static_cast<Space_hst *>(cst.obj()) == &Space_hst::nova && !r.ma().valid())
+                current->sys_finish_status (Status::BAD_PAR);
+            if (dt == Kobject::Subtype::HST)
+                current->sys_finish_status (static_cast<Space_hst *>(cdt.obj())->delegate (static_cast<Space_hst *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm(), r.ma()));
+            if (dt == Kobject::Subtype::GST)
+                current->sys_finish_status (static_cast<Space_gst *>(cdt.obj())->delegate (static_cast<Space_hst *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm(), r.ma()));
+            if (dt == Kobject::Subtype::DMA)
+                current->sys_finish_status (static_cast<Space_dma *>(cdt.obj())->delegate (static_cast<Space_hst *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm(), r.ma()));
+        }
+
+        else if (st == Kobject::Subtype::OBJ && dt == st)
+            current->sys_finish_status (static_cast<Space_obj *>(cdt.obj())->delegate (static_cast<Space_obj *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm()));
+        else if (st == Kobject::Subtype::PIO && dt == st)
+            current->sys_finish_status (static_cast<Space_pio *>(cdt.obj())->delegate (static_cast<Space_pio *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm()));
+        else if (st == Kobject::Subtype::MSR && dt == st)
+            current->sys_finish_status (static_cast<Space_msr *>(cdt.obj())->delegate (static_cast<Space_msr *>(cst.obj()), r.ssb(), r.dsb(), r.ord(), r.pmm()));
+    }
+
+    current->sys_finish_status (Status::BAD_CAP);
+}
+
 void Ec::sys_ctrl_ec()
 {
     Sys_ctrl_ec r { current->sys_regs() };
 
     trace (TRACE_SYSCALL, "EC:%p %s EC:%#lx", current, __func__, r.ec());
 
-    auto cap = current->pd->Space_obj::lookup (r.ec());
+    auto cap = current->get_obj()->lookup (r.ec());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_ec::CTRL))) {
         trace (TRACE_ERROR, "%s: Bad EC CAP (%#lx)", __func__, r.ec());
         sys_finish<Status::BAD_CAP>();
@@ -382,7 +433,7 @@ void Ec::sys_ctrl_sc()
 
     trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx", current, __func__, r.sc());
 
-    auto cap = current->pd->Space_obj::lookup (r.sc());
+    auto cap = current->get_obj()->lookup (r.sc());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_sc::CTRL))) {
         trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r.sc());
         sys_finish<Status::BAD_CAP>();
@@ -399,7 +450,7 @@ void Ec::sys_ctrl_pt()
 
     trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx ID:%#lx", current, __func__, r.pt(), r.id());
 
-    auto cap = current->pd->Space_obj::lookup (r.pt());
+    auto cap = current->get_obj()->lookup (r.pt());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pt::CTRL))) {
         trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r.pt());
         sys_finish<Status::BAD_CAP>();
@@ -418,7 +469,7 @@ void Ec::sys_ctrl_sm()
 
     trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx OP:%u", current, __func__, r.sm(), r.op());
 
-    auto cap = current->pd->Space_obj::lookup (r.sm());
+    auto cap = current->get_obj()->lookup (r.sm());
     if (EXPECT_FALSE (!cap.validate (r.op() ? Capability::Perm_sm::CTRL_DN : Capability::Perm_sm::CTRL_UP))) {
         trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r.sm());
         sys_finish<Status::BAD_CAP>();
@@ -450,7 +501,7 @@ void Ec::sys_ctrl_hw()
 
     trace (TRACE_SYSCALL, "EC:%p %s OP:%u DESC:%#lx", static_cast<void *>(current), __func__, r.op(), r.desc());
 
-    if (EXPECT_FALSE (current->pd != &Pd::root))
+    if (EXPECT_FALSE (current->get_obj() != Pd::root->get_obj()))
         current->sys_finish_status (Status::BAD_HYP);
 
     switch (r.op()) {
@@ -486,7 +537,7 @@ void Ec::sys_assign_int()
         sys_finish<Status::BAD_CPU>();
     }
 
-    auto cap = current->pd->Space_obj::lookup (r.sm());
+    auto cap = current->get_obj()->lookup (r.sm());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_sm::ASSIGN))) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r.sm());
         sys_finish<Status::BAD_CAP>();
@@ -516,34 +567,25 @@ void Ec::sys_assign_dev()
 {
     Sys_assign_dev r { current->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s PD:%#lx SMMU:%#lx DAD:%#lx", current, __func__, r.pd(), r.smmu(), r.dad());
+    trace (TRACE_SYSCALL, "EC:%p %s DMA:%#lx SMMU:%#lx DAD:%#lx", static_cast<void *>(current), __func__, r.dma(), r.smmu(), r.dad());
 
-    if (EXPECT_FALSE (current->pd != &Pd::root)) {
-        trace (TRACE_ERROR, "%s: Not Root PD", __func__);
-        sys_finish<Status::BAD_HYP>();
-    }
+    if (EXPECT_FALSE (current->get_obj() != Pd::root->get_obj()))
+        current->sys_finish_status (Status::BAD_HYP);
 
-    Smmu *smmu = Smmu::lookup (r.smmu());
+    auto const csp { current->get_obj()->lookup (r.dma()) };
 
-    if (EXPECT_FALSE (!smmu)) {
-        trace (TRACE_ERROR, "%s: Bad SMMU (%#lx)", __func__, r.smmu());
-        sys_finish<Status::BAD_DEV>();
-    }
+    if (EXPECT_FALSE (!csp.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::DMA)))
+        current->sys_finish_status (Status::BAD_CAP);
 
-    auto cap = current->pd->Space_obj::lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::ASSIGN))) {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP>();
-    }
+    auto const smmu { Smmu::lookup (r.smmu()) };
 
-    auto pd = static_cast<Pd *>(cap.obj());
+    if (EXPECT_FALSE (!smmu))
+        current->sys_finish_status (Status::BAD_DEV);
 
-    if (!smmu->configure (pd, r.dad())) {
-        trace (TRACE_ERROR, "%s: Bad Parameter for SI/DAD", __func__);
-        sys_finish<Status::BAD_PAR>();
-    }
+    if (EXPECT_FALSE (!smmu->configure (static_cast<Space_dma *>(csp.obj()), r.dad())))
+        current->sys_finish_status (Status::BAD_PAR);
 
-    sys_finish<Status::SUCCESS>();
+    current->sys_finish_status (Status::SUCCESS);
 }
 
 extern "C"

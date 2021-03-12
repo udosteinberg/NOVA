@@ -28,8 +28,10 @@ INIT_PRIORITY (PRIO_SPACE_MSR) ALIGNED (Kobject::alignment) Space_msr Space_msr:
  * Constructor (NOVA MSR Space)
  * FIXME: Bitmap allocation failure
  */
-Space_msr::Space_msr() : bmp (new Bitmap_msr)
+Space_msr::Space_msr() : Space (Kobject::Subtype::MSR, nullptr), bmp (new Bitmap_msr)
 {
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_MSR, Capability (this, std::to_underlying (Capability::Perm_sp::TAKE)));
+
     constexpr Msr::Register rw[] { Msr::Register::IA32_SYSENTER_CS,
                                    Msr::Register::IA32_SYSENTER_ESP,
                                    Msr::Register::IA32_SYSENTER_EIP,

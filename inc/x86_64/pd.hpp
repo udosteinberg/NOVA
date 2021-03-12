@@ -1,10 +1,11 @@
 /*
- * Protection Domain
+ * Protection Domain (PD)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,61 +22,66 @@
 #pragma once
 
 #include "atomic.hpp"
-#include "fpu.hpp"
-#include "kmem.hpp"
-#include "slab.hpp"
-#include "space_dma.hpp"
-#include "space_gst.hpp"
-#include "space_hst.hpp"
-#include "space_msr.hpp"
-#include "space_obj.hpp"
-#include "space_pio.hpp"
+#include "kobject.hpp"
+#include "status.hpp"
+#include "std.hpp"
 
-class Pd : public Kobject, public Space_obj, public Space_hst, public Space_gst, public Space_dma, public Space_pio, public Space_msr
+class Space_dma;
+class Space_gst;
+class Space_hst;
+class Space_msr;
+class Space_obj;
+class Space_pio;
+
+class Pd final : public Kobject
 {
     private:
+        Atomic<unsigned>    spaces      { 0 };
+        Atomic<Space_obj *> space_obj   { nullptr };
+        Atomic<Space_hst *> space_hst   { nullptr };
+        Atomic<Space_pio *> space_pio   { nullptr };
+
+        Slab_cache dma_cache;
+        Slab_cache gst_cache;
+        Slab_cache hst_cache;
+        Slab_cache msr_cache;
+        Slab_cache obj_cache;
+        Slab_cache pio_cache;
+
+        Pd();
+
+        inline auto attach (Kobject::Subtype s) { return !spaces.test_and_set (BIT (std::to_underlying (s))); }
+        inline void detach (Kobject::Subtype s) { spaces &= ~BIT (std::to_underlying (s)); }
+
         static Slab_cache cache;
 
     public:
         Slab_cache fpu_cache;
 
-        static Atomic<Pd *> current CPULOCAL;
-        static Pd kern, root;
+        static inline Pd *root { nullptr };
 
-        Pd (Pd *);
-
-        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr), fpu_cache (sizeof (Fpu), 16) {}
-
-        ALWAYS_INLINE HOT
-        inline void make_current()
+        [[nodiscard]] static inline auto create (Status &s)
         {
-            uintptr_t p = get_pcid();
+            auto const pd { new (cache) Pd };
 
-            if (EXPECT_FALSE (htlb.tst (Cpu::id)))
-                htlb.clr (Cpu::id);
+            if (EXPECT_FALSE (!pd))
+                s = Status::MEM_OBJ;
 
-            else {
-
-                if (EXPECT_TRUE (current == this))
-                    return;
-
-                p |= BIT64 (63);
-            }
-
-            current = this;
-
-            loc[Cpu::id].make_current (Cpu::feature (Cpu::Feature::PCID) ? p : 0);
+            return pd;
         }
 
-        ALWAYS_INLINE
-        static inline Pd *remote (unsigned c)
-        {
-            return *Kmem::loc_to_glob (&current, c);
-        }
+        inline void destroy() { operator delete (this, cache); }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        inline Space_obj *get_obj() const { return space_obj; }
+        inline Space_hst *get_hst() const { return space_hst; }
+        inline Space_pio *get_pio() const { return space_pio; }
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        Space_dma *create_dma (Status &, Space_obj *, unsigned long);
+        Space_gst *create_gst (Status &, Space_obj *, unsigned long);
+        Space_hst *create_hst (Status &, Space_obj *, unsigned long);
+        Space_msr *create_msr (Status &, Space_obj *, unsigned long);
+        Space_obj *create_obj (Status &, Space_obj *, unsigned long);
+        Space_pio *create_pio (Status &, Space_obj *, unsigned long);
+
+        static Pd *create_pd (Status &, Space_obj *, unsigned long, unsigned);
 };

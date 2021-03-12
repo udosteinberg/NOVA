@@ -28,8 +28,10 @@ INIT_PRIORITY (PRIO_SPACE_PIO) ALIGNED (Kobject::alignment) Space_pio Space_pio:
  * Constructor (NOVA PIO Space)
  * FIXME: Bitmap allocation failure
  */
-Space_pio::Space_pio() : bmp (new Bitmap_pio)
+Space_pio::Space_pio() : Space (Kobject::Subtype::PIO, nullptr), bmp (new Bitmap_pio), hst (nullptr)
 {
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_PIO, Capability (this, std::to_underlying (Capability::Perm_sp::TAKE)));
+
     user_access (0, BIT (16), Paging::R);
 }
 

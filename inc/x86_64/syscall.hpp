@@ -23,6 +23,7 @@
 #pragma once
 
 #include "abi.hpp"
+#include "memattr.hpp"
 #include "mtd_arch.hpp"
 #include "qpd.hpp"
 #include "regs.hpp"
@@ -50,6 +51,8 @@ struct Sys_ipc_reply final : private Sys_abi
 struct Sys_create_pd final : private Sys_abi
 {
     inline Sys_create_pd (Sys_regs &r) : Sys_abi (r) {}
+
+    inline auto op() const { return flags(); }
 
     inline unsigned long sel() const { return p0() >> 8; }
 
@@ -112,6 +115,25 @@ struct Sys_create_sm final : private Sys_abi
     inline unsigned long pd() const { return p1(); }
 
     inline mword cnt() const { return p2(); }
+};
+
+struct Sys_ctrl_pd final : private Sys_abi
+{
+    inline Sys_ctrl_pd (Sys_regs &r) : Sys_abi (r) {}
+
+    inline unsigned long src() const { return p0() >> 8; }
+
+    inline unsigned long dst() const { return p1(); }
+
+    inline uintptr_t ssb() const { return p2() >> 12; }
+
+    inline uintptr_t dsb() const { return p3() >> 12; }
+
+    inline unsigned ord() const { return p2() & BIT_RANGE (4, 0); }
+
+    inline unsigned pmm() const { return p3() & BIT_RANGE (4, 0); }
+
+    inline auto ma() const { return Memattr { static_cast<uint32>(p4()) }; }
 };
 
 struct Sys_ctrl_ec final : private Sys_abi
@@ -188,7 +210,7 @@ struct Sys_assign_dev final : private Sys_abi
 {
     inline Sys_assign_dev (Sys_regs &r) : Sys_abi (r) {}
 
-    inline unsigned long pd() const { return p0() >> 8; }
+    inline unsigned long dma() const { return p0() >> 8; }
 
     inline uintptr_t smmu() const { return p1() & ~OFFS_MASK; }
 
