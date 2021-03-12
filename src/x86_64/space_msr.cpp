@@ -28,8 +28,10 @@ INIT_PRIORITY (PRIO_SPACE_MSR) ALIGNED (Kobject::alignment) Space_msr Space_msr:
  * Constructor (NOVA MSR Space)
  * FIXME: Bitmap allocation failure
  */
-Space_msr::Space_msr() : bmp { new Bitmap_msr }
+Space_msr::Space_msr() : Space { Kobject::Subtype::MSR }, bmp { new Bitmap_msr }
 {
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_MSR, Capability { this, std::to_underlying (Capability::Perm_sp::TAKE) });
+
     for (auto msr : rw)
         access_ctrl (msr, Paging::Permissions (Paging::W | Paging::R));
 
@@ -38,6 +40,49 @@ Space_msr::Space_msr() : bmp { new Bitmap_msr }
 
     for (auto msr : ro)
         access_ctrl (msr, Paging::Permissions (Paging::R));
+}
+
+Space_msr *Space_msr::create (Status &s, Pd *pd)
+{
+    // Acquire reference
+    Refptr<Pd> ref_pd { pd };
+
+    // Failed to acquire reference
+    if (!ref_pd) [[unlikely]]
+        s = Status::ABORTED;
+
+    else {
+
+        auto const bmp { new Bitmap_msr };
+
+        if (bmp) [[likely]] {
+
+            // Create new MSR object
+            auto const obj { new (ref_pd->msr_cache) Space_msr { ref_pd, bmp } };
+
+            // If creation succeeded, then reference must have been consumed
+            if (obj) [[likely]] {
+                assert (!ref_pd);
+                return obj;
+            }
+
+            delete bmp;
+        }
+
+        // Failed to create MSR object
+        s = Status::MEM_OBJ;
+    }
+
+    return nullptr;
+}
+
+void Space_msr::destroy()
+{
+    auto &cache { get_pd()->msr_cache };
+
+    this->~Space_msr();
+
+    operator delete (this, cache);
 }
 
 /*
