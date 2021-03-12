@@ -265,5 +265,5 @@ void Pagetable<T,I,O,L,M,C>::Table::deallocate (unsigned l)
             old->deallocate (l - 1);
     }
 
-    operator delete (this, false);
+    operator delete (this, true);
 }
