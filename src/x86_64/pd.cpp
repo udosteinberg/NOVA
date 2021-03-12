@@ -1,11 +1,11 @@
 /*
- * Protection Domain
+ * Protection Domain (PD)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,32 +19,149 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "mtrr.hpp"
-#include "pd.hpp"
+#include "fpu.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
+#include "space_msr.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 #include "stdio.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 32);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Pd::cache { sizeof (Pd), Kobject::alignment };
 
-Atomic<Pd *>    Pd::current { nullptr };
-ALIGNED(32) Pd  Pd::kern (&Pd::kern);
-ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
-
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr), fpu_cache (sizeof (Fpu), 16)
+Pd::Pd() : Kobject (Kobject::Type::PD),
+           dma_cache (sizeof (Space_dma), Kobject::alignment),
+           gst_cache (sizeof (Space_gst), Kobject::alignment),
+           hst_cache (sizeof (Space_hst), Kobject::alignment),
+           msr_cache (sizeof (Space_msr), Kobject::alignment),
+           obj_cache (sizeof (Space_obj), Kobject::alignment),
+           pio_cache (sizeof (Space_pio), Kobject::alignment),
+           fpu_cache (sizeof (Fpu), 16)
 {
-    hptp = Hptp::master;
+    trace (TRACE_CREATE, "PD:%p created", static_cast<void *>(this));
+}
 
-    Mtrr::init();
+Space_obj *Pd::create_obj (Status &s, Space_obj *obj, unsigned long sel)
+{
+    if (EXPECT_FALSE (!attach (Kobject::Subtype::OBJ))) {
+        s = Status::ABORTED;
+        return nullptr;
+    }
 
-#if 0   // FIXME
-    Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (reinterpret_cast<mword>(&NOVA_HPAE), USER_ADDR);
+    auto const o { Space_obj::create (s, obj_cache, this) };
 
-    // HIP
-    Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE, 1);
+    if (EXPECT_TRUE (o)) {
 
-    // I/O Ports
-    Space_pio::addreg (0, 1UL << 16, 7);
-#endif
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_OBJ)))) == Status::SUCCESS))
+            return space_obj = o;
+
+        o->destroy (obj_cache);
+    }
+
+    detach (Kobject::Subtype::OBJ);
+
+    return nullptr;
+}
+
+Space_hst *Pd::create_hst (Status &s, Space_obj *obj, unsigned long sel)
+{
+    if (EXPECT_FALSE (!attach (Kobject::Subtype::HST))) {
+        s = Status::ABORTED;
+        return nullptr;
+    }
+
+    auto const o { Space_hst::create (s, hst_cache, this) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_HST)))) == Status::SUCCESS))
+            return space_hst = o;
+
+        o->destroy (hst_cache);
+    }
+
+    detach (Kobject::Subtype::HST);
+
+    return nullptr;
+}
+
+Space_gst *Pd::create_gst (Status &s, Space_obj *obj, unsigned long sel)
+{
+    auto const o { Space_gst::create (s, gst_cache, this) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_GST)))) == Status::SUCCESS))
+            return o;
+
+        o->destroy (gst_cache);
+    }
+
+    return nullptr;
+}
+
+Space_dma *Pd::create_dma (Status &s, Space_obj *obj, unsigned long sel)
+{
+    auto const o { Space_dma::create (s, dma_cache, this) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_DMA)))) == Status::SUCCESS))
+            return o;
+
+        o->destroy (dma_cache);
+    }
+
+    return nullptr;
+}
+
+Space_pio *Pd::create_pio (Status &s, Space_obj *obj, unsigned long sel)
+{
+    auto const a { attach (Kobject::Subtype::PIO) };
+
+    auto const o { Space_pio::create (s, pio_cache, this, a) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_PIO)))) == Status::SUCCESS))
+            return a ? space_pio = o : o;
+
+        o->destroy (pio_cache);
+    }
+
+    if (a)
+        detach (Kobject::Subtype::PIO);
+
+    return nullptr;
+}
+
+Space_msr *Pd::create_msr (Status &s, Space_obj *obj, unsigned long sel)
+{
+    auto const o { Space_msr::create (s, msr_cache, this) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sp::DEFINED_MSR)))) == Status::SUCCESS))
+            return o;
+
+        o->destroy (msr_cache);
+    }
+
+    return nullptr;
+}
+
+Pd *Pd::create_pd (Status &s, Space_obj *obj, unsigned long sel, unsigned prm)
+{
+    auto const o { Pd::create (s) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, prm))) == Status::SUCCESS))
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
 }

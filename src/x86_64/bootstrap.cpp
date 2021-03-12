@@ -32,8 +32,8 @@ void bootstrap()
 
     // Before cores leave the barrier into userland, the idle EC must exist
     if (!Acpi::resume) {
-        Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
-        Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current);
+        Ec::current = new Ec (nullptr, Ec::idle, Cpu::id);
+        Sc::current = new Sc (nullptr, Cpu::id, Ec::current);
     }
 
     // Barrier: wait for all CPUs to arrive here
@@ -44,8 +44,10 @@ void bootstrap()
 
     else if (Cpu::bsp) {
         Hip::hip->add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
-        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
+        Status s;
+        Pd::root = Pd::create (s);
+        Ec *root_ec = new Ec (Pd::root->get_obj(), Pd::root->get_hst(), Pd::root->get_pio(), NUM_EXC + 1, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
+        Sc *root_sc = new Sc (Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
         root_sc->remote_enqueue();
     }
 

@@ -190,9 +190,6 @@ __init_bsp:             // Check if we launched via Multiboot v2
                         PTE_REL 2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
                         PTE_REL 1, PT1L_HPAS, NOVA_HPAS, NOVA_HPAS, PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P
 
-                        // FIXME: AP Startup Code mapping
-                        PTE_REL 1, PT1L_HPAS, 0, 0, PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P
-
                         // Configure Page Tables: Link Section (2M pages)
                         PTE_FIX 3, PT3S_HPAS, LINK_ADDR, PT2H_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
                         PTE_FIX 2, PT2H_HPAS, LINK_ADDR, PT1H_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
