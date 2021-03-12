@@ -22,26 +22,29 @@
 #pragma once
 
 #include "bitmap_pio.hpp"
-#include "kmem.hpp"
-#include "paging.hpp"
-#include "space.hpp"
-#include "status.hpp"
+#include "space_hst.hpp"
 
-class Space_pio : public Space
+class Space_pio final : public Space
 {
-    friend class Pd;
-
     private:
-        Bitmap_pio *const bmp;
+        Refptr<Space_hst> const hst;
+        Bitmap_pio *      const bmp;
 
         static Space_pio nova;
 
         Space_pio();
 
-        Space_pio (Bitmap_pio *b) : bmp (b) {}
+        Space_pio (Refptr<Pd> &p, Refptr<Space_hst> &h, Bitmap_pio *b) : Space { Kobject::Subtype::PIO, p }, hst { std::move (h) }, bmp { b }
+        {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, Kmem::ptr_to_phys (bmp), 1, Paging::R, Memattr::ram());
+        }
 
         ~Space_pio()
         {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, 0, 1, Paging::NONE, Memattr::ram());
+
             delete bmp;
         }
 
@@ -53,6 +56,41 @@ class Space_pio : public Space
         [[nodiscard]] Status delegate (Space_pio const *, unsigned long, unsigned long, unsigned, unsigned);
 
         [[nodiscard]] auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static Space_pio *create (Status &s, Slab_cache &cache, Pd *pd, bool a)
+        {
+            // Acquire references
+            Refptr<Pd> ref_pd { pd };
+            Refptr<Space_hst> ref_hst { a ? pd->get_hst() : nullptr };
+
+            // Failed to acquire references
+            if (EXPECT_FALSE (!ref_pd || (a && !ref_hst)))
+                s = Status::ABORTED;
+
+            else {
+
+                auto const bmp { new Bitmap_pio };
+
+                if (EXPECT_TRUE (bmp)) {
+
+                    auto const pio { new (cache) Space_pio { ref_pd, ref_hst, bmp } };
+
+                    // If we created pio, then references must have been consumed
+                    assert (!pio || (!ref_pd && !ref_hst));
+
+                    if (EXPECT_TRUE (pio))
+                        return pio;
+
+                    delete bmp;
+                }
+
+                s = Status::MEM_OBJ;
+            }
+
+            return nullptr;
+        }
+
+        void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         static void user_access (uint64_t base, size_t size, Paging::Permissions p)
         {
