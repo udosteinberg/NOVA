@@ -6,7 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -60,7 +60,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
 void Acpi_table_dmar::Remapping_rmrr::parse() const
 {
     for (uint64 hpa = base & ~OFFS_MASK; hpa < limit; hpa += PAGE_SIZE)
-        Pd::kern.dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::W | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+        Pd::kern.Space_mem::update (hpa, hpa, 0, Paging::Permissions (Paging::W | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE, Space::Index::DMA_HST);
 
     auto addr = reinterpret_cast<uintptr_t>(this);
 
