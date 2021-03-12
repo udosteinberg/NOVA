@@ -87,7 +87,7 @@ class Hpt final : public Pagetable<Hpt, uint64, uint64, 4, 3, false>::Entry
 
 class Hptp final : public Pagetable<Hpt, uint64, uint64, 4, 3, false>
 {
-    friend class Pd;
+    friend class Space_hst;
 
     private:
         static Hptp master;

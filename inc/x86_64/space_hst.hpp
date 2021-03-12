@@ -28,8 +28,13 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_hst : public Space_mem<Space_hst>
+class Space_hst final : public Space_mem<Space_hst>
 {
+    private:
+        Space_hst();
+
+        inline Space_hst (Pd *p) : Space_mem (Kobject::Subtype::HST, p) {}
+
     public:
         Hptp    hptp;
         Pcid    pcid;
@@ -44,6 +49,25 @@ class Space_hst : public Space_mem<Space_hst>
         static constexpr auto num { BIT64 (Hptp::lev * Hptp::bpl - 1) };
 
         [[nodiscard]] inline auto get_ptab (unsigned cpu) { return loc[cpu].root_init (false); }
+
+        [[nodiscard]] static inline Space_hst *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            auto const hst { new (cache) Space_hst (pd) };
+
+            if (EXPECT_TRUE (hst)) {
+
+                if (EXPECT_TRUE (hst->hptp.root_init (false)))
+                    return hst;
+
+                operator delete (hst, cache);
+            }
+
+            s = Status::INS_MEM;
+
+            return nullptr;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         inline auto lookup (uint64 v, uint64 &p, unsigned &o, Memattr::Cacheability &ca, Memattr::Shareability &sh) const { return hptp.lookup (v, p, o, ca, sh); }
 

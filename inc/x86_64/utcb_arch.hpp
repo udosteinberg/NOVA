@@ -71,13 +71,15 @@ class Utcb_arch final
             uint64      msr;
         } sel;
 
+        bool assign_spaces (Cpu_regs &, Space_obj const *) const;
+
     public:
         void load_exc (Mtd_arch const, Exc_regs const &);
         void load_vmx (Mtd_arch const, Cpu_regs const &);
         void load_svm (Mtd_arch const, Cpu_regs const &);
         bool save_exc (Mtd_arch const, Exc_regs &) const;
-        bool save_vmx (Mtd_arch const, Cpu_regs &) const;
-        bool save_svm (Mtd_arch const, Cpu_regs &) const;
+        bool save_vmx (Mtd_arch const, Cpu_regs &, Space_obj const *) const;
+        bool save_svm (Mtd_arch const, Cpu_regs &, Space_obj const *) const;
 };
 
 static_assert (__is_standard_layout (Utcb_arch) && sizeof (Utcb_arch) == 0x260);

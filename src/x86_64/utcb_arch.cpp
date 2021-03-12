@@ -192,7 +192,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
         efer = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER);
 }
 
-bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
+bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
 {
     auto &s { c.exc.sys };
 
@@ -370,6 +370,10 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
     }
 
     if (m & Mtd_arch::Item::SPACES) {
+
+        if (EXPECT_FALSE (!assign_spaces (c, obj)))
+            return false;
+
         Vmcs::write (Vmcs::Encoding::EPTP,        c.gst->get_phys() | (Eptp::lev - 1) << 3 | CA_TYPE_MEM_WB);
         Vmcs::write (Vmcs::Encoding::BITMAP_IO_A, c.pio->get_phys());
         Vmcs::write (Vmcs::Encoding::BITMAP_IO_B, c.pio->get_phys() + PAGE_SIZE);
@@ -476,7 +480,7 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
         efer = v->efer;
 }
 
-bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
+bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
 {
     auto &s { c.exc.sys };
     auto  v { c.vmcb };
@@ -585,10 +589,44 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
             v->tlb_control = 3;
 
     if (m & Mtd_arch::Item::SPACES) {
+
+        if (EXPECT_FALSE (!assign_spaces (c, obj)))
+            return false;
+
         v->npt_cr3  = c.gst->get_phys();
         v->base_io  = c.pio->get_phys();
         v->base_msr = c.msr->get_phys();
     }
+
+    return true;
+}
+
+bool Utcb_arch::assign_spaces (Cpu_regs &c, Space_obj const *obj) const
+{
+    auto const cgst { obj->lookup (sel.gst) };
+    auto const cpio { obj->lookup (sel.pio) };
+    auto const cmsr { obj->lookup (sel.msr) };
+
+    if (EXPECT_FALSE (!cgst.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::GST) ||
+                      !cpio.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::PIO) ||
+                      !cmsr.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::MSR)))
+        return false;
+
+    auto const gst { static_cast<Space_gst *>(cgst.obj()) };
+    auto const pio { static_cast<Space_pio *>(cpio.obj()) };
+    auto const msr { static_cast<Space_msr *>(cmsr.obj()) };
+    auto const own { c.obj->get_pd() };
+
+    if (EXPECT_FALSE (gst->get_pd() != own || pio->get_pd() != own || msr->get_pd() != own))
+        return false;
+
+    // FIXME: Refcount updates
+
+    c.gst = gst;
+    c.pio = pio;
+    c.msr = msr;
+
+    c.hazard.clr (Hazard::ILLEGAL);
 
     return true;
 }

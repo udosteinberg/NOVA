@@ -21,7 +21,7 @@
 
 #include "extern.hpp"
 #include "ioapic.hpp"
-#include "pd.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)

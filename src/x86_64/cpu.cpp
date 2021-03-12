@@ -31,7 +31,7 @@
 #include "lapic.hpp"
 #include "lowlevel.hpp"
 #include "mca.hpp"
-#include "pd.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
@@ -272,8 +272,8 @@ void Cpu::init()
 
     if (!Acpi::resume) {
         uint64 phys; unsigned o; Memattr::Cacheability ca; Memattr::Shareability sh;
-        Pd::kern.Space_hst::loc[id] = Hptp::current();
-        Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ca, sh);
+        Space_hst::nova.loc[id] = Hptp::current();
+        Space_hst::nova.loc[id].lookup (MMAP_CPU_DATA, phys, o, ca, sh);
         Hptp::master_map (MMAP_GLB_DATA + id * PAGE_SIZE, phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ca, sh);
         Hptp::set_leaf_max (feature (Feature::GB_PAGES) ? 3 : 2);
     }

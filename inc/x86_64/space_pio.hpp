@@ -22,26 +22,29 @@
 #pragma once
 
 #include "bitmap_pio.hpp"
-#include "kmem.hpp"
-#include "paging.hpp"
-#include "space.hpp"
-#include "status.hpp"
+#include "space_hst.hpp"
 
-class Space_pio : public Space
+class Space_pio final : public Space
 {
-    friend class Pd;
-
     private:
         Bitmap_pio *const bmp;
+        Space_hst * const hst;
 
         static Space_pio nova;
 
         Space_pio();
 
-        inline Space_pio (Bitmap_pio *b) : bmp (b) {}
+        inline Space_pio (Pd *p, Bitmap_pio *b, Space_hst *h) : Space (Kobject::Subtype::PIO, p), bmp (b), hst (h)
+        {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, Kmem::ptr_to_phys (bmp), 1, Paging::R, Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+        }
 
         inline ~Space_pio()
         {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, 0, 1, Paging::NONE, Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+
             delete bmp;
         }
 
@@ -53,6 +56,34 @@ class Space_pio : public Space
         [[nodiscard]] Status delegate (Space_pio const *, unsigned long, unsigned long, unsigned, unsigned);
 
         [[nodiscard]] inline auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static inline Space_pio *create (Status &s, Slab_cache &cache, Pd *pd, bool a)
+        {
+            auto const hst { pd->get_hst() };
+
+            if (EXPECT_FALSE (!hst)) {
+                s = Status::ABORTED;
+                return nullptr;
+            }
+
+            auto const bmp { new Bitmap_pio };
+
+            if (EXPECT_TRUE (bmp)) {
+
+                auto const pio { new (cache) Space_pio (pd, bmp, a ? hst : nullptr) };
+
+                if (EXPECT_TRUE (pio))
+                    return pio;
+
+                delete bmp;
+            }
+
+            s = Status::INS_MEM;
+
+            return nullptr;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         static void user_access (uint64 base, size_t size, bool a)
         {
