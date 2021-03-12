@@ -33,7 +33,7 @@
 #include "lowlevel.hpp"
 #include "mca.hpp"
 #include "msr.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
@@ -184,8 +184,8 @@ void Cpu::init()
 
     if (!Acpi::resume) {
         uint64 phys; unsigned o; Memattr::Cacheability ca; Memattr::Shareability sh;
-        Pd::kern.Space_mem::loc[id] = Hptp::current();
-        Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, o, ca, sh);
+        Pd_kern::nova().Space_mem::loc[id] = Hptp::current();
+        Pd_kern::nova().Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, o, ca, sh);
         Hptp::master.update (MMAP_GLB_DATA + id * PAGE_SIZE, phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ca, sh);
         Hptp::set_leaf_max (feature (Feature::GB_PAGES) ? 3 : 2);
     }

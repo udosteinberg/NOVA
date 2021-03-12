@@ -26,7 +26,7 @@
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 
@@ -60,7 +60,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
 void Acpi_table_dmar::Remapping_rmrr::parse() const
 {
     for (uint64 hpa = base & ~OFFS_MASK; hpa < limit; hpa += PAGE_SIZE)
-        Pd::kern.dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::W | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+        Pd_kern::nova().dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::W | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
 
     auto addr = reinterpret_cast<uintptr_t>(this);
 
@@ -76,7 +76,7 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
         }
 
         if (smmu)
-            smmu->configure (&Pd::kern, Space::Index::DMA_HST, s->dev(), false);
+            smmu->configure (&Pd_kern::nova(), Space::Index::DMA_HST, s->dev(), false);
 
         trace (TRACE_FIRM | TRACE_PARSE, "RMRR: %#llx-%#llx Scope Type %u Device %02x:%02x.%x", base, limit, s->type, s->b, s->d, s->f);
 

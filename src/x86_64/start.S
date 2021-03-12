@@ -193,9 +193,6 @@ __init_bsp:             cli
                         PTE_REL 2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, ATTR_A | ATTR_U | ATTR_W | ATTR_P
                         PTE_REL 1, PT1L_HPAS, NOVA_HPAS, NOVA_HPAS, ATTR_S | ATTR_D | ATTR_A | ATTR_W | ATTR_P
 
-                        // FIXME: AP Startup Code mapping
-                        PTE_REL 1, PT1L_HPAS, 0, 0, ATTR_S | ATTR_D | ATTR_A | ATTR_W | ATTR_P
-
                         // Configure Page Tables: Link Section (2M pages)
                         PTE_FIX 3, PT3S_HPAS, LINK_ADDR, PT2H_HPAS, ATTR_A | ATTR_U | ATTR_W | ATTR_P
                         PTE_FIX 2, PT2H_HPAS, LINK_ADDR, PT1H_HPAS, ATTR_A | ATTR_U | ATTR_W | ATTR_P
