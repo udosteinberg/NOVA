@@ -25,6 +25,7 @@
 #include "elf.hpp"
 #include "entry.hpp"
 #include "hip.hpp"
+#include "pd_kern.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -261,7 +262,7 @@ void Ec::root_invoke()
     Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
 #endif
 
-    current->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd::kern,   static_cast<unsigned>(Capability::Perm_pd::CTRL)));
+    current->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd_kern::nova(), static_cast<unsigned>(Capability::Perm_pd::CTRL)));
     current->pd->Space_obj::insert (Space_obj::num - 2, Capability (current->pd, static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
     current->pd->Space_obj::insert (Space_obj::num - 3, Capability (Ec::current, static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
     current->pd->Space_obj::insert (Space_obj::num - 4, Capability (Sc::current, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
@@ -273,7 +274,7 @@ void Ec::root_invoke()
 
 void Ec::die (char const *reason, Exc_regs *r)
 {
-    if (current->utcb || current->pd == &Pd::kern)
+    if (current->utcb || current->pd == &Pd_kern::nova())
         trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
                current, Sc::current, r->vec, r->cs, r->rip, r->cr2, r->err, reason);
     else
