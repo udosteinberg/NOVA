@@ -31,8 +31,6 @@ class Vmcs
 
         static Vmcs *current CPULOCAL_HOT;
 
-        static uint16 vpid_ctr CPULOCAL;
-
         static union vmx_basic {
             uint64      val;
             struct {
@@ -360,7 +358,7 @@ class Vmcs
             return Buddy::allocator.alloc (0, Buddy::NOFILL);
         }
 
-        Vmcs (mword, mword, mword, uint64);
+        Vmcs (mword, mword, mword, uint64, uint16);
 
         ALWAYS_INLINE
         inline Vmcs() : rev (basic.revision)
@@ -426,7 +424,7 @@ class Vmcs
         }
 
         ALWAYS_INLINE
-        static inline unsigned long vpid()
+        static inline uint16 vpid()
         {
             return has_vpid() ? read<uint16> (VPID) : 0;
         }

@@ -33,9 +33,9 @@
 #include "tss.hpp"
 #include "util.hpp"
 #include "vmx.hpp"
+#include "vpid.hpp"
 
 Vmcs *              Vmcs::current;
-uint16              Vmcs::vpid_ctr;
 Vmcs::vmx_basic     Vmcs::basic;
 Vmcs::vmx_ept_vpid  Vmcs::ept_vpid;
 Vmcs::vmx_ctrl_pin  Vmcs::ctrl_pin;
@@ -45,7 +45,7 @@ Vmcs::vmx_ctrl_ent  Vmcs::ctrl_ent;
 mword               Vmcs::fix_cr0_set, Vmcs::fix_cr0_clr;
 mword               Vmcs::fix_cr4_set, Vmcs::fix_cr4_clr;
 
-Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
+Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp, uint16 vpid) : rev (basic.revision)
 {
     make_current();
 
@@ -59,8 +59,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
 
     write (VMCS_LINK_PTR, ~0ULL);
 
-    write (VPID, ++vpid_ctr);
-
+    write (VPID, vpid);
     write (EPTP, eptp | (Ept::max() - 1) << 3 | 6);
 
     write (IO_BITMAP_A, bmp);
@@ -137,6 +136,9 @@ void Vmcs::init()
 
     Cr::set_cr0 ((Cr::get_cr0() & ~fix_cr0_clr) | fix_cr0_set);
     Cr::set_cr4 ((Cr::get_cr4() & ~fix_cr4_clr) | fix_cr4_set);
+
+    // VMX architecture reserves VPID 0 for host usage
+    Vpid::allocator.reserve (0);
 
     Vmcs *root = new Vmcs;
 
