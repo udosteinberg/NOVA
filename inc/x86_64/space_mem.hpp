@@ -23,15 +23,17 @@
 
 #include "bits.hpp"
 #include "memattr.hpp"
+#include "memory.hpp"
 #include "paging.hpp"
 #include "space.hpp"
-#include "status.hpp"
-
-class Space_hst;
 
 template<typename T> class Space_mem : public Space
 {
     protected:
+        Space_mem (Kobject::Subtype s) : Space { s } {}
+
+        Space_mem (Kobject::Subtype s, Refptr<Pd> &p) : Space { s, p } {}
+
         static void access_ctrl (T &mem, uint64_t phys, size_t size, Paging::Permissions perm, Memattr attr)
         {
             for (unsigned o; size; size -= BITN (o), phys += BITN (o))
