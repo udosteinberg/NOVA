@@ -29,6 +29,8 @@
 #include "sdid.hpp"
 #include "wait.hpp"
 
+class Space_dma;
+
 class Smmu final : public List<Smmu>, private Mmio
 {
     private:
@@ -646,7 +648,7 @@ class Smmu final : public List<Smmu>, private Mmio
                 l->fault();
         }
 
-        bool configure (Pd *, uintptr_t, bool = true);
+        bool configure (Space_dma *, uintptr_t, bool = true);
 
         bool configured (pci_t pci) const
         {

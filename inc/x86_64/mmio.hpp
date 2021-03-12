@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "pd.hpp"
+#include "space_hst.hpp"
 
 class Mmio
 {
@@ -30,6 +30,9 @@ class Mmio
 
         explicit Mmio (uintptr_t p, size_t s) : phys { p }, mmio { mmio_base.fetch_add (s) | (p & OFFS_MASK (0)) }
         {
+            // Reserve MMIO region
+            Space_hst::access_ctrl (phys & ~OFFS_MASK (0), s, Paging::NONE);
+
             // FIXME: Order 0 hardcoded. Make it based on s
             Hptp::master_map (mmio, phys & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
         }

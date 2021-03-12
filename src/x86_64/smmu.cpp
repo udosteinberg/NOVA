@@ -70,13 +70,13 @@ void Smmu::init()
     init_pmr();
 }
 
-bool Smmu::configure (Pd *p, uintptr_t dad, bool invalidate)
+bool Smmu::configure (Space_dma *dma, uintptr_t dad, bool invalidate)
 {
     auto const pci { static_cast<pci_t>(dad) };
-    auto const lev { bit_scan_msb (cap >> 8 & BIT_RANGE (4, 0)) };
+    auto const lev { min (Dpt::lev(), 2U + bit_scan_msb (cap >> 8 & BIT_RANGE (4, 0))) };
 
-    auto const sdid { p->get_sdid() };
-    auto const ptab { p->dpt.root_init (lev + 1) };
+    auto const sdid { dma->get_sdid() };
+    auto const ptab { dma->get_ptab (lev - 1) };
 
     if (!ptab) [[unlikely]]
         return false;
@@ -99,7 +99,7 @@ bool Smmu::configure (Pd *p, uintptr_t dad, bool invalidate)
         else
             c->set (0, 0);
 
-        c->set (sdid << 8 | lev, Kmem::ptr_to_phys (ptab) | BIT (0));
+        c->set (sdid << 8 | (lev - 2), Kmem::ptr_to_phys (ptab) | BIT (0));
     }
 
     if (invalidate) [[likely]]
