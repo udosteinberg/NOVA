@@ -24,12 +24,12 @@
 #include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 
 void Space_mem::init (unsigned cpu)
 {
     if (!cpus.tas (cpu)) {
-        loc[cpu].sync_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
+        loc[cpu].sync_from (Pd_kern::nova().loc[cpu], MMAP_CPU, MMAP_SPC);
         loc[cpu].sync_from_master (LINK_ADDR, MMAP_CPU);
     }
 }
@@ -84,7 +84,7 @@ Status Space_mem::delegate (Space_mem const *mem, unsigned long src, unsigned lo
             pm = Paging::NONE;
 
         // If src is not NOVA, then inherit shareability and memory type
-        if (mem != &Pd::kern) {
+        if (mem != &Pd_kern::nova()) {
             sh = src_sh;
             ca = src_ca;
         }
@@ -117,7 +117,7 @@ void Space_mem::shootdown()
             continue;
 #endif
 
-        Pd *pd = Pd::remote (cpu);
+        auto pd = Pd::remote_current (cpu);
 
         if (!pd)
             continue;

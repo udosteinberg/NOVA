@@ -25,6 +25,7 @@
 #include "interrupt.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
+#include "pd_kern.hpp"
 #include "sm.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
@@ -35,7 +36,7 @@ Interrupt Interrupt::int_table[NUM_GSI];
 void Interrupt::init()
 {
     for (unsigned i = 0; i < sizeof (int_table) / sizeof (*int_table); i++)
-        int_table[i].sm = new Sm (&Pd::kern, i);
+        int_table[i].sm = new Sm (&Pd_kern::nova(), i);
 }
 
 void Interrupt::set_mask (unsigned gsi, bool msk)

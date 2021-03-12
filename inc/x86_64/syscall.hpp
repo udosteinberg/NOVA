@@ -21,9 +21,11 @@
 
 #pragma once
 
+#include "memattr.hpp"
 #include "mtd_arch.hpp"
 #include "qpd.hpp"
 #include "regs.hpp"
+#include "space.hpp"
 
 class Sys_ipc_call final : public Sys_regs
 {
@@ -48,7 +50,7 @@ class Sys_create_pd final : public Sys_regs
     public:
         inline unsigned long sel() const { return p0() >> 8; }
 
-        inline unsigned long pd() const { return p1(); }
+        inline unsigned long own() const { return p1(); }
 };
 
 class Sys_create_ec final : public Sys_regs
@@ -101,6 +103,30 @@ class Sys_create_sm final : public Sys_regs
         inline unsigned long pd() const { return p1(); }
 
         inline mword cnt() const { return p2(); }
+};
+
+class Sys_ctrl_pd final : public Sys_regs
+{
+    public:
+        inline unsigned long spd() const { return p0() >> 8; }
+
+        inline unsigned long dpd() const { return p1(); }
+
+        inline uintptr_t src() const { return p2() >> 12; }
+
+        inline uintptr_t dst() const { return p3() >> 12; }
+
+        inline Space::Type st() const { return Space::Type (p2() & BIT_RANGE (1, 0)); }
+
+        inline Space::Index si() const { return Space::Index (p3() & BIT_RANGE (1, 0)); }
+
+        inline unsigned ord() const { return p2() >> 2 & BIT_RANGE (4, 0); }
+
+        inline unsigned pmm() const { return p3() >> 2 & BIT_RANGE (4, 0); }
+
+        inline Memattr::Shareability sh() const { return Memattr::Shareability (p3() >> 10 & BIT_RANGE (1, 0)); }
+
+        inline Memattr::Cacheability ca() const { return Memattr::Cacheability (p3() >> 7 & BIT_RANGE (2, 0)); }
 };
 
 class Sys_ctrl_ec final : public Sys_regs
