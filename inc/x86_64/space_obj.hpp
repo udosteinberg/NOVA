@@ -21,18 +21,13 @@
 
 #pragma once
 
-#include "atomic.hpp"
 #include "bits.hpp"
 #include "capability.hpp"
-#include "macros.hpp"
 #include "memory.hpp"
 #include "space.hpp"
-#include "status.hpp"
 
-class Space_obj : public Space
+class Space_obj final : public Space
 {
-    friend class Pd;
-
     private:
         struct Captable;
 
@@ -41,7 +36,19 @@ class Space_obj : public Space
         static constexpr auto lev { 2 };
         static constexpr auto bpl { bit_scan_msb (PAGE_SIZE (0) / sizeof (Captable *)) };
 
+        Space_obj() : Space { Kobject::Subtype::OBJ }
+        {
+            insert (Selector::NOVA_OBJ, Capability { this, std::to_underlying (Capability::Perm_sp::TAKE) });
+        }
+
+        Space_obj (Refptr<Pd> &p) : Space { Kobject::Subtype::OBJ, p } {}
+
         ~Space_obj();
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: OBJ %p collected", static_cast<void *>(this));
+        }
 
         Atomic<Capability> *walk (unsigned long, bool);
 
@@ -65,6 +72,40 @@ class Space_obj : public Space
             ROOT_PD  = selectors - 9,
             NOVA_CPU = 0,
         };
+
+        [[nodiscard]] static Space_obj *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            // Acquire reference
+            Refptr<Pd> ref_pd { pd };
+
+            // Failed to acquire reference
+            if (!ref_pd) [[unlikely]]
+                s = Status::ABORTED;
+
+            else {
+
+                auto const obj { new (cache) Space_obj { ref_pd } };
+
+                // If we created obj, then reference must have been consumed
+                assert (!obj || !ref_pd);
+
+                if (obj) [[likely]]
+                    return obj;
+
+                s = Status::MEM_OBJ;
+            }
+
+            return nullptr;
+        }
+
+        void destroy()
+        {
+            auto &cache { get_pd()->obj_cache };
+
+            this->~Space_obj();
+
+            operator delete (this, cache);
+        }
 
         Capability lookup (unsigned long) const;
         Status     update (unsigned long, Capability);
