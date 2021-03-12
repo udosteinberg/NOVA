@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -28,13 +29,18 @@
 #include "ptab_ept.hpp"
 #include "ptab_hpt.hpp"
 #include "space.hpp"
+#include "status.hpp"
 #include "vpid.hpp"
 
-class Space_mem : public Space
+class Space_mem : private Space
 {
     private:
         Pcid id_hst;
         Vpid id_gst;
+
+        void sync (Space::Index);
+
+        Paging::Permissions lookup (uint64 v, uint64 &p, unsigned &o, Memattr::Cacheability &ca, Memattr::Shareability &sh) const { return hpt.lookup (v, p, o, ca, sh); }
 
     public:
         Hptp loc[NUM_CPU];
@@ -45,35 +51,21 @@ class Space_mem : public Space
             Hptp npt;
         };
 
-        mword did;
-
         Cpuset cpus;
         Cpuset htlb;
         Cpuset gtlb;
 
-        static unsigned did_ctr;
+        static constexpr unsigned long num = BIT64 (Hptp::lev * Hptp::bpl - 1);
 
         ALWAYS_INLINE
-        inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
+        inline Space_mem() {}
 
         inline auto pcid() const { return id_hst; }
         inline auto vpid() const { return id_gst; }
 
-        Paging::Permissions lookup (uint64 v, uint64 &p, unsigned &o)
-        {
-            Memattr::Cacheability ca;
-            Memattr::Shareability sh;
-            return hpt.lookup (v, p, o, ca, sh);
-        }
+        Status update (mword, mword, unsigned, Paging::Permissions, Memattr::Cacheability, Memattr::Shareability, Space::Index = Space::Index::CPU_HST);
 
-        void update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh)
-        {
-            hpt.update (v, p, o, pm, ca, sh);
-        }
-
-        void insert_root (uint64, uint64, mword = 0x7);
-
-        bool insert_utcb (mword);
+        Status delegate (Space_mem const *, unsigned long, unsigned long, unsigned, unsigned, Space::Index, Memattr::Cacheability, Memattr::Shareability);
 
         static void shootdown();
 
