@@ -1,11 +1,11 @@
 /*
- * Protection Domain
+ * Protection Domain (PD)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,32 +19,20 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "mtrr.hpp"
-#include "pd.hpp"
+#include "fpu.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 32);
+Slab_cache Pd::cache (sizeof (Pd), Kobject::alignment);
 
-Atomic<Pd *>    Pd::current { nullptr };
-ALIGNED(32) Pd  Pd::kern (&Pd::kern);
-ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
+Atomic<Pd *> Pd::current { nullptr };
 
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr, nullptr), Space_msr (nullptr), fpu_cache (sizeof (Fpu), 16)
+// FIXME: Bitmap allocation via factory
+Pd::Pd() : Kobject (Kobject::Type::PD), Space_pio (new Bitmap_pio, new Bitmap_pio), Space_msr (new Bitmap_msr), fpu_cache (sizeof (Fpu), 16)
 {
-    hpt = Hptp::master;
+    trace (TRACE_CREATE, "PD:%p created", static_cast<void *>(this));
 
-    Mtrr::init();
-
-#if 0   // FIXME
-    Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (reinterpret_cast<mword>(&NOVA_HPAE), USER_ADDR);
-
-    // HIP
-    Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE, 1);
-
-    // I/O Ports
-    Space_pio::addreg (0, 1UL << 16, 7);
-#endif
+    if (Space_pio::bmp_hst())
+        Space_mem::update (MMAP_SPC_IOP, Kmem::ptr_to_phys (Space_pio::bmp_hst()), 1, Paging::Permissions (Paging::W | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 }

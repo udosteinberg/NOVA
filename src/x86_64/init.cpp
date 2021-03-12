@@ -27,14 +27,18 @@
 #include "interrupt.hpp"
 #include "kmem.hpp"
 #include "patch.hpp"
+#include "pd_kern.hpp"
 #include "pic.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
 
 extern "C"
-Hpt::OAddr kern_ptab_setup()
+Hpt::OAddr kern_ptab_setup (uint32 t)
 {
+    if (Acpi::resume)
+        return Pd_kern::nova().Space_mem::loc[Cpu::find_by_topology (t)].root_addr();
+
     Hptp hptp;
 
     // Sync kernel code and data
