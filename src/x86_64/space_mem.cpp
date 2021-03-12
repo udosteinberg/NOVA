@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,77 +19,55 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.hpp"
-#include "hazard.hpp"
-#include "hip.hpp"
-#include "interrupt.hpp"
-#include "lowlevel.hpp"
-#include "mtrr.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
-#include "svm.hpp"
-#include "vectors.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
 
-void Space_mem::init (unsigned cpu)
+template <typename T>
+Status Space_mem<T>::delegate (Space_hst const *hst, unsigned long const ssb, unsigned long const dsb, unsigned const ord, unsigned const pmm, Memattr ma)
 {
-    if (!cpus.tas (cpu)) {
-        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
-        loc[cpu].share_from_master (LINK_ADDR, MMAP_CPU);
-    }
-}
+    auto const sse { ssb + BITN (ord) }, dse { dsb + BITN (ord) };
 
-void Space_mem::shootdown()
-{
-    for (cpu_t cpu { 0 }; cpu < NUM_CPU; cpu++) {
+    if (EXPECT_FALSE (sse > hst->selectors() || dse > T::selectors()))
+        return Status::BAD_PAR;
 
-        if (!Hip::hip->cpu_online (cpu))
-            continue;
+    unsigned o;
 
-        Pd *pd = Pd::remote (cpu);
+    auto sts { Status::SUCCESS };
 
-        if (!pd->htlb.tst (cpu) && !pd->gtlb.tst (cpu))
-            continue;
+    for (auto src { ssb }, dst { dsb }; src < sse; src += BITN (o), dst += BITN (o)) {
 
-        if (Cpu::id == cpu) {
-            Cpu::hazard |= Hazard::SCHED;
-            continue;
-        }
+        uintptr_t s { src << PAGE_BITS };
+        uintptr_t d { dst << PAGE_BITS };
+        Hpt::OAddr p;
+        Memattr a;
 
-        auto ctr = Counter::req[1].get (cpu);
+        auto pm { Paging::Permissions (hst->lookup (s, p, o, a) & (Paging::K | Paging::U | pmm)) };
 
-        Interrupt::send_cpu (Interrupt::Request::RKE, cpu);
+        // Kernel memory cannot be delegated
+        if (pm & Paging::K)
+            pm = Paging::NONE;
 
-        while (Counter::req[1].get (cpu) == ctr)
-            pause();
-    }
-}
+        // Memory attributes are inherited for virt/virt delegations
+        if (hst != &Space_hst::nova)
+            ma = a;
 
-void Space_mem::insert_root (uint64_t s, uint64_t e, mword)
-{
-    for (uint64_t p = s; p < e; s = p) {
+        o = min (o, ord);
 
-        unsigned t = Mtrr::memtype (s, p);
+        d &= ~Hpt::offs_mask (o);
+        p &= ~Hpt::offs_mask (o);
 
-        for (uint64_t n; p < e; p = n)
-            if (Mtrr::memtype (p, n) != t)
-                break;
-
-        if (s > ~0UL)
+        if ((sts = static_cast<T *>(this)->update (d, p, o, pm, ma)) != Status::SUCCESS)
             break;
-
-        if ((p = min (p, e)) > ~0UL)
-            p = static_cast<uint64>(~0UL) + 1;
-
-#if 0   // FIXME
-        addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
-#endif
     }
+
+    static_cast<T *>(this)->sync();
+
+    Buddy::free_wait();
+
+    return sts;
 }
 
-bool Space_mem::insert_utcb (mword b)
-{
-    if (!b)
-        return true;
-
-    return false;
-}
+template class Space_mem<Space_hst>;
+template class Space_mem<Space_gst>;
+template class Space_mem<Space_dma>;
