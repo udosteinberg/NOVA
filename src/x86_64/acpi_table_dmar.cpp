@@ -23,8 +23,8 @@
 #include "acpi_table_dmar.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
 #include "smmu.hpp"
+#include "space_dma.hpp"
 
 bool Acpi_table_dmar::Scope::parse (uint16_t const s, pci_t &sbdf) const
 {
@@ -144,7 +144,7 @@ bool Acpi_table_dmar::Remapping_rmrr::parse() const
         }
 
         // Assign firmware-driven DMA device to the NOVA DMA space
-        if (smmu && !smmu->nova_assigned (sbdf) && smmu->assign_dev (sbdf, nullptr, &Pd::kern, x) != Status::SUCCESS) [[unlikely]]
+        if (smmu && !smmu->nova_assigned (sbdf) && smmu->assign_dev (sbdf, nullptr, &Space_dma::nova, x) != Status::SUCCESS) [[unlikely]]
             break;
     }
 

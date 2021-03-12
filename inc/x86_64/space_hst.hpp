@@ -28,10 +28,25 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_hst : public Space_mem<Space_hst>
+class Space_hst final : public Space_mem<Space_hst>
 {
-    public:
+    private:
         uint16_t const pcid;
+
+        explicit Space_hst();
+
+        // Constructor
+        explicit Space_hst (Refptr<Pd> &ref_pd, uint16_t p) : Space_mem { Kobject::Subtype::HST, ref_pd }, pcid { p } {}
+
+        // Destructor
+        ~Space_hst() { Pcid::allocator.free (pcid); }
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: HST %p collected", static_cast<void *>(this));
+        }
+
+    public:
         Hptp        hptp;
         Hptp        loc[NUM_CPU];
         Cpuset      cpus;
@@ -40,16 +55,14 @@ class Space_hst : public Space_mem<Space_hst>
         static Space_hst nova;
         static Space_hst *current CPULOCAL;
 
-        // Constructor
-        explicit Space_hst() : pcid { Pcid::allocator.alloc().val() } {}
-
-        // Destructor
-        ~Space_hst() { Pcid::allocator.free (pcid); }
-
         static constexpr uint8_t sbw() { return Hpt::ibits - PAGE_BITS - 1; }
         static           uint8_t mco() { return static_cast<uint8_t>(Hpt::lev_ord()); }
 
         [[nodiscard]] auto get_ptab (unsigned cpu) { return loc[cpu].root_init(); }
+
+        [[nodiscard]] static Space_hst *create (Status &, Pd *);
+
+        void destroy() override final;
 
         auto lookup (uint64_t v, uint64_t &p, unsigned &o, Memattr &ma) const { return hptp.lookup (v, p, o, ma); }
 

@@ -29,7 +29,7 @@ class Capability final
     friend class Space_obj;
 
     private:
-        uintptr_t val;
+        uintptr_t const val;
 
         ALWAYS_INLINE
         inline bool validate (Kobject::Type t, unsigned p) const

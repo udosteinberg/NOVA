@@ -26,16 +26,27 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_gst : public Space_mem<Space_gst>
+class Space_gst final : public Space_mem<Space_gst>
 {
     private:
         Eptp    eptp;
+
+        explicit Space_gst (Refptr<Pd> &ref_pd) : Space_mem { Kobject::Subtype::GST, ref_pd } {}
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: GST %p collected", static_cast<void *>(this));
+        }
 
     public:
         Cpuset  gtlb;
 
         static constexpr uint8_t sbw() { return Ept::ibits - PAGE_BITS; }
         static           uint8_t mco() { return static_cast<uint8_t>(Ept::lev_ord()); }
+
+        [[nodiscard]] static Space_gst *create (Status &, Pd *);
+
+        void destroy() override final;
 
         auto lookup (uint64_t v, uint64_t &p, unsigned &o, Memattr &ma) const { return eptp.lookup (v, p, o, ma); }
 
