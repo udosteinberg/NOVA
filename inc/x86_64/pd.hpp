@@ -1,10 +1,11 @@
 /*
- * Protection Domain
+ * Protection Domain (PD)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -33,13 +34,36 @@ class Pd : public Kobject, public Space_obj, public Space_mem, public Space_pio,
     private:
         static Slab_cache cache;
 
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
+
+    protected:
+        Pd();
+
     public:
         static Atomic<Pd *> current CPULOCAL;
-        static Pd kern, root;
+        static inline Pd *  root    { nullptr };
 
-        Pd (Pd *);
+        [[nodiscard]] ALWAYS_INLINE
+        static inline Pd *create() { return new Pd; }
 
-        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), Space_pio (nullptr, nullptr), Space_msr (nullptr) {}
+        void destroy() { delete this; }
+
+        ALWAYS_INLINE
+        static inline Pd *remote_current (unsigned cpu)
+        {
+            return *Kmem::loc_to_glob (&current, cpu);
+        }
 
         ALWAYS_INLINE HOT
         inline void make_current()
@@ -62,15 +86,8 @@ class Pd : public Kobject, public Space_obj, public Space_mem, public Space_pio,
             loc[Cpu::id].make_current (Cpu::feature (Cpu::Feature::PCID) ? p : 0);
         }
 
-        ALWAYS_INLINE
-        static inline Pd *remote (unsigned c)
-        {
-            return *Kmem::loc_to_glob (&current, c);
-        }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        inline auto delegate_obj (Pd *pd, unsigned long src, unsigned long dst, unsigned ord, unsigned pmm)                                                                      { return Space_obj::delegate (pd, src, dst, ord, pmm); }
+        inline auto delegate_mem (Pd *pd, unsigned long src, unsigned long dst, unsigned ord, unsigned pmm, Space::Index si, Memattr::Cacheability ca, Memattr::Shareability sh) { return Space_mem::delegate (pd, src, dst, ord, pmm, si, ca, sh); }
+        inline auto delegate_pio (Pd *pd, unsigned long src, unsigned long dst, unsigned ord, unsigned pmm, Space::Index si)                                                     { return Space_pio::delegate (pd, src, dst, ord, pmm, si); }
+        inline auto delegate_msr (Pd *pd, unsigned long src, unsigned long dst, unsigned ord, unsigned pmm, Space::Index si)                                                     { return Space_msr::delegate (pd, src, dst, ord, pmm, si); }
 };
