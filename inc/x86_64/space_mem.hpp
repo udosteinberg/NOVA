@@ -23,16 +23,16 @@
 
 #include "bits.hpp"
 #include "memattr.hpp"
+#include "memory.hpp"
 #include "paging.hpp"
 #include "space.hpp"
-#include "status.hpp"
-
-class Space_hst;
 
 template <typename T>
 class Space_mem : public Space
 {
     protected:
+        inline Space_mem (Kobject::Subtype s, Pd *p) : Space (s, p) {}
+
         static void user_access (T &mem, uint64_t addr, size_t size, bool a, Memattr ma)
         {
             for (unsigned o; size; size -= BITN (o), addr += BITN (o))

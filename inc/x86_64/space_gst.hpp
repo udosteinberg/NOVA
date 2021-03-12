@@ -26,16 +26,37 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_gst : public Space_mem<Space_gst>
+class Space_gst final : public Space_mem<Space_gst>
 {
     private:
         Eptp    eptp;
+
+        inline Space_gst (Pd *p) : Space_mem (Kobject::Subtype::GST, p) {}
 
     public:
         Cpuset  gtlb;
 
         static inline auto selectors() { return BIT64 (Ept::ibits - PAGE_BITS); }
         static inline auto max_order() { return Ept::lev_ord(); }
+
+        [[nodiscard]] static inline Space_gst *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            auto const gst { new (cache) Space_gst (pd) };
+
+            if (EXPECT_TRUE (gst)) {
+
+                if (EXPECT_TRUE (gst->eptp.root_init()))
+                    return gst;
+
+                operator delete (gst, cache);
+            }
+
+            s = Status::MEM_OBJ;
+
+            return nullptr;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         inline auto lookup (uint64_t v, uint64_t &p, unsigned &o, Memattr &ma) const { return eptp.lookup (v, p, o, ma); }
 

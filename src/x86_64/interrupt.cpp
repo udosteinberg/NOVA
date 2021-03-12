@@ -37,7 +37,7 @@ void Interrupt::setup()
     Idt::build();
 
     for (unsigned gsi { 0 }; gsi < sizeof (int_table) / sizeof (*int_table); gsi++)
-        int_table[gsi].sm = new Sm (&Pd::kern, gsi);
+        int_table[gsi].sm = new Sm (nullptr, gsi);
 }
 
 void Interrupt::set_mask (unsigned gsi, bool msk)
@@ -54,7 +54,7 @@ void Interrupt::rke_handler()
     if (Acpi::get_transition().state())
         Cpu::hazard |= Hazard::SLEEP;
 
-    if (Pd::current->Space_hst::htlb.tst (Cpu::id))
+    if (Space_hst::current->htlb.tst (Cpu::id))
         Cpu::hazard |= Hazard::SCHED;
 }
 

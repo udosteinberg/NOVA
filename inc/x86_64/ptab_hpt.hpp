@@ -85,7 +85,7 @@ class Hpt final : public Pte<Hpt, uint64_t, uint64_t>
 
 class Hptp final : public Ptab<Hpt, uint64_t, uint64_t>
 {
-    friend class Pd;
+    friend class Space_hst;
 
     private:
         static Hptp master;

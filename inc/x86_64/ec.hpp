@@ -33,6 +33,7 @@
 #include "queue.hpp"
 #include "regs.hpp"
 #include "sc.hpp"
+#include "space_hst.hpp"
 #include "timeout_hypercall.hpp"
 #include "tss.hpp"
 
@@ -133,8 +134,8 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, void (*)(), unsigned);
-        Ec (Pd *, mword, Pd *, void (*)(), unsigned, unsigned, mword, mword);
+        Ec (Space_hst *, void (*)(), unsigned);
+        Ec (Space_obj *, Space_hst *, Space_pio *, mword, void (*)(), unsigned, unsigned, mword, mword);
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)
