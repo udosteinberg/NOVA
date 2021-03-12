@@ -22,25 +22,36 @@
 #pragma once
 
 #include "bitmap_pio.hpp"
-#include "kmem.hpp"
-#include "paging.hpp"
-#include "space.hpp"
-#include "status.hpp"
+#include "space_hst.hpp"
 
-class Space_pio : public Space
+class Space_pio final : public Space
 {
-    friend class Pd;
-
     private:
-        Bitmap_pio *const bmp;
+        Refptr<Space_hst> const hst;
+        Bitmap_pio *      const bmp;
 
         static Space_pio nova;
 
         Space_pio();
 
-        Space_pio (Bitmap_pio *b) : bmp { b } {}
+        Space_pio (Refptr<Pd> &ref_pd, Refptr<Space_hst> &h, Bitmap_pio *b) : Space { Kobject::Subtype::PIO, ref_pd }, hst { std::move (h) }, bmp { b }
+        {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, Kmem::ptr_to_phys (bmp), 1, Paging::R, Memattr::ram());
+        }
 
-        ~Space_pio() { delete bmp; }
+        ~Space_pio()
+        {
+            if (hst)
+                hst->update (MMAP_SPC_PIO, 0, 1, Paging::NONE, Memattr::ram());
+
+            delete bmp;
+        }
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: PIO %p collected", static_cast<void *>(this));
+        }
 
         [[nodiscard]] Paging::Permissions lookup (size_t) const;
 
@@ -53,6 +64,10 @@ class Space_pio : public Space
         [[nodiscard]] Status delegate (Space_pio const *, size_t, size_t, unsigned, unsigned);
 
         [[nodiscard]] auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static Space_pio *create (Status &, Pd *, bool);
+
+        void destroy() override final;
 
         static void access_ctrl (uint64_t base, size_t size, Paging::Permissions perm)
         {

@@ -52,6 +52,42 @@ INIT_PRIORITY (PRIO_SPACE_OBJ) ALIGNED (Kobject::alignment) Space_obj Space_obj:
  *       ------          -----------         -----------         -----------
  */
 
+Space_obj *Space_obj::create (Status &s, Pd *pd)
+{
+    // Acquire reference
+    Refptr<Pd> ref_pd { pd };
+
+    // Failed to acquire reference
+    if (!ref_pd) [[unlikely]]
+        s = Status::ABORTED;
+
+    else {
+
+        // Create new OBJ object
+        auto const obj { new (ref_pd->obj_cache) Space_obj { ref_pd } };
+
+        // If creation succeeded, then reference must have been consumed
+        if (obj) [[likely]] {
+            assert (!ref_pd);
+            return obj;
+        }
+
+        // Failed to create OBJ object
+        s = Status::MEM_OBJ;
+    }
+
+    return nullptr;
+}
+
+void Space_obj::destroy()
+{
+    auto &cache { get_pd()->obj_cache };
+
+    this->~Space_obj();
+
+    operator delete (this, cache);
+}
+
 /*
  * Walk capability tables and return pointer to the capability slot for the specified selector
  *
