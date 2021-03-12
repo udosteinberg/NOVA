@@ -27,15 +27,28 @@
 #include "smmu.hpp"
 #include "space_mem.hpp"
 
-class Space_dma : public Space_mem<Space_dma>
+class Space_dma final : public Space_mem<Space_dma>
 {
     private:
         Sdid const  sdid;
         Dptp_amd    dptp_amd;
         Dptp_itl    dptp_itl;
 
+        explicit Space_dma() : Space_mem { Kobject::Subtype::DMA } {}
+
+        explicit Space_dma (Refptr<Pd> &ref_pd) : Space_mem { Kobject::Subtype::DMA, ref_pd } {}
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: DMA %p collected", static_cast<void *>(this));
+        }
+
     public:
         static Space_dma nova;
+
+        [[nodiscard]] static Space_dma *create (Status &, Pd *);
+
+        void destroy() override final;
 
         [[nodiscard]] uint16_t get_dom() const { return sdid; }
 

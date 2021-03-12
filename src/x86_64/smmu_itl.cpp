@@ -22,8 +22,8 @@
 
 #include "bits.hpp"
 #include "ioapic.hpp"
-#include "pd.hpp"
 #include "smmu_itl.hpp"
+#include "space_dma.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 

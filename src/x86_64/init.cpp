@@ -29,8 +29,11 @@
 #include "pic.hpp"
 #include "string.hpp"
 
-extern "C" uintptr_t kern_ptab_setup (apic_t)
+extern "C" uintptr_t kern_ptab_setup (apic_t t)
 {
+    if (Acpi::resume)
+        return Space_hst::nova.loc[Cpu::find_by_topology (t)].root_addr();
+
     Hptp hptp;
 
     // Share global kernel memory
