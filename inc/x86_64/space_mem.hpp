@@ -23,12 +23,16 @@
 #include "config.hpp"
 #include "cpu.hpp"
 #include "cpuset.hpp"
+#include "pcid.hpp"
 #include "ptab_dpt.hpp"
 #include "ptab_ept.hpp"
 #include "ptab_hpt.hpp"
 
 class Space_mem
 {
+    private:
+        Pcid pcid;
+
     public:
         Hptp loc[NUM_CPU];
         Hptp hpt;
@@ -48,6 +52,8 @@ class Space_mem
 
         ALWAYS_INLINE
         inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
+
+        inline auto get_pcid() const { return pcid; }
 
         Paging::Permissions lookup (uint64_t v, uint64_t &p, unsigned &o)
         {
