@@ -752,7 +752,7 @@ class Smmu_itl final : public Smmu
             return nullptr;
         }
 
-        [[nodiscard]] Status assign_dev (Pd *, uintptr_t, bool = true) override final;
+        [[nodiscard]] Status assign_dev (Space_dma *, uintptr_t, bool = true) override final;
 
         [[nodiscard]] static Status assign_int (Entry_irt *, iid_t, cpu_t, uint8_t, pci_t, uint8_t, uintptr_t &, uintptr_t &);
 };

@@ -94,7 +94,7 @@ bool Smmu_itl::init()
     return init_inv() && init_dev() && init_irt() && init_pmr();
 }
 
-Status Smmu_itl::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
+Status Smmu_itl::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
 {
     // Obtain source device from DAD
     auto const src { static_cast<pci_t>(dad) };
@@ -104,9 +104,9 @@ Status Smmu_itl::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
         return Status::BAD_DEV;
 
     // Determine PTAB level, PTAB root, domain ID
-    auto const ptl { lev() };
-    auto const ptr { p->dpt_itl.root_init (ptl - 1) };
-    auto const dom { p->get_sdid() };
+    auto const ptl { min (Dpt_itl::lev(), lev()) };
+    auto const ptr { dma->get_root_itl (ptl) };
+    auto const dom { dma->get_dom() };
 
     // Unable to lookup/allocate PTAB root
     if (!ptr) [[unlikely]]

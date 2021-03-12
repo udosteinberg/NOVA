@@ -26,7 +26,7 @@
 #include "status.hpp"
 #include "wait.hpp"
 
-class Pd;
+class Space_dma;
 
 class Smmu : public List<Smmu>, protected Mmio
 {
@@ -35,7 +35,7 @@ class Smmu : public List<Smmu>, protected Mmio
 
         [[nodiscard]] static auto type() { return hwtype; }
 
-        virtual Status assign_dev (Pd *, uintptr_t, bool = true) = 0;
+        virtual Status assign_dev (Space_dma *, uintptr_t, bool = true) = 0;
 
         static void all_interrupt()
         {
