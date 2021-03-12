@@ -30,6 +30,7 @@
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
+#include "vpid.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Ec::cache (sizeof (Ec), 32);
@@ -74,7 +75,8 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
                                   pd->Space_pio::walk(),
                                   Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
-                                  Kmem::ptr_to_phys (pd->ept.root_init (false)));
+                                  Kmem::ptr_to_phys (pd->ept.root_init (false)),
+                                  Vpid::alloc (cpu));
 
             regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
