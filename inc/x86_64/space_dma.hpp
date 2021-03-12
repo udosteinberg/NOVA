@@ -25,11 +25,20 @@
 #include "smmu.hpp"
 #include "space_mem.hpp"
 
-class Space_dma : public Space_mem<Space_dma>
+class Space_dma final : public Space_mem<Space_dma>
 {
     private:
         Sdid const  sdid;
         Dptp        dptp;
+
+        Space_dma() : Space_mem { Kobject::Subtype::DMA } {}
+
+        Space_dma (Refptr<Pd> &ref_pd) : Space_mem { Kobject::Subtype::DMA, ref_pd } {}
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: DMA %p collected", static_cast<void *>(this));
+        }
 
     public:
         static Space_dma nova;
@@ -40,6 +49,10 @@ class Space_dma : public Space_mem<Space_dma>
         static auto mco() { return static_cast<uint8_t>(Dpt::lev_ord()); }
 
         [[nodiscard]] auto get_ptab (unsigned l) { return dptp.root_init (l); }
+
+        [[nodiscard]] static Space_dma *create (Status &, Pd *);
+
+        void destroy() override final;
 
         auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma) { return dptp.update (v, p, o, pm, ma); }
 

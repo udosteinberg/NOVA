@@ -1,5 +1,5 @@
 /*
- * DMA Memory Space
+ * Guest Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,11 +19,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "space_dma.hpp"
+#include "space_gst.hpp"
 
-INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_dma Space_dma::nova;
-
-Space_dma *Space_dma::create (Status &s, Pd *pd)
+Space_gst *Space_gst::create (Status &s, Pd *pd)
 {
     // Acquire reference
     Refptr<Pd> ref_pd { pd };
@@ -34,32 +32,32 @@ Space_dma *Space_dma::create (Status &s, Pd *pd)
 
     else {
 
-        // Create new DMA object
-        auto const obj { new (ref_pd->dma_cache) Space_dma { ref_pd } };
+        // Create new GST object
+        auto const obj { new (ref_pd->gst_cache) Space_gst { ref_pd } };
 
         // If creation succeeded, then reference must have been consumed
         if (obj) [[likely]] {
 
             assert (!ref_pd);
 
-            if (obj->dptp.root_init()) [[likely]]
+            if (obj->eptp.root_init()) [[likely]]
                 return obj;
 
-            operator delete (obj, ref_pd->dma_cache);
+            operator delete (obj, ref_pd->gst_cache);
         }
 
-        // Failed to create DMA object
+        // Failed to create GST object
         s = Status::MEM_OBJ;
     }
 
     return nullptr;
 }
 
-void Space_dma::destroy()
+void Space_gst::destroy()
 {
-    auto &cache { get_pd()->dma_cache };
+    auto &cache { get_pd()->gst_cache };
 
-    this->~Space_dma();
+    this->~Space_gst();
 
     operator delete (this, cache);
 }

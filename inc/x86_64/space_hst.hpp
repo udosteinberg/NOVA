@@ -28,8 +28,18 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_hst : public Space_mem<Space_hst>
+class Space_hst final : public Space_mem<Space_hst>
 {
+    private:
+        Space_hst();
+
+        Space_hst (Refptr<Pd> &ref_pd) : Space_mem { Kobject::Subtype::HST, ref_pd } {}
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: HST %p collected", static_cast<void *>(this));
+        }
+
     public:
         Pcid const  pcid;
         Hptp        hptp;
@@ -47,6 +57,10 @@ class Space_hst : public Space_mem<Space_hst>
         static auto mco() { return static_cast<uint8_t>(Hpt::lev_ord()); }
 
         [[nodiscard]] auto get_ptab (unsigned cpu) { return loc[cpu].root_init(); }
+
+        [[nodiscard]] static Space_hst *create (Status &, Pd *);
+
+        void destroy() override final;
 
         auto lookup (uint64_t v, uint64_t &p, unsigned &o, Memattr &ma) const { return hptp.lookup (v, p, o, ma); }
 

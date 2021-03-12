@@ -21,6 +21,22 @@
 
 #pragma once
 
-class Space
+#include "pd.hpp"
+
+class Space : public Kobject
 {
+    private:
+        Refptr<Pd> const pd;
+
+    protected:
+        Space (Kobject::Subtype s) : Kobject { Kobject::Type::PD, s }, pd { &Pd::nova } {}
+
+        Space (Kobject::Subtype s, Refptr<Pd> &ref_pd) : Kobject { Kobject::Type::PD, s }, pd { std::move (ref_pd) } {}
+
+    public:
+        // Architecturally supported spaces must override these defaults in the derived class
+        static constexpr uint8_t mco { 0 };
+        static constexpr uint8_t sbw { 0 };
+
+        Pd *get_pd() const { return pd; }
 };
