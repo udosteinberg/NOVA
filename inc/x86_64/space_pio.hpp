@@ -1,10 +1,11 @@
 /*
- * Port I/O Space
+ * PIO Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,34 +21,42 @@
 
 #pragma once
 
+#include "bitmap_pio.hpp"
+#include "paging.hpp"
 #include "space.hpp"
+#include "status.hpp"
 
-class Space_mem;
-
-class Space_pio : public Space
+class Space_pio : private Space
 {
     private:
-        Paddr hbmp, gbmp;
+        Bitmap_pio * const cpu_hst;
+        Bitmap_pio * const cpu_gst;
 
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (mword idx)
+        Paging::Permissions lookup (unsigned long) const;
+
+    protected:
+        /*
+         * Constructor
+         *
+         * @param h     Pointer to PIO bitmap for host (or nullptr)
+         * @param g     Pointer to PIO bitmap for guest (or nullptr)
+         */
+        inline Space_pio (Bitmap_pio *h, Bitmap_pio *g) : cpu_hst (h), cpu_gst (g) {}
+
+        /*
+         * Destructor
+         */
+        inline ~Space_pio()
         {
-            return SPC_LOCAL_IOP + (idx / 8 / sizeof (mword)) * sizeof (mword);
+            delete cpu_hst;
+            delete cpu_gst;
         }
 
-        ALWAYS_INLINE
-        static inline mword idx_to_mask (mword idx)
-        {
-            return 1UL << (idx % (8 * sizeof (mword)));
-        }
+        void update (unsigned long, Paging::Permissions, Bitmap_pio *);
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
-
-        void update (bool, mword, mword);
+        Status delegate (Space_pio const *, unsigned long, unsigned long, unsigned, unsigned, Space::Index);
 
     public:
-        Paddr walk (bool = false, mword = 0);
-
-        static void page_fault (mword, mword);
+        inline auto bmp_hst() const { return cpu_hst; }
+        inline auto bmp_gst() const { return cpu_gst; }
 };
