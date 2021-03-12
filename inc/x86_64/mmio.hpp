@@ -18,6 +18,7 @@
 #pragma once
 
 #include "ptab_hpt.hpp"
+#include "space_hst.hpp"
 
 class Mmio
 {
@@ -33,6 +34,9 @@ class Mmio
             // Round physical address and size to full pages
             auto p { aligned_dn (Hpt::page_size (0), phys) };
             auto s { aligned_up (Hpt::page_size (0), phys + size) - p };
+
+            // Reserve physical memory region
+            Space_hst::access_ctrl (p, s, Paging::NONE);
 
             // Allocate MMIO region
             auto v { mmio_base.fetch_add (s) };
