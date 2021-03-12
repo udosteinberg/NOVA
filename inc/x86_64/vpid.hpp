@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,7 +20,9 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "compiler.hpp"
+#include "types.hpp"
 
 class Invvpid
 {
@@ -27,23 +31,38 @@ class Invvpid
         uint64  addr;
 
     public:
+        enum Type
+        {
+            ADR = 0,    // Individual address
+            SGL = 1,    // Single context
+            ALL = 2,    // All contexts
+            SRG = 3,    // Single context retaining globals
+        };
+
         ALWAYS_INLINE
-        inline Invvpid (unsigned long v, mword a) : vpid (v), addr (a) {}
+        inline Invvpid (uint16 v, uint64 a) : vpid (v), addr (a) {}
 };
 
 class Vpid
 {
-    public:
-        enum Type
-        {
-            ADDRESS             = 0,
-            CONTEXT_GLOBAL      = 1,
-            CONTEXT_NOGLOBAL    = 3
-        };
+    private:
+        uint16 const val;
 
-        ALWAYS_INLINE
-        static inline void flush (Type t, unsigned long vpid, mword addr = 0)
+        static inline Atomic<uint16> allocator { 0 };
+
+        // FIXME: Handle overflow
+        static inline auto alloc()
         {
-            asm volatile ("invvpid %0, %1" : : "m" (Invvpid (vpid, addr)), "r" (static_cast<mword>(t)) : "cc");
+            return allocator++;
+        }
+
+    public:
+        inline Vpid() : val (alloc()) {}
+
+        inline operator auto() const { return val; }
+
+        static inline void invalidate (Invvpid::Type t, uint16 vpid, uint64 addr = 0)
+        {
+            asm volatile ("invvpid %0, %1" : : "m" (Invvpid (vpid, addr)), "r" (static_cast<uintptr_t>(t)) : "cc");
         }
 };
