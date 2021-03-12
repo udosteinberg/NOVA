@@ -25,14 +25,14 @@
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
 #include "mtrr.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 
 void Space_mem::init (unsigned cpu)
 {
     if (cpus.set (cpu)) {
-        loc[cpu].sync_from (Pd::kern.loc[cpu], CPU_LOCAL, SPC_LOCAL);
+        loc[cpu].sync_from (Pd_kern::nova().loc[cpu], CPU_LOCAL, SPC_LOCAL);
         loc[cpu].sync_master_range (LINK_ADDR, CPU_LOCAL);
     }
 }
@@ -68,7 +68,7 @@ void Space_mem::shootdown()
             continue;
 #endif
 
-        Pd *pd = Pd::remote (cpu);
+        auto pd = Pd::remote_current (cpu);
 
         if (!pd->htlb.chk (cpu) && !pd->gtlb.chk (cpu))
             continue;

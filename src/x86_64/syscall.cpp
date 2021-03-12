@@ -23,6 +23,7 @@
 #include "hip.hpp"
 #include "interrupt.hpp"
 #include "lapic.hpp"
+#include "pd_kern.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
 #include "smmu.hpp"
@@ -187,22 +188,40 @@ void Ec::sys_create_pd()
 {
     auto r = static_cast<Sys_create_pd *>(current->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
+    trace (TRACE_SYSCALL, "EC:%p %s PD:%#lx", static_cast<void *>(current), __func__, r->sel());
 
-    auto cap = current->pd->Space_obj::lookup (r->pd());
+    auto cap = current->pd->Space_obj::lookup (r->own());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::PD))) {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->own());
         sys_finish<Status::BAD_CAP>();
     }
 
-    auto pd = new Pd (Pd::current, r->sel(), cap.prm());
-    if (current->pd->Space_obj::insert (r->sel(), Capability (pd, cap.prm())) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete pd;
-        sys_finish<Status::BAD_CAP>();
+    auto pd = Pd::create();
+
+    if (EXPECT_FALSE (!pd)) {
+        trace (TRACE_ERROR, "%s: Insufficient MEM", __func__);
+        sys_finish<Status::INS_MEM>();
     }
 
-    sys_finish<Status::SUCCESS>();
+    auto s = current->pd->Space_obj::insert (r->sel(), Capability (pd, cap.prm()));
+
+    if (EXPECT_TRUE (s == Status::SUCCESS))
+        sys_finish<Status::SUCCESS>();
+
+    pd->destroy();
+
+    switch (s) {
+
+        default:
+
+        case Status::BAD_CAP:
+            trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::BAD_CAP>();
+
+        case Status::INS_MEM:
+            trace (TRACE_ERROR, "%s: Insufficient MEM for CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::INS_MEM>();
+    }
 }
 
 void Ec::sys_create_ec()
@@ -343,6 +362,59 @@ void Ec::sys_create_sm()
     sys_finish<Status::SUCCESS>();
 }
 
+void Ec::sys_ctrl_pd()
+{
+    auto r = static_cast<Sys_ctrl_pd *>(current->sys_regs());
+
+    trace (TRACE_SYSCALL, "EC:%p %s SPD:%#lx DPD:%#lx ST:%u SI:%u SRC:%#lx DST:%#lx ORD:%u PMM:%#x CA:%u SH:%u", static_cast<void *>(current), __func__, r->spd(), r->dpd(), static_cast<unsigned>(r->st()), static_cast<unsigned>(r->si()), r->src(), r->dst(), r->ord(), r->pmm(), static_cast<unsigned>(r->ca()), static_cast<unsigned>(r->sh()));
+
+    auto cap = current->pd->Space_obj::lookup (r->spd());
+    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::CTRL))) {
+        trace (TRACE_ERROR, "%s: Bad SRC PD CAP (%#lx)", __func__, r->spd());
+        sys_finish<Status::BAD_CAP>();
+    }
+
+    auto src = static_cast<Pd *>(cap.obj());
+
+    cap = current->pd->Space_obj::lookup (r->dpd());
+    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::CTRL))) {
+        trace (TRACE_ERROR, "%s: Bad DST PD CAP (%#lx)", __func__, r->dpd());
+        sys_finish<Status::BAD_CAP>();
+    }
+
+    auto dst = static_cast<Pd *>(cap.obj());
+
+    if (EXPECT_FALSE (dst == &Pd_kern::nova())) {
+        trace (TRACE_ERROR, "%s: Bad DST PD CAP (%#lx)", __func__, r->dpd());
+        sys_finish<Status::BAD_CAP>();
+    }
+
+    if (EXPECT_FALSE ((r->src() | r->dst()) & ((1UL << r->ord()) - 1))) {
+        trace (TRACE_ERROR, "%s: Unaligned address", __func__);
+        sys_finish<Status::BAD_PAR>();
+    }
+
+    switch (r->st()) {
+
+        case Space::Type::OBJ:
+            if (dst->update_space_obj (src, r->src(), r->dst(), r->ord(), r->pmm()))
+                sys_finish<Status::SUCCESS>();
+            break;
+
+        case Space::Type::MEM:
+            if (dst->update_space_mem (src, r->src(), r->dst(), r->ord(), r->pmm(), r->ca(), r->sh(), r->si()))
+                sys_finish<Status::SUCCESS>();
+            break;
+
+        case Space::Type::PIO:
+            if (dst->update_space_pio (src, r->src(), r->src(), r->ord(), r->pmm()))
+                sys_finish<Status::SUCCESS>();
+            break;
+    }
+
+    sys_finish<Status::BAD_PAR>();
+}
+
 void Ec::sys_ctrl_ec()
 {
     auto r = static_cast<Sys_ctrl_ec *>(current->sys_regs());
@@ -469,7 +541,7 @@ void Ec::sys_assign_dev()
 
     trace (TRACE_SYSCALL, "EC:%p %s PD:%#lx SMMU:%#lx SI:%u DEV:%#lx", static_cast<void *>(current), __func__, r->pd(), r->smmu(), static_cast<unsigned>(r->si()), r->dev());
 
-    if (EXPECT_FALSE (current->pd != &Pd::root)) {
+    if (EXPECT_FALSE (current->pd != Pd::root)) {
         trace (TRACE_ERROR, "%s: Not Root PD", __func__);
         sys_finish<Status::BAD_HYP>();
     }

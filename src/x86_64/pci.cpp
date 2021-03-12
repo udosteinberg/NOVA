@@ -20,7 +20,7 @@
 
 #include "extern.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
@@ -37,7 +37,7 @@ struct Pci::quirk_map Pci::map[] =
 
 Pci::Pci (unsigned r, unsigned l) : List<Pci> (list), reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
 {
-    Pd::kern.Space_mem::update (reg_base, cfg_base + (rid << PAGE_BITS), 0, Paging::Permissions (Paging::R | Paging::W | Paging::G), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
+    Pd_kern::nova().Space_mem::update (reg_base, cfg_base + (rid << PAGE_BITS), 0, Paging::Permissions (Paging::R | Paging::W | Paging::G), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
         if (read<uint16>(REG_VID) == map[i].vid && read<uint16>(REG_DID) == map[i].did)

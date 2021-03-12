@@ -26,7 +26,7 @@
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "smmu.hpp"
 
 void Acpi_dmar::parse() const
@@ -55,7 +55,7 @@ void Acpi_dmar::parse() const
 void Acpi_rmrr::parse() const
 {
     for (uint64 hpa = base & ~PAGE_MASK; hpa < limit; hpa += PAGE_SIZE)
-        Pd::kern.dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::R | Paging::W), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
+        Pd_kern::nova().dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::R | Paging::W), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(s) + s->length)) {
 
@@ -68,7 +68,7 @@ void Acpi_rmrr::parse() const
         }
 
         if (smmu)
-            smmu->configure (&Pd::kern, Space::Index::DMA_HST, s->rid());
+            smmu->configure (&Pd_kern::nova(), Space::Index::DMA_HST, s->rid());
     }
 }
 

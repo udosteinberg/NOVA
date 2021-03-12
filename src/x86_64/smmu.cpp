@@ -23,7 +23,7 @@
 #include "bits.hpp"
 #include "extern.hpp"
 #include "lapic.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
@@ -33,11 +33,10 @@ Slab_cache  Smmu::cache (sizeof (Smmu), 8);
 
 Smmu::Smmu (Paddr p) : List<Smmu> (list), phys_base (p), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), invq (static_cast<Smmu_qi *>(Buddy::alloc (ord, Buddy::Fill::BITS0))), invq_idx (0)
 {
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
-#endif
+    // Reserve MMIO region
+    Pd_kern::remove_user_mem (p & ~PAGE_MASK, PAGE_SIZE);
 
-    Pd::kern.Space_mem::update (reg_base, p & ~PAGE_MASK, 0, Paging::Permissions (Paging::R | Paging::W | Paging::G), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
+    Pd_kern::nova().Space_mem::update (reg_base, p & ~PAGE_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     cap  = read<uint64>(REG_CAP);
     ecap = read<uint64>(REG_ECAP);
