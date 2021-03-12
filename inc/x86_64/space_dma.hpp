@@ -25,11 +25,15 @@
 #include "smmu.hpp"
 #include "space_mem.hpp"
 
-class Space_dma : public Space_mem<Space_dma>
+class Space_dma final : public Space_mem<Space_dma>
 {
     private:
         Sdid const  sdid;
         Dptp        dptp;
+
+        inline Space_dma() : Space_mem (Kobject::Subtype::DMA, nullptr) {}
+
+        inline Space_dma (Pd *p) : Space_mem (Kobject::Subtype::DMA, p) {}
 
     public:
         static Space_dma nova;
@@ -38,6 +42,25 @@ class Space_dma : public Space_mem<Space_dma>
         static inline auto max_order() { return Dptp::lim; }
 
         [[nodiscard]] inline auto get_ptab (unsigned l) { return dptp.root_init (l); }
+
+        [[nodiscard]] static inline Space_dma *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            auto const dma { new (cache) Space_dma (pd) };
+
+            if (EXPECT_TRUE (dma)) {
+
+                if (EXPECT_TRUE (dma->dptp.root_init()))
+                    return dma;
+
+                operator delete (dma, cache);
+            }
+
+            s = Status::MEM_OBJ;
+
+            return nullptr;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         inline auto update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh) { return dptp.update (v, p, o, pm, ca, sh); }
 

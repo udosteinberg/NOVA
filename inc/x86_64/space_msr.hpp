@@ -25,12 +25,9 @@
 #include "kmem.hpp"
 #include "paging.hpp"
 #include "space.hpp"
-#include "status.hpp"
 
-class Space_msr : public Space
+class Space_msr final : public Space
 {
-    friend class Pd;
-
     private:
         Bitmap_msr *const bmp;
 
@@ -38,7 +35,7 @@ class Space_msr : public Space
 
         Space_msr();
 
-        inline Space_msr (Bitmap_msr *b) : bmp (b) {}
+        inline Space_msr (Pd *p, Bitmap_msr *b) : Space (Kobject::Subtype::MSR, p), bmp (b) {}
 
         inline ~Space_msr() { delete bmp; }
 
@@ -50,6 +47,27 @@ class Space_msr : public Space
         [[nodiscard]] Status delegate (Space_msr const *, unsigned long, unsigned long, unsigned, unsigned);
 
         [[nodiscard]] inline auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static inline Space_msr *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            auto const bmp { new Bitmap_msr };
+
+            if (EXPECT_TRUE (bmp)) {
+
+                auto const msr { new (cache) Space_msr (pd, bmp) };
+
+                if (EXPECT_TRUE (msr))
+                    return msr;
+
+                delete bmp;
+            }
+
+            s = Status::MEM_OBJ;
+
+            return nullptr;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         static void user_access (uint64 base, size_t size, bool a)
         {

@@ -21,8 +21,9 @@
  */
 
 #include "bits.hpp"
-#include "pd.hpp"
 #include "smmu.hpp"
+#include "space_dma.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 

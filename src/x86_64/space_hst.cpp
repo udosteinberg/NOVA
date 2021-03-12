@@ -19,7 +19,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "pd.hpp"
 #include "space_hst.hpp"
 #include "space_obj.hpp"
 
@@ -27,10 +26,26 @@ INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_hst Space_hst:
 
 Space_hst *Space_hst::current { nullptr };
 
+/*
+ * Constructor (NOVA HST Space)
+ */
+Space_hst::Space_hst() : Space_mem (Kobject::Subtype::HST, nullptr)
+{
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_HST, Capability (this, std::to_underlying (Capability::Perm_sp::TAKE)));
+
+    nova.hptp = Hptp::master;
+
+    auto const s { Kmem::sym_to_phys (&NOVA_HPAS) };
+    auto const e { Kmem::sym_to_phys (&NOVA_HPAE) };
+
+    user_access (0, s, true);
+    user_access (e, (selectors() << PAGE_BITS) - e, true);
+}
+
 void Space_hst::init (unsigned cpu)
 {
     if (!cpus.tas (cpu)) {
-        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
+        loc[cpu].share_from (nova.loc[cpu], MMAP_CPU, MMAP_SPC);
         loc[cpu].share_from_master (LINK_ADDR, MMAP_CPU);
     }
 }

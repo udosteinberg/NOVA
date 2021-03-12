@@ -29,12 +29,16 @@
 #include "patch.hpp"
 #include "pic.hpp"
 #include "smmu.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
 
 extern "C"
-Hpt::OAddr kern_ptab_setup()
+Hpt::OAddr kern_ptab_setup (uint32 t)
 {
+    if (Acpi::resume)
+        return Space_hst::nova.loc[Cpu::find_by_topology (t)].root_addr();
+
     Hptp hptp;
 
     // Share kernel code and data

@@ -28,7 +28,7 @@
 class Capability final
 {
     private:
-        uintptr_t val { 0 };
+        uintptr_t const val;
 
         ALWAYS_INLINE
         inline bool validate (Kobject::Type t, unsigned p) const
@@ -63,12 +63,12 @@ class Capability final
         // PD Object Capability Permissions
         enum class Perm_pd : unsigned
         {
-            CTRL        = BIT (0),
-            PD          = BIT (1),
-            EC_PT_SM    = BIT (2),
-            SC          = BIT (3),
-            ASSIGN      = BIT (4),
-            DEFINED     = ASSIGN | SC | EC_PT_SM | PD | CTRL,
+            PD          = BIT (0),
+            EC          = BIT (1),
+            SC          = BIT (2),
+            PT          = BIT (3),
+            SM          = BIT (4),
+            DEFINED     = SM | PT | SC | EC | PD,
         };
 
         // EC Object Capability Permissions
@@ -107,10 +107,7 @@ class Capability final
         };
 
         // Raw Capability Constructor
-        inline explicit Capability (uintptr_t v) : val (v) {}
-
-        // Null Capability Constructor
-        inline Capability() : val (0) {}
+        inline explicit Capability (uintptr_t v = 0) : val (v) {}
 
         // Object Capability Constructor
         inline Capability (Kobject *o, unsigned p) : val (p ? reinterpret_cast<uintptr_t>(o) | (p & pmask) : 0) {}
@@ -125,7 +122,7 @@ class Capability final
         inline auto validate (Perm_sp p, Kobject::Subtype s) const { return validate (Kobject::Type::PD, s, std::to_underlying (p)); }
 
         ALWAYS_INLINE
-        inline auto validate (Perm_pd p) const { return validate (Kobject::Type::PD, std::to_underlying (p)); }
+        inline auto validate (Perm_pd p) const { return validate (Kobject::Type::PD, Kobject::Subtype::PD, std::to_underlying (p)); }
 
         ALWAYS_INLINE
         inline auto validate (Perm_ec p) const { return validate (Kobject::Type::EC, std::to_underlying (p)); }
