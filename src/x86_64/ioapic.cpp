@@ -20,7 +20,7 @@
  */
 
 #include "ioapic.hpp"
-#include "pd.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB) Slab_cache Ioapic::cache { sizeof (Ioapic), alignof (Ioapic) };

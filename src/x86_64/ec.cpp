@@ -28,6 +28,8 @@
 #include "hip.hpp"
 #include "multiboot.hpp"
 #include "rcu.hpp"
+#include "space_gst.hpp"
+#include "space_obj.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "vmx.hpp"
@@ -39,15 +41,15 @@ Slab_cache Ec::cache (sizeof (Ec), 32);
 Ec *Ec::current, *Ec::fpowner;
 
 // Constructors
-Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), regs (own, own, own), utcb (nullptr), pd (own), cpu (c), glb (true), evt (0), timeout (this)
+Ec::Ec (Space_hst *hst, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), regs (nullptr, hst, static_cast<Space_pio *>(nullptr)), utcb (nullptr), pd (nullptr), cpu (c), glb (true), evt (0), timeout (this)
 {
-    trace (TRACE_SYSCALL, "EC:%p created (PD:%p Kernel)", this, own);
+    trace (TRACE_SYSCALL, "EC:%p created (Kernel)", this);
 }
 
-Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), regs (p, p, p), pd (p), cpu (c), glb (!!f), evt (e), timeout (this)
+Ec::Ec (Space_obj *obj, Space_hst *hst, Space_pio *pio, mword, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), regs (obj, hst, pio), pd (nullptr), cpu (c), glb (!!f), evt (e), timeout (this)
 {
     // Make sure we have a PTAB for this CPU in the PD
-    pd->Space_hst::init (cpu_t (c));
+    hst->init (cpu_t (c));
 
     if (u) {
 
@@ -55,11 +57,11 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
 
         utcb = new Utcb;
 
-        pd->Space_hst::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
+        hst->update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
 
         exc_regs().set_ep (NUM_EXC - 2);
 
-        trace (TRACE_SYSCALL, "EC:%p created (PD:%p CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, p, c, u, s, e);
+        trace (TRACE_SYSCALL, "EC:%p created (CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, c, u, s, e);
 
     } else {
 
@@ -69,22 +71,24 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
 
             regs.vmcs = new Vmcs;
             regs.vmcs->init (0, reinterpret_cast<uintptr_t>(&sys_regs() + 1),
-                             Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
+                             Kmem::ptr_to_phys (hst->loc[c].root_init (false)),
                              0, Vpid::alloc (cpu));
 
 //          regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
             cont = send_msg<ret_user_vmresume>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCS:%p)", this, p, regs.vmcs);
+            trace (TRACE_SYSCALL, "EC:%p created (VMCS:%p)", this, regs.vmcs);
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
+#if 0
             sys_regs().rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
                                                                       pd->Space_gst::get_phys()));
+#endif
 
 //          regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
-            trace (TRACE_SYSCALL, "EC:%p created (PD:%p VMCB:%p)", this, p, regs.vmcb);
+            trace (TRACE_SYSCALL, "EC:%p created (VMCB:%p)", this, regs.vmcb);
         }
     }
 }
@@ -164,9 +168,11 @@ void Ec::ret_user_vmresume()
 
     current->regs.vmcs->make_current();
 
-    if (EXPECT_FALSE (Pd::current->gtlb.tst (Cpu::id))) {
-        Pd::current->gtlb.clr (Cpu::id);
-        Pd::current->Space_gst::invalidate();
+    auto const gst { current->regs.get_gst() };
+
+    if (EXPECT_FALSE (gst->gtlb.tst (Cpu::id))) {
+        gst->gtlb.clr (Cpu::id);
+        gst->invalidate();
     }
 
     if (EXPECT_FALSE (Cr::get_cr2() != current->exc_regs().cr2))
@@ -188,8 +194,10 @@ void Ec::ret_user_vmrun()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmrun);
 
-    if (EXPECT_FALSE (Pd::current->gtlb.tst (Cpu::id))) {
-        Pd::current->gtlb.clr (Cpu::id);
+    auto const gst { current->regs.get_gst() };
+
+    if (EXPECT_FALSE (gst->gtlb.tst (Cpu::id))) {
+        gst->gtlb.clr (Cpu::id);
         current->regs.vmcb->tlb_control = 1;
     }
 
@@ -266,10 +274,14 @@ void Ec::root_invoke()
     Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
 #endif
 
-    current->pd->Space_obj::insert (Space_obj::selectors - 1, Capability (&Pd::kern,   static_cast<unsigned>(Capability::Perm_pd::PD)));
-    current->pd->Space_obj::insert (Space_obj::selectors - 2, Capability (current->pd, static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
-    current->pd->Space_obj::insert (Space_obj::selectors - 3, Capability (Ec::current, static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
-    current->pd->Space_obj::insert (Space_obj::selectors - 4, Capability (Sc::current, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
+    auto const obj { current->regs.get_obj() };
+
+#if 0
+    obj->insert (Space_obj::selectors - 1, Capability (&Pd_kern::nova(), static_cast<unsigned>(Capability::Perm_pd::PD)));
+#endif
+    obj->insert (Space_obj::selectors - 2, Capability (current->pd, static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
+    obj->insert (Space_obj::selectors - 3, Capability (Ec::current, static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
+    obj->insert (Space_obj::selectors - 4, Capability (Sc::current, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
 
     Console::flush();
 
@@ -278,12 +290,7 @@ void Ec::root_invoke()
 
 void Ec::die (char const *reason, Exc_regs *r)
 {
-    if (current->utcb || current->pd == &Pd::kern)
-        trace (0, "Killed EC:%p SC:%p V:%#lx CS:%#lx EIP:%#lx CR2:%#lx ERR:%#lx (%s)",
-               current, Sc::current, r->vec, r->cs, r->rip, r->cr2, r->err, reason);
-    else
-        trace (0, "Killed EC:%p SC:%p V:%#lx (%s)",
-               current, Sc::current, r->vec, reason);
+    trace (0, "Killed EC:%p SC:%p V:%#lx (%s)", current, Sc::current, r->vec, reason);
 
     Ec *ec = current->rcap;
 

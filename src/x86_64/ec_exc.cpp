@@ -91,20 +91,21 @@ bool Ec::handle_exc_gp (Exc_regs *)
 
 bool Ec::handle_exc_pf (Exc_regs *r)
 {
-    mword addr = r->cr2;
+    auto const pfa { r->cr2 };
+    auto const hst { current->regs.get_hst() };
 
     if (r->err & BIT (2))       // User-mode access
-        return addr < USER_ADDR && Pd::current->Space_hst::loc[Cpu::id].share_from (Pd::current->Space_hst::hptp, addr, USER_ADDR);
+        return pfa < USER_ADDR && hst->loc[Cpu::id].share_from (hst->hptp, pfa, USER_ADDR);
 
-    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_hst::loc[Cpu::id].share_from_master (addr))
+    if (pfa >= LINK_ADDR && pfa < MMAP_CPU && hst->loc[Cpu::id].share_from_master (pfa))
         return true;
 
     // Kernel fault in PIO space
-    if (addr >= MMAP_SPC_PIO && addr <= MMAP_SPC_PIO_E && Pd::current->Space_hst::loc[Cpu::id].share_from (Pd::current->Space_hst::hptp, addr, MMAP_CPU))
+    if (pfa >= MMAP_SPC_PIO && pfa <= MMAP_SPC_PIO_E && hst->loc[Cpu::id].share_from (hst->hptp, pfa, MMAP_CPU))
         return true;
 
     // Convert #PF in I/O bitmap to #GP(0)
-    if (r->user() && addr >= MMAP_SPC_PIO && addr <= MMAP_SPC_PIO_E) {
+    if (r->user() && pfa >= MMAP_SPC_PIO && pfa <= MMAP_SPC_PIO_E) {
         r->vec = EXC_GP;
         r->err = r->cr2 = 0;
         send_msg<ret_user_iret>();
