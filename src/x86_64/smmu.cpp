@@ -22,9 +22,10 @@
 
 #include "bits.hpp"
 #include "lapic.hpp"
-#include "pd.hpp"
 #include "pci.hpp"
 #include "smmu.hpp"
+#include "space_dma.hpp"
+#include "space_hst.hpp"
 #include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB) Slab_cache Smmu::cache { sizeof (Smmu), alignof (Smmu) };

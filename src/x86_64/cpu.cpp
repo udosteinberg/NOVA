@@ -30,7 +30,7 @@
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "mca.hpp"
-#include "pd.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
@@ -296,8 +296,8 @@ void Cpu::init()
 
     if (!Acpi::resume) {
         Hpt::OAddr phys; unsigned o; Memattr ma;
-        Pd::kern.Space_hst::loc[id] = Hptp::current();
-        Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
+        Space_hst::nova.loc[id] = Hptp::current();
+        Space_hst::nova.loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
         Hptp::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
     }
 
