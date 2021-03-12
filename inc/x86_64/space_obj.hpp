@@ -21,18 +21,13 @@
 
 #pragma once
 
-#include "atomic.hpp"
 #include "bits.hpp"
 #include "capability.hpp"
-#include "macros.hpp"
 #include "memory.hpp"
 #include "space.hpp"
-#include "status.hpp"
 
-class Space_obj : public Space
+class Space_obj final : public Space
 {
-    friend class Pd;
-
     private:
         struct Captable;
 
@@ -40,6 +35,13 @@ class Space_obj : public Space
 
         static constexpr auto lev { 2 };
         static constexpr auto bpl { bit_scan_reverse (PAGE_SIZE (0) / sizeof (Captable *)) };
+
+        inline Space_obj() : Space (Kobject::Subtype::OBJ, nullptr)
+        {
+            insert (Selector::NOVA_OBJ, Capability (this, std::to_underlying (Capability::Perm_sp::TAKE)));
+        }
+
+        inline Space_obj (Pd *p) : Space (Kobject::Subtype::OBJ, p) {}
 
         ~Space_obj();
 
@@ -64,6 +66,18 @@ class Space_obj : public Space
             NOVA_INT = BIT (16),
             NOVA_CPU = 0,
         };
+
+        [[nodiscard]] static inline Space_obj *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            auto const obj { new (cache) Space_obj (pd) };
+
+            if (EXPECT_FALSE (!obj))
+                s = Status::MEM_OBJ;
+
+            return obj;
+        }
+
+        inline void destroy (Slab_cache &cache) { operator delete (this, cache); }
 
         Capability lookup (unsigned long) const;
         Status     update (unsigned long, Capability, Capability &);
