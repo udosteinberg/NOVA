@@ -33,15 +33,15 @@ ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
 
 Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr)
 {
-    hpt = Hptp::master;
+    hptp = Hptp::master;
 
+#if 0   // FIXME
     Space_mem::insert_root (0, LOAD_ADDR);
     Space_mem::insert_root (Multiboot::ea, USER_ADDR);
 
     // HIP
     Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE (0), 1);
 
-#if 0   // FIXME
     // I/O Ports
     Space_pio::addreg (0, 1UL << 16, 7);
 #endif
