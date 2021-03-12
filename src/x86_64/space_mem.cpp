@@ -19,73 +19,54 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.hpp"
-#include "hazard.hpp"
-#include "interrupt.hpp"
-#include "lowlevel.hpp"
-#include "mtrr.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
-#include "svm.hpp"
-#include "vectors.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
 
-void Space_mem::init (cpu_t cpu)
+template<typename T> Status Space_mem<T>::delegate (Space_hst const *hst, unsigned long const ssb, unsigned long const dsb, unsigned const ord, unsigned const pmm, Memattr ma)
 {
-    if (!cpus.tas (cpu)) {
-        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
-        loc[cpu].share_from_master (BASE_ADDR, MMAP_CPU);
-    }
-}
+    auto const sse { ssb + BITN (ord) }, dse { dsb + BITN (ord) };
 
-void Space_mem::shootdown()
-{
-    for (cpu_t cpu { 0 }; cpu < Cpu::count; cpu++) {
+    if (sse > hst->selectors() || dse > T::selectors()) [[unlikely]]
+        return Status::BAD_PAR;
 
-        Pd *pd = Pd::remote (cpu);
+    unsigned o;
 
-        if (!pd->htlb.tst (cpu) && !pd->gtlb.tst (cpu))
-            continue;
+    auto sts { Status::SUCCESS };
 
-        if (Cpu::id == cpu) {
-            Cpu::hazard |= Hazard::SCHED;
-            continue;
-        }
+    for (auto src { ssb }, dst { dsb }; src < sse; src += BITN (o), dst += BITN (o)) {
 
-        auto ctr = Counter::req[1].get (cpu);
+        uintptr_t s { src << PAGE_BITS };
+        uintptr_t d { dst << PAGE_BITS };
+        Hpt::OAddr p;
+        Memattr a;
 
-        Interrupt::send_cpu (Interrupt::Request::RKE, cpu);
+        auto pm { Paging::Permissions (hst->lookup (s, p, o, a) & (Paging::K | Paging::U | pmm)) };
 
-        while (Counter::req[1].get (cpu) == ctr)
-            pause();
-    }
-}
+        // Kernel memory cannot be delegated
+        if (pm & Paging::K)
+            pm = Paging::NONE;
 
-void Space_mem::insert_root (uint64_t, uint64_t, uintptr_t)
-{
-#if 0   // FIXME
-    for (uint64 p = s; p < e; s = p) {
+        // Memory attributes are inherited for virt/virt delegations
+        if (hst != &Space_hst::nova)
+            ma = a;
 
-        unsigned t = Mtrr::memtype (s, p);
+        o = min (o, ord);
 
-        for (uint64_t n; p < e; p = n)
-            if (Mtrr::memtype (p, n) != t)
-                break;
+        d &= ~Hpt::offs_mask (o);
+        p &= ~Hpt::offs_mask (o);
 
-        if (s > ~0UL)
+        if ((sts = static_cast<T *>(this)->update (d, p, o, pm, ma)) != Status::SUCCESS)
             break;
-
-        if ((p = min (p, e)) > ~0UL)
-            p = static_cast<uint64>(~0UL) + 1;
-
-        addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
     }
-#endif
+
+    static_cast<T *>(this)->sync();
+
+    Buddy::free_wait();
+
+    return sts;
 }
 
-bool Space_mem::insert_utcb (mword b)
-{
-    if (!b)
-        return true;
-
-    return false;
-}
+template class Space_mem<Space_hst>;
+template class Space_mem<Space_gst>;
+template class Space_mem<Space_dma>;

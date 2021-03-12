@@ -1,5 +1,5 @@
 /*
- * Protection Domain
+ * DMA Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,30 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "multiboot.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
+#include "kobject.hpp"
+#include "space_dma.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 32);
-
-Atomic<Pd *>    Pd::current { nullptr };
-ALIGNED(32) Pd  Pd::kern (&Pd::kern);
-ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
-
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr)
-{
-    hptp = Hptp::master;
-
-#if 0   // FIXME
-    Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (Multiboot::ea, USER_ADDR);
-
-    // HIP
-    Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE (0), 1);
-
-    // I/O Ports
-    Space_pio::addreg (0, 1UL << 16, 7);
-#endif
-}
+INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_dma Space_dma::nova;
