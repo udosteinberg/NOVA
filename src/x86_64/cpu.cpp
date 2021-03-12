@@ -288,8 +288,8 @@ void Cpu::init()
     Lapic::init (clk, rat);
 
     Hpt::OAddr phys; unsigned o; Memattr ma;
-    Pd::kern.Space_mem::loc[id] = Hptp::current();
-    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
+    Pd::kern.Space_hst::loc[id] = Hptp::current();
+    Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
     Hptp::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
 
     setup_msr();

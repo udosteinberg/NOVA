@@ -1,5 +1,5 @@
 /*
- * Memory Space
+ * Host Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,26 +19,18 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "pd.hpp"
+#include "space_hst.hpp"
+#include "space_obj.hpp"
 
-#include "bits.hpp"
-#include "memattr.hpp"
-#include "paging.hpp"
-#include "space.hpp"
-#include "status.hpp"
+INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_hst Space_hst::nova;
 
-class Space_hst;
+Space_hst *Space_hst::current { nullptr };
 
-template <typename T>
-class Space_mem : public Space
+void Space_hst::init (cpu_t cpu)
 {
-    protected:
-        static void user_access (T &mem, uint64_t addr, size_t size, bool a, Memattr ma)
-        {
-            for (unsigned o; size; size -= BITN (o), addr += BITN (o))
-                mem.update (addr, addr, (o = static_cast<unsigned>(max_order (addr, size))) - PAGE_BITS, a ? Paging::Permissions (Paging::U | Paging::API) : Paging::NONE, ma);
-        }
-
-    public:
-        Status delegate (Space_hst const *, unsigned long, unsigned long, unsigned, unsigned, Memattr);
-};
+    if (!cpus.tas (cpu)) {
+        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
+        loc[cpu].share_from_master (LINK_ADDR, MMAP_CPU);
+    }
+}

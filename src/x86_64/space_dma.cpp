@@ -1,5 +1,5 @@
 /*
- * Memory Space
+ * DMA Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,26 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "kobject.hpp"
+#include "space_dma.hpp"
 
-#include "bits.hpp"
-#include "memattr.hpp"
-#include "paging.hpp"
-#include "space.hpp"
-#include "status.hpp"
-
-class Space_hst;
-
-template <typename T>
-class Space_mem : public Space
-{
-    protected:
-        static void user_access (T &mem, uint64_t addr, size_t size, bool a, Memattr ma)
-        {
-            for (unsigned o; size; size -= BITN (o), addr += BITN (o))
-                mem.update (addr, addr, (o = static_cast<unsigned>(max_order (addr, size))) - PAGE_BITS, a ? Paging::Permissions (Paging::U | Paging::API) : Paging::NONE, ma);
-        }
-
-    public:
-        Status delegate (Space_hst const *, unsigned long, unsigned long, unsigned, unsigned, Memattr);
-};
+INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_dma Space_dma::nova;
