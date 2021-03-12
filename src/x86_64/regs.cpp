@@ -32,18 +32,18 @@ template <> void Exc_regs::tlb_flush<Vmcb>(bool full) const
 
 template <> void Exc_regs::tlb_flush<Vmcs>(bool full) const
 {
-    mword vpid = Vmcs::vpid();
+    auto vpid = Vmcs::vpid();
 
     if (vpid)
-        Vpid::flush (full ? Vpid::CONTEXT_GLOBAL : Vpid::CONTEXT_NOGLOBAL, vpid);
+        Vpid::flush (full ? Invvpid::CONTEXT_GLOBAL : Invvpid::CONTEXT_NOGLOBAL, vpid);
 }
 
 template <> void Exc_regs::tlb_flush<Vmcs>(mword addr) const
 {
-    mword vpid = Vmcs::vpid();
+    auto vpid = Vmcs::vpid();
 
     if (vpid)
-        Vpid::flush (Vpid::ADDRESS, vpid, addr);
+        Vpid::flush (Invvpid::ADDRESS, vpid, addr);
 }
 
 template <> void Exc_regs::set_cpu_ctrl0<Vmcb> (uint32 val)
