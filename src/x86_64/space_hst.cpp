@@ -1,5 +1,5 @@
 /*
- * Static Initialization Priorities
+ * Host Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,17 +19,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "pd.hpp"
+#include "space_hst.hpp"
+#include "space_obj.hpp"
 
-// Lower numbers indicate a higher priority
-#define AFTER(X)        ((X) + 1)
+INIT_PRIORITY (PRIO_SPACE_MEM)
+ALIGNED (Kobject::alignment) Space_hst Space_hst::nova;
 
-#define PRIO_LIMIT      100
-#define PRIO_PTAB       AFTER (PRIO_LIMIT)
-#define PRIO_SLAB       AFTER (PRIO_PTAB)
-#define PRIO_SPACE_OBJ  AFTER (PRIO_SLAB)
-#define PRIO_SPACE_MEM  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_PIO  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_MSR  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_CONSOLE    65533
-#define PRIO_LOCAL      65534
+Space_hst *Space_hst::current { nullptr };
+
+void Space_hst::init (unsigned cpu)
+{
+    if (!cpus.tas (cpu)) {
+        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
+        loc[cpu].share_from_master (LINK_ADDR, MMAP_CPU);
+    }
+}

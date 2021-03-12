@@ -19,77 +19,59 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.hpp"
-#include "hazard.hpp"
-#include "hip.hpp"
-#include "interrupt.hpp"
-#include "lowlevel.hpp"
-#include "mtrr.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
-#include "svm.hpp"
-#include "vectors.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
 
-void Space_mem::init (unsigned cpu)
+template <typename T>
+Status Space_mem<T>::delegate (Space_hst const *hst, unsigned long ssb, unsigned long dsb, unsigned ord, unsigned pmm, Memattr::Cacheability ca, Memattr::Shareability sh)
 {
-    if (!cpus.tas (cpu)) {
-        loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
-        loc[cpu].share_from_master (LINK_ADDR, MMAP_CPU);
-    }
-}
+    auto const s_end { ssb + BITN (ord) }, d_end { dsb + BITN (ord) };
 
-void Space_mem::shootdown()
-{
-    for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
+    if (EXPECT_FALSE (s_end > hst->num || d_end > T::num))
+        return Status::BAD_PAR;
 
-        if (!Hip::hip->cpu_online (cpu))
-            continue;
+    unsigned o;
 
-        Pd *pd = Pd::remote (cpu);
+    Status sts { Status::SUCCESS };
 
-        if (!pd->htlb.tst (cpu) && !pd->gtlb.tst (cpu))
-            continue;
+    for (auto src { ssb }, dst { dsb }; src < s_end; src += BITN (o), dst += BITN (o)) {
 
-        if (Cpu::id == cpu) {
-            Cpu::hazard |= Hazard::SCHED;
-            continue;
+        uintptr_t s { src << PAGE_BITS };
+        uintptr_t d { dst << PAGE_BITS };
+        Hpt::OAddr p;
+        Memattr::Cacheability src_ca;
+        Memattr::Shareability src_sh;
+
+        auto pm { Paging::Permissions (hst->lookup (s, p, o, src_ca, src_sh) & (Paging::K | Paging::U | pmm)) };
+
+        // Kernel memory cannot be delegated
+        if (pm & Paging::K)
+            pm = Paging::NONE;
+
+        // Memory attributes are inherited for virt/virt delegations
+        if (hst != &Space_hst::nova) {
+            ca = src_ca;
+            sh = src_sh;
         }
 
-        auto ctr = Counter::req[1].get (cpu);
+        o = min (o, ord);
 
-        Interrupt::send_cpu (Interrupt::Request::RKE, cpu);
+        s &= ~Hpt::offs_mask (o);
+        d &= ~Hpt::offs_mask (o);
+        p &= ~Hpt::offs_mask (o);
 
-        while (Counter::req[1].get (cpu) == ctr)
-            pause();
-    }
-}
-
-void Space_mem::insert_root (uint64 s, uint64 e, mword)
-{
-    for (uint64 p = s; p < e; s = p) {
-
-        unsigned t = Mtrr::memtype (s, p);
-
-        for (uint64 n; p < e; p = n)
-            if (Mtrr::memtype (p, n) != t)
-                break;
-
-        if (s > ~0UL)
+        if ((sts = static_cast<T *>(this)->update (d, p, o, pm, ca, sh)) != Status::SUCCESS)
             break;
-
-        if ((p = min (p, e)) > ~0UL)
-            p = static_cast<uint64>(~0UL) + 1;
-
-#if 0   // FIXME
-        addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
-#endif
     }
+
+    static_cast<T *>(this)->sync();
+
+    Buddy::free_wait();
+
+    return sts;
 }
 
-bool Space_mem::insert_utcb (mword b)
-{
-    if (!b)
-        return true;
-
-    return false;
-}
+template class Space_mem<Space_hst>;
+template class Space_mem<Space_gst>;
+template class Space_mem<Space_dma>;

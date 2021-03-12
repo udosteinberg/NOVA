@@ -1,5 +1,5 @@
 /*
- * Static Initialization Priorities
+ * DMA Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,17 +19,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "kobject.hpp"
+#include "space_dma.hpp"
 
-// Lower numbers indicate a higher priority
-#define AFTER(X)        ((X) + 1)
-
-#define PRIO_LIMIT      100
-#define PRIO_PTAB       AFTER (PRIO_LIMIT)
-#define PRIO_SLAB       AFTER (PRIO_PTAB)
-#define PRIO_SPACE_OBJ  AFTER (PRIO_SLAB)
-#define PRIO_SPACE_MEM  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_PIO  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_MSR  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_CONSOLE    65533
-#define PRIO_LOCAL      65534
+INIT_PRIORITY (PRIO_SPACE_MEM)
+ALIGNED (Kobject::alignment) Space_dma Space_dma::nova;
