@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,32 +20,33 @@
 
 #pragma once
 
-#include "compiler.hpp"
+#include "alloc_bitmap.hpp"
 
-class Invvpid
+struct Invvpid final
 {
-    private:
-        uint64  vpid;
-        uint64  addr;
+    enum class Type : uintptr_t
+    {
+        ADR = 0,    // Individual address
+        SGL = 1,    // Single context
+        ALL = 2,    // All contexts
+        SRG = 3,    // Single context retaining globals
+    };
 
-    public:
-        ALWAYS_INLINE
-        inline Invvpid (unsigned long v, mword a) : vpid (v), addr (a) {}
+    static bool invalidate (Type t, uint16_t vpid, uint64_t addr = 0)
+    {
+        uint128_t const desc { uint128_t { addr } << 64 | vpid };
+
+        bool ret;
+        asm volatile ("invvpid %1, %2" : "=@cca" (ret) : "m" (desc), "r" (std::to_underlying (t)));
+        return ret;
+    }
 };
 
-class Vpid
+struct Vpid final
 {
-    public:
-        enum Type
-        {
-            ADDRESS             = 0,
-            CONTEXT_GLOBAL      = 1,
-            CONTEXT_NOGLOBAL    = 3
-        };
-
-        ALWAYS_INLINE
-        static inline void flush (Type t, unsigned long vpid, mword addr = 0)
-        {
-            asm volatile ("invvpid %0, %1" : : "m" (Invvpid (vpid, addr)), "r" (static_cast<mword>(t)) : "cc");
-        }
+    /*
+     * VPID is always 16 bits wide
+     * Conceptually per-CPU, but we use a global allocator
+     */
+    static inline constinit Alloc_bitmap<BIT (16)> allocator;
 };
