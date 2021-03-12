@@ -88,7 +88,7 @@ void Smmu::init()
     init_pmr();
 }
 
-Status Smmu::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
+Status Smmu::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
 {
     // Determine src device
     auto const src { static_cast<pci_t>(dad) };
@@ -97,9 +97,9 @@ Status Smmu::assign_dev (Pd *p, uintptr_t dad, bool invalidate)
     if (Pci::seg (src) != grp->seg) [[unlikely]]
         return Status::BAD_DEV;
 
-    auto const rlev { lev() };
-    auto const sdid { p->get_sdid() };
-    auto const ptab { p->dpt.root_init (rlev - 1) };
+    auto const rlev { min (Dpt::lev(), lev()) };
+    auto const sdid { dma->get_sdid() };
+    auto const ptab { dma->get_ptab (rlev - 1) };
 
     if (!ptab) [[unlikely]]
         return Status::MEM_OBJ;
