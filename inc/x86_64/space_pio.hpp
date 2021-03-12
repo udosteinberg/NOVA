@@ -1,10 +1,11 @@
 /*
- * Port I/O Space
+ * PIO Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,32 +21,42 @@
 
 #pragma once
 
-class Space_mem;
+#include "bitmap_pio.hpp"
+#include "kmem.hpp"
+#include "paging.hpp"
+#include "space.hpp"
+#include "status.hpp"
 
-class Space_pio
+class Space_pio : public Space
 {
+    friend class Pd;
+
     private:
-        Paddr hbmp, gbmp;
+        Bitmap_pio *const bmp;
 
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (mword idx)
+        static Space_pio nova;
+
+        Space_pio();
+
+        inline Space_pio (Bitmap_pio *b) : bmp (b) {}
+
+        inline ~Space_pio()
         {
-            return MMAP_SPC_PIO + (idx / 8 / sizeof (mword)) * sizeof (mword);
+            delete bmp;
         }
 
-        ALWAYS_INLINE
-        static inline mword idx_to_mask (mword idx)
-        {
-            return 1UL << (idx % (8 * sizeof (mword)));
-        }
+        [[nodiscard]] Paging::Permissions lookup (unsigned long) const;
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
-
-        void update (bool, mword, mword);
+        void update (unsigned long, Paging::Permissions);
 
     public:
-        Paddr walk (bool = false, mword = 0);
+        [[nodiscard]] Status delegate (Space_pio const *, unsigned long, unsigned long, unsigned, unsigned);
 
-        static void page_fault (mword, mword);
+        [[nodiscard]] inline auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        static void user_access (uint64 base, size_t size, bool a)
+        {
+            for (unsigned i = 0; i < size; i++)         // FIXME: Optimize
+                nova.update (base + i, a ? Paging::R : Paging::NONE);
+        }
 };
