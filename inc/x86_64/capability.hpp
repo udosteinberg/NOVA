@@ -29,7 +29,7 @@ class Capability final
     friend class Space_obj;
 
     private:
-        uintptr_t val;
+        uintptr_t const val;
 
         // Return object pointer for non-zero pointer bits
         ALWAYS_INLINE

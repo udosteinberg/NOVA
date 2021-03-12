@@ -74,7 +74,7 @@ class Pte_hst final : public Pte_lpt<Pte_hst, uint64_t, uint64_t>
 
 class Ptab_hst final : public Ptab<Pte_hst, uint64_t, uint64_t>
 {
-    friend class Pd;
+    friend class Space_hst;
 
     private:
         static Ptab_hst master;

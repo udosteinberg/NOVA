@@ -28,7 +28,7 @@
 #include "space_mem.hpp"
 #include "tlb.hpp"
 
-class Space_gst : public Space_mem<Space_gst>
+class Space_gst final : public Space_mem<Space_gst>
 {
     private:
         Ptab_gst_amd    gst_amd;
@@ -56,8 +56,19 @@ class Space_gst : public Space_mem<Space_gst>
             }
         }
 
+        explicit Space_gst (Refptr<Pd> &ref_pd) : Space_mem { Kobject::Subtype::GST, ref_pd } {}
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: GST %p collected", static_cast<void *>(this));
+        }
+
     public:
         Cpuset gtlb;
+
+        [[nodiscard]] static Space_gst *create (Status &, Pd *);
+
+        void destroy() override final;
 
         [[nodiscard]] auto get_root_amd() const { return gst_amd.root_hw(); }
         [[nodiscard]] auto get_root_itl() const { return gst_itl.root_hw(); }

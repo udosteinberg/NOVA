@@ -40,7 +40,7 @@ void Interrupt::rke_handler()
     if (Acpi::get_transition().valid())
         Cpu::hazard |= Hazard::SLEEP;
 
-    if (Pd::current->Space_hst::htlb.tst (Cpu::id))
+    if (Space_hst::current->htlb.tst (Cpu::id))
         Cpu::hazard |= Hazard::SCHED;
 }
 

@@ -27,21 +27,32 @@
 #include "smmu.hpp"
 #include "space_mem.hpp"
 
-class Space_dma : public Space_mem<Space_dma>
+class Space_dma final : public Space_mem<Space_dma>
 {
     private:
         uint16_t const  sdid;
         Ptab_dma_amd    dma_amd;
         Ptab_dma_itl    dma_itl;
 
-    public:
-        static Space_dma nova;
+        explicit Space_dma();
 
         // Constructor
-        explicit Space_dma() : sdid { Sdid::allocator.alloc().val() } {}
+        explicit Space_dma (Refptr<Pd> &ref_pd, uint16_t s) : Space_mem { Kobject::Subtype::DMA, ref_pd }, sdid { s } {}
 
         // Destructor
         ~Space_dma() { Sdid::allocator.free (sdid); }
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: DMA %p collected", static_cast<void *>(this));
+        }
+
+    public:
+        static Space_dma nova;
+
+        [[nodiscard]] static Space_dma *create (Status &, Pd *);
+
+        void destroy() override final;
 
         [[nodiscard]] auto get_sdid() const { return sdid; }
         [[nodiscard]] auto get_root_amd (unsigned l) { return dma_amd.root_init (l - 1); }

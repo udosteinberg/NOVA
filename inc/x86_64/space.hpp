@@ -21,6 +21,18 @@
 
 #pragma once
 
-class Space
+#include "pd.hpp"
+
+class Space : public Kobject
 {
+    private:
+        Refptr<Pd> const pd;
+
+    protected:
+        explicit Space (Kobject::Subtype s) : Kobject { Kobject::Type::PD, s }, pd { &Pd::nova } {}
+
+        explicit Space (Kobject::Subtype s, Refptr<Pd> &ref_pd) : Kobject { Kobject::Type::PD, s }, pd { std::move (ref_pd) } {}
+
+    public:
+        Pd *get_pd() const { return pd; }
 };

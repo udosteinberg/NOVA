@@ -26,12 +26,9 @@
 #include "msr.hpp"
 #include "paging.hpp"
 #include "space.hpp"
-#include "status.hpp"
 
-class Space_msr : public Space
+class Space_msr final : public Space
 {
-    friend class Pd;
-
     private:
         static constexpr Msr::Reg64 rw[]
         {
@@ -84,9 +81,14 @@ class Space_msr : public Space
 
         Space_msr();
 
-        Space_msr (Bitmap_msr *b) : bmp { b } {}
+        Space_msr (Refptr<Pd> &ref_pd, Bitmap_msr *b) : Space { Kobject::Subtype::MSR, ref_pd }, bmp { b } {}
 
         ~Space_msr() { delete bmp; }
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: MSR %p collected", static_cast<void *>(this));
+        }
 
         [[nodiscard]] Paging::Permissions lookup (size_t) const;
 
@@ -99,6 +101,10 @@ class Space_msr : public Space
         [[nodiscard]] Status delegate (Space_msr const *, size_t, size_t, unsigned, unsigned);
 
         [[nodiscard]] auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static Space_msr *create (Status &, Pd *);
+
+        void destroy() override final;
 
         static void access_ctrl (Msr::Reg64 r, Paging::Permissions perm) { nova.update (std::to_underlying (r), perm); }
 };

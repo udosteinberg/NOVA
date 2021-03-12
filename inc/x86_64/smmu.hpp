@@ -28,7 +28,7 @@
 #include "status.hpp"
 #include "wait.hpp"
 
-class Pd;
+class Space_dma;
 
 class Smmu : public List<Smmu>, protected Mmio
 {
@@ -53,7 +53,7 @@ class Smmu : public List<Smmu>, protected Mmio
 
         static_assert (__is_standard_layout (Entry) && alignof (Entry) == 16 && sizeof (Entry) == 16);
 
-        [[nodiscard]] virtual Status assign_dev (uintptr_t, Pd *, Pd *, uintptr_t &) = 0;
+        [[nodiscard]] virtual Status assign_dev (uintptr_t, Space_dma *, Space_dma *, uintptr_t &) = 0;
 
         [[nodiscard]] virtual bool nova_assigned (pci_t) = 0;
 

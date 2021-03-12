@@ -28,9 +28,55 @@ INIT_PRIORITY (PRIO_SPACE_PIO) ALIGNED (Kobject::alignment) Space_pio Space_pio:
  * Constructor (NOVA PIO Space)
  * FIXME: Bitmap allocation failure
  */
-Space_pio::Space_pio() : bmp { new Bitmap_pio }
+Space_pio::Space_pio() : Space { Kobject::Subtype::PIO }, hst { nullptr }, bmp { new Bitmap_pio }
 {
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_PIO, Capability { this, std::to_underlying (Capability::Perm_sp::TAKE) });
+
     access_ctrl (0, BIT (16), Paging::R);
+}
+
+Space_pio *Space_pio::create (Status &s, Pd *pd, bool a)
+{
+    // Acquire references
+    Refptr<Pd> ref_pd { pd };
+    Refptr<Space_hst> ref_hst { a ? pd->get_hst() : nullptr };
+
+    // Failed to acquire references
+    if (!ref_pd || (a && !ref_hst)) [[unlikely]]
+        s = Status::ABORTED;
+
+    else {
+
+        auto const bmp { new Bitmap_pio };
+
+        if (bmp) [[likely]] {
+
+            // Create new PIO object
+            auto const obj { new (ref_pd->pio_cache) Space_pio { ref_pd, ref_hst, bmp } };
+
+            // If creation succeeded, then references must have been consumed
+            if (obj) [[likely]] {
+                assert (!ref_pd && !ref_hst);
+                return obj;
+            }
+
+            delete bmp;
+        }
+
+        // Failed to create PIO object
+        s = Status::MEM_OBJ;
+    }
+
+    return nullptr;
+}
+
+void Space_pio::destroy()
+{
+    auto &cache { get_pd()->pio_cache };
+
+    this->~Space_pio();
+
+    operator delete (this, cache);
 }
 
 /*
