@@ -31,7 +31,7 @@ Atomic<Pd *>    Pd::current { nullptr };
 ALIGNED(32) Pd  Pd::kern (&Pd::kern);
 ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
 
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD)
+Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr, nullptr)
 {
     hpt = Hptp::master;
 
