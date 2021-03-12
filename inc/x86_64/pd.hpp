@@ -23,12 +23,14 @@
 #include "atomic.hpp"
 #include "kmem.hpp"
 #include "slab.hpp"
-#include "space_mem.hpp"
+#include "space_dma.hpp"
+#include "space_gst.hpp"
+#include "space_hst.hpp"
 #include "space_msr.hpp"
 #include "space_obj.hpp"
 #include "space_pio.hpp"
 
-class Pd : public Kobject, public Space_obj, public Space_mem, public Space_pio, public Space_msr
+class Pd : public Kobject, public Space_obj, public Space_hst, public Space_gst, public Space_dma, public Space_pio, public Space_msr
 {
     private:
         static Slab_cache cache;
