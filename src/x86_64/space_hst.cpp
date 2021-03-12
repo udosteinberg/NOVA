@@ -1,5 +1,5 @@
 /*
- * Protection Domain
+ * Host Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -19,30 +19,22 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "multiboot.hpp"
 #include "pd.hpp"
-#include "stdio.hpp"
+#include "space_hst.hpp"
+#include "space_obj.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pd::cache (sizeof (Pd), 32);
+INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_hst Space_hst::nova;
 
-Atomic<Pd *>    Pd::current { nullptr };
-ALIGNED(32) Pd  Pd::kern (&Pd::kern);
-ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
+Space_hst *Space_hst::current { nullptr };
 
-Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr)
+void Space_hst::init (cpu_t cpu)
 {
-    hptp = Hptp::master;
+    if (cpus.tas (cpu)) [[likely]]
+        return;
 
-#if 0   // FIXME
-    Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (Multiboot::ea, USER_ADDR);
+    // Share global kernel memory
+    loc[cpu].share_from_master (BASE_ADDR, MMAP_CPU);
 
-    // HIP
-    Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE (0), 1);
-
-    // I/O Ports
-    Space_pio::addreg (0, 1UL << 16, 7);
-#endif
+    // Share CPU-local memory
+    loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
 }
