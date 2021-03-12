@@ -43,7 +43,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         ALWAYS_INLINE HOT
         inline void make_current()
         {
-            mword pcid = did;
+            uintptr_t p = get_pcid();
 
             if (EXPECT_FALSE (htlb.tst (Cpu::id)))
                 htlb.clr (Cpu::id);
@@ -53,12 +53,12 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
                 if (EXPECT_TRUE (current == this))
                     return;
 
-                pcid |= static_cast<mword>(1ULL << 63);
+                p |= BIT64 (63);
             }
 
             current = this;
 
-            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? pcid : 0);
+            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? p : 0);
         }
 
         ALWAYS_INLINE
