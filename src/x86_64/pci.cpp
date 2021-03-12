@@ -20,7 +20,7 @@
 
 #include "extern.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
