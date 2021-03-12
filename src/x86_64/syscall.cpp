@@ -218,6 +218,11 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_CPU>();
     }
 
+    if (EXPECT_FALSE (r->utcb() >= Space_hst::selectors() << PAGE_BITS)) {
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
+        sys_finish<Sys_regs::BAD_PAR>();
+    }
+
     if (EXPECT_FALSE (!r->utcb() && !(Hip::hip->feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM)))) {
         trace (TRACE_ERROR, "%s: VCPUs not supported", __func__);
         sys_finish<Sys_regs::BAD_FTR>();
@@ -229,11 +234,6 @@ void Ec::sys_create_ec()
         sys_finish<Sys_regs::BAD_CAP>();
     }
     auto pd = static_cast<Pd *>(cap.obj());
-
-    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & OFFS_MASK || !pd->insert_utcb (r->utcb()))) {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish<Sys_regs::BAD_PAR>();
-    }
 
     auto ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : nullptr, r->cpu(), r->evt(), r->utcb(), r->esp());
 
@@ -440,8 +440,8 @@ void Ec::sys_assign_pci()
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
-    uint64 phys; unsigned o, rid;
-    if (EXPECT_FALSE (!Pd::current->Space_mem::lookup (r->dev(), phys, o) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
+    uint64 phys; unsigned o, rid; Memattr ma;
+    if (EXPECT_FALSE (!Pd::current->Space_hst::lookup (r->dev(), phys, o, ma) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Sys_regs::BAD_DEV>();
     }

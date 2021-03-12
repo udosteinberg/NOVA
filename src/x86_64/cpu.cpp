@@ -20,6 +20,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "bits.hpp"
 #include "cache.hpp"
 #include "cmdline.hpp"
@@ -198,8 +199,8 @@ void Cpu::init()
     Lapic::init (clk, rat);
 
     uint64 phys; unsigned o; Memattr ma;
-    Pd::kern.Space_mem::loc[id] = Hptp::current();
-    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
+    Pd::kern.Space_hst::loc[id] = Hptp::current();
+    Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
     Hptp::master_map (MMAP_GLB_DATA + id * PAGE_SIZE, phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
     Hptp::set_leaf_max (feature (FEAT_1GB_PAGES) ? 3 : 2);
 

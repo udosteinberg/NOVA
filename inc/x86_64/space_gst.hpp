@@ -1,5 +1,5 @@
 /*
- * Static Initialization Priorities
+ * Guest Memory Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,15 +21,26 @@
 
 #pragma once
 
-// Lower numbers indicate a higher priority
-#define AFTER(X)        ((X) + 1)
+#include "cpuset.hpp"
+#include "ptab_ept.hpp"
+#include "space_mem.hpp"
 
-#define PRIO_LIMIT      100
-#define PRIO_PTAB       AFTER (PRIO_LIMIT)
-#define PRIO_SLAB       AFTER (PRIO_PTAB)
-#define PRIO_SPACE_OBJ  AFTER (PRIO_SLAB)
-#define PRIO_SPACE_MEM  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_PIO  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_SPACE_MSR  AFTER (PRIO_SPACE_OBJ)
-#define PRIO_CONSOLE    65533
-#define PRIO_LOCAL      65534
+class Space_gst : public Space_mem<Space_gst>
+{
+    private:
+        Eptp    eptp;
+
+    public:
+        Cpuset  gtlb;
+
+        static inline auto selectors() { return BIT64 (Ept::ibits - PAGE_BITS); }
+        static inline auto max_order() { return Eptp::lim; }
+
+        inline auto update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr ma) { return eptp.update (v, p, o, pm, ma); }
+
+        inline void sync() { gtlb.set(); }
+
+        inline void invalidate() { eptp.invalidate(); }
+
+        inline auto get_phys() const { return eptp.root_addr(); }
+};
