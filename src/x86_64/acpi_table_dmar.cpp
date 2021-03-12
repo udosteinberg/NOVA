@@ -23,8 +23,8 @@
 #include "acpi_table_dmar.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
 #include "smmu.hpp"
+#include "space_dma.hpp"
 
 bool Acpi_table_dmar::Remapping_drhd::parse() const
 {
@@ -103,7 +103,7 @@ bool Acpi_table_dmar::Remapping_rmrr::parse() const
         }
 
         if (smmu)
-            smmu->assign_dev (t, nullptr, &Pd::kern, x);
+            smmu->assign_dev (t, nullptr, &Space_dma::nova, x);
     }
 
     return end == ptr;

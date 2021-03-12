@@ -28,7 +28,7 @@
 #include "status.hpp"
 #include "wait.hpp"
 
-class Pd;
+class Space_dma;
 
 class Smmu : public List<Smmu>, protected Mmio
 {
@@ -53,7 +53,7 @@ class Smmu : public List<Smmu>, protected Mmio
 
         static_assert (__is_standard_layout (Entry) && alignof (Entry) == 16 && sizeof (Entry) == 16);
 
-        virtual Status assign_dev (uintptr_t, Pd *, Pd *, uintptr_t &) = 0;
+        virtual Status assign_dev (uintptr_t, Space_dma *, Space_dma *, uintptr_t &) = 0;
 
         // Interrupt Source Encoding for MSI: [31]=valid, [30:16]=idx, [15:0]=bdf
         static uint32_t ise_msi (pci_t src, uint16_t idx) { return BIT (31) | uint32_t { idx } << 16 | Pci::bdf (src); }

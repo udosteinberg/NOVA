@@ -19,13 +19,88 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "pd.hpp"
+#include "multiboot.hpp"
 #include "space_hst.hpp"
 #include "space_obj.hpp"
 
 INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_hst Space_hst::nova;
 
 Space_hst *Space_hst::current { nullptr };
+
+/*
+ * Constructor (NOVA HST Space)
+ */
+Space_hst::Space_hst() : Space_mem { Kobject::Subtype::HST }, pcid { 0 }
+{
+    Pcid::allocator.reserve (pcid);
+
+    Space_obj::nova.insert (Space_obj::Selector::NOVA_HST, Capability { this, std::to_underlying (Capability::Perm_sp::TAKE) });
+
+    // FIXME: Create an L1 PTAB for early sharing before CPUs plug themselves into the array. CPU preallocation will make this obsolete.
+    bool m { true };
+    (void) Hptp::master.walk (MMAP_GLB_CPUS, 1, m);
+
+    nova.hptp = Hptp::master;
+
+    // Highest mappable PA
+    uintptr_t max_addr { BIT64 (min (Memattr::obits, Hpt::ibits - 1)) };
+
+    // Compute image addresses within mappable PA bounds
+    auto const s { min (max_addr, Kmem::sym_to_phys (&NOVA_HPAS)) };
+    auto const e { min (max_addr, Multiboot::ea) };
+
+    access_ctrl (0, s, Paging::Permissions (Paging::U | Paging::API));
+    access_ctrl (e, max_addr - e, Paging::Permissions (Paging::U | Paging::API));
+}
+
+Space_hst *Space_hst::create (Status &s, Pd *pd)
+{
+    // Acquire reference
+    Refptr<Pd> ref_pd { pd };
+
+    // Failed to acquire reference
+    if (!ref_pd) [[unlikely]]
+        s = Status::ABORTED;
+
+    else {
+
+        // Allocate PCID
+        if (auto const r { Pcid::allocator.alloc() }) [[likely]] {
+
+            auto const pcid { r.val() };
+
+            // Create new HST object
+            auto const obj { new (ref_pd->hst_cache) Space_hst { ref_pd, pcid } };
+
+            // If creation succeeded, then reference must have been consumed
+            if (obj) [[likely]] {
+
+                assert (!ref_pd);
+
+                if (obj->hptp.root_init()) [[likely]]
+                    return obj;
+
+                operator delete (obj, ref_pd->hst_cache);
+            }
+
+            Pcid::allocator.free (pcid);
+        }
+
+        // Failed to create HST object
+        s = Status::MEM_OBJ;
+    }
+
+    return nullptr;
+}
+
+void Space_hst::destroy()
+{
+    auto &cache { get_pd()->hst_cache };
+
+    this->~Space_hst();
+
+    operator delete (this, cache);
+}
 
 void Space_hst::init (cpu_t cpu)
 {
@@ -36,5 +111,5 @@ void Space_hst::init (cpu_t cpu)
     loc[cpu].share_from_master (BASE_ADDR, MMAP_CPU);
 
     // Share CPU-local memory
-    loc[cpu].share_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
+    loc[cpu].share_from (nova.loc[cpu], MMAP_CPU, MMAP_SPC);
 }

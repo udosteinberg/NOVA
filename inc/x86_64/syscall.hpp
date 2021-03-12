@@ -23,6 +23,7 @@
 #pragma once
 
 #include "abi.hpp"
+#include "memattr.hpp"
 #include "mtd_arch.hpp"
 #include "qpd.hpp"
 #include "regs.hpp"
@@ -50,6 +51,8 @@ struct Sys_ipc_reply final : private Sys_abi
 struct Sys_create_pd final : private Sys_abi
 {
     Sys_create_pd (Sys_regs &r) : Sys_abi { r } {}
+
+    auto op() const { return flags(); }
 
     unsigned long sel() const { return p0() >> 8; }
 
@@ -112,6 +115,25 @@ struct Sys_create_sm final : private Sys_abi
     unsigned long pd() const { return p1(); }
 
     mword cnt() const { return p2(); }
+};
+
+struct Sys_ctrl_pd final : private Sys_abi
+{
+    Sys_ctrl_pd (Sys_regs &r) : Sys_abi { r } {}
+
+    unsigned long src() const { return p0() >> 8; }
+
+    unsigned long dst() const { return p1(); }
+
+    uintptr_t ssb() const { return p2() >> 12; }
+
+    uintptr_t dsb() const { return p3() >> 12; }
+
+    unsigned ord() const { return p2() & BIT_RANGE (4, 0); }
+
+    unsigned pmm() const { return p3() & Capability::pmask; }
+
+    auto ma() const { return Memattr { static_cast<uint32_t>(p4()) }; }
 };
 
 struct Sys_ctrl_ec final : private Sys_abi

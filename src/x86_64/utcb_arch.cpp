@@ -195,7 +195,7 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
         efer = Vmcs::read<Vmcs::Encoding::GUEST_EFER>();
 }
 
-bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
+bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
 {
     auto &s { c.exc.sys };
 
@@ -384,10 +384,24 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c) const
             Invvpid::invalidate (Vmcs::has_invvpid_sgl() ? Invvpid::Type::SGL : Invvpid::Type::ALL, Vmcs::read<Vmcs::Encoding::VPID>());
 
     if (m & Mtd_arch::Item::SPACES) {
+
+        if (!assign_spaces (c, obj)) [[unlikely]]
+            return false;
+
         Vmcs::write<Vmcs::Encoding::EPTP>       (c.gst->get_phys() | (Ept::lev() - 1) << 3 | CA_TYPE_MEM_WB);
         Vmcs::write<Vmcs::Encoding::BITMAP_IO_A>(c.pio->get_phys());
         Vmcs::write<Vmcs::Encoding::BITMAP_IO_B>(c.pio->get_phys() + PAGE_SIZE (0));
         Vmcs::write<Vmcs::Encoding::BITMAP_MSR> (c.msr->get_phys());
+    }
+
+    if (m & Mtd_arch::Item::APIC) {
+
+        uint64_t addr;
+
+        if (!assign_aapage (c, addr)) [[unlikely]]
+            return false;
+
+        Vmcs::write<Vmcs::Encoding::APIC_ACCS_ADDR>(addr);
     }
 
     return true;
@@ -491,7 +505,7 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
         efer = v->efer;
 }
 
-bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
+bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
 {
     auto &s { c.exc.sys };
     auto  v { c.vmcb };
@@ -600,10 +614,60 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c) const
             v->tlb_control = 3;
 
     if (m & Mtd_arch::Item::SPACES) {
+
+        if (!assign_spaces (c, obj)) [[unlikely]]
+            return false;
+
         v->npt_cr3  = c.gst->get_phys();
         v->base_io  = c.pio->get_phys();
         v->base_msr = c.msr->get_phys();
     }
+
+    return true;
+}
+
+bool Utcb_arch::assign_aapage (Cpu_regs &c, uint64_t &addr) const
+{
+    Space_gst const *const gst { c.gst };
+
+    unsigned o; Memattr ma;
+
+    if (!gst || !gst->lookup (apic_base & ~OFFS_MASK (0), addr, o, ma) || o) [[unlikely]]
+        return false;
+
+    addr |= ma.key_encode();
+
+    return true;
+}
+
+bool Utcb_arch::assign_spaces (Cpu_regs &c, Space_obj const *obj) const
+{
+    auto const cap_gst { obj->lookup (sel.gst) };
+    auto const cap_pio { obj->lookup (sel.pio) };
+    auto const cap_msr { obj->lookup (sel.msr) };
+
+    // Space capabilities must have ASSIGN permission
+    if (!cap_gst.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::GST) ||
+        !cap_pio.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::PIO) ||
+        !cap_msr.validate (Capability::Perm_sp::ASSIGN, Kobject::Subtype::MSR)) [[unlikely]]
+        return false;
+
+    auto const gst { static_cast<Space_gst *>(cap_gst.obj()) };
+    auto const pio { static_cast<Space_pio *>(cap_pio.obj()) };
+    auto const msr { static_cast<Space_msr *>(cap_msr.obj()) };
+    auto const own { c.obj->get_pd() };
+
+    // Spaces must belong to the EC's PD
+    if (gst->get_pd() != own || pio->get_pd() != own || msr->get_pd() != own) [[unlikely]]
+        return false;
+
+    // FIXME: Refcount updates
+
+    c.gst = gst;
+    c.pio = pio;
+    c.msr = msr;
+
+    c.hazard.clr (Hazard::ILLEGAL);
 
     return true;
 }
