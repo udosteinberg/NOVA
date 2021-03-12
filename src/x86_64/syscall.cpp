@@ -216,6 +216,11 @@ void Ec::sys_create_ec()
         sys_finish<Status::BAD_CPU>();
     }
 
+    if (r->utcb() >= Space_hst::selectors() << PAGE_BITS) [[unlikely]] {
+        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
+        sys_finish<Status::BAD_PAR>();
+    }
+
     if (!r->utcb() && !(Hip::hip->feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: VCPUs not supported", __func__);
         sys_finish<Status::BAD_FTR>();
@@ -227,11 +232,6 @@ void Ec::sys_create_ec()
         sys_finish<Status::BAD_CAP>();
     }
     auto pd = static_cast<Pd *>(cap.obj());
-
-    if (r->utcb() >= USER_ADDR || r->utcb() & OFFS_MASK (0) || !pd->insert_utcb (r->utcb())) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
-        sys_finish<Status::BAD_PAR>();
-    }
 
     auto ec = new Ec (Pd::current, r->sel(), pd, r->flags() & 1 ? static_cast<void (*)()>(send_msg<ret_user_iret>) : nullptr, r->cpu(), r->evt(), r->utcb(), r->esp());
 

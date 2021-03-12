@@ -305,8 +305,8 @@ void Cpu::init()
     Lapic::init (clk, rat);
 
     unsigned o; Memattr ma;
-    Pd::kern.Space_mem::loc[id] = Ptab_hst::current();
-    Pd::kern.Space_mem::loc[id].lookup (MMAP_CPU_DATA, phys_local, o, ma);
+    Pd::kern.Space_hst::loc[id] = Ptab_hst::current();
+    Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys_local, o, ma);
     Ptab_hst::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys_local, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
 
     setup_msr();
