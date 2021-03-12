@@ -26,12 +26,9 @@
 #include "msr.hpp"
 #include "paging.hpp"
 #include "space.hpp"
-#include "status.hpp"
 
-class Space_msr : public Space
+class Space_msr final : public Space
 {
-    friend class Pd;
-
     private:
         static constexpr Msr::Reg64 rw[]
         {
@@ -84,9 +81,14 @@ class Space_msr : public Space
 
         Space_msr();
 
-        Space_msr (Bitmap_msr *b) : bmp { b } {}
+        Space_msr (Refptr<Pd> &p, Bitmap_msr *b) : Space { Kobject::Subtype::MSR, p }, bmp { b } {}
 
         ~Space_msr() { delete bmp; }
+
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: MSR %p collected", static_cast<void *>(this));
+        }
 
         [[nodiscard]] Paging::Permissions lookup (unsigned long) const;
 
@@ -99,6 +101,47 @@ class Space_msr : public Space
         [[nodiscard]] Status delegate (Space_msr const *, unsigned long, unsigned long, unsigned, unsigned);
 
         [[nodiscard]] auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        [[nodiscard]] static Space_msr *create (Status &s, Slab_cache &cache, Pd *pd)
+        {
+            // Acquire reference
+            Refptr<Pd> ref_pd { pd };
+
+            // Failed to acquire reference
+            if (!ref_pd) [[unlikely]]
+                s = Status::ABORTED;
+
+            else {
+
+                auto const bmp { new Bitmap_msr };
+
+                if (bmp) [[likely]] {
+
+                    auto const msr { new (cache) Space_msr { ref_pd, bmp } };
+
+                    // If we created msr, then reference must have been consumed
+                    assert (!msr || !ref_pd);
+
+                    if (msr) [[likely]]
+                        return msr;
+
+                    delete bmp;
+                }
+
+                s = Status::MEM_OBJ;
+            }
+
+            return nullptr;
+        }
+
+        void destroy()
+        {
+            auto &cache { get_pd()->msr_cache };
+
+            this->~Space_msr();
+
+            operator delete (this, cache);
+        }
 
         static void access_ctrl (Msr::Reg64 r, Paging::Permissions perm) { nova.update (std::to_underlying (r), perm); }
 };

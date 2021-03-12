@@ -19,7 +19,6 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "kobject.hpp"
 #include "space_dma.hpp"
 
 INIT_PRIORITY (PRIO_SPACE_MEM) ALIGNED (Kobject::alignment) Space_dma Space_dma::nova;

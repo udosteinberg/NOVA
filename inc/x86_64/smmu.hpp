@@ -29,8 +29,6 @@
 #include "sdid.hpp"
 #include "wait.hpp"
 
-class Space_dma;
-
 class Smmu final : public List<Smmu>, private Mmio
 {
     private:
