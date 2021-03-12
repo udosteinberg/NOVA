@@ -37,13 +37,13 @@ Pd::Pd (Pd *) : Kobject (Kobject::Type::PD)
 
     Mtrr::init();
 
+#if 0   // FIXME
     Space_mem::insert_root (0, LOAD_ADDR);
     Space_mem::insert_root (reinterpret_cast<mword>(&NOVA_HPAE), USER_ADDR);
 
     // HIP
     Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE, 1);
 
-#if 0   // FIXME
     // I/O Ports
     Space_pio::addreg (0, 1UL << 16, 7);
 #endif

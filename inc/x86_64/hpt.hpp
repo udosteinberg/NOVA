@@ -90,8 +90,6 @@ class Hpt : public Pte<Hpt, 4, 9, uint64, uint64>
 
         void sync_master_range (mword, mword);
 
-        Paddr replace (mword, mword, bool);
-
         static void *map (OAddr, bool = false);
 };
 

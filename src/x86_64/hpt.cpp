@@ -49,20 +49,6 @@ void Hpt::sync_master_range (mword s, mword e)
         sync_from (Hptp (Kmem::ptr_to_phys (&PTAB_HVAS)), s, CPU_LOCAL);
 }
 
-Paddr Hpt::replace (mword v, mword p, bool w)
-{
-    if (w)
-        p |= ATTR_nX | ATTR_D | ATTR_A | ATTR_W | ATTR_P;
-    else
-        p |= ATTR_nX | ATTR_A | ATTR_P;
-
-    Hpt o, *e = walk (v, 0, true); assert (e);
-
-    do o = *e; while (o.val != p && !(o.val & ATTR_W) && !__atomic_compare_exchange_n (&e->val, &o.val, p, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
-
-    return e->addr();
-}
-
 void *Hpt::map (OAddr p, bool w)
 {
     Hptp hpt = Hptp::current();

@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,9 +28,6 @@
 #include "pd.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
-#include "vectors.hpp"
-
-unsigned Space_mem::did_ctr;
 
 void Space_mem::init (unsigned cpu)
 {
@@ -39,12 +37,36 @@ void Space_mem::init (unsigned cpu)
     }
 }
 
+void Space_mem::update (mword v, mword p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh, Space::Index si)
+{
+    switch (si) {
+        case Space::Index::CPU_HST: hpt.update (v, p, o, pm, ca, sh); break;
+        case Space::Index::CPU_GST: ept.update (v, p, o, pm, ca, sh); break;
+        case Space::Index::DMA_HST:
+        case Space::Index::DMA_GST: dpt.update (v, p, o, pm, ca, sh); break;
+    }
+}
+
+void Space_mem::flush (Space::Index si)
+{
+    switch (si) {
+        case Space::Index::CPU_HST: hpt.flush(); break;
+        case Space::Index::CPU_GST: ept.flush(); break;
+        case Space::Index::DMA_HST:
+        case Space::Index::DMA_GST: dpt.flush(); break;
+    }
+}
+
 void Space_mem::shootdown()
 {
+    // FIXME: Enable preemption
+
     for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
 
+#if 0   // FIXME
         if (!Hip::hip->cpu_online (cpu))
             continue;
+#endif
 
         Pd *pd = Pd::remote (cpu);
 
@@ -56,41 +78,11 @@ void Space_mem::shootdown()
             continue;
         }
 
-        auto ctr = Counter::req[1].get (cpu);
+        auto cnt = Counter::req[Interrupt::Request::RKE].get (cpu);
 
         Interrupt::send_cpu (cpu, Interrupt::Request::RKE);
 
-        while (Counter::req[1].get (cpu) == ctr)
+        while (Counter::req[Interrupt::Request::RKE].get (cpu) == cnt)
             pause();
     }
-}
-
-void Space_mem::insert_root (uint64 s, uint64 e, mword)
-{
-    for (uint64 p = s; p < e; s = p) {
-
-        unsigned t = Mtrr::memtype (s, p);
-
-        for (uint64 n; p < e; p = n)
-            if (Mtrr::memtype (p, n) != t)
-                break;
-
-        if (s > ~0UL)
-            break;
-
-        if ((p = min (p, e)) > ~0UL)
-            p = static_cast<uint64>(~0UL) + 1;
-
-#if 0   // FIXME
-        addreg (static_cast<mword>(s >> PAGE_BITS), static_cast<mword>(p - s) >> PAGE_BITS, a, t);
-#endif
-    }
-}
-
-bool Space_mem::insert_utcb (mword b)
-{
-    if (!b)
-        return true;
-
-    return false;
 }
