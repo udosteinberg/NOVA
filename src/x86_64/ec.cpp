@@ -46,7 +46,7 @@ Ec::Ec (Pd *own, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Su
 Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), pd (p), cpu (c), glb (!!f), evt (e)
 {
     // Make sure we have a PTAB for this CPU in the PD
-    pd->Space_mem::init (c);
+    pd->Space_hst::init (cpu_t (c));
 
     if (u) {
 
@@ -54,7 +54,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
 
         utcb = new Utcb;
 
-        pd->Space_mem::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
+        pd->Space_hst::update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
 
         exc_regs().set_ep (NUM_EXC - 2);
 
@@ -69,7 +69,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(&sys_regs() + 1),
                                   0, // FIXME: pd->Space_pio::walk(),
                                   Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
-                                  Kmem::ptr_to_phys (pd->ept.root_init (false)),
+                                  pd->Space_gst::get_phys(),
                                   Vpid::alloc (cpu));
 
 //          regs.nst_ctrl<Vmcs>();
@@ -80,7 +80,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
             sys_regs().rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
-                                                                Kmem::ptr_to_phys (pd->npt.root_init (false))));
+                                                                pd->Space_gst::get_phys()));
 
 //          regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;
@@ -166,7 +166,7 @@ void Ec::ret_user_vmresume()
 
     if (Pd::current->gtlb.tst (Cpu::id)) [[unlikely]] {
         Pd::current->gtlb.clr (Cpu::id);
-        Pd::current->ept.invalidate();
+        Pd::current->Space_gst::invalidate();
     }
 
     if (Cr::get_cr2() != current->regs.cr2) [[unlikely]]
