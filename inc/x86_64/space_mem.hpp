@@ -26,9 +26,13 @@
 #include "dpt.hpp"
 #include "ept.hpp"
 #include "hpt.hpp"
+#include "pcid.hpp"
 
 class Space_mem
 {
+    private:
+        Pcid pcid;
+
     public:
         Hpt loc[NUM_CPU];
         Hpt hpt;
@@ -48,6 +52,8 @@ class Space_mem
 
         ALWAYS_INLINE
         inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
+
+        inline auto get_pcid() const { return pcid; }
 
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
