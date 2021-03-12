@@ -72,7 +72,7 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
             regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
-                                  pd->Space_pio::walk(),
+                                  0, // FIXME: pd->Space_pio::walk(),
                                   pd->loc[c].init_root (false),
                                   pd->ept.init_root (false),
                                   pd->vpid());
@@ -84,7 +84,8 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
         } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
 
-            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (pd->Space_pio::walk(), pd->npt.init_root (false)));
+            regs.rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
+                                                                pd->npt.init_root (false)));
 
             regs.nst_ctrl<Vmcb>();
             cont = send_msg<ret_user_vmrun>;

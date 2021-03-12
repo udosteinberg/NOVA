@@ -1,10 +1,11 @@
 /*
- * Port I/O Space
+ * PIO Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,34 +21,26 @@
 
 #pragma once
 
+#include "compiler.hpp"
 #include "space.hpp"
-
-class Space_mem;
+#include "status.hpp"
 
 class Space_pio : public Space
 {
     private:
-        Paddr hbmp, gbmp;
+        struct Bitmap;
 
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (mword idx)
-        {
-            return SPC_LOCAL_IOP + (idx / 8 / sizeof (mword)) * sizeof (mword);
-        }
+        Bitmap *bitmap { nullptr };
 
-        ALWAYS_INLINE
-        static inline mword idx_to_mask (mword idx)
-        {
-            return 1UL << (idx % (8 * sizeof (mword)));
-        }
-
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
-
-        void update (bool, mword, mword);
+        NODISCARD
+        bool walk (unsigned long, bool, uintptr_t *&);
 
     public:
-        Paddr walk (bool = false, mword = 0);
+        static constexpr unsigned long num = BIT64 (16);
 
-        static void page_fault (mword, mword);
+        ~Space_pio();
+
+        bool lookup (unsigned long);
+
+        Status update (unsigned long, bool);
 };
