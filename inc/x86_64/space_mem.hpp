@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,58 +21,33 @@
 
 #pragma once
 
-#include "config.hpp"
-#include "cpu.hpp"
-#include "cpuset.hpp"
-#include "pcid.hpp"
-#include "ptab_tmp.hpp"
-#include "sdid.hpp"
+#include "bits.hpp"
+#include "memattr.hpp"
+#include "paging.hpp"
+#include "space.hpp"
+#include "status.hpp"
 
-class Space_mem
+class Space_hst;
+
+template<typename T> class Space_mem : public Space
 {
-    private:
-        uint16_t const pcid;
-        uint16_t const sdid;
+    protected:
+        static void access_ctrl (T &mem, uint64_t phys, size_t size, Paging::Permissions perm, Memattr attr)
+        {
+            bool inv { false };
+
+            for (unsigned o; size; size -= BITN (o), phys += BITN (o))
+                mem.update (phys, phys, (o = aligned_order (size, phys)) - PAGE_BITS, perm, attr, inv);
+        }
 
     public:
-        Hptp loc[NUM_CPU];
-        Hptp hpt;
-        union {
-            Dptp_amd dpt_amd;
-            Dptp_itl dpt_itl;
-        };
-        union {
-            Eptp ept;
-            Hptp npt;
-        };
+        [[nodiscard]] static constexpr auto selectors() { return BITN (T::sbw()); }
 
-        Cpuset cpus;
-        Cpuset htlb;
-        Cpuset gtlb;
+        // Limit for user-accessible memory mappings
+        [[nodiscard]] static constexpr auto user_boundary() { return selectors() << PAGE_BITS; }
 
-        explicit Space_mem() : pcid { Pcid::allocator.alloc().val() }, sdid { Sdid::allocator.alloc().val() } {}
+        [[nodiscard]] static constexpr auto info_addr() { return user_boundary() - PAGE_SIZE (0) * 1; }
+        [[nodiscard]] static constexpr auto utcb_addr() { return user_boundary() - PAGE_SIZE (0) * 2; }
 
-        ~Space_mem() { Pcid::allocator.free (pcid); Sdid::allocator.free (sdid); }
-
-        auto get_pcid() const { return pcid; }
-        auto get_sdid() const { return sdid; }
-
-        Paging::Permissions lookup (uint64_t v, uint64_t &p, unsigned &o)
-        {
-            Memattr ma;
-            return hpt.lookup (v, p, o, ma);
-        }
-
-        void update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma)
-        {
-            hpt.update (v, p, o, pm, ma);
-        }
-
-        void insert_root (uint64_t, uint64_t, uintptr_t = 0x7);
-
-        bool insert_utcb (mword);
-
-        static void shootdown();
-
-        void init (cpu_t);
+        [[nodiscard]] Status delegate (Space_hst const *, unsigned long, unsigned long, unsigned, unsigned, Memattr);
 };
