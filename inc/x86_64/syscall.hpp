@@ -63,19 +63,19 @@ struct Sys_create_ec final : private Sys_abi
 {
     inline Sys_create_ec (Sys_regs &r) : Sys_abi (r) {}
 
-    inline bool type() const { return flags() & BIT (0); }
+    inline auto flg() const { return flags(); }
 
     inline unsigned long sel() const { return p0() >> 8; }
 
     inline unsigned long pd() const { return p1(); }
 
-    inline cpu_t cpu() const { return p2() & 0xfff; }
+    inline cpu_t cpu() const { return p2() & OFFS_MASK (0); }
 
-    inline mword utcb() const { return p2() & ~0xfff; }
+    inline uintptr_t hva() const { return p2() & ~OFFS_MASK (0); }
 
-    inline mword esp() const { return p3(); }
+    inline uintptr_t sp() const { return p3(); }
 
-    inline unsigned evt() const { return static_cast<unsigned>(p4()); }
+    inline uintptr_t evt() const { return p4(); }
 };
 
 struct Sys_create_sc final : private Sys_abi
@@ -139,6 +139,8 @@ struct Sys_ctrl_pd final : private Sys_abi
 struct Sys_ctrl_ec final : private Sys_abi
 {
     inline Sys_ctrl_ec (Sys_regs &r) : Sys_abi (r) {}
+
+    inline bool strong() const { return flags() & BIT (0); }
 
     inline unsigned long ec() const { return p0() >> 8; }
 };

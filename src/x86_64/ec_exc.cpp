@@ -19,66 +19,37 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "extern.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
+#include "fpu.hpp"
 #include "gdt.hpp"
 #include "mca.hpp"
-#include "stdio.hpp"
 
-void Ec::load_fpu()
+void Ec::fpu_load()
 {
-    if (!utcb)
+    assert (fpu);
+
+    if (is_vcpu())
         regs.fpu_ctrl (true);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new (pd->fpu_cache) Fpu;
-
     fpu->load();
+
+    regs.hazard.set (Hazard::FPU);
 }
 
-void Ec::save_fpu()
+void Ec::fpu_save()
 {
-    if (!utcb)
+    assert (fpu);
+
+    if (is_vcpu())
         regs.fpu_ctrl (false);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new (pd->fpu_cache) Fpu;
-
     fpu->save();
+
+    regs.hazard.clr (Hazard::FPU);
 }
 
-void Ec::transfer_fpu (Ec *ec)
-{
-    if (!(Cpu::hazard & Hazard::FPU)) {
-
-        Fpu::enable();
-
-        if (fpowner != this) {
-            if (fpowner)
-                fpowner->save_fpu();
-            load_fpu();
-        }
-    }
-
-    fpowner = ec;
-}
-
-void Ec::handle_exc_nm()
-{
-    Fpu::enable();
-
-    if (current == fpowner)
-        return;
-
-    if (fpowner)
-        fpowner->save_fpu();
-
-    current->load_fpu();
-
-    fpowner = current;
-}
-
-bool Ec::handle_exc_gp (Exc_regs *)
+bool Ec_arch::handle_exc_gp (Exc_regs *)
 {
     if (Cpu::hazard & Hazard::TR) {
         Cpu::hazard &= ~Hazard::TR;
@@ -89,13 +60,13 @@ bool Ec::handle_exc_gp (Exc_regs *)
     return false;
 }
 
-bool Ec::handle_exc_pf (Exc_regs *r)
+bool Ec_arch::handle_exc_pf (Exc_regs *r)
 {
     auto const pfa { r->cr2 };
-    auto const hst { current->regs.get_hst() };
+    auto const hst { regs.get_hst() };
 
     if (r->err & BIT (2))       // User-mode access
-        return pfa < USER_ADDR && hst->loc[Cpu::id].share_from (hst->hptp, pfa, USER_ADDR);
+        return pfa < Space_hst::selectors() << PAGE_BITS && hst->loc[Cpu::id].share_from (hst->hptp, pfa, Space_hst::selectors() << PAGE_BITS);
 
     if (pfa >= LINK_ADDR && pfa < MMAP_CPU && hst->loc[Cpu::id].share_from_master (pfa))
         return true;
@@ -108,27 +79,30 @@ bool Ec::handle_exc_pf (Exc_regs *r)
     if (r->user() && pfa >= MMAP_SPC_PIO && pfa <= MMAP_SPC_PIO_E) {
         r->vec = EXC_GP;
         r->err = r->cr2 = 0;
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (this);
     }
 
-    die ("#PF (kernel)", r);
+    return false;
 }
 
-void Ec::handle_exc (Exc_regs *r)
+void Ec_arch::handle_exc (Exc_regs *r)
 {
+    Ec *const self { current };
+
     switch (r->vec) {
 
         case EXC_NM:
-            handle_exc_nm();
-            return;
+            if (switch_fpu (self))
+                return;
+            break;
 
         case EXC_GP:
-            if (handle_exc_gp (r))
+            if (static_cast<Ec_arch *>(self)->handle_exc_gp (r))
                 return;
             break;
 
         case EXC_PF:
-            if (handle_exc_pf (r))
+            if (static_cast<Ec_arch *>(self)->handle_exc_pf (r))
                 return;
             break;
 
@@ -138,7 +112,7 @@ void Ec::handle_exc (Exc_regs *r)
     }
 
     if (r->user())
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (self);
 
-    die ("EXC", r);
+    panic ("Kernel exception %#lx (%#lx) at IP:%#lx CR2:%#lx", r->vec, r->err, r->rip, r->cr2);
 }

@@ -27,6 +27,7 @@
 #include "lapic.hpp"
 #include "sm.hpp"
 #include "smmu.hpp"
+#include "space_hst.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 

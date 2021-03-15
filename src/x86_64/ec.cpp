@@ -1,5 +1,5 @@
 /*
- * Execution Context
+ * Execution Context (EC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,281 +21,268 @@
  */
 
 #include "abi.hpp"
-#include "bits.hpp"
-#include "ec.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
 #include "elf.hpp"
-#include "entry.hpp"
+#include "extern.hpp"
+#include "fpu.hpp"
 #include "hip.hpp"
+#include "interrupt.hpp"
 #include "multiboot.hpp"
-#include "rcu.hpp"
-#include "space_gst.hpp"
+#include "sm.hpp"
+#include "space_hst.hpp"
 #include "space_obj.hpp"
 #include "stdio.hpp"
-#include "svm.hpp"
-#include "vmx.hpp"
-#include "vpid.hpp"
+#include "timer.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Ec::cache (sizeof (Ec), 32);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Ec::cache { sizeof (Ec_arch), Kobject::alignment };
 
-Ec *Ec::current, *Ec::fpowner;
+Atomic<Ec *>    Ec::current     { nullptr };
+Ec *            Ec::fpowner     { nullptr };
+unsigned        Ec::donations   { 0 };
 
-// Constructors
-Ec::Ec (Space_hst *hst, void (*f)(), cpu_t c) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cont (f), regs (nullptr, hst, static_cast<Space_pio *>(nullptr)), utcb (nullptr), pd (nullptr), cpu (c), glb (true), evt (0), timeout (this)
+// Factory: Kernel Thread
+Ec *Ec::create (cpu_t c, cont_t x)
 {
-    trace (TRACE_SYSCALL, "EC:%p created (Kernel)", this);
+    // Acquire references
+    Refptr<Space_obj> ref_obj { &Space_obj::nova };
+    Refptr<Space_hst> ref_hst { &Space_hst::nova };
+    Refptr<Space_pio> ref_pio { nullptr };
+
+    // Failed to acquire references
+    if (EXPECT_FALSE (!ref_obj || !ref_hst))
+        return nullptr;
+
+    // Create EC
+    auto const ec { new (cache) Ec_arch { ref_obj, ref_hst, ref_pio, c, x } };
+
+    // If we created the EC, then references must have been consumed
+    assert (!ec || (!ref_obj && !ref_hst && !ref_pio));
+
+    return ec;
 }
 
-Ec::Ec (Space_obj *obj, Space_hst *hst, Space_pio *pio, mword, void (*f)(), cpu_t c, unsigned e, mword u, mword s) : Kobject (Kobject::Type::EC, u ? (f ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL) : Kobject::Subtype::EC_VCPU_REAL), cont (f), regs (obj, hst, pio), pd (nullptr), cpu (c), glb (!!f), evt (e), timeout (this)
+// Factory: HST EC
+Ec *Ec::create_hst (Status &s, Pd *pd, bool t, bool fpu, cpu_t cpu, unsigned long evt, uintptr_t sp, uintptr_t hva)
 {
-    // Make sure we have a PTAB for this CPU in the PD
-    hst->init (cpu_t (c));
+    // Acquire references
+    Refptr<Space_obj> ref_obj { pd->get_obj() };
+    Refptr<Space_hst> ref_hst { pd->get_hst() };
+    Refptr<Space_pio> ref_pio { pd->get_pio() };
 
-    if (u) {
-
-        (glb ? exc_regs().rsp : exc_regs().sp()) = s;
-
-        utcb = new Utcb;
-
-        hst->update (u, Kmem::ptr_to_phys (utcb), 0, Paging::Permissions (Paging::R | Paging::W | Paging::U), Memattr::ram());
-
-        exc_regs().set_ep (NUM_EXC - 2);
-
-        trace (TRACE_SYSCALL, "EC:%p created (CPU:%#x UTCB:%#lx ESP:%lx EVT:%#x)", this, c, u, s, e);
-
-    } else {
-
-        exc_regs().set_ep (NUM_VMI - 2);
-
-        if (Hip::hip->feature() & Hip::FEAT_VMX) {
-
-            regs.vmcs = new Vmcs;
-            regs.vmcs->init (0, reinterpret_cast<uintptr_t>(&sys_regs() + 1),
-                             Kmem::ptr_to_phys (hst->loc[c].root_init (false)),
-                             0, Vpid::alloc (cpu));
-
-//          regs.nst_ctrl<Vmcs>();
-            regs.vmcs->clear();
-            cont = send_msg<ret_user_vmresume>;
-            trace (TRACE_SYSCALL, "EC:%p created (VMCS:%p)", this, regs.vmcs);
-
-        } else if (Hip::hip->feature() & Hip::FEAT_SVM) {
-
-#if 0
-            sys_regs().rax = Kmem::ptr_to_phys (regs.vmcb = new Vmcb (0, // FIXME: pd->Space_pio::walk(),
-                                                                      pd->Space_gst::get_phys()));
-#endif
-
-//          regs.nst_ctrl<Vmcb>();
-            cont = send_msg<ret_user_vmrun>;
-            trace (TRACE_SYSCALL, "EC:%p created (VMCB:%p)", this, regs.vmcb);
-        }
-    }
-}
-
-void Ec::handle_hazard (mword hzd, void (*func)())
-{
-    if (hzd & Hazard::RCU)
-        Rcu::quiet();
-
-    if (hzd & Hazard::SCHED) {
-        current->cont = func;
-        Sc::schedule();
+    // Failed to acquire references
+    if (EXPECT_FALSE (!ref_obj || !ref_hst || (Ec_arch::needs_pio && !ref_pio))) {
+        s = Status::ABORTED;
+        return nullptr;
     }
 
-    if (hzd & Hazard::RECALL) {
-        current->regs.hazard.clr (Hazard::RECALL);
+    auto const f { fpu ? new (pd->fpu_cache) Fpu : nullptr };
+    auto const u { new Utcb };
+    Ec *ec;
 
-        if (func == ret_user_vmresume) {
-            current->exc_regs().set_ep (NUM_VMI - 1);
-            send_msg<ret_user_vmresume>();
-        }
-
-        if (func == ret_user_vmrun) {
-            current->exc_regs().set_ep (NUM_VMI - 1);
-            send_msg<ret_user_vmrun>();
-        }
-
-        if (func == ret_user_sysexit)
-            current->redirect_to_iret();
-
-        current->exc_regs().set_ep (NUM_EXC - 1);
-        send_msg<ret_user_iret>();
+    if (EXPECT_TRUE ((!fpu || f) && u && (ec = new (cache) Ec_arch { t, f, ref_obj, ref_hst, ref_pio, cpu, evt, sp, hva, u }))) {
+        assert (!ref_obj && !ref_hst && !ref_pio);
+        return ec;
     }
 
-    if (hzd & Hazard::TSC) {
-        current->regs.hazard.clr (Hazard::TSC);
+    delete u;
+    Fpu::operator delete (f, pd->fpu_cache);
 
-        if (func == ret_user_vmresume) {
-            current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.exc.offset_tsc);
-        } else
-            current->regs.vmcb->tsc_offset = current->regs.exc.offset_tsc;
+    s = Status::MEM_OBJ;
+
+    return nullptr;
+}
+
+void Ec::create_idle()
+{
+    auto const ec { Ec::create (Cpu::id, idle) };
+    auto const sc { new Sc (nullptr, Cpu::id, ec) };
+
+    assert (ec && sc);
+
+    current = ec;
+    Sc::current = sc;
+}
+
+void Ec::create_root()
+{
+    trace (TRACE_PERF, "TIME: %lums %lums/%lums",
+           Stc::ticks_to_ms (Timer::time() - Multiboot::t0),
+           Stc::ticks_to_ms (Multiboot::t1 - Multiboot::t0),
+           Stc::ticks_to_ms (Multiboot::t2 - Multiboot::t1));
+
+    auto const ra { Multiboot::ra };
+
+    if (EXPECT_FALSE (!ra)) {
+        trace (TRACE_ROOT, "ROOT: No image");
+        return;
     }
 
-    if (hzd & Hazard::FPU)
-        if (current != fpowner)
-            Fpu::disable();
-}
+    Status s;
 
-void Ec::ret_user_sysexit()
-{
-    mword hzd = (Cpu::hazard | current->regs.hazard) & (Hazard::RECALL | Hazard::RCU | Hazard::FPU | Hazard::SCHED);
-    if (EXPECT_FALSE (hzd))
-        handle_hazard (hzd, ret_user_sysexit);
+    Pd::root = Pd::create (s);
+    Space_obj::nova.insert (Space_obj::Selector::ROOT_PD, Capability (Pd::root, std::to_underlying (Capability::Perm_pd::DEFINED)));
 
-    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR) "mov %%r11, %%rsp; mov $0x202, %%r11; sysretq" : : "m" (current->regs) : "memory");
+    auto const obj { Pd::root->create_obj (s, &Space_obj::nova, Space_obj::Selector::ROOT_OBJ) };
+    auto const hst { Pd::root->create_hst (s, &Space_obj::nova, Space_obj::Selector::ROOT_HST) };
+                     Pd::root->create_pio (s, &Space_obj::nova, Space_obj::Selector::ROOT_PIO);
 
-    UNREACHED;
-}
+    obj->delegate (&Space_obj::nova, Space_obj::Selector::NOVA_OBJ, Space_obj::selectors - 1, 0, Capability::pmask);
+    obj->delegate (&Space_obj::nova, Space_obj::Selector::ROOT_OBJ, Space_obj::selectors - 2, 0, Capability::pmask);
+    obj->delegate (&Space_obj::nova, Space_obj::Selector::ROOT_PD,  Space_obj::selectors - 3, 0, Capability::pmask);
 
-void Ec::ret_user_iret()
-{
-    mword hzd = (Cpu::hazard | current->regs.hazard) & (Hazard::RECALL | Hazard::RCU | Hazard::FPU | Hazard::SCHED);
-    if (EXPECT_FALSE (hzd))
-        handle_hazard (hzd, ret_user_iret);
+    auto info_addr { (Space_hst::selectors() - 1) << PAGE_BITS };
+    auto utcb_addr { (Space_hst::selectors() - 2) << PAGE_BITS };
 
-    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR IRET) : : "m" (current->regs) : "memory");
+    auto const ec { Pd::create_ec (s, obj, Space_obj::selectors - 4, Pd::root, Cpu::id, 0, 0, utcb_addr, BIT (2) | BIT (1)) };
+    auto const sc { new Sc (Pd::root, NUM_EXC + 2, ec, Cpu::id, Sc::default_prio, Sc::default_quantum) };
 
-    UNREACHED;
-}
+    if (EXPECT_FALSE (!ec || !sc))
+        return;
 
-void Ec::ret_user_vmresume()
-{
-    mword hzd = (Cpu::hazard | current->regs.hazard) & (Hazard::RECALL | Hazard::TSC | Hazard::RCU | Hazard::SCHED);
-    if (EXPECT_FALSE (hzd))
-        handle_hazard (hzd, ret_user_vmresume);
+    auto const e { static_cast<Eh const *>(Hptp::map (MMAP_GLB_MAP0, ra)) };
 
-    current->regs.vmcs->make_current();
-
-    auto const gst { current->regs.get_gst() };
-
-    if (EXPECT_FALSE (gst->gtlb.tst (Cpu::id))) {
-        gst->gtlb.clr (Cpu::id);
-        gst->invalidate();
+    if (EXPECT_FALSE (!e->valid (ELF_MACHINE))) {
+        trace (TRACE_ROOT, "ROOT: Invalid image");
+        return;
     }
 
-    if (EXPECT_FALSE (Cr::get_cr2() != current->exc_regs().cr2))
-        Cr::set_cr2 (current->exc_regs().cr2);
-
-    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
-                  "vmresume;"
-                  "vmlaunch;"
-                  "lea %1, %%rsp;"
-                  "jmp vmx_failure;"
-                  : : "m" (current->regs), "m" (DSTK_TOP) : "memory");
-
-    UNREACHED;
-}
-
-void Ec::ret_user_vmrun()
-{
-    mword hzd = (Cpu::hazard | current->regs.hazard) & (Hazard::RECALL | Hazard::TSC | Hazard::RCU | Hazard::SCHED);
-    if (EXPECT_FALSE (hzd))
-        handle_hazard (hzd, ret_user_vmrun);
-
-    auto const gst { current->regs.get_gst() };
-
-    if (EXPECT_FALSE (gst->gtlb.tst (Cpu::id))) {
-        gst->gtlb.clr (Cpu::id);
-        current->regs.vmcb->tlb_control = 1;
-    }
-
-    asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
-                  "clgi;"
-                  "sti;"
-                  "vmload;"
-                  "vmrun;"
-                  "vmsave;"
-                  EXPAND (SAVE_GPR)
-                  "mov %1, %%rax;"
-                  "lea %2, %%rsp;"
-                  "vmload;"
-                  "cli;"
-                  "stgi;"
-                  "jmp svm_handler;"
-                  : : "m" (current->regs), "m" (Vmcb::root), "m" (DSTK_TOP) : "memory");
-
-    UNREACHED;
-}
-
-void Ec::idle()
-{
-    for (;;) {
-
-        mword hzd = Cpu::hazard & (Hazard::RCU | Hazard::SCHED);
-        if (EXPECT_FALSE (hzd))
-            handle_hazard (hzd, idle);
-
-        Cpu::halt();
-    }
-}
-
-void Ec::root_invoke()
-{
-    auto const e { static_cast<Eh const *>(Hptp::map (MMAP_GLB_MAP0, Multiboot::ra)) };
-    if (!Multiboot::ra || !e->valid (ELF_MACHINE))
-        die ("No ELF");
-
-    auto const abi { Sys_abi (current->sys_regs()) };
+    auto const abi { Sys_abi (ec->sys_regs()) };
 
     abi.p0() = Multiboot::p0;
     abi.p1() = Multiboot::p1;
     abi.p2() = Multiboot::p2;
 
-    current->exc_regs().ip() = e->entry;
-    current->exc_regs().sp() = USER_ADDR - PAGE_SIZE (0);
+    ec->cont = Ec_arch::ret_user_hypercall;
+    ec->exc_regs().ip() = e->entry;
+    ec->exc_regs().sp() = info_addr;
 
-#if 0   // FIXME
-    auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
-    auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + __atomic_load_n (&e->ph_offset, __ATOMIC_RELAXED)));
+    uint64_t root_e { 0 }, root_s { root_e - 1 };
 
-    for (unsigned i = 0; i < c; i++, p++) {
+    auto p { static_cast<Ph const *>(Hptp::map (MMAP_GLB_MAP1, ra + e->ph_offset)) };
 
-        if (p->type == 1) {
+    for (auto c { e->ph_count }; c--; p++) {
 
-            unsigned attr = !!(p->flags & 0x4) << 0 |   // R
-                            !!(p->flags & 0x2) << 1 |   // W
-                            !!(p->flags & 0x1) << 2;    // X
+        if (p->type != 1 || !p->f_size || !p->flags)
+            continue;
 
-            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE (0) != (p->f_offs + Hip::root_addr) % PAGE_SIZE (0))
-                die ("Bad ELF");
+        if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE (0) != (p->f_offs + ra) % PAGE_SIZE (0))
+            return;
 
-            mword phys = align_dn (p->f_offs + Hip::root_addr, PAGE_SIZE (0));
-            mword virt = align_dn (p->v_addr, PAGE_SIZE (0));
-            mword size = align_up (p->v_addr + p->f_size, PAGE_SIZE (0)) - virt;
+        auto perm { Paging::Permissions (Paging::R  * !!(p->flags & BIT (2)) |
+                                         Paging::W  * !!(p->flags & BIT (1)) |
+                                         Paging::XU * !!(p->flags & BIT (0)) |
+                                         Paging::U) };
 
-            for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
-                Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = min (max_order (phys, size), max_order (virt, size))) - PAGE_BITS, attr);
-        }
+        trace (TRACE_ROOT | TRACE_PARSE, "ROOT: P:%#lx => V:%#lx S:%#10lx (%#x)", p->f_offs + ra, p->v_addr, p->f_size, perm);
+
+        auto phys { align_dn (p->f_offs + ra, PAGE_SIZE (0)) };
+        auto virt { align_dn (p->v_addr, PAGE_SIZE (0)) };
+        auto size { align_up (p->v_addr + p->f_size, PAGE_SIZE (0)) - virt };
+
+        root_s = min (root_s, phys);
+        root_e = max (root_e, phys + size);
+
+        for (unsigned o; size; size -= BITN (o), phys += BITN (o), virt += BITN (o))
+            hst->delegate (&Space_hst::nova, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Memattr::ram());
     }
 
-    // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
-#endif
-
-    auto const obj { current->regs.get_obj() };
-
-#if 0
-    obj->insert (Space_obj::selectors - 1, Capability (&Pd_kern::nova(), static_cast<unsigned>(Capability::Perm_pd::PD)));
-#endif
-    obj->insert (Space_obj::selectors - 2, Capability (current->pd, static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
-    obj->insert (Space_obj::selectors - 3, Capability (Ec::current, static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
-    obj->insert (Space_obj::selectors - 4, Capability (Sc::current, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
+    sc->remote_enqueue();
 
     Console::flush();
-
-    ret_user_sysexit();
 }
 
-void Ec::die (char const *reason, Exc_regs *r)
+void Ec::activate()
 {
-    trace (0, "Killed EC:%p SC:%p V:%#lx (%s)", current, Sc::current, r->vec, reason);
+    auto ec { this };
 
-    Ec *ec = current->rcap;
+    for (donations = 0; ec->callee; ec = ec->callee)
+        donations++;
+
+    // Fast path: EC is not blocked (and has no chance to block).
+    // Slow path: EC may be unblocked from a remote core anytime.
+    if (EXPECT_TRUE (!ec->blocked() || !ec->block_sc()))
+        static_cast<Ec_arch *>(ec)->make_current();
+}
+
+void Ec::help (Ec *ec, cont_t c)
+{
+    if (EXPECT_FALSE (ec->cont == dead))
+        return;
+
+    cont = c;
+
+    // Preempt long helping chains, including livelocks
+    Cpu::preemption_point();
+    if (EXPECT_FALSE (Cpu::hazard & Hazard::SCHED))
+        Sc::schedule (false);
+
+    Counter::helping.inc();
+
+    ec->activate();
+
+    Sc::schedule (true);
+}
+
+void Ec::idle (Ec *const self)
+{
+    trace (TRACE_CONT, "%s", __func__);
+
+    for (;;) {
+
+        auto hzd { Cpu::hazard & (Hazard::RCU | Hazard::SLEEP | Hazard::SCHED) };
+        if (EXPECT_FALSE (hzd))
+            self->handle_hazard (hzd, idle);
+
+        Cpu::halt();
+    }
+}
+
+void Ec::kill (char const *reason)
+{
+    trace (TRACE_KILL, "Killed EC:%p (%s)", static_cast<void *>(this), reason);
+
+    auto const ec { caller };
 
     if (ec)
-        ec->cont = ec->cont == ret_user_sysexit ? static_cast<void (*)()>(sys_finish<Status::ABORTED>) : dead;
+        ec->cont = ec->cont == Ec_arch::ret_user_hypercall ? sys_finish<Status::ABORTED> : dead;
 
     reply (dead);
+}
+
+/*
+ * Switch FPU ownership
+ *
+ * @param ec    Prospective new owner (or nullptr to unassign FPU)
+ * @return      True if FPU ownership was changed, false otherwise
+ */
+bool Ec::switch_fpu (Ec *ec)
+{
+    // We want to assign the FPU to an EC
+    if (EXPECT_TRUE (ec)) {
+
+        // The EC must not be the FPU owner
+        assert (fpowner != ec);
+
+        // The FPU must be disabled
+        assert (!(Cpu::hazard & Hazard::FPU));
+
+        // The EC is not eligible to use the FPU
+        if (EXPECT_FALSE (!ec->fpu))
+            return false;
+    }
+
+    Fpu::enable();
+
+    // Save state of previous owner
+    if (EXPECT_TRUE (fpowner))
+        fpowner->fpu_save();
+
+    fpowner = ec;
+
+    // Load state of new owner
+    if (EXPECT_TRUE (fpowner))
+        fpowner->fpu_load();
+
+    return true;
 }
