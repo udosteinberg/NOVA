@@ -23,8 +23,8 @@
 
 #include "atomic.hpp"
 #include "compiler.hpp"
-#include "config.hpp"
 #include "kmem.hpp"
+#include "vectors.hpp"
 
 class Counter final
 {

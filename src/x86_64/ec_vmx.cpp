@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,11 +19,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "ec.hpp"
-#include "gsi.hpp"
-#include "lapic.hpp"
-#include "vectors.hpp"
+#include "interrupt.hpp"
 #include "vmx.hpp"
 
 void Ec::vmx_exception()
@@ -63,16 +60,7 @@ void Ec::vmx_exception()
 
 void Ec::vmx_extint()
 {
-    uint32 vector = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff;
-
-    if (vector >= VEC_IPI)
-        Lapic::ipi_vector (vector);
-    else if (vector >= VEC_MSI)
-        Dmar::vector (vector);
-    else if (vector >= VEC_LVT)
-        Lapic::lvt_vector (vector);
-    else if (vector >= VEC_GSI)
-        Gsi::vector (vector);
+    Interrupt::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & BIT_RANGE (7, 0));
 
     ret_user_vmresume();
 }
