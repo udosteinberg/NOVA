@@ -1,5 +1,5 @@
 /*
- * Scheduling Context
+ * Scheduling Context (SC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -22,78 +22,35 @@
 
 #pragma once
 
-#include "compiler.hpp"
-#include "kmem.hpp"
-#include "queue.hpp"
-#include "slab.hpp"
+#include "ec.hpp"
 
-class Ec;
-class Pd;
-
-class Sc : public Kobject, public Queue<Sc>::Element
+class Sc final : public Kobject, public Queue<Sc>::Element
 {
-    public:
-        Ec * const ec;
-        cpu_t const cpu;
-        unsigned const prio;
-        uint64 const budget;
-        uint64 time;
+    friend class Scheduler;
 
     private:
-        uint64 left;
-        uint64 tsc;
+        Refptr<Ec> const    ec;     // Bound EC (also implies Owner PD)
+        uint64_t   const    budget;
+        cpu_t      const    cpu;
+        cos_t      const    cos;
+        uint8_t    const    prio;
+        Atomic<uint64_t>    used    { 0 };
+        uint64_t            left    { 0 };
+        uint64_t            last    { 0 };
 
-        static unsigned const priorities = 128;
+        Sc (Refptr<Ec> &, cpu_t, uint16_t, uint8_t, cos_t);
 
-        static Slab_cache cache;
-
-        static struct Rq {
-            Queue<Sc>   queue;
-            Spinlock    lock;
-        } rq CPULOCAL;
-
-        static Queue<Sc> list[priorities] CPULOCAL;
-
-        static unsigned prio_top CPULOCAL;
-
-        void ready_enqueue (uint64);
-        static Sc *ready_dequeue (uint64);
+        void collect() override final
+        {
+            trace (TRACE_DESTROY, "KOBJ: SC %p collected", static_cast<void *>(this));
+        }
 
     public:
-        static Sc *     current     CPULOCAL_HOT;
-        static unsigned ctr_loop    CPULOCAL;
+        [[nodiscard]] static Sc *create (Status &, Ec *, cpu_t, uint16_t, uint8_t, cos_t);
 
-        static unsigned const default_prio = 1;
-        static unsigned const default_quantum = 10000;
+        void destroy() override final;
 
-        Sc (Pd *, mword, Ec *);
-        Sc (Pd *, mword, Ec *, cpu_t, unsigned, unsigned);
+        Ec *get_ec() const { return ec; }
 
-        ALWAYS_INLINE
-        static inline Rq *remote (cpu_t c)
-        {
-            return Kmem::loc_to_glb (c, &rq);
-        }
-
-        void remote_enqueue();
-
-        static void rrq_handler();
-
-        [[noreturn]]
-        static void schedule (bool = false);
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
-
-        void destroy() override final
-        {
-            this->~Sc();
-
-            operator delete (this);
-        }
-
-        void collect() override final {}
+        uint64_t get_used() const { return used; }
 };
