@@ -21,7 +21,8 @@
 #include "counter.hpp"
 #include "hazards.hpp"
 #include "hip.hpp"
-#include "lapic.hpp"
+#include "interrupt.hpp"
+#include "lowlevel.hpp"
 #include "mtrr.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
@@ -57,7 +58,7 @@ void Space_mem::shootdown()
 
         auto ctr = Counter::req[1].get (cpu);
 
-        Lapic::send_cpu (VEC_IPI_RKE, cpu);
+        Interrupt::send_cpu (Interrupt::Request::RKE, cpu);
 
         while (Counter::req[1].get (cpu) == ctr)
             pause();

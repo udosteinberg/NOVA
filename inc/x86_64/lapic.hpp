@@ -131,11 +131,6 @@ class Lapic final
             return static_cast<cpu_t>(-1);
         }
 
-        static void timer_handler();
-        static void error_handler();
-        static void perfm_handler();
-        static void therm_handler();
-
         static inline unsigned ratio { 0 };
 
     public:
@@ -188,9 +183,10 @@ class Lapic final
             }
         }
 
+        static void timer_handler();
+        static void error_handler();
+        static void perfm_handler();
+        static void therm_handler();
+
         static void init (uint32_t, uint32_t);
-
-        static void lvt_vector (unsigned) asm ("lvt_vector");
-
-        static void ipi_vector (unsigned) asm ("ipi_vector");
 };
