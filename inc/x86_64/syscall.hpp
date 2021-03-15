@@ -106,9 +106,9 @@ class Sys_create_sm final : public Sys_regs
     public:
         inline unsigned long sel() const { return p0() >> 8; }
 
-        inline unsigned long pd() const { return p1(); }
+        inline unsigned long own() const { return p1(); }
 
-        inline mword cnt() const { return p2(); }
+        inline uint64 cnt() const { return p2(); }
 };
 
 class Sys_ctrl_pd final : public Sys_regs
@@ -164,13 +164,13 @@ class Sys_ctrl_pt final : public Sys_regs
 class Sys_ctrl_sm final : public Sys_regs
 {
     public:
+        inline bool op() const { return flags() & BIT (0); }
+
+        inline bool zc() const { return flags() & BIT (1); }
+
         inline unsigned long sm() const { return p0() >> 8; }
 
-        inline unsigned op() const { return flags() & 0x1; }
-
-        inline unsigned zc() const { return flags() & 0x2; }
-
-        inline uint64 time() const { return static_cast<uint64>(p1()) << 32 | p2(); }
+        inline uint64 time_ticks() const { return p1(); }
 };
 
 class Sys_ctrl_pm final : public Sys_regs
@@ -186,15 +186,13 @@ class Sys_assign_int final : public Sys_regs
     public:
         inline unsigned long sm() const { return p0() >> 8; }
 
-        inline mword dev() const { return p1(); }
+        inline auto cpu() const { return static_cast<uint16> (p1()); }
 
-        inline unsigned cpu() const { return static_cast<unsigned>(p2()); }
+        inline auto dev() const { return static_cast<uint16> (p2()); }
 
-        inline void set_msi (uint64 val)
-        {
-            p1() = static_cast<mword>(val >> 32);
-            p2() = static_cast<mword>(val);
-        }
+        inline void set_msi_addr (uint32 val) { p1() = val; }
+
+        inline void set_msi_data (uint16 val) { p2() = val; }
 };
 
 class Sys_assign_dev final : public Sys_regs
