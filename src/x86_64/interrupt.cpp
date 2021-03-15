@@ -35,7 +35,7 @@ Interrupt Interrupt::int_table[NUM_GSI];
 void Interrupt::init()
 {
     for (unsigned i = 0; i < sizeof (int_table) / sizeof (*int_table); i++)
-        int_table[i].sm = new Sm (&Pd_kern::nova(), i);
+        int_table[i].sm = Sm::create (0, i);
 }
 
 void Interrupt::set_mask (unsigned gsi, bool msk)
