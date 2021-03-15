@@ -42,16 +42,12 @@ void bootstrap()
     else {
 
         // Create idle EC
-        Ec::current = new Ec (Pd::current = &Pd_kern::nova(), Ec::idle, Cpu::id);
-        Sc::current = new Sc (&Pd_kern::nova(), Cpu::id, Ec::current);
+        Ec::create_idle();
 
         // Create root EC
         if (Cpu::bsp) {
             Hip::hip->add_check();
-            Pd::root = Pd::create();
-            Ec *root_ec = new Ec (Pd::root, NUM_EXC + 1, Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
-            Sc *root_sc = new Sc (Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
-            root_sc->remote_enqueue();
+            Ec::create_root();
         }
     }
 
