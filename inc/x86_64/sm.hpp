@@ -1,11 +1,12 @@
 /*
- * Semaphore
+ * Semaphore (SM)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,54 +24,73 @@
 
 #include "ec.hpp"
 
-class Sm : public Kobject, private Queue<Ec>
+class Sm final : public Kobject, private Queue<Ec>
 {
     private:
-        mword           counter;
-        Spinlock        lock;
+        Refptr<Pd>    const pd;     // Owner PD
+        uint64_t            cnt;
+        void *        const ptr;
+        iid_t         const iid;
+        Spinlock            lock;
 
-        static Slab_cache cache;
+        explicit Sm (Refptr<Pd> &, uintptr_t, void *);
+
+        void collect() override final;
 
     public:
-        Sm (Pd *, mword, mword = 0);
+        [[nodiscard]] static Sm *create (Status &, Pd *, uintptr_t, void *);
 
-        ALWAYS_INLINE
-        inline void dn (Ec *const self, bool zero, uint64 t)
+        void destroy() override final;
+
+        auto get_ptr() const { assert (subtype == Kobject::Subtype::SM_INT); return ptr; }
+        auto get_iid() const { assert (subtype == Kobject::Subtype::SM_INT); return iid; }
+
+        [[nodiscard]] Status dn (Ec *const self, bool zero, uint64_t t)
         {
-            {   Lock_guard <Spinlock> guard (lock);
+            {   Lock_guard <Spinlock> guard { lock };
 
-                if (counter) {
-                    counter = zero ? 0 : counter - 1;
-                    return;
+                // Fast path if the counter is > 0
+                if (cnt) [[likely]] {
+                    cnt = zero ? 0 : cnt - 1;
+                    return Status::SUCCESS;
                 }
 
-                // The EC can no longer be activated
+                // Prevent blocking on a dead SM
+                if (dead()) [[unlikely]]
+                    return Status::ABORTED;
+
+                // Block EC
                 self->block();
 
                 enqueue_tail (self);
             }
 
-            // At this point remote cores can unblock the EC
+            // Determine if a remote CPU has already unblocked the EC
+            if (!self->block_sc()) [[unlikely]]
+                return Status::SUCCESS;
 
-            if (self->block_sc()) {
+            // Program timeout if applicable
+            if (t) [[likely]]
+                self->set_timeout (t, this);
 
-                if (t)
-                    self->set_timeout (t, this);
-
-                Scheduler::schedule (true);
-            }
+            // Reschedule
+            Scheduler::schedule (true);
         }
 
-        ALWAYS_INLINE
-        inline void up()
+        Status up()
         {
             Ec *ec;
 
-            {   Lock_guard <Spinlock> guard (lock);
+            {   Lock_guard <Spinlock> guard { lock };
 
                 if (!(ec = dequeue_head())) {
-                    counter++;
-                    return;
+
+                    if (cnt == ~0ULL) [[unlikely]]
+                        return Status::OVRFLOW;
+
+                    cnt++;
+
+                    return Status::SUCCESS;
                 }
 
                 // The EC can now be activated again
@@ -78,12 +98,14 @@ class Sm : public Kobject, private Queue<Ec>
             }
 
             ec->unblock_sc();
+
+            return Status::SUCCESS;
         }
 
-        ALWAYS_INLINE NONNULL
-        inline void timeout (Ec *const ec)
+        NONNULL
+        void timeout (Ec *const ec)
         {
-            {   Lock_guard <Spinlock> guard (lock);
+            {   Lock_guard <Spinlock> guard { lock };
 
                 if (!ec->blocked())
                     return;
@@ -96,19 +118,4 @@ class Sm : public Kobject, private Queue<Ec>
 
             ec->unblock_sc();
         }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
-
-        void destroy() override final
-        {
-            this->~Sm();
-
-            operator delete (this);
-        }
-
-        void collect() override final {}
 };
