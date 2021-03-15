@@ -39,7 +39,7 @@
 
 class Utcb;
 
-class Ec : private Kobject, public Queue<Ec>::Element, private Queue<Sc>
+class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element, private Queue<Sc>
 {
     private:
         void        (*cont)() ALIGNED (16);
@@ -58,7 +58,6 @@ class Ec : private Kobject, public Queue<Ec>::Element, private Queue<Sc>
         };
         unsigned const evt;
         Atomic<unsigned> hazard;
-        Timeout_hypercall timeout;
         Spinlock    lock;
 
         static Slab_cache cache;
@@ -150,15 +149,13 @@ class Ec : private Kobject, public Queue<Ec>::Element, private Queue<Sc>
         ALWAYS_INLINE
         inline void set_timeout (uint64 t, Sm *s)
         {
-            if (t) [[unlikely]]
-                timeout.enqueue (t, s);
+            Timeout_hypercall::enqueue (t, s);
         }
 
         ALWAYS_INLINE
         inline void clr_timeout()
         {
-            if (timeout.active()) [[unlikely]]
-                timeout.dequeue();
+            Timeout_hypercall::dequeue();
         }
 
         ALWAYS_INLINE

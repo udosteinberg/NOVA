@@ -2,6 +2,7 @@
  * Hypercall Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,5 +21,5 @@
 
 void Timeout_hypercall::trigger()
 {
-    sm->timeout (ec);
+    sm->timeout (static_cast<Ec *>(this));
 }
