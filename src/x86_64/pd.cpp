@@ -37,6 +37,7 @@ Pd::Pd (Refptr<Pd> &ref_pd) : Kobject   { Kobject::Type::PD, Kobject::Subtype::P
                               pd        { std::move (ref_pd) },
                               pd_cache  { sizeof (Pd),        Kobject::alignment },
                               ec_cache  { sizeof (Ec),        Kobject::alignment },
+                              sc_cache  { sizeof (Sc),        Kobject::alignment },
                               obj_cache { sizeof (Space_obj), Kobject::alignment },
                               hst_cache { sizeof (Space_hst), Kobject::alignment },
                               gst_cache { sizeof (Space_gst), Kobject::alignment },
@@ -219,6 +220,23 @@ Ec *Pd::create_ec (Status &s, Space_obj *obj, unsigned long sel, cpu_t cpu, uint
     if (o) [[likely]] {
 
         if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_ec::DEFINED) })) == Status::SUCCESS) [[likely]]
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Sc *Pd::create_sc (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, cpu_t cpu, uint16_t budget, uint8_t prio, cos_t cos)
+{
+    assert (this == ec->get_pd());
+
+    auto const o { Sc::create (s, ec, cpu, budget, prio, cos) };
+
+    if (o) [[likely]] {
+
+        if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_sc::DEFINED) })) == Status::SUCCESS) [[likely]]
             return o;
 
         o->destroy();
