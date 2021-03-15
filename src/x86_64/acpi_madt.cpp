@@ -22,16 +22,16 @@
 #include "acpi.hpp"
 #include "acpi_madt.hpp"
 #include "cpu.hpp"
-#include "gsi.hpp"
+#include "interrupt.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "pic.hpp"
+#include "util.hpp"
 
 void Acpi_table_madt::parse() const
 {
     parse_entry (Acpi_apic::LAPIC,  &parse_lapic);
     parse_entry (Acpi_apic::IOAPIC, &parse_ioapic);
-    parse_entry (Acpi_apic::INTR,   &parse_intr);
 
     if (flags & 1)
         Pic::exists = true;
@@ -58,28 +58,5 @@ void Acpi_table_madt::parse_ioapic (Acpi_apic const *ptr)
 
     Ioapic *ioapic = new Ioapic (p->phys, p->id, p->gsi);
 
-    unsigned gsi = p->gsi;
-    unsigned max = ioapic->mre();
-
-    for (unsigned short i = 0; i <= max && gsi < NUM_GSI; i++, gsi++)
-        Gsi::gsi_table[gsi].ioapic = ioapic;
-}
-
-void Acpi_table_madt::parse_intr (Acpi_apic const *ptr)
-{
-    Acpi_intr const *p = static_cast<Acpi_intr const *>(ptr);
-
-    gsi_t irq = p->irq;
-    gsi_t gsi = static_cast<gsi_t>(p->gsi);
-
-    if (gsi >= NUM_GSI || irq >= NUM_IRQ || p->bus) [[unlikely]]
-        return;
-
-    Gsi::irq_table[irq] = gsi;
-
-    Gsi::gsi_table[gsi].pol = p->flags.pol == Acpi_inti::POL_LOW   || (p->flags.pol == Acpi_inti::POL_CONFORMING && irq == Acpi::irq);
-    Gsi::gsi_table[gsi].trg = p->flags.trg == Acpi_inti::TRG_LEVEL || (p->flags.trg == Acpi_inti::TRG_CONFORMING && irq == Acpi::irq);
-
-    if (irq == Acpi::irq)
-        sci_overridden = true;
+    Interrupt::gsi_pin = max (Interrupt::gsi_pin, static_cast<gsi_t>(p->gsi + ioapic->mre() + 1));
 }

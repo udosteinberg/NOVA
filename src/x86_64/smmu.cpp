@@ -72,7 +72,7 @@ void Smmu::init()
     // Configure SMMU fault interrupt
     write (Reg32::FEUADDR, dst & BIT_RANGE (31, 8));
     write (Reg32::FEADDR, Lapic::msi_base | (dst & BIT_RANGE (7, 0)) << 12);
-    write (Reg32::FEDATA, VEC_MSI_DMAR);
+    write (Reg32::FEDATA, VEC_FLT);
     write (Reg32::FECTL, 0);
 
     // Clear any pending faults that may have occurred in prior boot stages
@@ -165,7 +165,7 @@ Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_
     trace (TRACE_INTR, "INTR: Routing GSI %#06x (%c%c%c) from %04x:%02x:%02x.%x to %#06x:%#04x (%s)", gsi, msk ? 'M' : 'U', trg ? 'L' : 'E', pol ? 'L' : 'H', Pci::seg (src), Pci::bus (src), Pci::dev (src), Pci::fun (src), cpu, vec, ioapic ? "PIN" : "MSI");
 
     // Populate interrupt remapping table even if IR is not in use
-    if (!irt[gsi].set (BIT (18) | Pci::bdf (src), static_cast<uint64_t>(dst) << (Lapic::x2apic ? 32 : 40) | vec << 16 | trg << 4 | BIT (0))) [[unlikely]]
+    if (!irt->set (BIT (18) | Pci::bdf (src), static_cast<uint64_t>(dst) << (Lapic::x2apic ? 32 : 40) | vec << 16 | trg << 4 | BIT (0))) [[unlikely]]
         return Status::ABORTED;
 
     // Invalidate stale cached entries for SEG:GSI
@@ -220,15 +220,4 @@ void Smmu::fault()
     }
 
     write (Reg32::FSTS, Fault::ITE | Fault::ICE | Fault::IQE | Fault::APF | Fault::AFO | Fault::PFO);
-}
-
-void Smmu::vector (unsigned vector)
-{
-    unsigned msi = vector - VEC_MSI;
-
-    if (msi == 0) [[likely]]
-        for (auto l { list }; l; l = l->next)
-            l->fault();
-
-    Lapic::eoi();
 }
