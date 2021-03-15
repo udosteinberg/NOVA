@@ -107,21 +107,21 @@ class alignas (16) Cpu_regs final
 
     public:
         union {
-            Vmcb *              vmcb;
-            Vmcs *              vmcs;
+            Vmcb * const        vmcb;
+            Vmcs * const        vmcs;
         };
 
         Exc_regs                exc;
-        Space_obj * const       obj;
-        Space_hst * const       hst;
-        Space_gst *             gst     { nullptr };
-        Space_pio *             pio     { nullptr };
-        Space_msr *             msr     { nullptr };
+        Refptr<Space_obj> const obj;
+        Refptr<Space_hst> const hst;
+        Refptr<Space_gst>       gst     { nullptr };
+        Refptr<Space_pio>       pio     { nullptr };
+        Refptr<Space_msr>       msr     { nullptr };
         Hazard                  hazard  { 0 };
 
-        Cpu_regs (Space_obj *o, Space_hst *h, Space_pio *p = nullptr) : vmcb (nullptr), obj (o), hst (h), pio (p) {}
-        Cpu_regs (Space_obj *o, Space_hst *h, Vmcb *v) : vmcb (v), obj (o), hst (h), hazard (Hazard::ILLEGAL) {}
-        Cpu_regs (Space_obj *o, Space_hst *h, Vmcs *v) : vmcs (v), obj (o), hst (h), hazard (Hazard::ILLEGAL) {}
+        Cpu_regs (Refptr<Space_obj> &o, Refptr<Space_hst> &h, Refptr<Space_pio> &p) : vmcb { nullptr }, obj { std::move (o) }, hst { std::move (h) }, pio { std::move (p) } {}
+        Cpu_regs (Refptr<Space_obj> &o, Refptr<Space_hst> &h, Vmcb *v) : vmcb { v }, obj { std::move (o) }, hst { std::move (h) }, hazard (Hazard::ILLEGAL) {}
+        Cpu_regs (Refptr<Space_obj> &o, Refptr<Space_hst> &h, Vmcs *v) : vmcs { v }, obj { std::move (o) }, hst { std::move (h) }, hazard (Hazard::ILLEGAL) {}
 
         Space_obj *get_obj() const { return obj; }
         Space_hst *get_hst() const { return hst; }
