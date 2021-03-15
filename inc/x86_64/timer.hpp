@@ -42,5 +42,7 @@ class Timer : private Stc
         static inline void set_time (uint64 t)
         {
             Msr::write (Msr::Register::IA32_TSC, t);
+
+            Timeout::sync();
         }
 };
