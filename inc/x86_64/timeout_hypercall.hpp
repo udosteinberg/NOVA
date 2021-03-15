@@ -2,7 +2,7 @@
  * Hypercall Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,11 +23,11 @@
 class Ec;
 class Sm;
 
-class Timeout_hypercall : public Timeout
+class Timeout_hypercall final : public Timeout
 {
     private:
-        Ec * const ec;
-        Sm *sm;
+        Ec * const  ec                      { nullptr };
+        Sm *        sm                      { nullptr };
 
         void trigger() override;
 
