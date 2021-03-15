@@ -101,8 +101,8 @@ class alignas (16) Cpu_regs
 
     public:
         union {
-            Vmcb *          vmcb;
-            Vmcs *          vmcs;
+            Vmcb * const    vmcb;
+            Vmcs * const    vmcs;
         };
 
         Exc_regs            exc;

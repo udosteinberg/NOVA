@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,66 +19,37 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "extern.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
+#include "fpu.hpp"
 #include "gdt.hpp"
 #include "mca.hpp"
-#include "stdio.hpp"
 
-void Ec::load_fpu()
+void Ec::fpu_load()
 {
+    assert (fpu);
+
     if (!utcb)
         regs.fpu_ctrl (true);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new (pd->fpu_cache) Fpu;
-
     fpu->load();
+
+    set_hazard (HZD_FPU);
 }
 
-void Ec::save_fpu()
+void Ec::fpu_save()
 {
+    assert (fpu);
+
     if (!utcb)
         regs.fpu_ctrl (false);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new (pd->fpu_cache) Fpu;
-
     fpu->save();
+
+    clr_hazard (HZD_FPU);
 }
 
-void Ec::transfer_fpu (Ec *ec)
-{
-    if (!(Cpu::hazard & HZD_FPU)) {
-
-        Fpu::enable();
-
-        if (fpowner != this) {
-            if (fpowner)
-                fpowner->save_fpu();
-            load_fpu();
-        }
-    }
-
-    fpowner = ec;
-}
-
-void Ec::handle_exc_nm()
-{
-    Fpu::enable();
-
-    if (current == fpowner)
-        return;
-
-    if (fpowner)
-        fpowner->save_fpu();
-
-    current->load_fpu();
-
-    fpowner = current;
-}
-
-bool Ec::handle_exc_gp (Exc_regs *)
+bool Ec_arch::handle_exc_gp (Exc_regs *)
 {
     if (Cpu::hazard & HZD_TR) {
         Cpu::hazard &= ~HZD_TR;
@@ -88,47 +60,50 @@ bool Ec::handle_exc_gp (Exc_regs *)
     return false;
 }
 
-bool Ec::handle_exc_pf (Exc_regs *r)
+bool Ec_arch::handle_exc_pf (Exc_regs *r)
 {
-    mword addr = r->cr2;
+    auto addr = r->cr2;
 
     if (r->err & BIT (2))       // User-mode access
-        return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
+        return addr < Space_mem::num << PAGE_BITS && pd->Space_mem::loc[Cpu::id].sync_from (pd->Space_mem::hpt, addr, Space_mem::num << PAGE_BITS);
 
-    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp::master, addr, MMAP_CPU))
+    if (addr >= LINK_ADDR && addr < MMAP_CPU && pd->Space_mem::loc[Cpu::id].sync_from (Hptp::master, addr, MMAP_CPU))
         return true;
 
     // Kernel fault in I/O space
-    if (addr >= MMAP_SPC_IOP && addr <= MMAP_SPC_IOP_E && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
+    if (addr >= MMAP_SPC_IOP && addr <= MMAP_SPC_IOP_E && pd->Space_mem::loc[Cpu::id].sync_from (pd->Space_mem::hpt, addr, MMAP_CPU))
         return true;
 
     // Convert #PF in I/O bitmap to #GP(0)
     if (r->user() && addr >= MMAP_SPC_IOP && addr <= MMAP_SPC_IOP_E) {
         r->vec = EXC_GP;
         r->err = r->cr2 = 0;
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (this);
     }
 
-    die ("#PF (kernel)", r);
+    return false;
 }
 
-void Ec::handle_exc (Exc_regs *r)
+void Ec_arch::handle_exc (Exc_regs *r)
 {
     Counter::exc[r->vec].inc();
+
+    Ec *const self = current;
 
     switch (r->vec) {
 
         case EXC_NM:
-            handle_exc_nm();
-            return;
+            if (switch_fpu (self))
+                return;
+            break;
 
         case EXC_GP:
-            if (handle_exc_gp (r))
+            if (static_cast<Ec_arch *>(self)->handle_exc_gp (r))
                 return;
             break;
 
         case EXC_PF:
-            if (handle_exc_pf (r))
+            if (static_cast<Ec_arch *>(self)->handle_exc_pf (r))
                 return;
             break;
 
@@ -138,7 +113,7 @@ void Ec::handle_exc (Exc_regs *r)
     }
 
     if (r->user())
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (self);
 
-    die ("EXC", r);
+    self->kill ("Unhandled exception");
 }

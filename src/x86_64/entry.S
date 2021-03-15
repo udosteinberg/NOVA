@@ -115,6 +115,7 @@ entry_exc_error:        SAVE_STATE 1
                         mov     %rbx, %rdi
                         call    exc_handler
 exit:                   testb   $3, OFS_CS(%rbx)
+                        mov     current, %rdi           // ARG_1 = Ec::current
                         jnz     ret_user_iret
                         LOAD_GPR
                         IRET
@@ -146,8 +147,10 @@ entry_sys:              mov     %rsp, %r11
                         lea     -(__SIZEOF_POINTER__ * 8)(%rsp), %rsp
                         SAVE_GPR
                         lea     DSTK_TOP, %rsp
-                        and     $0xf, %rdi
-                        jmp     *syscall(, %rdi, __SIZEOF_POINTER__)
+                        mov     %rdi, %rsi
+                        mov     current, %rdi           // ARG_1 = Ec::current
+                        and     $0xf, %rsi
+                        jmp     *syscall(, %rsi, __SIZEOF_POINTER__)
 
 /*
  * VMX Entry
