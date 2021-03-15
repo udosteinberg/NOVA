@@ -2,6 +2,7 @@
  * Budget Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,8 +21,7 @@
 #include "initprio.hpp"
 #include "timeout_budget.hpp"
 
-INIT_PRIORITY (PRIO_LOCAL)
-Timeout_budget Timeout_budget::budget;
+INIT_PRIORITY (PRIO_LOCAL) Timeout_budget Timeout_budget::timeout;
 
 void Timeout_budget::trigger()
 {
