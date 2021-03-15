@@ -56,13 +56,13 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
     switch (lvt_max()) {
         default:
-            set_lvt (Register32::LVT_THERM, Delivery::DLV_FIXED, VEC_LVT_THERM);
+            set_lvt (Register32::LVT_THERM, Delivery::DLV_FIXED, VEC_LVT + 3);
             [[fallthrough]];
         case 4:
-            set_lvt (Register32::LVT_PERFM, Delivery::DLV_FIXED, VEC_LVT_PERFM);
+            set_lvt (Register32::LVT_PERFM, Delivery::DLV_FIXED, VEC_LVT + 2);
             [[fallthrough]];
         case 3:
-            set_lvt (Register32::LVT_ERROR, Delivery::DLV_FIXED, VEC_LVT_ERROR);
+            set_lvt (Register32::LVT_ERROR, Delivery::DLV_FIXED, VEC_LVT + 1);
             [[fallthrough]];
         case 2:
             set_lvt (Register32::LVT_LINT1, Delivery::DLV_NMI, 0);
@@ -71,7 +71,7 @@ void Lapic::init (uint32_t clk, uint32_t rat)
             set_lvt (Register32::LVT_LINT0, Delivery::DLV_EXTINT, 0, BIT (16));
             [[fallthrough]];
         case 0:
-            set_lvt (Register32::LVT_TIMER, Delivery::DLV_FIXED, VEC_LVT_TIMER, BIT (18) * dl);
+            set_lvt (Register32::LVT_TIMER, Delivery::DLV_FIXED, VEC_LVT + 0, BIT (18) * dl);
     }
 
     write (Register32::TPR, 0x10);
@@ -134,34 +134,4 @@ void Lapic::timer_handler()
         Stc::interrupt();
 
     Rcu::update();
-}
-
-void Lapic::lvt_vector (unsigned vector)
-{
-    auto const lvt { vector - VEC_LVT };
-
-    switch (vector) {
-        case VEC_LVT_TIMER: timer_handler(); break;
-        case VEC_LVT_ERROR: error_handler(); break;
-        case VEC_LVT_PERFM: perfm_handler(); break;
-        case VEC_LVT_THERM: therm_handler(); break;
-    }
-
-    eoi();
-
-    Counter::loc[lvt].inc();
-}
-
-void Lapic::ipi_vector (unsigned vector)
-{
-    auto const ipi { vector - VEC_IPI };
-
-    switch (vector) {
-        case VEC_IPI_RRQ: Sc::rrq_handler(); break;
-        case VEC_IPI_RKE: Sc::rke_handler(); break;
-    }
-
-    eoi();
-
-    Counter::req[ipi].inc();
 }

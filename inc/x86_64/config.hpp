@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,10 +24,6 @@
 #define CFG_VER         7
 
 #define NUM_CPU         64
-#define NUM_IRQ         16
 #define NUM_EXC         32
+#define NUM_VEC         256
 #define NUM_VMI         256
-#define NUM_GSI         128
-#define NUM_LVT         6
-#define NUM_MSI         1
-#define NUM_IPI         2
