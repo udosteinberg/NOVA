@@ -22,16 +22,13 @@
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
-#include "pd_kern.hpp"
 
 extern "C" NORETURN
 void bootstrap()
 {
     Cpu::init();
 
-    // Create idle EC
-    Ec::current = new Ec (Pd::current = &Pd_kern::nova(), Ec::idle, Cpu::id);
-    Sc::current = new Sc (&Pd_kern::nova(), Cpu::id, Ec::current);
+    Ec::create_idle();
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
@@ -39,10 +36,7 @@ void bootstrap()
     // Create root task
     if (Cpu::bsp) {
         Hip::hip->add_check();
-        Pd::root = Pd::create();
-        Ec *root_ec = new Ec (Pd::root, NUM_EXC + 1, Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
-        Sc *root_sc = new Sc (Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
-        root_sc->remote_enqueue();
+        Ec::create_root();
     }
 
     Sc::schedule();

@@ -19,10 +19,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
 #include "svm.hpp"
 
-void Ec::svm_exception (mword reason)
+void Ec_arch::svm_exception (mword reason)
 {
     if (current->regs.vmcb->exitintinfo & 0x80000000) {
 
@@ -40,14 +41,15 @@ void Ec::svm_exception (mword reason)
             break;
 
         case 0x47:          // #NM
-            handle_exc_nm();
-            ret_user_vmrun();
+            if (current->fpu_switch())
+                ret_user_vmexit_svm (current);
+            break;
     }
 
-    send_msg<ret_user_vmrun>();
+    send_msg<ret_user_vmexit_svm> (current);
 }
 
-void Ec::handle_svm()
+void Ec_arch::handle_svm()
 {
     current->regs.vmcb->tlb_control = 0;
 
@@ -71,10 +73,10 @@ void Ec::handle_svm()
 
         case 0x60:              // EXTINT
             asm volatile ("sti; nop; cli" : : : "memory");
-            ret_user_vmrun();
+            ret_user_vmexit_svm (current);
     }
 
     current->regs.set_ep (reason);
 
-    send_msg<ret_user_vmrun>();
+    send_msg<ret_user_vmexit_svm> (current);
 }

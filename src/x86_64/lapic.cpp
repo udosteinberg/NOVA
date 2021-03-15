@@ -26,6 +26,7 @@
 #include "extern.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
+#include "ptab_hpt.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
