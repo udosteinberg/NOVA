@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,14 +19,15 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
+#include "hazards.hpp"
 #include "interrupt.hpp"
-#include "lapic.hpp"
 #include "smmu.hpp"
 #include "vectors.hpp"
 #include "vmx.hpp"
 
-void Ec::vmx_exception()
+void Ec_arch::vmx_exception()
 {
     uint32 vect_info = Vmcs::read<uint32> (Vmcs::Encoding::ORG_EVENT_IDENT);
 
@@ -46,22 +47,23 @@ void Ec::vmx_exception()
     switch (intr_info & 0x7ff) {
 
         default:
-            current->regs.set_ep (Vmcs::VMX_EXC_NMI);
+            regs.set_ep (Vmcs::VMX_EXC_NMI);
             break;
 
         case 0x202:         // NMI
             asm volatile ("int $0x2" : : : "memory");
-            ret_user_vmresume();
+            ret_user_vmexit_vmx (this);
 
         case 0x307:         // #NM
-            handle_exc_nm();
-            ret_user_vmresume();
+            if (switch_fpu (this))
+                ret_user_vmexit_vmx (this);
+            break;
     }
 
-    send_msg<ret_user_vmresume>();
+    send_msg<ret_user_vmexit_vmx> (this);
 }
 
-void Ec::vmx_extint()
+void Ec_arch::vmx_extint()
 {
     uint32 vector = Vmcs::read<uint32> (Vmcs::Encoding::EXI_EVENT_IDENT) & 0xff;
 
@@ -74,11 +76,13 @@ void Ec::vmx_extint()
     else if (vector >= VEC_GSI)
         Interrupt::handle_gsi (vector);
 
-    ret_user_vmresume();
+    ret_user_vmexit_vmx (this);
 }
 
-void Ec::handle_vmx()
+void Ec_arch::handle_vmx()
 {
+    Ec *const self = current;
+
     Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::Encoding::EXI_REASON) & 0xff;
@@ -86,11 +90,11 @@ void Ec::handle_vmx()
     Counter::vmi[reason].inc();
 
     switch (reason) {
-        case Vmcs::VMX_EXC_NMI:     vmx_exception();
-        case Vmcs::VMX_EXTINT:      vmx_extint();
+        case Vmcs::VMX_EXC_NMI:     static_cast<Ec_arch *>(self)->vmx_exception();
+        case Vmcs::VMX_EXTINT:      static_cast<Ec_arch *>(self)->vmx_extint();
     }
 
-    current->regs.set_ep (reason);
+    self->regs.set_ep (reason);
 
-    send_msg<ret_user_vmresume>();
+    send_msg<ret_user_vmexit_vmx> (self);
 }

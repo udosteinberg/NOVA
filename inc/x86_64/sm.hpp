@@ -35,10 +35,8 @@ class Sm : public Kobject, private Queue<Ec>
         Sm (Pd *, mword, mword = 0);
 
         ALWAYS_INLINE
-        inline void dn (bool zero, uint64 t)
+        inline void dn (Ec *const ec, bool zero, uint64 t)
         {
-            Ec *ec = Ec::current;
-
             {   Lock_guard <Spinlock> guard (lock);
 
                 if (counter) {
@@ -46,12 +44,21 @@ class Sm : public Kobject, private Queue<Ec>
                     return;
                 }
 
+                // The EC can no longer be activated
+                ec->block();
+
                 enqueue_tail (ec);
             }
 
-            ec->set_timeout (t, this);
+            // At this point remote cores can unblock the EC
 
-            ec->block_sc();
+            if (ec->block_sc()) {
+
+                if (t)
+                    ec->set_timeout (t, this);
+
+                Sc::schedule (true);
+            }
         }
 
         ALWAYS_INLINE
@@ -65,9 +72,12 @@ class Sm : public Kobject, private Queue<Ec>
                     counter++;
                     return;
                 }
+
+                // The EC can now be activated again
+                ec->unblock (Ec::sys_finish<Status::SUCCESS, true>);
             }
 
-            ec->release (Ec::sys_finish<Status::SUCCESS, true>);
+            ec->unblock_sc();
         }
 
         ALWAYS_INLINE
@@ -79,9 +89,12 @@ class Sm : public Kobject, private Queue<Ec>
                     return;
 
                 dequeue (ec);
+
+                // The EC can now be activated again
+                ec->unblock (Ec::sys_finish<Status::TIMEOUT>);
             }
 
-            ec->release (Ec::sys_finish<Status::TIMEOUT>);
+            ec->unblock_sc();
         }
 
         ALWAYS_INLINE

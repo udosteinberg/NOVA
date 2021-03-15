@@ -1,11 +1,12 @@
 /*
- * Execution Context
+ * Execution Context (EC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,89 +23,77 @@
 #pragma once
 
 #include "atomic.hpp"
-#include "counter.hpp"
 #include "fpu.hpp"
 #include "kmem.hpp"
+#include "kobject.hpp"
 #include "lock_guard.hpp"
-#include "mtd.hpp"
-#include "pd.hpp"
 #include "queue.hpp"
 #include "regs.hpp"
 #include "sc.hpp"
+#include "slab.hpp"
+#include "status.hpp"
 #include "timeout_hypercall.hpp"
-#include "tss.hpp"
 
+class Pd;
 class Utcb;
 
 class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 {
+    friend class Ec_arch;
+
     private:
-        void        (*cont)() ALIGNED (16);
-        Cpu_regs    regs;
-        Ec *        rcap;
-        Utcb *      utcb;
-        Pd * const  pd;
-        Ec *        partner;
-        Fpu *       fpu;
-        union {
-            struct {
-                uint16  cpu;
-                uint16  glb;
-            };
-            uint32  xcpu;
-        };
-        unsigned const evt;
-        Atomic<unsigned> hazard;
-        Timeout_hypercall timeout;
-        Spinlock    lock;
+        typedef void (*cont_t)(Ec *);   // Continuation Type
 
-        static Slab_cache cache;
+        Cpu_regs            regs;
+        unsigned      const cpu         { 0 };
+        unsigned long const evt         { 0 };
+        Pd *          const pd          { nullptr };
+        Fpu *         const fpu         { nullptr };
+        Utcb *        const utcb        { nullptr };
+        Ec *                callee      { nullptr };
+        Ec *                caller      { nullptr };
+        Atomic<cont_t>      cont        { nullptr };
+        Atomic<unsigned>    hazard      { 0 };
+        Timeout_hypercall   timeout     { this };
+        Spinlock            lock;
 
-        static void handle_exc (Exc_regs *) asm ("exc_handler");
-
-        NORETURN
-        static void handle_vmx() asm ("vmx_handler");
-
-        NORETURN
-        static void handle_svm() asm ("svm_handler");
-
-        static void handle_exc_nm();
-        static bool handle_exc_gp (Exc_regs *);
-        static bool handle_exc_pf (Exc_regs *);
-
-        NORETURN
-        static inline void svm_exception (mword);
-
-        NORETURN
-        static inline void vmx_exception();
-
-        NORETURN
-        static inline void vmx_extint();
-
-        NOINLINE
-        static void handle_hazard (mword, void (*)());
+        static Atomic<Ec *> current asm ("current") CPULOCAL;
+        static Ec *         fpowner                 CPULOCAL;
+        static unsigned     donations               CPULOCAL;
+        static Slab_cache   cache;
 
         ALWAYS_INLINE
-        inline Sys_regs *sys_regs() { return &regs; }
+        inline Cpu_regs *cpu_regs() { return &regs; }
 
         ALWAYS_INLINE
         inline Exc_regs *exc_regs() { return &regs; }
 
         ALWAYS_INLINE
-        inline void set_partner (Ec *p)
+        inline Sys_regs *sys_regs() { return &regs; }
+
+        ALWAYS_INLINE
+        inline bool is_vcpu() const { return subtype >= Kobject::Subtype::EC_VCPU_REAL; }
+
+        ALWAYS_INLINE
+        static inline Ec *remote_current (unsigned cpu)
         {
-            partner = p;
-            partner->rcap = this;
-            Sc::ctr_link++;
+            return *Kmem::loc_to_glob (&current, cpu);
+        }
+
+        ALWAYS_INLINE NONNULL
+        inline void set_partner (Ec *e)
+        {
+            callee = e;
+            callee->caller = this;
+            donations++;
         }
 
         ALWAYS_INLINE
-        inline unsigned clr_partner()
+        inline bool clr_partner()
         {
-            assert (partner == current);
-            partner->rcap = nullptr;
-            partner = nullptr;
-            return Sc::ctr_link--;
+            callee->caller = nullptr;
+            callee = nullptr;
+            return donations--;
         }
 
         ALWAYS_INLINE
@@ -116,40 +105,183 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         ALWAYS_INLINE
         inline void clr_hazard (unsigned h) { hazard &= ~h; }
 
+        void fpu_load();
+        void fpu_save();
+
+        static bool vcpu_supported();
+
+        NOINLINE
+        void handle_hazard (unsigned, cont_t);
+
+        NOINLINE
+        void help (Ec *, cont_t);
+
         ALWAYS_INLINE
-        inline void redirect_to_iret()
+        inline void rendezvous (Ec *, cont_t, cont_t, uintptr_t, uintptr_t, uintptr_t);
+
+        NORETURN HOT
+        void reply (cont_t = nullptr);
+
+        NORETURN
+        void kill (char const *);
+
+        NORETURN
+        static void dead (Ec *self) { self->kill ("IPC Abort"); }
+
+        NORETURN
+        static void blocking (Ec *self) { self->kill ("Blocking"); }
+
+        NORETURN
+        static void idle (Ec *);
+
+        NORETURN
+        static void root_invoke (Ec *);
+
+        NORETURN HOT
+        static void recv_kern (Ec *);
+
+        NORETURN HOT
+        static void recv_user (Ec *);
+
+        template <cont_t>
+        NORETURN
+        static void send_msg (Ec *);
+
+        NORETURN HOT
+        static void sys_ipc_call (Ec *);
+
+        NORETURN HOT
+        static void sys_ipc_reply (Ec *);
+
+        NORETURN
+        static void sys_create_pd (Ec *);
+
+        NORETURN
+        static void sys_create_ec (Ec *);
+
+        NORETURN
+        static void sys_create_sc (Ec *);
+
+        NORETURN
+        static void sys_create_pt (Ec *);
+
+        NORETURN
+        static void sys_create_sm (Ec *);
+
+        NORETURN
+        static void sys_ctrl_pd (Ec *);
+
+        NORETURN
+        static void sys_ctrl_ec (Ec *);
+
+        NORETURN
+        static void sys_ctrl_sc (Ec *);
+
+        NORETURN
+        static void sys_ctrl_pt (Ec *);
+
+        NORETURN
+        static void sys_ctrl_sm (Ec *);
+
+        NORETURN
+        static void sys_ctrl_pm (Ec *);
+
+        NORETURN
+        static void sys_assign_int (Ec *);
+
+        NORETURN
+        static void sys_assign_dev (Ec *);
+
+        // Constructor: Kernel Thread
+        Ec (Pd *p, unsigned c, cont_t x) : Kobject (Kobject::Type::EC, Kobject::Subtype::EC_GLOBAL), cpu (c), pd (p), cont (x) {}
+
+        // Constructor: User Thread
+        Ec (Pd *p, Fpu *f, Utcb *u, unsigned c, unsigned long e, cont_t x) : Kobject (Kobject::Type::EC, x ? Kobject::Subtype::EC_GLOBAL : Kobject::Subtype::EC_LOCAL), cpu (c), evt (e), pd (p), fpu (f), utcb (u), cont (x) {}
+
+        // Constructor: Virtual CPU
+        template <typename T>
+        Ec (Pd *p, Fpu *f, T *v, unsigned c, unsigned long e, cont_t x, bool t) : Kobject (Kobject::Type::EC, t ? Kobject::Subtype::EC_VCPU_OFFS : Kobject::Subtype::EC_VCPU_REAL), regs (v), cpu (c), evt (e), pd (p), fpu (f), cont (x) {}
+
+        NODISCARD
+        static inline void *operator new (size_t) noexcept
         {
-            regs.rsp = regs.sp();
-            regs.rip = regs.ip();
+            return cache.alloc();
         }
 
-        void load_fpu();
-        void save_fpu();
-
-        void transfer_fpu (Ec *);
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 
     public:
-        static Ec *current CPULOCAL_HOT;
-        static Ec *fpowner CPULOCAL;
+        // Factory: Kernel Thread
+        NODISCARD
+        static Ec *create (unsigned, cont_t);
 
-        Ec (Pd *, void (*)(), unsigned);
-        Ec (Pd *, mword, Pd *, void (*)(), unsigned, unsigned, mword, mword);
+        // Factory: User Thread
+        NODISCARD
+        static Ec *create (Pd *, bool, unsigned, unsigned long, uintptr_t, uintptr_t, cont_t);
+
+        // Factory: Virtual CPU
+        NODISCARD
+        static Ec *create (Pd *, bool, unsigned, unsigned long, bool);
+
+        static void create_idle();
+        static void create_root();
+
+        static bool switch_fpu (Ec *);
+
+        void destroy() { delete this; }
 
         ALWAYS_INLINE
-        inline void add_tsc_offset (uint64 tsc)
+        inline bool blocked() const { cont_t c = cont; return c == blocking || c == nullptr; }
+
+        ALWAYS_INLINE
+        inline void block() { cont = blocking; }
+
+        ALWAYS_INLINE
+        inline void unblock (cont_t c) { cont = c; }
+
+        /*
+         * Core X               Core Y
+         * e.g. Sm::dn()        e.g. Sm::up()
+         *
+         * A: ec->block()       C: ec->unblock()
+         * B: ec->block_sc()    D: ec->unblock_sc()
+         *
+         * Ordering: A before B, C before D, A before C, B+D can't run in parallel
+         *
+         * @return true if B happened before C, false if B happened after C
+         */
+        NODISCARD
+        bool block_sc()
         {
-            regs.tsc_offset += tsc;
-            set_hazard (HZD_TSC);
+            {   Lock_guard <Spinlock> guard (lock);
+
+                // If C already happened, then don't block the SC
+                if (!blocked())
+                    return false;
+
+                // Otherwise D will later unblock the SC
+                enqueue_tail (Sc::current);
+            }
+
+            return true;
         }
 
         ALWAYS_INLINE
-        inline bool blocked() const { return queued() || !cont; }
+        void unblock_sc()
+        {
+            Lock_guard <Spinlock> guard (lock);
+
+            for (Sc *sc; (sc = dequeue_head()); sc->remote_enqueue()) ;
+        }
 
         ALWAYS_INLINE
         inline void set_timeout (uint64 t, Sm *s)
         {
-            if (EXPECT_FALSE (t))
-                timeout.enqueue (t, s);
+            timeout.enqueue (t, s);
         }
 
         ALWAYS_INLINE
@@ -158,162 +290,13 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
             timeout.dequeue();
         }
 
-        ALWAYS_INLINE NORETURN
-        inline void make_current()
-        {
-            current = this;
-
-            Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
-
-            pd->make_current();
-
-            asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (MMAP_CPU_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
-        }
-
-        ALWAYS_INLINE
-        static inline Ec *remote (unsigned c)
-        {
-            return *Kmem::loc_to_glob (&current, c);
-        }
-
-        NOINLINE
-        void help (void (*c)())
-        {
-            if (EXPECT_TRUE (cont != dead)) {
-
-                Counter::helping.inc();
-
-                current->cont = c;
-
-                if (EXPECT_TRUE (++Sc::ctr_loop < 100))
-                    activate();
-
-                die ("Livelock");
-            }
-        }
-
-        NOINLINE
-        void block_sc()
-        {
-            {   Lock_guard <Spinlock> guard (lock);
-
-                if (!blocked())
-                    return;
-
-                enqueue_tail (Sc::current);
-            }
-
-            Sc::schedule (true);
-        }
-
-        ALWAYS_INLINE
-        inline void release (void (*c)())
-        {
-            cont = c;
-
-            Lock_guard <Spinlock> guard (lock);
-
-            for (Sc *sc; (sc = dequeue_head()); sc->remote_enqueue()) ;
-        }
-
-        HOT NORETURN
-        static void ret_user_sysexit();
-
-        HOT NORETURN
-        static void ret_user_iret() asm ("ret_user_iret");
-
-        NORETURN
-        static void ret_user_vmresume();
-
-        NORETURN
-        static void ret_user_vmrun();
-
-        template <Status S, bool T = false>
-        NOINLINE NORETURN
-        static void sys_finish();
-
-        NORETURN
         void activate();
 
-        template <void (*)()>
-        NORETURN
-        static void send_msg();
+        void adjust_offset_ticks (uint64);
 
-        HOT NORETURN
-        static void recv_kern();
+        template <Status S, bool T = false>
+        NORETURN NOINLINE
+        static void sys_finish (Ec *);
 
-        HOT NORETURN
-        static void recv_user();
-
-        HOT NORETURN
-        static void reply (void (*)() = nullptr);
-
-        HOT NORETURN
-        static void sys_call();
-
-        HOT NORETURN
-        static void sys_reply();
-
-        NORETURN
-        static void sys_create_pd();
-
-        NORETURN
-        static void sys_create_ec();
-
-        NORETURN
-        static void sys_create_sc();
-
-        NORETURN
-        static void sys_create_pt();
-
-        NORETURN
-        static void sys_create_sm();
-
-        NORETURN
-        static void sys_revoke();
-
-        NORETURN
-        static void sys_lookup();
-
-        NORETURN
-        static void sys_ctrl_pd();
-
-        NORETURN
-        static void sys_ctrl_ec();
-
-        NORETURN
-        static void sys_ctrl_sc();
-
-        NORETURN
-        static void sys_ctrl_pt();
-
-        NORETURN
-        static void sys_ctrl_sm();
-
-        NORETURN
-        static void sys_ctrl_pm();
-
-        NORETURN
-        static void sys_assign_int();
-
-        NORETURN
-        static void sys_assign_dev();
-
-        NORETURN
-        static void idle();
-
-        NORETURN
-        static void root_invoke();
-
-        NORETURN
-        static void dead() { die ("IPC Abort"); }
-
-        NORETURN
-        static void die (char const *, Exc_regs * = &current->regs);
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        static cont_t const syscall[16] asm ("syscall");
 };
