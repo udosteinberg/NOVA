@@ -1,10 +1,11 @@
 /*
- * Semaphore
+ * Semaphore (SM)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,10 +22,9 @@
 #include "sm.hpp"
 #include "stdio.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Sm::cache (sizeof (Sm), 32);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Sm::cache { sizeof (Sm), Kobject::alignment };
 
-Sm::Sm (Pd *, mword, mword cnt) : Kobject (Kobject::Type::SM), counter (cnt)
+Sm::Sm (uint64_t c, unsigned i) : Kobject { Kobject::Type::SM }, counter { c }, id { i }
 {
-    trace (TRACE_SYSCALL, "SM:%p created (CNT:%lu)", this, cnt);
+    trace (TRACE_CREATE, "SM:%p created (CNT:%lu)", static_cast<void *>(this), c);
 }
