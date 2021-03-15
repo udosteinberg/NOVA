@@ -107,18 +107,6 @@ class Lapic final
             write (Register64::ICR, v);
         }
 
-        ALWAYS_INLINE
-        static inline void timer_handler();
-
-        ALWAYS_INLINE
-        static inline void error_handler();
-
-        ALWAYS_INLINE
-        static inline void perfm_handler();
-
-        ALWAYS_INLINE
-        static inline void therm_handler();
-
         static inline unsigned ratio { 0 };
 
     public:
@@ -152,9 +140,10 @@ class Lapic final
                 Msr::write (Msr::Register::IA32_TSC_DEADLINE, tsc);
         }
 
+        static void timer_handler();
+        static void error_handler();
+        static void perfm_handler();
+        static void therm_handler();
+
         static void init (uint32, uint32);
-
-        static void lvt_vector (unsigned) asm ("lvt_vector");
-
-        static void ipi_vector (unsigned) asm ("ipi_vector");
 };

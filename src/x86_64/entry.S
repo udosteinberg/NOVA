@@ -57,10 +57,10 @@ INTRGATE                \DPL
                         jmp     entry_exc
 .endm
 
-.macro                  INTERRUPT VEC, LABEL
+.macro                  INTERRUPT VEC
 INTRGATE                0
                         push    $\VEC
-                        jmp     \LABEL
+                        jmp     entry_int
 .endm
 
 .macro                  SAVE_STATE N
@@ -122,39 +122,17 @@ exit:                   testb   $3, OFS_CS(%rbx)
 /*
  * Interrupt Entry
  */
-.macro                  INTERRUPT_ENTRY FUNC
-                        SAVE_STATE 2
+entry_int:              SAVE_STATE 2
                         mov     OFS_VEC(%rbx), %rdi
-                        call    \FUNC
+                        call    int_handler
                         jmp     exit
-.endm
 
 /*
  * Interrupts
  */
 .set                    VEC,    NUM_EXC
-
-entry_gsi:              INTERRUPT_ENTRY gsi_vector
-.rept                   NUM_GSI
-INTERRUPT               VEC,    entry_gsi
-.set                    VEC,    VEC + 1
-.endr
-
-entry_msi:              INTERRUPT_ENTRY msi_vector
-.rept                   NUM_MSI
-INTERRUPT               VEC,    entry_msi
-.set                    VEC,    VEC + 1
-.endr
-
-entry_lvt:              INTERRUPT_ENTRY lvt_vector
-.rept                   NUM_LVT
-INTERRUPT               VEC,    entry_lvt
-.set                    VEC,    VEC + 1
-.endr
-
-entry_ipi:              INTERRUPT_ENTRY ipi_vector
-.rept                   NUM_IPI
-INTERRUPT               VEC,    entry_ipi
+.rept                   NUM_VEC-NUM_EXC
+INTERRUPT               VEC
 .set                    VEC,    VEC + 1
 .endr
 
