@@ -54,7 +54,7 @@ void Smmu::init()
     // Configure SMMU fault interrupt
     write (Reg32::FEUADDR, dst & BIT_RANGE (31, 8));
     write (Reg32::FEADDR, Lapic::msi_base | (dst & BIT_RANGE (7, 0)) << 12);
-    write (Reg32::FEDATA, VEC_MSI_DMAR);
+    write (Reg32::FEDATA, VEC_FLT);
     write (Reg32::FECTL, 0);
 
     // Clear any pending faults that may have occurred in prior boot stages
@@ -194,15 +194,4 @@ void Smmu::fault()
     }
 
     write (Reg32::FSTS, Fault::ITE | Fault::ICE | Fault::IQE | Fault::APF | Fault::AFO | Fault::PFO);
-}
-
-void Smmu::vector (unsigned vector)
-{
-    unsigned msi = vector - VEC_MSI;
-
-    if (msi == 0) [[likely]]
-        for (auto l { list }; l; l = l->next)
-            l->fault();
-
-    Lapic::eoi();
 }

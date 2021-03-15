@@ -641,7 +641,11 @@ class Smmu final : public List<Smmu>, private Mmio
                 l->invalidate_iec (gsi);
         }
 
-        static void vector (unsigned) asm ("msi_vector");
+        static void interrupt()
+        {
+            for (auto l { list }; l; l = l->next)
+                l->fault();
+        }
 
         bool configure (Pd *, uintptr_t, bool = true);
 
