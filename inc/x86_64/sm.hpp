@@ -35,10 +35,8 @@ class Sm : public Kobject, private Queue<Ec>
         Sm (Pd *, mword, mword = 0);
 
         ALWAYS_INLINE
-        inline void dn (bool zero, uint64 t)
+        inline void dn (Ec *const ec, bool zero, uint64 t)
         {
-            Ec *ec = Ec::current;
-
             {   Lock_guard <Spinlock> guard (lock);
 
                 if (counter) {
@@ -49,9 +47,13 @@ class Sm : public Kobject, private Queue<Ec>
                 enqueue_tail (ec);
             }
 
-            ec->set_timeout (t, this);
+            if (ec->block_sc()) {
 
-            ec->block_sc();
+                if (t)
+                    ec->set_timeout (t, this);
+
+                Sc::schedule (true);
+            }
         }
 
         ALWAYS_INLINE

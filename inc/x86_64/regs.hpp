@@ -100,9 +100,13 @@ class alignas (16) Cpu_regs : private Pad, public Exc_regs
 {
     public:
         union {
-            Vmcs *  vmcs;
-            Vmcb *  vmcb;
+            Vmcb * const    vmcb;
+            Vmcs * const    vmcs;
         };
+
+        inline Cpu_regs()         : vmcb (nullptr) {}
+        inline Cpu_regs (Vmcb *v) : vmcb (v) {}
+        inline Cpu_regs (Vmcs *v) : vmcs (v) {}
 
     private:
         template <typename T> ALWAYS_INLINE inline mword get_g_cs_dl() const;

@@ -24,8 +24,10 @@
 #include "compiler.hpp"
 #include "kmem.hpp"
 #include "queue.hpp"
+#include "slab.hpp"
 
 class Ec;
+class Pd;
 
 class Sc : public Kobject, public Queue<Sc>::Element
 {
@@ -58,7 +60,6 @@ class Sc : public Kobject, public Queue<Sc>::Element
 
     public:
         static Sc *     current     CPULOCAL_HOT;
-        static unsigned ctr_link    CPULOCAL;
         static unsigned ctr_loop    CPULOCAL;
 
         static unsigned const default_prio = 1;

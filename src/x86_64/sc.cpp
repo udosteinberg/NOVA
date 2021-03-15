@@ -19,7 +19,9 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "counter.hpp"
 #include "ec.hpp"
+#include "hazards.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
 #include "timeout_budget.hpp"
@@ -32,7 +34,6 @@ INIT_PRIORITY (PRIO_LOCAL)
 Sc::Rq Sc::rq;
 
 Sc *        Sc::current;
-unsigned    Sc::ctr_link;
 unsigned    Sc::ctr_loop;
 Queue<Sc>   Sc::list[priorities];
 
@@ -78,7 +79,7 @@ Sc * Sc::ready_dequeue (uint64 t)
     while (list[prio_top].empty() && prio_top)
         prio_top--;
 
-    sc->ec->add_tsc_offset (sc->tsc - t);
+    sc->ec->adjust_offset_ticks (t - sc->tsc);
 
     sc->tsc = t;
 
@@ -103,11 +104,15 @@ void Sc::schedule (bool blocked)
     if (EXPECT_TRUE (!blocked))
         current->ready_enqueue (t);
 
-    ctr_loop = 0;
-    current = ready_dequeue (t);
+    for (;;) {
 
-    Timeout_budget::timeout.enqueue (t + current->left);
-    current->ec->activate();
+        ctr_loop = 0;
+        current = ready_dequeue (t);
+
+        Timeout_budget::timeout.enqueue (t + current->left);
+        current->ec->activate();
+        Timeout_budget::timeout.dequeue();
+    }
 }
 
 void Sc::remote_enqueue()

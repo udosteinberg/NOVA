@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -56,17 +57,23 @@ class Sys_create_pd final : public Sys_regs
 class Sys_create_ec final : public Sys_regs
 {
     public:
+        inline bool type() const { return flags() & BIT (0); }
+
+        inline bool vcpu() const { return flags() & BIT (1); }
+
+        inline bool fpu() const { return flags() & BIT (2); }
+
         inline unsigned long sel() const { return p0() >> 8; }
 
-        inline unsigned long pd() const { return p1(); }
+        inline unsigned long own() const { return p1(); }
 
-        inline unsigned cpu() const { return p2() & 0xfff; }
+        inline unsigned cpu() const { return p2() & PAGE_MASK; }
 
-        inline mword utcb() const { return p2() & ~0xfff; }
+        inline uintptr_t utcb() const { return p2() & ~PAGE_MASK; }
 
-        inline mword esp() const { return p3(); }
+        inline uintptr_t sp() const { return p3(); }
 
-        inline unsigned evt() const { return static_cast<unsigned>(p4()); }
+        inline uintptr_t eb() const { return p4(); }
 };
 
 class Sys_create_sc final : public Sys_regs
@@ -132,6 +139,8 @@ class Sys_ctrl_pd final : public Sys_regs
 class Sys_ctrl_ec final : public Sys_regs
 {
     public:
+        inline bool strong() const { return flags() & BIT (0); }
+
         inline unsigned long ec() const { return p0() >> 8; }
 };
 

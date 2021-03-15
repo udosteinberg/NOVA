@@ -26,6 +26,7 @@
 #include "counter.hpp"
 #include "extern.hpp"
 #include "gdt.hpp"
+#include "hazards.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
 #include "lapic.hpp"
@@ -182,6 +183,8 @@ void Cpu::setup_pcid()
 void Cpu::init()
 {
     for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+    hazard = HZD_BOOT_GST | HZD_BOOT_HST;
 
     Gdt::build();
     Tss::build();

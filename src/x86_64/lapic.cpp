@@ -24,6 +24,7 @@
 #include "cmdline.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
+#include "hpt.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "pd_kern.hpp"

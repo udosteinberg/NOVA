@@ -1,8 +1,7 @@
 /*
- * Hazards
+ * System-Call Interface
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,13 +17,5 @@
 
 #pragma once
 
-#define HZD_SCHED       0x1
-#define HZD_DS_ES       0x2
-#define HZD_TR          0x4
-#define HZD_FPU         0x8
-#define HZD_RCU         0x10
-#define HZD_BOOT_HST    0x20
-#define HZD_BOOT_GST    0x40
-#define HZD_TSC         0x20000000
-#define HZD_RECALL      0x40000000
-#define HZD_ILLEGAL     0x80000000
+template void Ec::send_msg<Ec_arch::ret_user_vmexit_vmx> (Ec *);
+template void Ec::send_msg<Ec_arch::ret_user_vmexit_svm> (Ec *);
