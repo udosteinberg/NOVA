@@ -111,11 +111,13 @@ struct Sys_create_sm final : private Sys_abi
 {
     Sys_create_sm (Sys_regs &r) : Sys_abi { r } {}
 
+    auto flg() const { return flags(); }
+
     unsigned long sel() const { return p0() >> 8; }
 
     unsigned long pd() const { return p1(); }
 
-    mword cnt() const { return p2(); }
+    uintptr_t val() const { return p2(); }
 };
 
 struct Sys_ctrl_pd final : private Sys_abi
@@ -170,13 +172,13 @@ struct Sys_ctrl_sm final : private Sys_abi
 {
     Sys_ctrl_sm (Sys_regs &r) : Sys_abi { r } {}
 
+    bool op() const { return flags() & BIT (0); }
+
+    bool zc() const { return flags() & BIT (1); }
+
     unsigned long sm() const { return p0() >> 8; }
 
-    unsigned op() const { return flags() & 0x1; }
-
-    unsigned zc() const { return flags() & 0x2; }
-
-    uint64_t time() const { return static_cast<uint64_t>(p1()) << 32 | p2(); }
+    uint64_t time_ticks() const { return p1(); }
 };
 
 struct Sys_ctrl_hw final : private Sys_abi
