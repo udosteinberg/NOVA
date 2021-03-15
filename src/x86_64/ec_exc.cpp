@@ -18,66 +18,39 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
 #include "extern.hpp"
+#include "fpu.hpp"
 #include "gdt.hpp"
 #include "mca.hpp"
 #include "stdio.hpp"
 
-void Ec::load_fpu()
+void Ec::fpu_load()
 {
+    assert (fpu);
+
     if (!utcb)
         regs.fpu_ctrl (true);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new Fpu;
-
     fpu->load();
+
+    set_hazard (HZD_FPU);
 }
 
-void Ec::save_fpu()
+void Ec::fpu_save()
 {
+    assert (fpu);
+
     if (!utcb)
         regs.fpu_ctrl (false);
 
-    if (EXPECT_FALSE (!fpu))
-        fpu = new Fpu;
-
     fpu->save();
+
+    clr_hazard (HZD_FPU);
 }
 
-void Ec::transfer_fpu (Ec *ec)
-{
-    if (!(Cpu::hazard & HZD_FPU)) {
-
-        Fpu::enable();
-
-        if (fpowner != this) {
-            if (fpowner)
-                fpowner->save_fpu();
-            load_fpu();
-        }
-    }
-
-    fpowner = ec;
-}
-
-void Ec::handle_exc_nm()
-{
-    Fpu::enable();
-
-    if (current == fpowner)
-        return;
-
-    if (fpowner)
-        fpowner->save_fpu();
-
-    current->load_fpu();
-
-    fpowner = current;
-}
-
-bool Ec::handle_exc_gp (Exc_regs *)
+bool Ec_arch::handle_exc_gp (Exc_regs *)
 {
     if (Cpu::hazard & HZD_TR) {
         Cpu::hazard &= ~HZD_TR;
@@ -89,12 +62,12 @@ bool Ec::handle_exc_gp (Exc_regs *)
     return false;
 }
 
-bool Ec::handle_exc_pf (Exc_regs *r)
+bool Ec_arch::handle_exc_pf (Exc_regs *r)
 {
     mword addr = r->cr2;
 
     if (r->err & Paging::ERR_U)
-        return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
+        return addr < Space_mem::num << PAGE_BITS && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, Space_mem::num << PAGE_BITS);
 
     if (addr >= LINK_ADDR && addr < CPU_LOCAL && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp::master, addr, CPU_LOCAL))
         return true;
@@ -107,21 +80,22 @@ bool Ec::handle_exc_pf (Exc_regs *r)
     if (r->user() && addr >= SPC_LOCAL_IOP && addr <= SPC_LOCAL_IOP_E) {
         r->vec = EXC_GP;
         r->err = r->cr2 = 0;
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (current);
     }
 
-    die ("#PF (kernel)", r);
+    current->kill ("#PF (kernel)");
 }
 
-void Ec::handle_exc (Exc_regs *r)
+void Ec_arch::handle_exc (Exc_regs *r)
 {
     Counter::exc[r->vec].inc();
 
     switch (r->vec) {
 
         case EXC_NM:
-            handle_exc_nm();
-            return;
+            if (current->fpu_switch())
+                return;
+            break;
 
         case EXC_GP:
             if (handle_exc_gp (r))
@@ -139,7 +113,7 @@ void Ec::handle_exc (Exc_regs *r)
     }
 
     if (r->user())
-        send_msg<ret_user_iret>();
+        send_msg<ret_user_exception> (current);
 
-    die ("EXC", r);
+    current->kill ("EXC");
 }

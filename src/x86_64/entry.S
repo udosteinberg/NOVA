@@ -176,6 +176,7 @@ entry_ipi:              push    $0
  * Interrupt Return
  */
 ret_from_interrupt:     testb   $3, OFS_CS (%rbx)
+                        mov     current, %rdi           // ARG_1 = Ec::current
                         jnz     ret_user_iret
                         LOAD_GPR
                         add     $(6 * SIZE), %rsp
@@ -191,8 +192,10 @@ entry_sys:              mov     %rsp, %r11
                         lea     -11*SIZE(%rsp), %rsp
                         SAVE_GPR
                         lea     STCK_TOP, %rsp
-                        and     $0xf, %rdi
-                        jmp     *syscall(,%rdi,SIZE)
+                        mov     %rdi, %rsi
+                        mov     current, %rdi           // ARG_1 = Ec::current
+                        and     $0xf, %rsi
+                        jmp     *syscall(,%rsi,SIZE)
 
 /*
  * VMX Entry
