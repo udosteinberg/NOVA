@@ -93,7 +93,7 @@ void Sc::schedule (bool blocked)
     assert (blocked || !current->get_next());
 
     uint64 t = rdtsc();
-    uint64 d = Timeout_budget::budget.dequeue();
+    uint64 d = Timeout_budget::timeout.dequeue();
 
     current->time += t - current->tsc;
     current->left = d > t ? d - t : 0;
@@ -106,7 +106,7 @@ void Sc::schedule (bool blocked)
     ctr_loop = 0;
     current = ready_dequeue (t);
 
-    Timeout_budget::budget.enqueue (t + current->left);
+    Timeout_budget::timeout.enqueue (t + current->left);
     current->ec->activate();
 }
 

@@ -20,21 +20,15 @@
 
 #include "timeout.hpp"
 
-class Ec;
 class Sm;
 
 class Timeout_hypercall : public Timeout
 {
     private:
-        Ec * const ec;
-        Sm *sm;
+        Sm *sm { nullptr };
 
-        void trigger() override;
+        void trigger() override final;
 
     public:
-        ALWAYS_INLINE
-        inline Timeout_hypercall (Ec *e) : ec (e) {}
-
-        ALWAYS_INLINE
-        inline void enqueue (uint64 t, Sm *s) { sm = s; Timeout::enqueue (t); }
+        void enqueue (uint64_t t, Sm *s) { sm = s; Timeout::enqueue (t); }
 };
