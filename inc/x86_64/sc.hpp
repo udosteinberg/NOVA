@@ -1,5 +1,5 @@
 /*
- * Scheduling Context
+ * Scheduling Context (SC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -22,69 +22,95 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "compiler.hpp"
-#include "kmem.hpp"
+#include "kobject.hpp"
 #include "queue.hpp"
-#include "slab.hpp"
+#include "status.hpp"
 
 class Ec;
-class Pd;
 
-class Sc : public Kobject, public Queue<Sc>::Element
+class Sc final : public Kobject, public Queue<Sc>::Element
 {
-    public:
-        Ec * const ec;
-        unsigned const cpu;
-        unsigned const prio;
-        uint64 const budget;
-        uint64 time;
+    friend class Scheduler;
 
     private:
-        uint64 left;
-        uint64 tsc;
+        Ec *     const          ec                  { nullptr };
+        uint64   const          budget              { 0 };
+        unsigned const          cpu                 { 0 };
+        uint16   const          cos                 { 0 };
+        uint8    const          prio                { 0 };
+        Atomic<uint64>          used                { 0 };
+        uint64                  left                { 0 };
+        uint64                  last                { 0 };
 
-        static unsigned const priorities = 128;
+        static Slab_cache       cache;
 
-        static Slab_cache cache;
-
-        static struct Rq {
-            Queue<Sc>   queue;
-            Spinlock    lock;
-        } rq CPULOCAL;
-
-        static Queue<Sc> list[priorities] CPULOCAL;
-
-        static unsigned prio_top CPULOCAL;
-
-        void ready_enqueue (uint64);
-        static Sc *ready_dequeue (uint64);
+        Sc (unsigned, Ec *, uint16, uint8, uint16);
 
     public:
-        static Sc *     current     CPULOCAL_HOT;
-        static unsigned ctr_loop    CPULOCAL;
-
-        static unsigned const default_prio = 1;
-        static unsigned const default_quantum = 10000;
-
-        Sc (Pd *, mword, Ec *);
-        Sc (Pd *, mword, Ec *, unsigned, unsigned, unsigned);
-
-        ALWAYS_INLINE
-        static inline Rq *remote (unsigned c)
+        [[nodiscard]] static inline Sc *create (Status &s, unsigned n, Ec *e, uint16 b, uint8 p, uint16 c)
         {
-            return Kmem::loc_to_glob (&rq, c);
+            auto const sc { new (cache) Sc (n, e, b, p, c) };
+
+            if (EXPECT_FALSE (!sc))
+                s = Status::MEM_OBJ;
+
+            return sc;
         }
 
-        void remote_enqueue();
+        inline void destroy() { operator delete (this, cache); }
 
-        static void rrq_handler();
+        ALWAYS_INLINE
+        inline auto get_ec() const { return ec; }
+
+        ALWAYS_INLINE
+        inline uint64 get_used() const { return used; }
+};
+
+class Scheduler final
+{
+    public:
+        static constexpr auto priorities { 128 };
+
+        static void unblock (Sc *);
+        static void requeue();
+
+        ALWAYS_INLINE
+        static inline auto get_current() { return current; }
+
+        ALWAYS_INLINE
+        static inline void set_current (Sc *s) { current = s; }
 
         [[noreturn]]
         static void schedule (bool = false);
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+    private:
+        // Ready queue
+        class Ready final
+        {
+            private:
+                Queue<Sc>   queue[priorities];
+                unsigned    prio_top { 0 };
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+            public:
+                inline void enqueue (Sc *, uint64);
+                inline auto dequeue (uint64);
+        };
+
+        // Release queue
+        class Release final
+        {
+            private:
+                Queue<Sc>   queue;
+                Spinlock    lock;
+
+            public:
+                inline void enqueue (Sc *);
+                inline auto dequeue();
+        };
+
+        static Ready        ready       CPULOCAL;
+        static Release      release     CPULOCAL;
+        static Sc *         current     CPULOCAL;
 };
