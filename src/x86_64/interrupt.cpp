@@ -1,0 +1,170 @@
+/*
+ * Interrupt Handling
+ *
+ * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
+ * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
+ *
+ * This file is part of the NOVA microhypervisor.
+ *
+ * NOVA is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NOVA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License version 2 for more details.
+ */
+
+#include "counter.hpp"
+#include "dmar.hpp"
+#include "hazards.hpp"
+#include "idt.hpp"
+#include "interrupt.hpp"
+#include "ioapic.hpp"
+#include "lapic.hpp"
+#include "sm.hpp"
+#include "stdio.hpp"
+#include "vectors.hpp"
+
+Interrupt Interrupt::int_table[NUM_GSI];
+
+void Interrupt::setup()
+{
+    Idt::build();
+
+    for (unsigned gsi { 0 }; gsi < sizeof (int_table) / sizeof (*int_table); gsi++)
+        int_table[gsi].sm = new Sm (&Pd::kern, gsi);
+}
+
+void Interrupt::set_mask (unsigned gsi, bool msk)
+{
+    Config const conf { int_table[gsi].config };
+    auto const ioapic { int_table[gsi].ioapic };
+
+    if (ioapic && conf.trg())
+        ioapic->set_cfg (gsi, msk, true, conf.pol());
+}
+
+void Interrupt::rke_handler()
+{
+    if (Pd::current->Space_mem::htlb.tst (Cpu::id))
+        Cpu::hazard |= HZD_SCHED;
+}
+
+void Interrupt::handle_ipi (unsigned ipi)
+{
+    assert (ipi < NUM_IPI);
+
+    Counter::req[ipi].inc();
+
+    switch (ipi) {
+        case Request::RRQ: Sc::rrq_handler(); break;
+        case Request::RKE: rke_handler(); break;
+    }
+}
+
+void Interrupt::handle_lvt (unsigned lvt)
+{
+    assert (lvt < NUM_LVT);
+
+    Counter::loc[lvt].inc();
+
+    switch (lvt) {
+        case 0: Lapic::timer_handler(); break;
+        case 1: Lapic::error_handler(); break;
+        case 2: Lapic::perfm_handler(); break;
+        case 3: Lapic::therm_handler(); break;
+    }
+}
+
+void Interrupt::handle_gsi (unsigned gsi)
+{
+    assert (gsi < NUM_GSI);
+
+    set_mask (gsi, true);
+
+    int_table[gsi].sm->up();
+}
+
+void Interrupt::handler (unsigned v)
+{
+    if (v >= VEC_FLT)
+        Dmar::interrupt();
+
+    else if (v >= VEC_IPI)
+        handle_ipi (v - VEC_IPI);
+
+    else if (v >= VEC_LVT)
+        handle_lvt (v - VEC_LVT);
+
+    else if (v >= VEC_GSI)
+        handle_gsi (v - VEC_GSI);
+
+    Lapic::eoi();
+}
+
+void Interrupt::init (unsigned gsi, uint32_t &msi_addr, uint16_t &msi_data)
+{
+    Config const conf { int_table[gsi].config };
+    auto const ioapic { int_table[gsi].ioapic };
+
+    auto const src { ioapic ? ioapic->src() : conf.src() };
+    auto const aid { Lapic::id[conf.cpu()] };
+    auto const vec { static_cast<uint8_t>(VEC_GSI + gsi) };
+
+    Dmar::set_irt (gsi, src, aid, vec, conf.trg());
+
+    /* MSI Compatibility Format
+     * ADDR: 0xfee[31:20] APICID[19:12] ---[11:5] 0[4] RH[3] DM[2] --[1:0]
+     * DATA: ---[31:16] TRG[15] ASS[14] --[13:11] DLVM[10:8] VEC[7:0]
+     *
+     * MSI Remappable Format
+     * ADDR: 0xfee[31:20] Handle[19:5] 1[4] SHV[3] Handle[2] --[1:0]
+     * DATA: ---[31:16] Subhandle[15:0]
+     */
+
+    /* IOAPIC RTE Format
+     * 63:56/31:24 = APICID     => ADDR[19:12]
+     * 55:48/23:16 = EDID       => ADDR[11:4]
+     * 16 = MSK
+     * 15 = TRG                 => DATA[15]
+     * 14 = RIRR
+     * 13 = POL
+     * 12 = DS
+     * 11 = DM                  => ADDR[2]
+     * 10:8 = DLV               => DATA[10:8]
+     * 7:0 = VEC                => DATA[7:0]
+     */
+
+    if (ioapic) {
+        ioapic->set_dst (gsi, Dmar::ire() ? gsi << 17 | BIT (16) : aid << 24);
+        ioapic->set_cfg (gsi, conf.msk(), conf.trg(), conf.pol());
+        msi_addr = msi_data = 0;
+    } else {
+        msi_addr = Lapic::msi_base | (Dmar::ire() ? BIT_RANGE (4, 3) : aid << 12);
+        msi_data = static_cast<uint16_t>(Dmar::ire() ? gsi : vec);
+    }
+}
+
+void Interrupt::configure (unsigned gsi, Config cfg, uint32_t &msi_addr, uint16_t &msi_data)
+{
+    trace (TRACE_INTR, "INTR: Routing GSI %#04x (%c%c%c) to CPU %u", gsi, cfg.msk() ? 'M' : 'U', cfg.trg() ? 'L' : 'E', cfg.pol() ? 'L' : 'H', cfg.cpu());
+
+    int_table[gsi].config = cfg;
+
+    init (gsi, msi_addr, msi_data);
+}
+
+void Interrupt::send_cpu (Request req, cpu_t cpu)
+{
+    Lapic::send_cpu (VEC_IPI + req, cpu);
+}
+
+void Interrupt::send_exc (Request req)
+{
+    Lapic::send_exc (VEC_IPI + req);
+}

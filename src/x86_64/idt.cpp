@@ -23,13 +23,13 @@
 #include "idt.hpp"
 #include "selectors.hpp"
 
-ALIGNED(8) Idt Idt::idt[VEC_MAX];
+ALIGNED(8) Idt Idt::idt[NUM_VEC];
 
 void Idt::build()
 {
     uintptr_t *ptr { handlers };
 
-    for (unsigned vector { 0 }; vector < VEC_MAX; vector++, ptr++)
+    for (unsigned vector { 0 }; vector < sizeof (idt) / sizeof (*idt); vector++, ptr++)
         if (*ptr)
             idt[vector].set (SYS_INTR_GATE, *ptr & 3, SEL_KERN_CODE, *ptr & ~3);
         else

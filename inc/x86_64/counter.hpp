@@ -22,8 +22,8 @@
 #pragma once
 
 #include "atomic.hpp"
-#include "config.hpp"
 #include "kmem.hpp"
+#include "vectors.hpp"
 
 class Counter final
 {

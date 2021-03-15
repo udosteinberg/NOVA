@@ -38,7 +38,7 @@ class Idt final : private Descriptor
         }
 
     public:
-        static Idt idt[VEC_MAX];
+        static Idt idt[NUM_VEC];
 
         static void build();
 
