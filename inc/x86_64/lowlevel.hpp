@@ -38,12 +38,6 @@ static inline void pause()
 }
 
 ALWAYS_INLINE
-static inline auto rdtsc()
-{
-    return __builtin_ia32_rdtsc();
-}
-
-ALWAYS_INLINE
 static inline auto get_cr0()
 {
     uintptr_t cr0;
