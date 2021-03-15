@@ -58,5 +58,5 @@ extern "C" [[noreturn]] void bootstrap()
         Ec::create_root();
     }
 
-    Sc::schedule();
+    Scheduler::schedule();
 }
