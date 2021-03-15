@@ -1,11 +1,10 @@
 /*
- * Scheduling Context
+ * Scheduling Context (SC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -20,126 +19,47 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "counter.hpp"
 #include "ec.hpp"
-#include "interrupt.hpp"
-#include "lowlevel.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
-#include "timeout_budget.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Sc::cache (sizeof (Sc), 32);
-
-INIT_PRIORITY (PRIO_LOCAL)
-Sc::Rq Sc::rq;
-
-Sc *        Sc::current;
-unsigned    Sc::ctr_loop;
-Queue<Sc>   Sc::list[priorities];
-
-unsigned Sc::prio_top;
-
-Sc::Sc (Pd *, mword sel, Ec *e) : Kobject (Kobject::Type::SC), ec (e), cpu (static_cast<cpu_t>(sel)), prio (0), budget (Stc::ms_to_ticks (1000)), left (0)
+Sc::Sc (Refptr<Ec> &ref_ec, cpu_t n, uint16_t b, uint8_t p, cos_t c) : Kobject { Kobject::Type::SC }, ec { std::move (ref_ec) }, budget { Stc::ms_to_ticks (b) }, cpu { n }, cos { c }, prio { p }
 {
-    trace (TRACE_SYSCALL, "SC:%p created (Kernel)", this);
+    trace (TRACE_CREATE, "SC:%p created (EC:%p CPU:%u Budget:%ums Prio:%u COS:%u)", static_cast<void *>(this), static_cast<void *>(ec), cpu, b, p, c);
 }
 
-Sc::Sc (Pd *, mword, Ec *e, cpu_t c, unsigned p, unsigned q) : Kobject (Kobject::Type::SC), ec (e), cpu (c), prio (p), budget (Stc::ms_to_ticks (q)), left (0)
+Sc *Sc::create (Status &s, Ec *ec, cpu_t cpu, uint16_t budget, uint8_t prio, cos_t cos)
 {
-    trace (TRACE_SYSCALL, "SC:%p created (EC:%p CPU:%#x P:%#x Q:%#x)", this, e, c, p, q);
-}
+    // Acquire reference
+    Refptr<Ec> ref_ec { ec };
 
-void Sc::ready_enqueue (uint64 t)
-{
-    assert (prio < priorities);
-    assert (cpu == Cpu::id);
+    // Failed to acquire reference
+    if (!ref_ec) [[unlikely]]
+        s = Status::ABORTED;
 
-    if (prio > prio_top)
-        prio_top = prio;
+    else {
 
-    list[prio].enqueue (this, left);
+        // Create new SC object
+        auto const obj { new (ref_ec->get_pd()->sc_cache) Sc { ref_ec, cpu, budget, prio, cos } };
 
-    if (prio > current->prio || (this != current && prio == current->prio && left))
-        Cpu::hazard |= Hazard::SCHED;
+        // If creation succeeded, then reference must have been consumed
+        if (obj) [[likely]] {
+            assert (!ref_ec);
+            return obj;
+        }
 
-    if (!left)
-        left = budget;
-
-    tsc = t;
-}
-
-Sc * Sc::ready_dequeue (uint64 t)
-{
-    auto sc = list[prio_top].dequeue_head();
-
-    assert (sc);
-    assert (sc->prio < priorities);
-    assert (sc->cpu == Cpu::id);
-
-    while (list[prio_top].empty() && prio_top)
-        prio_top--;
-
-    sc->ec->adjust_offset_ticks (t - sc->tsc);
-
-    sc->tsc = t;
-
-    return sc;
-}
-
-void Sc::schedule (bool blocked)
-{
-    Counter::schedule.inc();
-
-    assert (current);
-    assert (blocked || !current->get_next());
-
-    uint64 t = rdtsc();
-    uint64 d = Timeout_budget::timeout.dequeue();
-
-    current->time += t - current->tsc;
-    current->left = d > t ? d - t : 0;
-
-    Cpu::hazard &= ~Hazard::SCHED;
-
-    if (!blocked) [[likely]]
-        current->ready_enqueue (t);
-
-    for (;;) {
-
-        ctr_loop = 0;
-        current = ready_dequeue (t);
-
-        Timeout_budget::timeout.enqueue (t + current->left);
-        current->ec->activate();
-        Timeout_budget::timeout.dequeue();
-    }
-}
-
-void Sc::remote_enqueue()
-{
-    if (Cpu::id == cpu)
-        return ready_enqueue (rdtsc());
-
-    bool ipi;
-
-    {
-        auto r = remote (cpu);
-
-        Lock_guard <Spinlock> guard (r->lock);
-
-        ipi = r->queue.enqueue_tail (this);
+        // Failed to create SC object
+        s = Status::MEM_OBJ;
     }
 
-    if (ipi)
-        Interrupt::send_cpu (Interrupt::Request::RRQ, cpu);
+    return nullptr;
 }
 
-void Sc::rrq_handler()
+void Sc::destroy()
 {
-    uint64 t = rdtsc();
+    auto &cache { ec->get_pd()->sc_cache };
 
-    Lock_guard <Spinlock> guard (rq.lock);
+    this->~Sc();
 
-    for (Sc *sc; (sc = rq.queue.dequeue_head()); sc->ready_enqueue (t)) ;
+    operator delete (this, cache);
 }
