@@ -108,8 +108,7 @@ class Acpi_intr : public Acpi_apic
 class Acpi_table_madt : public Acpi_table
 {
     private:
-        static void parse_lapic (Acpi_apic const *);
-
+        static void parse_lapic  (Acpi_apic const *);
         static void parse_ioapic (Acpi_apic const *);
 
         void parse_entry (Acpi_apic::Type, void (*)(Acpi_apic const *)) const;
@@ -119,11 +118,7 @@ class Acpi_table_madt : public Acpi_table
         uint32      flags;
         Acpi_apic   apic[];
 
-        static bool sci_overridden;
-
         void parse() const;
-
-        static void parse_intr (Acpi_apic const *);
 };
 
 #pragma pack()

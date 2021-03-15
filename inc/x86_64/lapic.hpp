@@ -146,12 +146,6 @@ class Lapic final
             return 0xffff;
         }
 
-        static void handle_timer();
-        static void handle_error();
-        static void handle_perfm();
-        static void handle_therm();
-        static void handle_cmchk();
-
         static inline constinit unsigned ratio { 0 };
 
     public:
@@ -207,9 +201,11 @@ class Lapic final
             }
         }
 
+        static void handle_timer();
+        static void handle_error();
+        static void handle_perfm();
+        static void handle_therm();
+        static void handle_cmchk();
+
         static void init (uint32_t, uint32_t);
-
-        static void lvt_vector (unsigned) asm ("lvt_vector");
-
-        static void ipi_vector (unsigned) asm ("ipi_vector");
 };
