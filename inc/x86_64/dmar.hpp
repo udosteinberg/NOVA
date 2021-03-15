@@ -278,5 +278,9 @@ class Dmar : public List<Dmar>
 
         void assign (unsigned long, Pd *);
 
-        static void vector (unsigned) asm ("msi_vector");
+        static inline void interrupt()
+        {
+            for (auto dmar = list; dmar; dmar = dmar->next)
+                dmar->fault_handler();
+        }
 };
