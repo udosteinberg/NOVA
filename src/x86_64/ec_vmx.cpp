@@ -19,12 +19,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
+#include "counter.hpp"
+#include "cr.hpp"
+#include "ec_arch.hpp"
 #include "interrupt.hpp"
 #include "stdio.hpp"
 #include "vmx.hpp"
 
-void Ec::vmx_exception()
+void Ec_arch::vmx_exception()
 {
     auto const vect_info { Vmcs::read<uint32_t> (Vmcs::Encoding::ORG_EVENT_IDENT) };
 
@@ -43,46 +45,51 @@ void Ec::vmx_exception()
 
         case 0x202:         // NMI
             asm volatile ("int $0x2" : : : "memory");
-            ret_user_vmresume();
+            ret_user_vmexit_vmx (this);
 
         case 0x307:         // #NM
-            handle_exc_nm();
-            ret_user_vmresume();
+            if (switch_fpu (this))
+                ret_user_vmexit_vmx (this);
+            break;
     }
 
-    current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
+    exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
 
-    send_msg<ret_user_vmresume>();
+    send_msg<ret_user_vmexit_vmx> (this);
 }
 
-void Ec::vmx_extint()
+void Ec_arch::vmx_extint()
 {
     Interrupt::handler (Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_EVENT_IDENT) & BIT_RANGE (7, 0));
 
-    ret_user_vmresume();
+    ret_user_vmexit_vmx (this);
 }
 
-void Ec::handle_vmx()
+void Ec_arch::handle_vmx()
 {
-    current->regs.cr2 = Cr::get_cr2();
+    Ec *const self { current };
+
+    self->regs.cr2 = Cr::get_cr2();
 
     Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
     auto const reason { Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_REASON) & BIT_RANGE (7, 0) };
 
     switch (reason) {
-        case Vmcs::VMX_EXC_NMI:     vmx_exception();
-        case Vmcs::VMX_EXTINT:      vmx_extint();
+        case Vmcs::VMX_EXC_NMI:     static_cast<Ec_arch *>(self)->vmx_exception();
+        case Vmcs::VMX_EXTINT:      static_cast<Ec_arch *>(self)->vmx_extint();
     }
 
-    current->exc_regs().set_ep (reason);
+    self->exc_regs().set_ep (reason);
 
-    send_msg<ret_user_vmresume>();
+    send_msg<ret_user_vmexit_vmx> (self);
 }
 
-void Ec::failed_vmx()
+void Ec_arch::failed_vmx()
 {
+    Ec *const self { current };
+
     trace (TRACE_ERROR, "VM entry failed with error %#x", Vmcs::read<uint32_t> (Vmcs::Encoding::VMX_INST_ERROR));
 
-    die ("VM entry failure");
+    self->kill ("VM entry failure");
 }
