@@ -1,5 +1,5 @@
 /*
- * Scheduling Context
+ * Scheduling Context (SC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -22,69 +22,90 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "compiler.hpp"
-#include "kmem.hpp"
+#include "kobject.hpp"
 #include "queue.hpp"
-#include "slab.hpp"
+#include "status.hpp"
 
 class Ec;
-class Pd;
 
-class Sc : public Kobject, public Queue<Sc>::Element
+class Sc final : public Kobject, public Queue<Sc>::Element
 {
-    public:
-        Ec * const ec;
-        cpu_t const cpu;
-        unsigned const prio;
-        uint64 const budget;
-        uint64 time;
+    friend class Scheduler;
 
     private:
-        uint64 left;
-        uint64 tsc;
+        Ec *     const          ec                  { nullptr };
+        uint64_t const          budget              { 0 };
+        cpu_t    const          cpu                 { 0 };
+        uint16_t const          cos                 { 0 };
+        uint8_t  const          prio                { 0 };
+        Atomic<uint64_t>        used                { 0 };
+        uint64_t                left                { 0 };
+        uint64_t                last                { 0 };
 
-        static unsigned const priorities = 128;
+        static Slab_cache       cache;
 
-        static Slab_cache cache;
-
-        static struct Rq {
-            Queue<Sc>   queue;
-            Spinlock    lock;
-        } rq CPULOCAL;
-
-        static Queue<Sc> list[priorities] CPULOCAL;
-
-        static unsigned prio_top CPULOCAL;
-
-        void ready_enqueue (uint64);
-        static Sc *ready_dequeue (uint64);
+        Sc (cpu_t, Ec *, uint16_t, uint8_t, uint16_t);
 
     public:
-        static Sc *     current     CPULOCAL_HOT;
-        static unsigned ctr_loop    CPULOCAL;
-
-        static unsigned const default_prio = 1;
-        static unsigned const default_quantum = 10000;
-
-        Sc (Pd *, mword, Ec *);
-        Sc (Pd *, mword, Ec *, cpu_t, unsigned, unsigned);
-
-        ALWAYS_INLINE
-        static inline Rq *remote (unsigned c)
+        [[nodiscard]] static Sc *create (Status &s, cpu_t n, Ec *e, uint16_t b, uint8_t p, uint16_t c)
         {
-            return Kmem::loc_to_glob (&rq, c);
+            auto const sc { new (cache) Sc (n, e, b, p, c) };
+
+            if (EXPECT_FALSE (!sc))
+                s = Status::MEM_OBJ;
+
+            return sc;
         }
 
-        void remote_enqueue();
+        void destroy() { operator delete (this, cache); }
 
-        static void rrq_handler();
+        auto get_ec() const { return ec; }
 
-        [[noreturn]]
-        static void schedule (bool = false);
+        uint64_t get_used() const { return used; }
+};
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+class Scheduler final
+{
+    public:
+        static constexpr auto priorities { 128 };
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        static void unblock (Sc *);
+        static void requeue();
+
+        static auto get_current() { return current; }
+
+        static void set_current (Sc *s) { current = s; }
+
+        [[noreturn]] static void schedule (bool = false);
+
+    private:
+        // Ready queue
+        class Ready final
+        {
+            private:
+                Queue<Sc>   queue[priorities];
+                unsigned    prio_top { 0 };
+
+            public:
+                void enqueue (Sc *, uint64_t);
+                auto dequeue (uint64_t);
+        };
+
+        // Release queue
+        class Release final
+        {
+            private:
+                Queue<Sc>   queue;
+                Spinlock    lock;
+
+            public:
+                void enqueue (Sc *);
+                auto dequeue();
+        };
+
+        static Ready        ready       CPULOCAL;
+        static Release      release     CPULOCAL;
+        static Sc *         current     CPULOCAL;
 };

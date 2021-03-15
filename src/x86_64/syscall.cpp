@@ -25,7 +25,6 @@
 #include "ec_arch.hpp"
 #include "hip.hpp"
 #include "interrupt.hpp"
-#include "lapic.hpp"
 #include "lowlevel.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
@@ -130,10 +129,10 @@ void Ec::reply (cont_t c)
         if (EXPECT_TRUE (ec->clr_partner()))
             static_cast<Ec_arch *>(ec)->make_current();
 
-        Sc::current->ec->activate();
+        Scheduler::get_current()->get_ec()->activate();
     }
 
-    Sc::schedule (true);
+    Scheduler::schedule (true);
 }
 
 template <Ec::cont_t C>
@@ -262,42 +261,29 @@ void Ec::sys_create_sc (Ec *const self)
 {
     Sys_create_sc r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx EC:%#lx P:%#x Q:%#x", static_cast<void *>(self), __func__, r.sel(), r.ec(), r.qpd().prio(), r.qpd().quantum());
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx EC:%#lx P:%u B:%u C:%u", static_cast<void *>(self), __func__, r.sel(), r.pd(), r.ec(), r.prio(), r.budget(), r.cos());
 
-    auto cpd { self->get_obj()->lookup (r.pd()) };
-    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::SC))) {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (EXPECT_FALSE (!r.prio() || !r.budget()))
+        self->sys_finish_status (Status::BAD_PAR);
 
-    auto cec { self->get_obj()->lookup (r.ec()) };
-    if (EXPECT_FALSE (!cec.validate (Capability::Perm_ec::BIND_SC))) {
-        trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r.ec());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const cpd { self->get_obj()->lookup (r.pd()) };
+    auto const cec { self->get_obj()->lookup (r.ec()) };
 
-    auto ec = static_cast<Ec *>(cec.obj());
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::SC) || !cec.validate (Capability::Perm_ec::BIND_SC)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    if (EXPECT_FALSE (ec->subtype == Kobject::Subtype::EC_LOCAL)) {
-        trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const ec { static_cast<Ec *>(cec.obj()) };
 
-    if (EXPECT_FALSE (!r.qpd().prio() || !r.qpd().quantum())) {
-        trace (TRACE_ERROR, "%s: Invalid QPD", __func__);
-        sys_finish<Status::BAD_PAR> (self);
-    }
+    if (EXPECT_FALSE (ec->subtype == Kobject::Subtype::EC_LOCAL))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    auto sc = new Sc (nullptr, r.sel(), ec, ec->cpu, r.qpd().prio(), r.qpd().quantum());
-    if (self->get_obj()->insert (r.sel(), Capability (sc, static_cast<unsigned>(Capability::Perm_sc::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        delete sc;
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    Status s;
+    auto const sc { Pd::create_sc (s, self->get_obj(), r.sel(), ec, ec->cpu, r.budget(), r.prio(), r.cos()) };
 
-    sc->remote_enqueue();
+    if (EXPECT_TRUE (sc))
+        Scheduler::unblock (sc);
 
-    sys_finish<Status::SUCCESS> (self);
+    self->sys_finish_status (s);
 }
 
 void Ec::sys_create_pt (Ec *const self)
@@ -436,15 +422,16 @@ void Ec::sys_ctrl_sc (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx", static_cast<void *>(self), __func__, r.sc());
 
-    auto cap = self->get_obj()->lookup (r.sc());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_sc::CTRL))) {
-        trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r.sc());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const csc { self->get_obj()->lookup (r.sc()) };
 
-    r.set_time (static_cast<Sc *>(cap.obj())->time);
+    if (EXPECT_FALSE (!csc.validate (Capability::Perm_sc::CTRL)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    sys_finish<Status::SUCCESS> (self);
+    auto const sc { static_cast<Sc *>(csc.obj()) };
+
+    r.set_time_ticks (sc->get_used());
+
+    self->sys_finish_status (Status::SUCCESS);
 }
 
 void Ec::sys_ctrl_pt (Ec *const self)
