@@ -95,13 +95,15 @@ Ec *Ec::create_hst (Status &s, Pd *pd, bool t, bool fpu, cpu_t cpu, unsigned lon
 
 void Ec::create_idle()
 {
+    Status s;
+
     auto const ec { Ec::create (Cpu::id, idle) };
-    auto const sc { new Sc (nullptr, Cpu::id, ec) };
+    auto const sc { Pd::create_sc (s, &Space_obj::nova, Space_obj::Selector::NOVA_CPU + Cpu::id, ec, Cpu::id, 1000, 0, 0) };
 
     assert (ec && sc);
 
     current = ec;
-    Sc::current = sc;
+    Scheduler::set_current (sc);
 }
 
 void Ec::create_root()
@@ -135,7 +137,7 @@ void Ec::create_root()
     auto utcb_addr { (Space_hst::selectors() - 2) << PAGE_BITS };
 
     auto const ec { Pd::create_ec (s, obj, Space_obj::selectors - 4, Pd::root, Cpu::id, 0, 0, utcb_addr, BIT (2) | BIT (1)) };
-    auto const sc { new Sc (Pd::root, NUM_EXC + 2, ec, Cpu::id, Sc::default_prio, Sc::default_quantum) };
+    auto const sc { Pd::create_sc (s, obj, Space_obj::selectors - 5, ec, Cpu::id, 1000, Scheduler::priorities - 1, 0) };
 
     if (EXPECT_FALSE (!ec || !sc))
         return;
@@ -187,7 +189,7 @@ void Ec::create_root()
             hst->delegate (&Space_hst::nova, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Memattr::ram());
     }
 
-    sc->remote_enqueue();
+    Scheduler::unblock (sc);
 
     Console::flush();
 }
@@ -215,13 +217,13 @@ void Ec::help (Ec *ec, cont_t c)
     // Preempt long helping chains, including livelocks
     Cpu::preemption_point();
     if (EXPECT_FALSE (Cpu::hazard & Hazard::SCHED))
-        Sc::schedule (false);
+        Scheduler::schedule (false);
 
     Counter::helping.inc();
 
     ec->activate();
 
-    Sc::schedule (true);
+    Scheduler::schedule (true);
 }
 
 void Ec::idle (Ec *const self)
