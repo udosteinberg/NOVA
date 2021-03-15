@@ -23,7 +23,6 @@
 
 void Acpi_table_fadt::parse() const
 {
-    Acpi::irq     = sci_irq;
     Acpi::feature = flags;
 
     // XXX: Use x_pm blocks if they exist
