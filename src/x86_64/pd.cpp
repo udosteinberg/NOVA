@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "ec_arch.hpp"
 #include "fpu.hpp"
 #include "space_dma.hpp"
 #include "space_gst.hpp"
@@ -35,6 +36,7 @@ INIT_PRIORITY (PRIO_SLAB) Pd Pd::nova { nullref };
 Pd::Pd (Refptr<Pd> &ref_pd) : Kobject   { Kobject::Type::PD, Kobject::Subtype::PD },
                               pd        { std::move (ref_pd) },
                               pd_cache  { sizeof (Pd),        Kobject::alignment },
+                              ec_cache  { sizeof (Ec),        Kobject::alignment },
                               obj_cache { sizeof (Space_obj), Kobject::alignment },
                               hst_cache { sizeof (Space_hst), Kobject::alignment },
                               gst_cache { sizeof (Space_gst), Kobject::alignment },
@@ -202,6 +204,21 @@ Pd *Pd::create_pd (Status &s, Space_obj *obj, unsigned long sel, unsigned prm)
     if (o) [[likely]] {
 
         if ((s = obj->insert (sel, Capability { o, prm })) == Status::SUCCESS) [[likely]]
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Ec *Pd::create_ec (Status &s, Space_obj *obj, unsigned long sel, cpu_t cpu, uintptr_t evt, uintptr_t sp, uintptr_t hva, uint8_t flg)
+{
+    auto const o { (flg & BIT (0) ? Ec::create_gst : Ec::create_hst) (s, this, flg & BIT (1), flg & BIT (2), cpu, evt, sp, hva) };
+
+    if (o) [[likely]] {
+
+        if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_ec::DEFINED) })) == Status::SUCCESS) [[likely]]
             return o;
 
         o->destroy();
