@@ -30,6 +30,7 @@
 #include "queue.hpp"
 #include "regs.hpp"
 #include "sc.hpp"
+#include "scheduler.hpp"
 #include "timeout_hypercall.hpp"
 
 class Fpu;
@@ -252,7 +253,7 @@ class Ec : public Kobject, private Queue<Sc>, public Queue<Ec>::Element
                     return false;
 
                 // Otherwise D will later unblock the SC
-                enqueue_tail (Sc::current);
+                enqueue_tail (Scheduler::get_current());
             }
 
             return true;
@@ -263,7 +264,7 @@ class Ec : public Kobject, private Queue<Sc>, public Queue<Ec>::Element
         {
             Lock_guard <Spinlock> guard { lock };
 
-            for (Sc *sc; (sc = dequeue_head()); sc->remote_enqueue()) ;
+            for (Sc *sc; (sc = dequeue_head()); Scheduler::unblock (sc)) ;
         }
 
         ALWAYS_INLINE

@@ -25,7 +25,6 @@
 #include "abi.hpp"
 #include "memattr.hpp"
 #include "mtd_arch.hpp"
-#include "qpd.hpp"
 #include "regs.hpp"
 
 struct Sys_ipc_call final : private Sys_abi
@@ -88,7 +87,11 @@ struct Sys_create_sc final : private Sys_abi
 
     inline unsigned long ec() const { return p2(); }
 
-    inline Qpd qpd() const { return Qpd (p3()); }
+    inline uint16_t budget() const { return p3() & BIT_RANGE (15, 0); }
+
+    inline uint8_t prio() const { return p3() >> 16 & BIT_RANGE (6, 0); }
+
+    inline cos_t cos() const { return p3() >> 23 & BIT_RANGE (15, 0); }
 };
 
 struct Sys_create_pt final : private Sys_abi
@@ -151,11 +154,7 @@ struct Sys_ctrl_sc final : private Sys_abi
 
     inline unsigned long sc() const { return p0() >> 8; }
 
-    inline void set_time (uint64_t val)
-    {
-        p1() = static_cast<mword>(val >> 32);
-        p2() = static_cast<mword>(val);
-    }
+    inline void set_time_ticks (uint64_t val) { p1() = val; }
 };
 
 struct Sys_ctrl_pt final : private Sys_abi
