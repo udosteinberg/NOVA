@@ -23,7 +23,6 @@
 #include "acpi.hpp"
 #include "counter.hpp"
 #include "ec_arch.hpp"
-#include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
 #include "pt.hpp"
@@ -313,22 +312,17 @@ void Ec::sys_create_sm (Ec *const self)
 {
     Sys_create_sm r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CNT:%lu", static_cast<void *>(self), __func__, r.sel(), r.cnt());
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx CNT:%lu", static_cast<void *>(self), __func__, r.sel(), r.pd(), r.cnt());
 
-    auto cap = self->get_obj()->lookup (r.pd());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::SM))) {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const cpd { self->get_obj()->lookup (r.pd()) };
 
-    auto sm = new Sm (nullptr, r.sel(), r.cnt());
-    if (self->get_obj()->insert (r.sel(), Capability (sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        delete sm;
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::SM)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    sys_finish<Status::SUCCESS> (self);
+    Status s;
+    Pd::create_sm (s, self->get_obj(), r.sel(), r.cnt());
+
+    self->sys_finish_status (s);
 }
 
 void Ec::sys_ctrl_pd (Ec *const self)
@@ -447,30 +441,35 @@ void Ec::sys_ctrl_sm (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx OP:%u", static_cast<void *>(self), __func__, r.sm(), r.op());
 
-    auto cap = self->get_obj()->lookup (r.sm());
-    if (EXPECT_FALSE (!cap.validate (r.op() ? Capability::Perm_sm::CTRL_DN : Capability::Perm_sm::CTRL_UP))) {
-        trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const csm { self->get_obj()->lookup (r.sm()) };
 
-    auto sm = static_cast<Sm *>(cap.obj());
+    if (EXPECT_FALSE (!csm.validate (r.op() ? Capability::Perm_sm::CTRL_DN : Capability::Perm_sm::CTRL_UP)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    switch (r.op()) {
+    auto const sm { static_cast<Sm *>(csm.obj()) };
 
-        case 0:
-            sm->up();
-            break;
+    if (r.op()) {           // Down
 
-        case 1:
-#if 0       // FIXME
-            if (sm->space == static_cast<Space_obj *>(&Pd::kern))
-                Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
-#endif
-            sm->dn (self, r.zc(), r.time());
-            break;
-    }
+        auto const id { sm->get_id() };
 
-    sys_finish<Status::SUCCESS> (self);
+        if (id != ~0U) {
+
+            Interrupt::Config cfg { Interrupt::int_table[id].config };
+
+            if (Cpu::id != cfg.cpu())
+                self->sys_finish_status (Status::BAD_CPU);
+
+            // Guest-assigned interrupts are deactivated by the guest
+            if (!cfg.gst())
+                Interrupt::deactivate (id);
+        }
+
+        sm->dn (self, r.zc(), r.time_ticks());
+
+    } else if (!sm->up())   // Up
+        self->sys_finish_status (Status::OVRFLOW);
+
+    self->sys_finish_status (Status::SUCCESS);
 }
 
 void Ec::sys_ctrl_hw (Ec *const self)
@@ -510,35 +509,25 @@ void Ec::sys_assign_int (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CPU:%u FLG:%#x", static_cast<void *>(self), __func__, r.sm(), r.cpu(), r.flg());
 
-    if (EXPECT_FALSE (!Hip::hip->cpu_online (r.cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r.cpu());
-        sys_finish<Status::BAD_CPU> (self);
-    }
+    if (EXPECT_FALSE (r.cpu() >= Cpu::count))
+        self->sys_finish_status (Status::BAD_CPU);
 
-    auto cap = self->get_obj()->lookup (r.sm());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_sm::ASSIGN))) {
-        trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const csm { self->get_obj()->lookup (r.sm()) };
 
-#if 0       // FIXME
-    auto sm = static_cast<Sm *>(cap.obj());
+    if (EXPECT_FALSE (!csm.validate (Capability::Perm_sm::ASSIGN)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    if (EXPECT_FALSE (sm->space != static_cast<Space_obj *>(&Pd::kern))) {
-        trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    assert (static_cast<Sm *>(csm.obj())->get_id() != ~0U);
 
-    uint64 phys; unsigned o, rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r.dev(), phys, o) || ((rid = Pci::phys_to_rid (phys)) == ~0U && (rid = Hpet::phys_to_rid (phys)) == ~0U)))) {
-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r.dev());
-        sys_finish<Status::BAD_DEV> (self);
-    }
+    uint32_t msi_addr;
+    uint16_t msi_data;
 
-    r.set_msi (Gsi::set (gsi, r.cpu(), rid));
-#endif
+    Interrupt::configure (static_cast<Sm *>(csm.obj())->get_id(), Interrupt::Config (r.cpu(), r.dev(), r.flg()), msi_addr, msi_data);
 
-    sys_finish<Status::SUCCESS> (self);
+    r.set_msi_addr (msi_addr);
+    r.set_msi_data (msi_data);
+
+    self->sys_finish_status (Status::SUCCESS);
 }
 
 void Ec::sys_assign_dev (Ec *const self)
