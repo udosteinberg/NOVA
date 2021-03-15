@@ -137,7 +137,7 @@ Status Interrupt::assign (Sm *sm, cpu_t cpu, gsi_t vec, pci_t src, uint8_t cfg, 
         return Status::SUCCESS;
 
     // Attach
-    return Smmu::assign_int (0, cpu, static_cast<uint8_t>(VEC_GSI + vec), src, cfg, msi_addr, msi_data);
+    return Smmu::assign_int (sm->get_gsi(), cpu, static_cast<uint8_t>(VEC_GSI + vec), src, cfg, msi_addr, msi_data);
 }
 
 void Interrupt::send_cpu (Request req, cpu_t cpu)
