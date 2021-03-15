@@ -101,18 +101,6 @@ class Lapic
             write (r, misc | static_cast<uint32>(d) | v);
         }
 
-        ALWAYS_INLINE
-        static inline void timer_handler();
-
-        ALWAYS_INLINE
-        static inline void error_handler();
-
-        ALWAYS_INLINE
-        static inline void perfm_handler();
-
-        ALWAYS_INLINE
-        static inline void therm_handler();
-
     public:
         static inline unsigned freq_tsc { 0 };
         static inline unsigned freq_bus { 0 };
@@ -136,11 +124,12 @@ class Lapic
                 Msr::write (Msr::IA32_TSC_DEADLINE, tsc);
         }
 
+        static void timer_handler();
+        static void error_handler();
+        static void perfm_handler();
+        static void therm_handler();
+
         static void init();
 
         static void send_ipi (unsigned, unsigned, Delivery = Delivery::DLV_FIXED, Shorthand = Shorthand::NONE);
-
-        static void lvt_vector (unsigned) asm ("lvt_vector");
-
-        static void ipi_vector (unsigned) asm ("ipi_vector");
 };

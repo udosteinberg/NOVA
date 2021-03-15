@@ -21,9 +21,9 @@
  */
 
 #include "dmar.hpp"
-#include "gsi.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
+#include "interrupt.hpp"
 #include "lapic.hpp"
 #include "pci.hpp"
 #include "pt.hpp"
@@ -362,7 +362,7 @@ void Ec::sys_ec_ctrl()
         ec->set_hazard (HZD_RECALL);
 
         if (Cpu::id != ec->cpu && Ec::remote (ec->cpu) == ec)
-            Lapic::send_ipi (ec->cpu, VEC_IPI_RKE);
+            Interrupt::send_cpu (ec->cpu, Interrupt::Request::RKE);
     }
 
     sys_finish<Sys_regs::SUCCESS>();
