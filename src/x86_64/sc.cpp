@@ -109,7 +109,7 @@ void Sc::schedule (bool suspend)
     assert (suspend || !current->prev);
 
     uint64 t = rdtsc();
-    uint64 d = Timeout_budget::budget.dequeue();
+    uint64 d = Timeout_budget::timeout.dequeue();
 
     current->time += t - current->tsc;
     current->left = d > t ? d - t : 0;
@@ -122,7 +122,7 @@ void Sc::schedule (bool suspend)
     Sc *sc = list[prio_top];
     assert (sc);
 
-    Timeout_budget::budget.enqueue (t + sc->left);
+    Timeout_budget::timeout.enqueue (t + sc->left);
 
     ctr_loop = 0;
 
