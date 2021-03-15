@@ -182,3 +182,18 @@ Ec *Pd::create_ec (Status &s, Space_obj *obj, unsigned long sel, Pd *pd, unsigne
 
     return nullptr;
 }
+
+Sc *Pd::create_sc (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, unsigned cpu, uint16 budget, uint8 prio, uint16 cos)
+{
+    auto const o { Sc::create (s, cpu, ec, budget, prio, cos) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sc::DEFINED)))) == Status::SUCCESS))
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
