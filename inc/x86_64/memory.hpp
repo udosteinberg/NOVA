@@ -50,6 +50,4 @@
 #define MMAP_GLB_DATA   0xffffffff90000000      // 511 510 128 000  256M
 #define LINK_ADDR       0xffffffff80000000      // 511 510 000 000  256M
 
-#define USER_ADDR       0x00007ffffffff000
-
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)

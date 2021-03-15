@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "ec_arch.hpp"
 #include "fpu.hpp"
 #include "space_dma.hpp"
 #include "space_gst.hpp"
@@ -158,6 +159,21 @@ Pd *Pd::create_pd (Status &s, Space_obj *obj, unsigned long sel, unsigned prm)
     if (EXPECT_TRUE (o)) {
 
         if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, prm))) == Status::SUCCESS))
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Ec *Pd::create_ec (Status &s, Space_obj *obj, unsigned long sel, Pd *pd, cpu_t cpu, uintptr_t evt, uintptr_t sp, uintptr_t hva, uint8_t flg)
+{
+    auto const o { (flg & BIT (0) ? Ec::create_gst : Ec::create_hst) (s, pd, flg & BIT (1), flg & BIT (2), cpu, evt, sp, hva) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_ec::DEFINED)))) == Status::SUCCESS))
             return o;
 
         o->destroy();
