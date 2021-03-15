@@ -30,10 +30,8 @@ extern "C" [[noreturn]] void bootstrap()
     // Idle EC must exist before scheduler invocation
     if (Acpi::resume)
         Space_hst::current = nullptr;
-    else {
-        Ec::current = new Ec (&Space_hst::nova, Ec::idle, Cpu::id);
-        Sc::current = new Sc (nullptr, Cpu::id, Ec::current);
-    }
+    else
+        Ec::create_idle();
 
     if (Cpu::bsp) [[unlikely]] {
 
@@ -56,15 +54,7 @@ extern "C" [[noreturn]] void bootstrap()
 
     else if (Cpu::bsp) {
         Hip::hip->add_check();
-        Status s;
-        Pd::root = Pd::create (s, &Pd::nova);
-        Space_obj::nova.insert (Space_obj::Selector::ROOT_PD, Capability { Pd::root, std::to_underlying (Capability::Perm_pd::DEFINED) });
-        Pd::root->create_obj (s, &Space_obj::nova, Space_obj::Selector::ROOT_OBJ);
-        Pd::root->create_hst (s, &Space_obj::nova, Space_obj::Selector::ROOT_HST);
-        Pd::root->create_pio (s, &Space_obj::nova, Space_obj::Selector::ROOT_PIO);
-        Ec *root_ec = new Ec (Pd::root->get_obj(), Pd::root->get_hst(), Pd::root->get_pio(), NUM_EXC + 1, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE (0), 0);
-        Sc *root_sc = new Sc (Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
-        root_sc->remote_enqueue();
+        Ec::create_root();
     }
 
     Sc::schedule();
