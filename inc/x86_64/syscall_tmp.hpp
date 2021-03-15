@@ -1,10 +1,6 @@
 /*
- * Floating Point Unit (FPU)
+ * System-Call Interface
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -19,14 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "fpu.hpp"
+#pragma once
 
-void Fpu::init()
-{
-}
-
-void Fpu::fini()
-{
-    Ec::switch_fpu (nullptr);
-}
+template void Ec::send_msg<Ec_arch::ret_user_exception> (Ec *);
+template void Ec::send_msg<Ec_arch::ret_user_vmexit_vmx> (Ec *);
+template void Ec::send_msg<Ec_arch::ret_user_vmexit_svm> (Ec *);
