@@ -33,6 +33,8 @@ class Space_msr;
 class Space_obj;
 class Space_pio;
 
+class Ec;
+
 class Pd final : public Kobject
 {
     private:
@@ -84,4 +86,5 @@ class Pd final : public Kobject
         Space_pio *create_pio (Status &, Space_obj *, unsigned long);
 
         static Pd *create_pd (Status &, Space_obj *, unsigned long, unsigned);
+        static Ec *create_ec (Status &, Space_obj *, unsigned long, Pd *, unsigned, uintptr_t, uintptr_t, uintptr_t, uint8);
 };

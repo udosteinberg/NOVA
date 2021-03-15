@@ -19,39 +19,43 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
+#include "counter.hpp"
+#include "ec_arch.hpp"
 #include "svm.hpp"
 
-void Ec::svm_exception (mword reason)
+void Ec_arch::svm_exception (mword reason)
 {
-    if (current->regs.vmcb->exitintinfo & 0x80000000) {
+    if (regs.vmcb->exitintinfo & 0x80000000) {
 
-        mword t = static_cast<mword>(current->regs.vmcb->exitintinfo) >> 8 & 0x7;
-        mword v = static_cast<mword>(current->regs.vmcb->exitintinfo) & 0xff;
+        mword t = static_cast<mword>(regs.vmcb->exitintinfo) >> 8 & 0x7;
+        mword v = static_cast<mword>(regs.vmcb->exitintinfo) & 0xff;
 
         if (t == 0 || (t == 3 && v != 3 && v != 4))
-            current->regs.vmcb->inj_control = current->regs.vmcb->exitintinfo;
+            regs.vmcb->inj_control = regs.vmcb->exitintinfo;
     }
 
     switch (reason) {
 
         default:
-            current->exc_regs().set_ep (reason);
+            exc_regs().set_ep (reason);
             break;
 
         case 0x47:          // #NM
-            handle_exc_nm();
-            ret_user_vmrun();
+            if (switch_fpu (this))
+                ret_user_vmexit_svm (this);
+            break;
     }
 
-    send_msg<ret_user_vmrun>();
+    send_msg<ret_user_vmexit_svm> (this);
 }
 
-void Ec::handle_svm()
+void Ec_arch::handle_svm()
 {
-    current->regs.vmcb->tlb_control = 0;
+    Ec *const self = current;
 
-    mword reason = static_cast<mword>(current->regs.vmcb->exitcode);
+    self->regs.vmcb->tlb_control = 0;
+
+    mword reason = static_cast<mword>(self->regs.vmcb->exitcode);
 
     switch (reason) {
         case -1UL:              // Invalid state
@@ -65,14 +69,14 @@ void Ec::handle_svm()
     switch (reason) {
 
         case 0x40 ... 0x5f:     // Exception
-            svm_exception (reason);
+            static_cast<Ec_arch *>(self)->svm_exception (reason);
 
         case 0x60:              // EXTINT
             asm volatile ("sti; nop; cli" : : : "memory");
-            ret_user_vmrun();
+            ret_user_vmexit_svm (self);
     }
 
-    current->exc_regs().set_ep (reason);
+    self->exc_regs().set_ep (reason);
 
-    send_msg<ret_user_vmrun>();
+    send_msg<ret_user_vmexit_svm> (self);
 }
