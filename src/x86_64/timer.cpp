@@ -26,4 +26,6 @@ void Timer::interrupt()
 void Timer::set_time (uint64 t)
 {
     Msr::write (Msr::IA32_TSC, t);
+
+    Timeout::sync();
 }
