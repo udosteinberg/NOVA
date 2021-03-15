@@ -22,8 +22,7 @@
 #include "rcu.hpp"
 #include "timeout_budget.hpp"
 
-INIT_PRIORITY (PRIO_LOCAL)
-Timeout_budget Timeout_budget::budget;
+INIT_PRIORITY (PRIO_LOCAL) Timeout_budget Timeout_budget::timeout;
 
 void Timeout_budget::trigger()
 {
