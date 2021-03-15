@@ -4,6 +4,9 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -20,18 +23,12 @@
 
 #include "config.hpp"
 
-#define VEC_GSI         (NUM_EXC)
+#define NUM_FLT         1
+#define NUM_IPI         2
+#define NUM_LVT         4
+#define NUM_GSI         (NUM_VEC - NUM_EXC - NUM_FLT - NUM_IPI - NUM_LVT)
+
+#define VEC_GSI         NUM_EXC
 #define VEC_LVT         (VEC_GSI + NUM_GSI)
-#define VEC_MSI         (VEC_LVT + NUM_LVT)
-#define VEC_IPI         (VEC_MSI + NUM_MSI)
-#define VEC_MAX         (VEC_IPI + NUM_IPI)
-
-#define VEC_LVT_TIMER   (VEC_LVT + 0)
-#define VEC_LVT_ERROR   (VEC_LVT + 3)
-#define VEC_LVT_PERFM   (VEC_LVT + 4)
-#define VEC_LVT_THERM   (VEC_LVT + 5)
-
-#define VEC_MSI_DMAR    (VEC_MSI + 0)
-
-#define VEC_IPI_RRQ     (VEC_IPI + 0)
-#define VEC_IPI_RKE     (VEC_IPI + 1)
+#define VEC_IPI         (VEC_LVT + NUM_LVT)
+#define VEC_FLT         (VEC_IPI + NUM_IPI)
