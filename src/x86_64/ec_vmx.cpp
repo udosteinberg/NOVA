@@ -21,7 +21,7 @@
 
 #include "dmar.hpp"
 #include "ec.hpp"
-#include "gsi.hpp"
+#include "interrupt.hpp"
 #include "lapic.hpp"
 #include "vectors.hpp"
 #include "vmx.hpp"
@@ -66,13 +66,13 @@ void Ec::vmx_extint()
     uint32 vector = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff;
 
     if (vector >= VEC_IPI)
-        Lapic::ipi_vector (vector);
+        Interrupt::handle_ipi (vector);
     else if (vector >= VEC_MSI)
         Dmar::vector (vector);
     else if (vector >= VEC_LVT)
-        Lapic::lvt_vector (vector);
+        Interrupt::handle_lvt (vector);
     else if (vector >= VEC_GSI)
-        Gsi::vector (vector);
+        Interrupt::handle_gsi (vector);
 
     ret_user_vmresume();
 }

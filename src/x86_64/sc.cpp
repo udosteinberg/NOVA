@@ -20,11 +20,10 @@
  */
 
 #include "ec.hpp"
-#include "lapic.hpp"
+#include "interrupt.hpp"
 #include "stdio.hpp"
 #include "timeout_budget.hpp"
 #include "timer.hpp"
-#include "vectors.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Sc::cache (sizeof (Sc), 32);
@@ -148,7 +147,7 @@ void Sc::remote_enqueue()
             next->prev = prev->next = this;
         } else {
             r->queue = prev = next = this;
-            Lapic::send_cpu (VEC_IPI_RRQ, cpu);
+            Interrupt::send_cpu (Interrupt::Request::RRQ, cpu);
         }
     }
 }
@@ -172,10 +171,4 @@ void Sc::rrq_handler()
     }
 
     rq.queue = nullptr;
-}
-
-void Sc::rke_handler()
-{
-    if (Pd::current->Space_mem::htlb.tst (Cpu::id))
-        Cpu::hazard |= HZD_SCHED;
 }

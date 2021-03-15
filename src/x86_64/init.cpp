@@ -21,11 +21,11 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "compiler.hpp"
-#include "console_serial.hpp"
-#include "gsi.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "interrupt.hpp"
 #include "kmem.hpp"
+#include "stdio.hpp"
 #include "string.hpp"
 
 extern "C"
@@ -70,6 +70,6 @@ void init (uintptr_t offset)
     Console::print ("\fNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Idt::build();
-    Gsi::setup();
+    Interrupt::init();
     Acpi::setup();
 }

@@ -122,33 +122,3 @@ void Lapic::timer_handler()
 
     Rcu::update();
 }
-
-void Lapic::lvt_vector (unsigned vector)
-{
-    unsigned lvt = vector - VEC_LVT;
-
-    switch (vector) {
-        case VEC_LVT_TIMER: timer_handler(); break;
-        case VEC_LVT_ERROR: error_handler(); break;
-        case VEC_LVT_PERFM: perfm_handler(); break;
-        case VEC_LVT_THERM: therm_handler(); break;
-    }
-
-    eoi();
-
-    Counter::loc[lvt].inc();
-}
-
-void Lapic::ipi_vector (unsigned vector)
-{
-    unsigned ipi = vector - VEC_IPI;
-
-    switch (vector) {
-        case VEC_IPI_RRQ: Sc::rrq_handler(); break;
-        case VEC_IPI_RKE: Sc::rke_handler(); break;
-    }
-
-    eoi();
-
-    Counter::req[ipi].inc();
-}
