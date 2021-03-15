@@ -33,7 +33,7 @@
 
 class Smmu final : public List<Smmu>, private Mmio
 {
-    friend class Gsi;
+    friend class Interrupt;
 
     private:
         enum class Reg32 : unsigned
@@ -731,7 +731,11 @@ class Smmu final : public List<Smmu>, private Mmio
                     l->invalidate_iec (idx);
         }
 
-        static void vector (unsigned) asm ("msi_vector");
+        static void interrupt()
+        {
+            for (auto l { list }; l; l = l->next)
+                l->fault();
+        }
 
         bool configured (pci_t pci) const
         {
