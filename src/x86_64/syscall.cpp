@@ -24,7 +24,6 @@
 #include "counter.hpp"
 #include "ec_arch.hpp"
 #include "hazards.hpp"
-#include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
 #include "pd_kern.hpp"
@@ -414,22 +413,40 @@ void Ec::sys_create_sm (Ec *const self)
 {
     auto r = static_cast<Sys_create_sm *>(self->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CNT:%lu", static_cast<void *>(self), __func__, r->sel(), r->cnt());
+    trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CNT:%llu", static_cast<void *>(self), __func__, r->sel(), r->cnt());
 
-    auto cap = self->pd->Space_obj::lookup (r->pd());
+    auto cap = self->pd->Space_obj::lookup (r->own());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC_PT_SM))) {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r->pd());
+        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r->own());
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    auto sm = new Sm (Pd::current, r->sel(), r->cnt());
-    if (self->pd->Space_obj::insert (r->sel(), Capability (sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete sm;
-        sys_finish<Status::BAD_CAP> (self);
+    auto sm = Sm::create (r->cnt());
+
+    if (EXPECT_FALSE (!sm)) {
+        trace (TRACE_ERROR, "%s: Insufficient MEM", __func__);
+        sys_finish<Status::INS_MEM> (self);
     }
 
-    sys_finish<Status::SUCCESS> (self);
+    auto s = self->pd->Space_obj::insert (r->sel(), Capability (sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED)));
+
+    if (EXPECT_TRUE (s == Status::SUCCESS))
+        sys_finish<Status::SUCCESS> (self);
+
+    sm->destroy();
+
+    switch (s) {
+
+        default:
+
+        case Status::BAD_CAP:
+            trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::BAD_CAP> (self);
+
+        case Status::INS_MEM:
+            trace (TRACE_ERROR, "%s: Insufficient MEM for CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::INS_MEM> (self);
+    }
 }
 
 void Ec::sys_ctrl_pd (Ec *const self)
@@ -569,20 +586,26 @@ void Ec::sys_ctrl_sm (Ec *const self)
 
     auto sm = static_cast<Sm *>(cap.obj());
 
-    switch (r->op()) {
+    if (r->op()) {          // Down
 
-        case 0:
-            sm->up();
-            break;
+        auto id = sm->get_id();
 
-        case 1:
-#if 0       // FIXME
-            if (sm->space == static_cast<Space_obj *>(&Pd::kern))
-                Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
-#endif
-            sm->dn (self, r->zc(), r->time());
-            break;
-    }
+        if (id != ~0U) {
+
+            Interrupt::Config cfg = Interrupt::int_table[id].config;
+
+            if (Cpu::id != cfg.cpu()) {
+                trace (TRACE_ERROR, "%s: Invalid CPU (%u)", __func__, Cpu::id);
+                sys_finish<Status::BAD_CPU> (self);
+            }
+
+            Interrupt::deactivate (id);
+        }
+
+        sm->dn (self, r->zc(), r->time_ticks());
+
+    } else if (!sm->up())   // Up
+        sys_finish<Status::OVRFLOW> (self);
 
     sys_finish<Status::SUCCESS> (self);
 }
@@ -627,8 +650,8 @@ void Ec::sys_assign_int (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CPU:%u FLG:%#x", static_cast<void *>(self), __func__, r->sm(), r->cpu(), r->flags());
 
-    if (EXPECT_FALSE (!Hip::hip->cpu_online (r->cpu()))) {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
+    if (EXPECT_FALSE (r->cpu() >= Cpu::count)) {
+        trace (TRACE_ERROR, "%s: Invalid CPU (%u)", __func__, r->cpu());
         sys_finish<Status::BAD_CPU> (self);
     }
 
@@ -638,22 +661,20 @@ void Ec::sys_assign_int (Ec *const self)
         sys_finish<Status::BAD_CAP> (self);
     }
 
-#if 0       // FIXME
-    auto sm = static_cast<Sm *>(cap.obj());
+    auto id = static_cast<Sm *>(cap.obj())->get_id();
 
-    if (EXPECT_FALSE (sm->space != static_cast<Space_obj *>(&Pd::kern))) {
-        trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r->sm());
+    if (EXPECT_FALSE (id == ~0U)) {
+        trace (TRACE_ERROR, "%s: Bad IS CAP (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    uint64 phys; unsigned o, rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys, o) || ((rid = Pci::phys_to_rid (phys)) == ~0U && (rid = Hpet::phys_to_rid (phys)) == ~0U)))) {
-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
-        sys_finish<Status::BAD_DEV> (self);
-    }
+    uint32 msi_addr;
+    uint16 msi_data;
 
-    r->set_msi (Gsi::set (gsi, r->cpu(), rid));
-#endif
+    Interrupt::configure (id, r->cpu(), r->dev(), r->flags(), msi_addr, msi_data);
+
+    r->set_msi_addr (msi_addr);
+    r->set_msi_data (msi_data);
 
     sys_finish<Status::SUCCESS> (self);
 }

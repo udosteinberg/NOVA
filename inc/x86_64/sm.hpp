@@ -1,11 +1,12 @@
 /*
- * Semaphore
+ * Semaphore (SM)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -26,13 +27,37 @@
 class Sm : public Kobject, private Queue<Ec>
 {
     private:
-        mword           counter;
+        uint64          counter { 0 };
+        unsigned const  id      { 0 };
         Spinlock        lock;
 
         static Slab_cache cache;
 
+        Sm (uint64, unsigned);
+
+        NODISCARD
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
+
     public:
-        Sm (Pd *, mword, mword = 0);
+        NODISCARD
+        static Sm *create (uint64 c, unsigned i = ~0U)
+        {
+            return new Sm (c, i);
+        }
+
+        void destroy() { delete this; }
+
+        ALWAYS_INLINE
+        inline auto get_id() const { return id; }
 
         ALWAYS_INLINE
         inline void dn (Ec *const ec, bool zero, uint64 t)
@@ -62,15 +87,20 @@ class Sm : public Kobject, private Queue<Ec>
         }
 
         ALWAYS_INLINE
-        inline void up()
+        inline bool up()
         {
             Ec *ec;
 
             {   Lock_guard <Spinlock> guard (lock);
 
                 if (!(ec = dequeue_head())) {
+
+                    if (counter == ~0ULL)
+                        return false;
+
                     counter++;
-                    return;
+
+                    return true;
                 }
 
                 // The EC can now be activated again
@@ -78,9 +108,11 @@ class Sm : public Kobject, private Queue<Ec>
             }
 
             ec->unblock_sc();
+
+            return true;
         }
 
-        ALWAYS_INLINE
+        ALWAYS_INLINE NONNULL
         inline void timeout (Ec *ec)
         {
             {   Lock_guard <Spinlock> guard (lock);
@@ -96,10 +128,4 @@ class Sm : public Kobject, private Queue<Ec>
 
             ec->unblock_sc();
         }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
 };
