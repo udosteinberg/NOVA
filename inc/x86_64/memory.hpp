@@ -67,6 +67,4 @@
 #define MMAP_TMP_RW0S   VIRT_ADDR (511, 251,   0,   0)          //   1G (Remap Window 0)
 #define BASE_ADDR       MMAP_GLB_PCIS
 
-#define USER_ADDR       0x00007ffffffff000
-
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)
