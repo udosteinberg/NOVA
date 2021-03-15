@@ -20,8 +20,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "gsi.hpp"
 #include "hip.hpp"
+#include "interrupt.hpp"
 #include "lapic.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
@@ -360,7 +360,7 @@ void Ec::sys_ec_ctrl()
         ec->set_hazard (HZD_RECALL);
 
         if (Cpu::id != ec->cpu && Ec::remote_current (ec->cpu) == ec)
-            Lapic::send_cpu (VEC_IPI + 1, ec->cpu);
+            Interrupt::send_cpu (Interrupt::Request::RKE, ec->cpu);
     }
 
     sys_finish<Status::SUCCESS>();

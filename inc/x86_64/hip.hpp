@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "config.hpp"
 #include "extern.hpp"
+#include "vectors.hpp"
 
 class Hip_cpu
 {

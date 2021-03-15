@@ -20,9 +20,7 @@
  */
 
 #include "ec.hpp"
-#include "gsi.hpp"
-#include "lapic.hpp"
-#include "vectors.hpp"
+#include "interrupt.hpp"
 #include "vmx.hpp"
 
 void Ec::vmx_exception()
@@ -62,7 +60,7 @@ void Ec::vmx_exception()
 
 void Ec::vmx_extint()
 {
-    Gsi::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff);
+    Interrupt::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & BIT_RANGE (7, 0));
 
     ret_user_vmresume();
 }

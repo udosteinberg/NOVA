@@ -27,7 +27,6 @@
 #include "multiboot.hpp"
 #include "space_obj.hpp"
 #include "stc.hpp"
-#include "vectors.hpp"
 
 mword Hip::root_addr;
 mword Hip::root_size;

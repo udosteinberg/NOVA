@@ -22,11 +22,9 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "compiler.hpp"
-#include "console_serial.hpp"
-#include "gsi.hpp"
 #include "hpt.hpp"
-#include "idt.hpp"
 #include "ioapic.hpp"
+#include "interrupt.hpp"
 #include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
@@ -78,8 +76,7 @@ extern "C" void init()
     // Now we're ready to talk to the world
     Console::print ("\fNOVA Microhypervisor v%d-%07lx-%#x (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<uintptr_t>(&GIT_VER), Patch::applied, ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
-    Idt::build();
-    Gsi::setup();
+    Interrupt::setup();
     Acpi::setup();
 
     Pic::init();

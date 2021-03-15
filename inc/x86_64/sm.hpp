@@ -25,6 +25,8 @@
 
 class Sm : public Kobject, public Queue<Ec>
 {
+    friend class Interrupt;
+
     private:
         mword           counter;
         Spinlock        lock;

@@ -26,7 +26,6 @@
 #include "acpi_rsdp.hpp"
 #include "acpi_rsdt.hpp"
 #include "assert.hpp"
-#include "gsi.hpp"
 #include "hpt.hpp"
 #include "io.hpp"
 #include "lowlevel.hpp"
@@ -36,8 +35,6 @@ Paddr       Acpi::dmar, Acpi::fadt, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xs
 Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;
 uint32      Acpi::tmr_ovf, Acpi::feature;
 uint8       Acpi::reset_val;
-unsigned    Acpi::irq, Acpi::gsi;
-bool        Acpi_table_madt::sci_overridden = false;
 
 void Acpi::delay (unsigned ms)
 {
@@ -46,12 +43,6 @@ void Acpi::delay (unsigned ms)
 
     while ((read (PM_TMR) - val) % (1UL << 24) < cnt)
         pause();
-}
-
-uint64 Acpi::time()
-{
-    mword b = tmr_msb(), c = read (PM_TMR), p = 1UL << b;
-    return 1000000 * ((tmr_ovf + ((c >> b ^ tmr_ovf) & 1)) * static_cast<uint64>(p) + (c & (p - 1))) / timer_frequency;
 }
 
 void Acpi::reset()
@@ -77,23 +68,9 @@ void Acpi::setup()
     if (dmar)
         static_cast<Acpi_table_dmar *>(Hpt::remap (dmar))->parse();
 
-    if (!Acpi_table_madt::sci_overridden) {
-        Acpi_intr sci_override;
-        sci_override.bus = 0;
-        sci_override.irq = static_cast<uint8>(irq);
-        sci_override.gsi = irq;
-        sci_override.flags.pol = Acpi_inti::POL_CONFORMING;
-        sci_override.flags.trg = Acpi_inti::TRG_CONFORMING;
-        Acpi_table_madt::parse_intr (&sci_override);
-    }
-
-    Gsi::set (gsi = Gsi::irq_to_gsi (irq));
-
     write (PM1_ENA, PM1_ENA_PWRBTN | PM1_ENA_GBL | PM1_ENA_TMR);
 
     for (; tmr_ovf = read (PM_TMR) >> tmr_msb(), read (PM1_STS) & PM1_STS_TMR; write (PM1_STS, PM1_STS_TMR)) ;
-
-    trace (TRACE_FIRM, "ACPI: GSI:%#x TMR:%lu", gsi, tmr_msb() + 1);
 }
 
 unsigned Acpi::read (Register reg)
@@ -180,14 +157,4 @@ void Acpi::hw_write (Acpi_gas *gas, unsigned val)
     }
 
     panic ("Unimplemented ASID %d", gas->asid);
-}
-
-void Acpi::interrupt()
-{
-    unsigned sts = read (PM1_STS);
-
-    if (sts & PM1_STS_TMR)
-        tmr_ovf++;
-
-    write (PM1_STS, sts);
 }
