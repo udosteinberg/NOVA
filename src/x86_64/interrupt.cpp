@@ -28,6 +28,7 @@
 #include "sm.hpp"
 #include "smmu.hpp"
 #include "space_hst.hpp"
+#include "space_obj.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
 
@@ -37,8 +38,10 @@ void Interrupt::setup()
 {
     Idt::build();
 
+    Status s;
+
     for (unsigned gsi { 0 }; gsi < sizeof (int_table) / sizeof (*int_table); gsi++)
-        int_table[gsi].sm = new Sm (nullptr, gsi);
+        int_table[gsi].sm = Pd::create_sm (s, &Space_obj::nova, Space_obj::Selector::NOVA_INT + gsi, 0, gsi);
 }
 
 void Interrupt::set_mask (unsigned gsi, bool msk)
