@@ -161,8 +161,7 @@ class Ec : public Kobject, public Queue<Sc>
         ALWAYS_INLINE
         inline void clr_timeout()
         {
-            if (timeout.active()) [[unlikely]]
-                timeout.dequeue();
+            timeout.dequeue();
         }
 
         ALWAYS_INLINE
