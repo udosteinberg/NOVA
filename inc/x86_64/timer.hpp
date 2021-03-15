@@ -19,6 +19,7 @@
 
 #include "lapic.hpp"
 #include "stc.hpp"
+#include "timeout.hpp"
 
 class Timer final : private Stc
 {
@@ -38,5 +39,7 @@ class Timer final : private Stc
         static void set_time (uint64_t t)
         {
             Msr::write (Msr::Reg64::IA32_TSC, t);
+
+            Timeout::sync();
         }
 };
