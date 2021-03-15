@@ -1,11 +1,12 @@
 /*
- * Semaphore
+ * Semaphore (SM)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,24 +24,50 @@
 
 #include "ec.hpp"
 
-class Sm : public Kobject, private Queue<Ec>
+class Sm final : public Kobject, private Queue<Ec>
 {
     private:
-        mword           counter;
+        uint64_t        cnt;
+        void *    const ptr;
+        iid_t     const iid;
         Spinlock        lock;
 
         static Slab_cache cache;
 
-    public:
-        Sm (Pd *, mword, mword = 0);
+        explicit Sm (uintptr_t, void *);
 
-        ALWAYS_INLINE
-        inline void dn (Ec *const self, bool zero, uint64 t)
+        void collect() override final
         {
-            {   Lock_guard <Spinlock> guard (lock);
+            trace (TRACE_DESTROY, "KOBJ: SM %p collected", static_cast<void *>(this));
+        }
 
-                if (counter) {
-                    counter = zero ? 0 : counter - 1;
+    public:
+        auto get_ptr() const { assert (subtype == Kobject::Subtype::SM_INT); return ptr; }
+        auto get_iid() const { assert (subtype == Kobject::Subtype::SM_INT); return iid; }
+
+        [[nodiscard]] static Sm *create (Status &s, uintptr_t v, void *p)
+        {
+            auto const sm { new (cache) Sm (v, p) };
+
+            if (!sm) [[unlikely]]
+                s = Status::MEM_OBJ;
+
+            return sm;
+        }
+
+        void destroy()
+        {
+            this->~Sm();
+
+            operator delete (this, cache);
+        }
+
+        void dn (Ec *const self, bool zero, uint64_t t)
+        {
+            {   Lock_guard <Spinlock> guard { lock };
+
+                if (cnt) {
+                    cnt = zero ? 0 : cnt - 1;
                     return;
                 }
 
@@ -61,16 +88,20 @@ class Sm : public Kobject, private Queue<Ec>
             }
         }
 
-        ALWAYS_INLINE
-        inline void up()
+        bool up()
         {
             Ec *ec;
 
-            {   Lock_guard <Spinlock> guard (lock);
+            {   Lock_guard <Spinlock> guard { lock };
 
                 if (!(ec = dequeue_head())) {
-                    counter++;
-                    return;
+
+                    if (cnt == ~0ULL) [[unlikely]]
+                        return false;
+
+                    cnt++;
+
+                    return true;
                 }
 
                 // The EC can now be activated again
@@ -78,12 +109,14 @@ class Sm : public Kobject, private Queue<Ec>
             }
 
             ec->unblock_sc();
+
+            return true;
         }
 
-        ALWAYS_INLINE NONNULL
-        inline void timeout (Ec *const ec)
+        NONNULL
+        void timeout (Ec *const ec)
         {
-            {   Lock_guard <Spinlock> guard (lock);
+            {   Lock_guard <Spinlock> guard { lock };
 
                 if (!ec->blocked())
                     return;
@@ -96,19 +129,4 @@ class Sm : public Kobject, private Queue<Ec>
 
             ec->unblock_sc();
         }
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
-
-        void destroy()
-        {
-            this->~Sm();
-
-            operator delete (this);
-        }
-
-        void collect() override final {}
 };
