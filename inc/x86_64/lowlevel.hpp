@@ -35,9 +35,3 @@ static inline void pause()
 {
     asm volatile ("pause" : : : "memory");
 }
-
-ALWAYS_INLINE
-static inline auto rdtsc()
-{
-    return __builtin_ia32_rdtsc();
-}
