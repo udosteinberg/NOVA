@@ -648,11 +648,21 @@ bool Utcb_arch::assign_spaces (Cpu_regs &c, Space_obj const *obj) const
     if (EXPECT_FALSE (gst->get_pd() != own || pio->get_pd() != own || msr->get_pd() != own))
         return false;
 
-    // FIXME: Refcount updates
+    // Acquire references
+    Refptr<Space_gst> ref_gst { gst };
+    Refptr<Space_pio> ref_pio { pio };
+    Refptr<Space_msr> ref_msr { msr };
 
-    c.gst = gst;
-    c.pio = pio;
-    c.msr = msr;
+    // Failed to acquire references
+    if (EXPECT_FALSE (!ref_gst || !ref_pio || !ref_msr))
+        return false;
+
+    c.gst = std::move (ref_gst);
+    c.pio = std::move (ref_pio);
+    c.msr = std::move (ref_msr);
+
+    // References must have been consumed
+    assert (!ref_gst && !ref_pio && !ref_msr);
 
     c.hazard.clr (Hazard::ILLEGAL);
 

@@ -51,6 +51,4 @@
 #define MMAP_GLB_PCIE   0xffffffffa0000000      // 511 510 256 000  256M
 #define LINK_ADDR       0xffffffff80000000      // 511 510 000 000  512M
 
-#define USER_ADDR       0x00007ffffffff000
-
 #define OFFSET          (LINK_ADDR - LOAD_ADDR)
