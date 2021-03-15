@@ -28,7 +28,7 @@
 
 class Smmu_itl final : public Smmu
 {
-    friend class Gsi;
+    friend class Interrupt;
 
     private:
         // Configurable Sizes
@@ -752,8 +752,6 @@ class Smmu_itl final : public Smmu
 
             return nullptr;
         }
-
-        static void vector (unsigned) asm ("msi_vector");
 
         [[nodiscard]] Status assign_dev (Pd *, uintptr_t, bool = true) override final;
 

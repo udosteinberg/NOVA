@@ -20,10 +20,7 @@
  */
 
 #include "ec.hpp"
-#include "gsi.hpp"
-#include "lapic.hpp"
-#include "smmu_itl.hpp"
-#include "vectors.hpp"
+#include "interrupt.hpp"
 #include "vmx.hpp"
 
 void Ec::vmx_exception()
@@ -63,16 +60,7 @@ void Ec::vmx_exception()
 
 void Ec::vmx_extint()
 {
-    uint32 vector = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff;
-
-    if (vector >= VEC_IPI)
-        Lapic::ipi_vector (vector);
-    else if (vector >= VEC_MSI)
-        Smmu_itl::vector (vector);
-    else if (vector >= VEC_LVT)
-        Lapic::lvt_vector (vector);
-    else if (vector >= VEC_GSI)
-        Gsi::vector (vector);
+    Interrupt::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & BIT_RANGE (7, 0));
 
     ret_user_vmresume();
 }
