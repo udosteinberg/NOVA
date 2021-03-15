@@ -102,8 +102,11 @@ void Interrupt::handler (unsigned v)
     Lapic::eoi();
 }
 
-void Interrupt::deactivate (Sm const *)
+void Interrupt::deactivate (Sm const *sm)
 {
+    // Interrupt Source Encoding for MSI/PIN-edge: [63:32]=0 (no directed EOI), PIN-level: (Ioapic*, directed EOI value)
+    if (uintptr_t const v { sm->ise }; v >> 32) [[unlikely]]
+        std::launder (reinterpret_cast<Ioapic const *>(v & ~uintptr_t { BIT_RANGE (7, 0) }))->eoi (static_cast<uint8_t>(v));
 }
 
 Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, uint16_t cpu, uint8_t vec, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
@@ -119,7 +122,7 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
         return Status::BAD_PAR;
 
     // Convert interrupt to SEG:GSI
-    Intid const iid { 0 };
+    auto const iid { sm->iid };
     auto const seg { iid.seg() };
     auto const gsi { iid.gsi() };
 
@@ -176,7 +179,9 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
     // Serialize multi-step updates per interrupt semaphore
     Lock_guard <Spinlock> guard { sm->lock };
 
-    Atomic<uintptr_t> ise;
+    // SRC:IDX must name this SM's single recorded source, if one is set (if IR-MSI)
+    if (!Smmu::noir && !ioapic && sm->ise && sm->ise != Smmu::ise_msi (src, idx)) [[unlikely]]
+        return Status::BAD_PAR;
 
     if (attach) [[likely]] {
 
@@ -203,7 +208,7 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
 
         // Update SMMU IRTE (if IR)
         if (!Smmu::noir) [[likely]]
-            if (auto const s { smmu->irte_set (irte, ise, ioapic, iid, src, dst, vec, trg, idx) }; s != Status::SUCCESS) [[unlikely]]
+            if (auto const s { smmu->irte_set (irte, sm->ise, ioapic, iid, src, dst, vec, trg, idx) }; s != Status::SUCCESS) [[unlikely]]
                 return s;
 
         // Helper lambda for MSI return values: both default to 0 (PIN), overridden by each MSI path
@@ -211,11 +216,11 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
 
         // Update IOAPIC RTE (if PIN)
         if (Smmu::noir) [[unlikely]]
-            ioapic ? ioapic->rte_set_compat (ise, gsi, msk, trg, pol, static_cast<uint8_t>(dst), vec) : set_msi (Lapic::msi_base | dst << 12, vec);
+            ioapic ? ioapic->rte_set_compat (sm->ise, gsi, msk, trg, pol, static_cast<uint8_t>(dst), vec) : set_msi (Lapic::msi_base | dst << 12, vec);
         else if (Smmu::type() == Smmu::Type::AMD)
-            ioapic ? ioapic->rte_set_ir_amd (ise, gsi, msk, trg, pol) : set_msi (Lapic::msi_base, idx);
+            ioapic ? ioapic->rte_set_ir_amd (sm->ise, gsi, msk, trg, pol) : set_msi (Lapic::msi_base, idx);
         else if (Smmu::type() == Smmu::Type::ITL)
-            ioapic ? ioapic->rte_set_ir_itl (ise, gsi, msk, trg, pol) : set_msi (Lapic::msi_base | BIT_RANGE (4, 3), gsi);
+            ioapic ? ioapic->rte_set_ir_itl (sm->ise, gsi, msk, trg, pol) : set_msi (Lapic::msi_base | BIT_RANGE (4, 3), gsi);
         else
             __builtin_unreachable();
 
@@ -229,7 +234,7 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
 
         // Update SMMU IRTE (if IR)
         if (!Smmu::noir) [[likely]]
-             if (auto const s { smmu->irte_clr (irte, ise, ioapic, iid, src, dst, vec) }; s != Status::SUCCESS) [[unlikely]]
+             if (auto const s { smmu->irte_clr (irte, sm->ise, ioapic, iid, src, dst, vec) }; s != Status::SUCCESS) [[unlikely]]
                  return s;
 
         {   // Update SM table: sm -> nullptr
