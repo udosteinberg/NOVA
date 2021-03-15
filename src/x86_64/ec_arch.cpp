@@ -169,7 +169,7 @@ void Ec::handle_hazard (unsigned h, cont_t func)
 
         if (Cpu::hazard & HZD_SCHED) {      // Reload
             cont = func;
-            Sc::schedule();
+            Scheduler::schedule();
         }
 
         if (h & HZD_ILLEGAL)
