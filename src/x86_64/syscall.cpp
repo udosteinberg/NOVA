@@ -23,7 +23,6 @@
 #include "acpi.hpp"
 #include "counter.hpp"
 #include "ec_arch.hpp"
-#include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
 #include "pt.hpp"
@@ -313,24 +312,26 @@ void Ec::sys_create_sm (Ec *const self)
 {
     Sys_create_sm r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CNT:%lu", static_cast<void *>(self), __func__, r.sel(), r.cnt());
+    bool const i { !!(r.flg() & BIT (0)) };
+
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx %s:%#lx", static_cast<void *>(self), __func__, r.sel(), r.pd(), i ? "GSI" : "CNT", r.val());
 
     auto const obj { self->regs.get_obj() };
     auto const cpd { obj->lookup (r.pd()) };
 
-    if (!cpd.validate (Capability::Perm_pd::SM)) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (!cpd.validate (i ? Capability::Perm_pd::DC : Capability::Perm_pd::SM)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
 
-    auto sm = new Sm (nullptr, r.sel(), r.cnt());
-    if (obj->insert (r.sel(), Capability { sm, static_cast<unsigned>(Capability::Perm_sm::DEFINED) }) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        sm->destroy();
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    // Determine owner PD
+    auto const pd { static_cast<Pd *>(cpd.obj()) };
 
-    sys_finish<Status::SUCCESS> (self);
+    if (i && !Interrupt::valid (Intid { r.iid() })) [[unlikely]]
+        self->sys_finish_status (Status::BAD_PAR);
+
+    Status s;
+    pd->create_sm (s, obj, r.sel(), i ? Kobject::Subtype::SM_INT : Kobject::Subtype::SM_REG, r.val());
+
+    self->sys_finish_status (s);
 }
 
 void Ec::sys_ctrl_pd (Ec *const self)
@@ -456,29 +457,24 @@ void Ec::sys_ctrl_sm (Ec *const self)
     auto const obj { self->regs.get_obj() };
     auto const csm { obj->lookup (r.sm()) };
 
-    if (!csm.validate (r.op() ? Capability::Perm_sm::CTRL_DN : Capability::Perm_sm::CTRL_UP)) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (!csm.validate (r.op() ? Capability::Perm_sm::CTRL_DN : Capability::Perm_sm::CTRL_UP)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
 
     auto const sm { static_cast<Sm *>(csm.obj()) };
 
-    switch (r.op()) {
+    Status s;
 
-        case 0:
-            sm->up();
-            break;
+    if (r.op()) {           // Down
 
-        case 1:
-#if 0       // FIXME
-            if (sm->space == static_cast<Space_obj *>(&Pd::kern))
-                Gsi::unmask (static_cast<unsigned>(sm->node_base - NUM_CPU));
-#endif
-            sm->dn (self, r.zc(), r.time());
-            break;
-    }
+        if (sm->subtype == Kobject::Subtype::SM_INT)
+            Interrupt::deactivate (sm);
 
-    sys_finish<Status::SUCCESS> (self);
+        s = sm->dn (self, r.zc(), r.time_ticks());
+
+    } else                  // Up
+        s = sm->up();
+
+    self->sys_finish_status (s);
 }
 
 void Ec::sys_ctrl_hw (Ec *const self)
@@ -555,41 +551,20 @@ void Ec::sys_assign_int (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s OP:%u SM:%#lx IDX:%#x CPU:%u VEC:%#x CFG:%#x", static_cast<void *>(self), __func__, r.op(), r.sm(), r.idx(), r.cpu(), r.vec(), r.cfg());
 
+    if (r.cpu() >= Cpu::count) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CPU);
+
     auto const obj { self->regs.get_obj() };
 
-    if (obj != Pd::root->get_obj()) [[unlikely]]
-        self->sys_finish_status (Status::BAD_HYP);
-
-    if (r.cpu() >= Cpu::count) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r.cpu());
-        sys_finish<Status::BAD_CPU> (self);
-    }
-
+    // Check SM capability
     auto const csm { obj->lookup (r.sm()) };
+    if (!csm.validate (Capability::Perm_sm::ASSIGN, Kobject::Subtype::SM_INT)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
 
-    if (!csm.validate (Capability::Perm_sm::CTRL_UP)) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    // SM must be non-null
+    auto const sm { static_cast<Sm *>(csm.obj()) };
 
-#if 0       // FIXME
-    auto sm = static_cast<Sm *>(csm.obj());
-
-    if (sm->space != static_cast<Space_obj *>(&Pd::kern)) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r.sm());
-        sys_finish<Status::BAD_CAP> (self);
-    }
-
-    uint64 phys; unsigned o, rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r.dev(), phys, o) || ((rid = Pci::phys_to_rid (phys)) == ~0U))) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r.dev());
-        sys_finish<Status::BAD_DEV> (self);
-    }
-
-    r.set_msi (Gsi::set (gsi, r.cpu(), rid));
-#endif
-
-    sys_finish<Status::SUCCESS> (self);
+    self->sys_finish_status (Interrupt::assign (r.op(), sm, r.src(), r.idx(), r.cpu(), r.vec(), r.cfg(), r.msi_addr(), r.msi_data()));
 }
 
 void Ec::sys_finish_status (Status s)
