@@ -99,18 +99,14 @@ void Interrupt::handler (unsigned v)
     Lapic::eoi();
 }
 
-void Interrupt::deactivate (Sm *)
+void Interrupt::deactivate (Sm *sm)
 {
     uint8_t vec;
 
-    auto const gsi { 0 };
-
-    auto const irt { Smmu::Grp::lookup_irt (gsi) };
-
     // Level-triggered interrupts require directed EOI to IOAPIC
-    if (irt->lookup (vec)) [[unlikely]] {
+    if (static_cast<Smmu::Entry_irt const *>(sm->get_ptr())->lookup (vec)) [[unlikely]] {
 
-        auto const ioapic { Ioapic::lookup (gsi) };
+        auto const ioapic { Ioapic::lookup (sm->get_iid()) };
 
         // Level-triggered implies PIN => IOAPIC must exist
         assert (ioapic);
@@ -139,10 +135,8 @@ Status Interrupt::assign (Sm *sm, cpu_t cpu, gsi_t vec, pci_t src, uint8_t cfg, 
     if (!sm) [[unlikely]]
         return Status::SUCCESS;
 
-    auto const irt { Smmu::Grp::lookup_irt (0) };
-
     // Attach
-    return Smmu::assign_int (irt, 0, cpu, static_cast<uint8_t>(VEC_GSI + vec), src, cfg, msi_addr, msi_data);
+    return Smmu::assign_int (static_cast<Smmu::Entry_irt *>(sm->get_ptr()), sm->get_iid(), cpu, static_cast<uint8_t>(VEC_GSI + vec), src, cfg, msi_addr, msi_data);
 }
 
 void Interrupt::send_cpu (Request req, cpu_t cpu)
