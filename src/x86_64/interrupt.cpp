@@ -52,7 +52,7 @@ void Interrupt::handle_ipi (unsigned n)
     Counter::req[n].inc();
 
     switch (n) {
-        case Request::RRQ: Sc::rrq_handler(); break;
+        case Request::RRQ: Scheduler::requeue(); break;
         case Request::RKE: rke_handler(); break;
     }
 }

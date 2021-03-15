@@ -1,5 +1,5 @@
 /*
- * Scheduling Context
+ * Scheduling Context (SC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -22,78 +22,65 @@
 
 #pragma once
 
-#include "compiler.hpp"
-#include "kmem.hpp"
-#include "queue.hpp"
-#include "slab.hpp"
+#include "ec.hpp"
 
-class Ec;
-class Pd;
-
-class Sc : public Kobject, public Queue<Sc>::Element
+class Sc final : public Kobject, public Queue<Sc>::Element
 {
-    public:
-        Ec * const ec;
-        cpu_t const cpu;
-        unsigned const prio;
-        uint64 const budget;
-        uint64 time;
+    friend class Scheduler;
 
     private:
-        uint64 left;
-        uint64 tsc;
+        Refptr<Ec> const    ec;
+        uint64_t   const    budget;
+        cpu_t      const    cpu;
+        cos_t      const    cos;
+        uint8_t    const    prio;
+        Atomic<uint64_t>    used    { 0 };
+        uint64_t            left    { 0 };
+        uint64_t            last    { 0 };
 
-        static unsigned const priorities = 128;
+        static Slab_cache   cache;
 
-        static Slab_cache cache;
+        Sc (Refptr<Ec>&, cpu_t, uint16_t, uint8_t, cos_t);
 
-        static struct Rq {
-            Queue<Sc>   queue;
-            Spinlock    lock;
-        } rq CPULOCAL;
-
-        static Queue<Sc> list[priorities] CPULOCAL;
-
-        static unsigned prio_top CPULOCAL;
-
-        void ready_enqueue (uint64);
-        static Sc *ready_dequeue (uint64);
-
-    public:
-        static Sc *     current     CPULOCAL_HOT;
-        static unsigned ctr_loop    CPULOCAL;
-
-        static unsigned const default_prio = 1;
-        static unsigned const default_quantum = 10000;
-
-        Sc (Pd *, mword, Ec *);
-        Sc (Pd *, mword, Ec *, cpu_t, unsigned, unsigned);
-
-        ALWAYS_INLINE
-        static inline Rq *remote (cpu_t c)
+        void collect() override final
         {
-            return Kmem::loc_to_glb (c, &rq);
+            trace (TRACE_DESTROY, "KOBJ: SC %p collected", static_cast<void *>(this));
         }
 
-        void remote_enqueue();
+    public:
+        [[nodiscard]] static Sc *create (Status &s, Ec *ec, cpu_t cpu, uint16_t budget, uint8_t prio, cos_t cos)
+        {
+            // Acquire reference
+            Refptr<Ec> ref_ec { ec };
 
-        static void rrq_handler();
+            // Failed to acquire reference
+            if (!ref_ec) [[unlikely]]
+                s = Status::ABORTED;
 
-        [[noreturn]]
-        static void schedule (bool = false);
+            else {
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+                auto const sc { new (cache) Sc { ref_ec, cpu, budget, prio, cos } };
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+                // If we created sc, then reference must have been consumed
+                assert (!sc || !ref_ec);
+
+                if (sc) [[likely]]
+                    return sc;
+
+                s = Status::MEM_OBJ;
+            }
+
+            return nullptr;
+        }
 
         void destroy()
         {
             this->~Sc();
 
-            operator delete (this);
+            operator delete (this, cache);
         }
 
-        void collect() override final {}
+        Ec *get_ec() const { return ec; }
+
+        uint64_t get_used() const { return used; }
 };
