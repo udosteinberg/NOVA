@@ -52,7 +52,7 @@ class Sm : public Kobject, private Queue<Ec>
                 if (t)
                     ec->set_timeout (t, this);
 
-                Sc::schedule (true);
+                Scheduler::schedule (true);
             }
         }
 

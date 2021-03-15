@@ -257,7 +257,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
                 if (!blocked())
                     return false;
 
-                enqueue_tail (Sc::current);
+                enqueue_tail (Scheduler::get_current());
             }
 
             return true;
@@ -270,7 +270,7 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 
             Lock_guard <Spinlock> guard (lock);
 
-            for (Sc *sc; (sc = dequeue_head()); sc->remote_enqueue()) ;
+            for (Sc *sc; (sc = dequeue_head()); Scheduler::unblock (sc)) ;
         }
 
         ALWAYS_INLINE
