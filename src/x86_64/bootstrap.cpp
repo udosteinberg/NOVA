@@ -54,5 +54,5 @@ void bootstrap()
     if (Cpu::bsp)
         Acpi::wake_restore();
 
-    Sc::schedule();
+    Scheduler::schedule();
 }
