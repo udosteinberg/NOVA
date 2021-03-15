@@ -78,7 +78,6 @@ class Sc : public Kobject
         void remote_enqueue();
 
         static void rrq_handler();
-        static void rke_handler();
 
         NORETURN
         static void schedule (bool = false);
