@@ -21,6 +21,7 @@
  */
 
 #include "acpi.hpp"
+#include "console_mbuf.hpp"
 #include "event.hpp"
 #include "hip.hpp"
 #include "interrupt.hpp"
@@ -46,8 +47,8 @@ void Hip::build (uint64_t root_s, uint64_t root_e)
     length          = sizeof (*this);
     nova_p_addr     = Kmem::sym_to_phys (&NOVA_HPAS);
     nova_e_addr     = Kmem::sym_to_phys (&NOVA_HPAE);
-    mbuf_p_addr     = 0;
-    mbuf_e_addr     = 0;
+    mbuf_p_addr     = Console_mbuf::addr();
+    mbuf_e_addr     = Console_mbuf::size() + mbuf_p_addr;
     root_p_addr     = root_s;
     root_e_addr     = root_e;
     acpi_rsdp_addr  = uefi->rsdp ? uefi->rsdp : ~0ULL;
