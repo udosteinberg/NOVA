@@ -27,7 +27,7 @@
 class Idt final
 {
     public:
-        static inline constinit ALIGNED(8) Descriptor_idt idt[VEC_MAX];
+        static inline constinit ALIGNED(8) Descriptor_idt idt[NUM_VEC];
 
         static void build();
 

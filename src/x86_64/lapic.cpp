@@ -22,13 +22,14 @@
 
 #include "acpi.hpp"
 #include "barrier.hpp"
-#include "ec.hpp"
 #include "extern.hpp"
+#include "hpt.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
+#include "timeout.hpp"
 #include "vectors.hpp"
 
 void Lapic::init (uint32_t clk, uint32_t rat)
@@ -61,16 +62,16 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
     switch (lvt_max()) {
         default:            // 7 entries since NHM
-            set_lvt (Reg32::LVT_CMCHK, Delivery::DLV_FIXED, VEC_LVT_CMCHK);
+            set_lvt (Reg32::LVT_CMCHK, Delivery::DLV_FIXED, VEC_LVT + 4);
             [[fallthrough]];
         case 5:             // 6 entries since WMT
-            set_lvt (Reg32::LVT_THERM, Delivery::DLV_FIXED, VEC_LVT_THERM);
+            set_lvt (Reg32::LVT_THERM, Delivery::DLV_FIXED, VEC_LVT + 3);
             [[fallthrough]];
         case 4:             // 5 entries since P6
-            set_lvt (Reg32::LVT_PERFM, Delivery::DLV_FIXED, VEC_LVT_PERFM);
+            set_lvt (Reg32::LVT_PERFM, Delivery::DLV_FIXED, VEC_LVT + 2);
             [[fallthrough]];
         case 3:             // 4 entries since P5
-            set_lvt (Reg32::LVT_ERROR, Delivery::DLV_FIXED, VEC_LVT_ERROR);
+            set_lvt (Reg32::LVT_ERROR, Delivery::DLV_FIXED, VEC_LVT + 1);
             [[fallthrough]];
         case 2:
             set_lvt (Reg32::LVT_LINT1, Delivery::DLV_NMI, 0);
@@ -79,7 +80,7 @@ void Lapic::init (uint32_t clk, uint32_t rat)
             set_lvt (Reg32::LVT_LINT0, Delivery::DLV_EXTINT, 0, BIT (16));
             [[fallthrough]];
         case 0:
-            set_lvt (Reg32::LVT_TIMER, Delivery::DLV_FIXED, VEC_LVT_TIMER, BIT (18) * dl);
+            set_lvt (Reg32::LVT_TIMER, Delivery::DLV_FIXED, VEC_LVT + 0, BIT (18) * dl);
     }
 
     write (Reg32::TPR, 0x10);
@@ -143,34 +144,3 @@ void Lapic::handle_perfm() {}
 void Lapic::handle_therm() {}
 
 void Lapic::handle_cmchk() {}
-
-void Lapic::lvt_vector (unsigned vector)
-{
-    auto const lvt { vector - VEC_LVT };
-
-    switch (vector) {
-        case VEC_LVT_TIMER: handle_timer(); break;
-        case VEC_LVT_ERROR: handle_error(); break;
-        case VEC_LVT_PERFM: handle_perfm(); break;
-        case VEC_LVT_THERM: handle_therm(); break;
-        case VEC_LVT_CMCHK: handle_cmchk(); break;
-    }
-
-    eoi();
-
-    Counter::loc[lvt].inc();
-}
-
-void Lapic::ipi_vector (unsigned vector)
-{
-    auto const ipi { vector - VEC_IPI };
-
-    switch (vector) {
-        case VEC_IPI_RRQ: Sc::rrq_handler(); break;
-        case VEC_IPI_RKE: Sc::rke_handler(); break;
-    }
-
-    eoi();
-
-    Counter::req[ipi].inc();
-}
