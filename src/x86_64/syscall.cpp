@@ -26,7 +26,6 @@
 #include "hazards.hpp"
 #include "hip.hpp"
 #include "interrupt.hpp"
-#include "lapic.hpp"
 #include "lowlevel.hpp"
 #include "pd_kern.hpp"
 #include "pt.hpp"
@@ -124,10 +123,10 @@ void Ec::reply (cont_t c)
         if (EXPECT_TRUE (ec->clr_partner()))
             static_cast<Ec_arch *>(ec)->make_current();
 
-        Sc::current->ec->activate();
+        Scheduler::get_current()->get_ec()->activate();
     }
 
-    Sc::schedule (true);
+    Scheduler::schedule (true);
 }
 
 template <Ec::cont_t C>
@@ -302,11 +301,11 @@ void Ec::sys_create_sc (Ec *const self)
 {
     auto r = static_cast<Sys_create_sc *>(self->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx EC:%#lx P:%#x Q:%#x", static_cast<void *>(self), __func__, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
+    trace (TRACE_SYSCALL, "EC:%p %s SC:%#lx EC:%#lx P:%u B:%u", static_cast<void *>(self), __func__, r->sel(), r->ec(), r->prio(), r->budget());
 
-    auto cap = self->pd->Space_obj::lookup (r->pd());
+    auto cap = self->pd->Space_obj::lookup (r->own());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::SC))) {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r->pd());
+        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r->own());
         sys_finish<Status::BAD_CAP> (self);
     }
 
@@ -323,21 +322,39 @@ void Ec::sys_create_sc (Ec *const self)
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    if (EXPECT_FALSE (!r->qpd().prio() || !r->qpd().quantum())) {
-        trace (TRACE_ERROR, "%s: Invalid QPD", __func__);
+    if (EXPECT_FALSE (!r->prio() || !r->budget())) {
+        trace (TRACE_ERROR, "%s: Invalid prio/budget", __func__);
         sys_finish<Status::BAD_PAR> (self);
     }
 
-    auto sc = new Sc (Pd::current, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
-    if (self->pd->Space_obj::insert (r->sel(), Capability (sc, static_cast<unsigned>(Capability::Perm_sc::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete sc;
-        sys_finish<Status::BAD_CAP> (self);
+    auto sc = Sc::create (ec->cpu, ec, r->prio(), r->budget());
+
+    if (EXPECT_FALSE (!sc)) {
+        trace (TRACE_ERROR, "%s: Insufficient MEM", __func__);
+        sys_finish<Status::INS_MEM> (self);
     }
 
-    sc->remote_enqueue();
+    auto s = self->pd->Space_obj::insert (r->sel(), Capability (sc, static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
 
-    sys_finish<Status::SUCCESS> (self);
+    if (EXPECT_TRUE (s == Status::SUCCESS)) {
+        Scheduler::unblock (sc);
+        sys_finish<Status::SUCCESS> (self);
+    }
+
+    sc->destroy();
+
+    switch (s) {
+
+        default:
+
+        case Status::BAD_CAP:
+            trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::BAD_CAP> (self);
+
+        case Status::INS_MEM:
+            trace (TRACE_ERROR, "%s: Insufficient MEM for CAP (%#lx)", __func__, r->sel());
+            sys_finish<Status::INS_MEM> (self);
+    }
 }
 
 void Ec::sys_create_pt (Ec *const self)
@@ -493,7 +510,9 @@ void Ec::sys_ctrl_sc (Ec *const self)
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    r->set_time (static_cast<Sc *>(cap.obj())->time * 1000 / Lapic::freq_tsc);
+    auto sc = static_cast<Sc *>(cap.obj());
+
+    r->set_time_ticks (sc->get_used());
 
     sys_finish<Status::SUCCESS> (self);
 }
