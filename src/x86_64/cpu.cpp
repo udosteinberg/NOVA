@@ -275,6 +275,8 @@ void Cpu::init()
     else {
         for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
 
+        hazard = Hazard::BOOT_GST | Hazard::BOOT_HST;
+
         Gdt::build();
         Tss::build();
     }
