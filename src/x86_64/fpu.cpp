@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "ec.hpp"
 #include "fpu.hpp"
 
 void Fpu::init()
@@ -27,4 +28,5 @@ void Fpu::init()
 
 void Fpu::fini()
 {
+    Ec::switch_fpu (nullptr);
 }
