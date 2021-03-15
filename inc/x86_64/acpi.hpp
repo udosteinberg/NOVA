@@ -70,7 +70,7 @@ class Acpi
             PM1_CNT_SLP_EN      = 1U << 13      // 0x2000
         };
 
-        static unsigned const timer_frequency = 3579545;
+        static constexpr unsigned timer_frequency = 3579545;
 
         static Paddr dmar, fadt, hpet, madt, mcfg, rsdt, xsdt;
 
@@ -98,13 +98,9 @@ class Acpi
         static inline mword tmr_msb() { return feature & 0x100 ? 31 : 23; }
 
     public:
-        static unsigned irq;
-        static unsigned gsi;
-
         static void delay (unsigned);
         static uint64 time();
         static void reset();
-        static void interrupt();
 
         static void setup();
 };
