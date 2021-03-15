@@ -160,7 +160,7 @@ void Ec::handle_hazard (unsigned hzd, cont_t func)
 
     if (hzd & HZD_SCHED) {
         cont = func;
-        Sc::schedule();
+        Scheduler::schedule();
     }
 
     if (hzd & HZD_ILLEGAL) {

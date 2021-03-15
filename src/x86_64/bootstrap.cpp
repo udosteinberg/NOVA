@@ -39,5 +39,5 @@ void bootstrap()
         Ec::create_root();
     }
 
-    Sc::schedule();
+    Scheduler::schedule();
 }

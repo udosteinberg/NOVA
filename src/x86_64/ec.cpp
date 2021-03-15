@@ -64,16 +64,16 @@ Ec *Ec::create (Pd *p, bool fpu, unsigned c, unsigned long e, uintptr_t a, uintp
 void Ec::create_idle()
 {
     current = Ec::create (Cpu::id, idle);
-    Sc::current = new Sc (&Pd_kern::nova(), Cpu::id, Ec::current);
+    Scheduler::set_current (Sc::create (Cpu::id, current, 0, 1000));
 }
 
 void Ec::create_root()
 {
     Pd::root = Pd::create();
     auto ec  = Ec::create (Pd::root, true, Cpu::id, 0, (Space_mem::num - 2) << PAGE_BITS, 0, root_invoke);
-    auto sc  = new Sc (Pd::root, NUM_EXC + 2, ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
+    auto sc  = Sc::create (Cpu::id, ec, Scheduler::priorities - 1, 1000);
 
-    sc->remote_enqueue();
+    Scheduler::unblock (sc);
 }
 
 void Ec::activate()
@@ -99,13 +99,13 @@ void Ec::help (Ec *ec, cont_t c)
     // Preempt long helping chains, including livelocks
     Cpu::preemption_point();
     if (EXPECT_FALSE (Cpu::hazard & HZD_SCHED))
-        Sc::schedule (false);
+        Scheduler::schedule (false);
 
     Counter::helping.inc();
 
     ec->activate();
 
-    Sc::schedule (true);
+    Scheduler::schedule (true);
 }
 
 void Ec::idle (Ec *const self)
@@ -185,7 +185,7 @@ void Ec::root_invoke (Ec *const self)
     self->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd_kern::nova(),          static_cast<unsigned>(Capability::Perm_pd::CTRL)));
     self->pd->Space_obj::insert (Space_obj::num - 2, Capability (self->pd,                  static_cast<unsigned>(Capability::Perm_pd::DEFINED)));
     self->pd->Space_obj::insert (Space_obj::num - 3, Capability (self,                      static_cast<unsigned>(Capability::Perm_ec::DEFINED)));
-    self->pd->Space_obj::insert (Space_obj::num - 4, Capability (Sc::current,               static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
+    self->pd->Space_obj::insert (Space_obj::num - 4, Capability (Scheduler::get_current(),  static_cast<unsigned>(Capability::Perm_sc::DEFINED)));
 
     Console::flush();
 

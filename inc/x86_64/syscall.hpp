@@ -24,7 +24,6 @@
 
 #include "memattr.hpp"
 #include "mtd_arch.hpp"
-#include "qpd.hpp"
 #include "regs.hpp"
 #include "space.hpp"
 
@@ -81,11 +80,13 @@ class Sys_create_sc final : public Sys_regs
     public:
         inline unsigned long sel() const { return p0() >> 8; }
 
-        inline unsigned long pd() const { return p1(); }
+        inline unsigned long own() const { return p1(); }
 
         inline unsigned long ec() const { return p2(); }
 
-        inline Qpd qpd() const { return Qpd (p3()); }
+        inline uint32 budget() const { return static_cast<uint32> (p3()) >> 12; }
+
+        inline unsigned prio() const { return p3() & BIT_RANGE (6, 0); }
 };
 
 class Sys_create_pt final : public Sys_regs
@@ -149,11 +150,7 @@ class Sys_ctrl_sc final : public Sys_regs
     public:
         inline unsigned long sc() const { return p0() >> 8; }
 
-        inline void set_time (uint64 val)
-        {
-            p1() = static_cast<mword>(val >> 32);
-            p2() = static_cast<mword>(val);
-        }
+        inline void set_time_ticks (uint64 val) { p1() = val; }
 };
 
 class Sys_ctrl_pt final : public Sys_regs
