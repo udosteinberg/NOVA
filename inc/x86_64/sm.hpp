@@ -51,7 +51,8 @@ class Sm : public Kobject, private Queue<Ec>
                 enqueue_tail (ec);
             }
 
-            ec->set_timeout (t, this);
+            if (t)
+                ec->set_timeout (t, this);
 
             ec->block_sc();
         }
