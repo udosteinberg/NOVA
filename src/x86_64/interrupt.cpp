@@ -39,7 +39,7 @@ void Interrupt::setup()
     Idt::build();
 
     for (unsigned gsi = 0; gsi < sizeof (int_table) / sizeof (*int_table); gsi++)
-        int_table[gsi].sm = new Sm (&Pd_kern::nova(), gsi);
+        int_table[gsi].sm = Sm::create (0, gsi);
 }
 
 void Interrupt::set_mask (unsigned gsi, bool msk)
