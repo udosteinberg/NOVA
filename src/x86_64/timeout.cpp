@@ -2,6 +2,7 @@
  * Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,19 +16,23 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "lapic.hpp"
-#include "lowlevel.hpp"
+#include "assert.hpp"
 #include "timeout.hpp"
+#include "timer.hpp"
 
 Timeout *Timeout::list;
 
-void Timeout::enqueue (uint64 t)
+void Timeout::enqueue (uint64_t t)
 {
+    assert (this != list);
+    assert (!prev);
+    assert (!next);
+
     time = t;
 
-    Timeout *p = nullptr;
+    Timeout *p { nullptr };
 
-    for (Timeout *n = list; n; p = n, n = n->next)
+    for (auto n { list }; n; p = n, n = n->next)
         if (n->time >= time)
             break;
 
@@ -36,7 +41,7 @@ void Timeout::enqueue (uint64 t)
     if (!p) {
         next = list;
         list = this;
-        Lapic::set_timer (time);
+        sync();
     } else {
         next = p->next;
         p->next = this;
@@ -46,9 +51,9 @@ void Timeout::enqueue (uint64 t)
         next->prev = this;
 }
 
-uint64 Timeout::dequeue()
+uint64_t Timeout::dequeue()
 {
-    if (active()) {
+    if (list == this || prev) {
 
         if (next)
             next->prev = prev;
@@ -56,20 +61,34 @@ uint64 Timeout::dequeue()
         if (prev)
             prev->next = next;
 
-        else if ((list = next))
-            Lapic::set_timer (list->time);
+        else {
+            list = next;
+            sync();
+        }
+
+        prev = next = nullptr;
     }
 
-    prev = next = nullptr;
+    assert (this != list);
+    assert (!prev);
+    assert (!next);
 
     return time;
 }
 
 void Timeout::check()
 {
-    while (list && list->time <= rdtsc()) {
+    while (list && list->time <= Timer::time()) {
         Timeout *t = list;
         t->dequeue();
         t->trigger();
     }
+}
+
+void Timeout::sync()
+{
+    if (list)
+        Timer::set_dln (list->time);
+    else
+        Timer::stop();
 }
