@@ -20,11 +20,11 @@
 
 #include "timeout.hpp"
 
-class Timeout_budget : public Timeout
+class Timeout_budget final : public Timeout
 {
     private:
         void trigger() override;
 
     public:
-        static Timeout_budget budget CPULOCAL;
+        static Timeout_budget timeout CPULOCAL;
 };
