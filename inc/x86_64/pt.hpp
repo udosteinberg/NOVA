@@ -1,10 +1,11 @@
 /*
- * Portal
+ * Portal (PT)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,40 +21,43 @@
 
 #pragma once
 
-#include "kobject.hpp"
+#include "ec.hpp"
 #include "mtd_arch.hpp"
 
-class Ec;
-class Pd;
-
-class Pt : public Kobject
+class Pt final : public Kobject
 {
     private:
-        static Slab_cache cache;
+        Refptr<Ec> const ec;    // Bound EC (also implies Owner PD)
+        uintptr_t  const ip;    // Entry IP
+
+        /*
+         * Memory Ordering
+         *
+         * ID/MTD changes are observable as follows:
+         * - Ambient CPU: after ctrl_pt returned
+         * - Remote CPUs: after external ACQUIRE/RELEASE synchronization with ambient CPU, denoting that ctrl_pt returned
+         */
+        Atomic<uintptr_t, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __ATOMIC_RELAXED> id  { 0 };
+        Atomic<Mtd_arch,  __ATOMIC_RELAXED, __ATOMIC_RELAXED, __ATOMIC_RELAXED> mtd { Mtd_arch { 0 } };
+
+        explicit Pt (Refptr<Ec> &, uintptr_t);
+
+        void collect() override final;
 
     public:
-        Ec * const ec;
-        Mtd_arch   const mtd;
-        mword      const ip;
-        mword      id;
+        [[nodiscard]] static Pt *create (Status &, Ec *, uintptr_t);
 
-        Pt (Pd *, mword, Ec *, Mtd, mword);
+        void destroy() override final;
 
-        ALWAYS_INLINE
-        inline void set_id (mword i) { id = i; }
+        Ec *get_ec() const { return ec; }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        uintptr_t get_ip() const { return ip; }
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        uintptr_t get_id() const { return id; }
 
-        void destroy() override final
-        {
-            this->~Pt();
+        auto get_mtd() const { return Mtd_arch { mtd.load() }; }
 
-            operator delete (this);
-        }
+        void set_id (uintptr_t i) { id = i; }
 
-        void collect() override final {}
+        void set_mtd (Mtd_arch m) { mtd.store (m); }
 };
