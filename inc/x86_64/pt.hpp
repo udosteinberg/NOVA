@@ -1,10 +1,11 @@
 /*
- * Portal
+ * Portal (PT)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,32 +21,49 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "kobject.hpp"
 #include "mtd_arch.hpp"
-#include "slab.hpp"
+#include "status.hpp"
 
 class Ec;
-class Pd;
 
-class Pt : public Kobject
+class Pt final : public Kobject
 {
+    friend class Ec;
+
     private:
-        static Slab_cache cache;
+        Ec *        const   ec      { nullptr };
+        uintptr_t   const   ip      { 0 };
+        Atomic<uintptr_t>   id      { 0 };
+        Atomic<Mtd_arch>    mtd     { Mtd_arch { 0 } };
+
+        static Slab_cache   cache;
+
+        Pt (Ec *, uintptr_t);
 
     public:
-        Ec * const ec;
-        Mtd_arch   const mtd;
-        mword      const ip;
-        mword      id;
+        [[nodiscard]] static inline Pt *create (Status &s, Ec *e, uintptr_t i)
+        {
+            auto const pt { new (cache) Pt (e, i) };
 
-        Pt (Pd *, mword, Ec *, Mtd, mword);
+            if (EXPECT_FALSE (!pt))
+                s = Status::MEM_OBJ;
+
+            return pt;
+        }
+
+        inline void destroy() { operator delete (this, cache); }
 
         ALWAYS_INLINE
-        inline void set_id (mword i) { id = i; }
+        inline uintptr_t get_id() const { return id; }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        inline Mtd_arch get_mtd() const { return mtd; }
 
         ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        inline void set_id (uintptr_t i) { id = i; }
+
+        ALWAYS_INLINE
+        inline void set_mtd (Mtd_arch m) { mtd = m; }
 };

@@ -21,6 +21,7 @@
 
 #include "ec_arch.hpp"
 #include "fpu.hpp"
+#include "pt.hpp"
 #include "space_dma.hpp"
 #include "space_gst.hpp"
 #include "space_hst.hpp"
@@ -189,6 +190,21 @@ Sc *Pd::create_sc (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, cpu_t c
     if (EXPECT_TRUE (o)) {
 
         if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_sc::DEFINED)))) == Status::SUCCESS))
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Pt *Pd::create_pt (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, uintptr_t ip)
+{
+    auto const o { Pt::create (s, ec, ip) };
+
+    if (EXPECT_TRUE (o)) {
+
+        if (EXPECT_TRUE ((s = obj->insert (sel, Capability (o, std::to_underlying (Capability::Perm_pt::DEFINED)))) == Status::SUCCESS))
             return o;
 
         o->destroy();
