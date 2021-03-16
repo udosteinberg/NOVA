@@ -1,10 +1,11 @@
 /*
- * Portal
+ * Portal (PT)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,32 +21,57 @@
 
 #pragma once
 
+#include "atomic.hpp"
 #include "kobject.hpp"
 #include "mtd_arch.hpp"
 #include "slab.hpp"
 
 class Ec;
-class Pd;
 
-class Pt : public Kobject
+class Pt : private Kobject
 {
+    friend class Ec;
+
     private:
-        static Slab_cache cache;
+        Ec *        const   ec      { nullptr };
+        uintptr_t   const   ip      { 0 };
+        Atomic<uintptr_t>   id      { 0 };
+        Atomic<Mtd_arch>    mtd     { 0 };
+
+        static Slab_cache   cache;
+
+        Pt (Ec *, uintptr_t);
+
+        NODISCARD
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 
     public:
-        Ec * const ec;
-        Mtd_arch   const mtd;
-        mword      const ip;
-        mword      id;
+        NODISCARD
+        static Pt *create (Ec *e, uintptr_t i)
+        {
+            return new Pt (e, i);
+        }
 
-        Pt (Pd *, mword, Ec *, Mtd, mword);
-
-        ALWAYS_INLINE
-        inline void set_id (mword i) { id = i; }
+        void destroy() { delete this; }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        inline uintptr_t get_id() const { return id; }
 
         ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        inline Mtd_arch get_mtd() const { return mtd; }
+
+        ALWAYS_INLINE
+        inline void set_id (uintptr_t i) { id = i; }
+
+        ALWAYS_INLINE
+        inline void set_mtd (Mtd_arch m) { mtd = m; }
 };
