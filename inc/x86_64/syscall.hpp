@@ -104,9 +104,7 @@ struct Sys_create_pt final : private Sys_abi
 
     inline unsigned long ec() const { return p2(); }
 
-    inline auto mtd() const { return Mtd_arch (static_cast<uint32> (p3())); }
-
-    inline mword eip() const { return p4(); }
+    inline uintptr_t ip() const { return p3(); }
 };
 
 struct Sys_create_sm final : private Sys_abi
@@ -165,7 +163,9 @@ struct Sys_ctrl_pt final : private Sys_abi
 
     inline unsigned long pt() const { return p0() >> 8; }
 
-    inline mword id() const { return p1(); }
+    inline uintptr_t id() const { return p1(); }
+
+    inline Mtd_arch mtd() const { return Mtd_arch (uint32 (p2())); }
 };
 
 struct Sys_ctrl_sm final : private Sys_abi
