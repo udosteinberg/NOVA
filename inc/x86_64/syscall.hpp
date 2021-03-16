@@ -94,13 +94,11 @@ class Sys_create_pt final : public Sys_regs
     public:
         inline unsigned long sel() const { return p0() >> 8; }
 
-        inline unsigned long pd() const { return p1(); }
+        inline unsigned long own() const { return p1(); }
 
         inline unsigned long ec() const { return p2(); }
 
-        inline auto mtd() const { return Mtd_arch (static_cast<uint32> (p3())); }
-
-        inline mword eip() const { return p4(); }
+        inline uintptr_t ip() const { return p3(); }
 };
 
 class Sys_create_sm final : public Sys_regs
@@ -158,7 +156,9 @@ class Sys_ctrl_pt final : public Sys_regs
     public:
         inline unsigned long pt() const { return p0() >> 8; }
 
-        inline mword id() const { return p1(); }
+        inline uintptr_t id() const { return p1(); }
+
+        inline Mtd_arch mtd() const { return Mtd_arch (uint32 (p2())); }
 };
 
 class Sys_ctrl_sm final : public Sys_regs
