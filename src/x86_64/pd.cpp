@@ -21,6 +21,7 @@
 
 #include "ec_arch.hpp"
 #include "fpu.hpp"
+#include "pt.hpp"
 #include "space_dma.hpp"
 #include "space_gst.hpp"
 #include "space_hst.hpp"
@@ -38,6 +39,7 @@ Pd::Pd (Refptr<Pd> &ref_pd) : Kobject   { Kobject::Type::PD, Kobject::Subtype::P
                               pd_cache  { sizeof (Pd),        Kobject::alignment },
                               ec_cache  { sizeof (Ec),        Kobject::alignment },
                               sc_cache  { sizeof (Sc),        Kobject::alignment },
+                              pt_cache  { sizeof (Pt),        Kobject::alignment },
                               obj_cache { sizeof (Space_obj), Kobject::alignment },
                               hst_cache { sizeof (Space_hst), Kobject::alignment },
                               gst_cache { sizeof (Space_gst), Kobject::alignment },
@@ -237,6 +239,23 @@ Sc *Pd::create_sc (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, cpu_t c
     if (o) [[likely]] {
 
         if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_sc::DEFINED) })) == Status::SUCCESS) [[likely]]
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Pt *Pd::create_pt (Status &s, Space_obj *obj, unsigned long sel, Ec *ec, uintptr_t ip)
+{
+    assert (this == ec->get_pd());
+
+    auto const o { Pt::create (s, ec, ip) };
+
+    if (o) [[likely]] {
+
+        if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_pt::DEFINED) })) == Status::SUCCESS) [[likely]]
             return o;
 
         o->destroy();
