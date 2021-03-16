@@ -148,7 +148,7 @@ void Ec::send_msg (Ec *const self)
 
     assert (ec->subtype == Kobject::Subtype::EC_LOCAL);
 
-    self->rendezvous (ec, C, recv_kern, pt->ip, pt->id, pt->mtd);
+    self->rendezvous (ec, C, recv_kern, pt->ip, pt->get_id(), pt->get_mtd());
 
     self->help (ec, send_msg<C>);
 
@@ -171,7 +171,7 @@ void Ec::sys_ipc_call (Ec *const self)
 
     assert (ec->subtype == Kobject::Subtype::EC_LOCAL);
 
-    self->rendezvous (ec, Ec_arch::ret_user_hypercall, recv_user, pt->ip, pt->id, r.mtd());
+    self->rendezvous (ec, Ec_arch::ret_user_hypercall, recv_user, pt->ip, pt->get_id(), r.mtd());
 
     if (EXPECT_FALSE (r.timeout()))
         sys_finish<Status::TIMEOUT> (self);
@@ -363,11 +363,11 @@ void Ec::sys_create_pt (Ec *const self)
 {
     auto r = Sys_create_pt (self->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx EC:%#lx EIP:%#lx", static_cast<void *>(self), __func__, r.sel(), r.ec(), r.eip());
+    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx EC:%#lx IP:%#lx", static_cast<void *>(self), __func__, r.sel(), r.ec(), r.ip());
 
-    auto cap = self->pd->Space_obj::lookup (r.pd());
+    auto cap = self->pd->Space_obj::lookup (r.own());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pd::EC_PT_SM))) {
-        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r.pd());
+        trace (TRACE_ERROR, "%s: Bad PD CAP (%#lx)", __func__, r.own());
         sys_finish<Status::BAD_CAP> (self);
     }
 
@@ -384,14 +384,32 @@ void Ec::sys_create_pt (Ec *const self)
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    auto pt = new Pt (Pd::current, r.sel(), ec, r.mtd(), r.eip());
-    if (self->pd->Space_obj::insert (r.sel(), Capability (pt, static_cast<unsigned>(Capability::Perm_pt::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        delete pt;
-        sys_finish<Status::BAD_CAP> (self);
+    auto pt = Pt::create (ec, r.ip());
+
+    if (EXPECT_FALSE (!pt)) {
+        trace (TRACE_ERROR, "%s: Insufficient MEM", __func__);
+        sys_finish<Status::INS_MEM> (self);
     }
 
-    sys_finish<Status::SUCCESS> (self);
+    auto s = self->pd->Space_obj::insert (r.sel(), Capability (pt, static_cast<unsigned>(Capability::Perm_pt::DEFINED)));
+
+    if (EXPECT_TRUE (s == Status::SUCCESS))
+        sys_finish<Status::SUCCESS> (self);
+
+    pt->destroy();
+
+    switch (s) {
+
+        default:
+
+        case Status::BAD_CAP:
+            trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
+            sys_finish<Status::BAD_CAP> (self);
+
+        case Status::INS_MEM:
+            trace (TRACE_ERROR, "%s: Insufficient MEM for CAP (%#lx)", __func__, r.sel());
+            sys_finish<Status::INS_MEM> (self);
+    }
 }
 
 void Ec::sys_create_sm (Ec *const self)
@@ -523,7 +541,7 @@ void Ec::sys_ctrl_pt (Ec *const self)
 {
     auto r = Sys_ctrl_pt (self->sys_regs());
 
-    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx ID:%#lx", static_cast<void *>(self), __func__, r.pt(), r.id());
+    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx ID:%#lx MTD:%#x", static_cast<void *>(self), __func__, r.pt(), r.id(), static_cast<unsigned>(r.mtd()));
 
     auto cap = self->pd->Space_obj::lookup (r.pt());
     if (EXPECT_FALSE (!cap.validate (Capability::Perm_pt::CTRL))) {
@@ -534,6 +552,7 @@ void Ec::sys_ctrl_pt (Ec *const self)
     auto pt = static_cast<Pt *>(cap.obj());
 
     pt->set_id (r.id());
+    pt->set_mtd (r.mtd());
 
     sys_finish<Status::SUCCESS> (self);
 }
