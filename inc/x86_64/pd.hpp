@@ -34,6 +34,7 @@ class Space_obj;
 class Space_pio;
 
 class Ec;
+class Pt;
 class Sc;
 
 class Pd final : public Kobject
@@ -60,6 +61,7 @@ class Pd final : public Kobject
         Slab_cache pd_cache;
         Slab_cache ec_cache;
         Slab_cache sc_cache;
+        Slab_cache pt_cache;
 
         Slab_cache obj_cache;
         Slab_cache hst_cache;
@@ -91,4 +93,5 @@ class Pd final : public Kobject
         Pd *create_pd (Status &, Space_obj *, unsigned long, unsigned);
         Ec *create_ec (Status &, Space_obj *, unsigned long, cpu_t, uintptr_t, uintptr_t, uintptr_t, uint8_t);
         Sc *create_sc (Status &, Space_obj *, unsigned long, Ec *, cpu_t, uint16_t, uint8_t, uint16_t);
+        Pt *create_pt (Status &, Space_obj *, unsigned long, Ec *, uintptr_t);
 };
