@@ -1,10 +1,11 @@
 /*
- * Portal
+ * Portal (PT)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,10 +23,9 @@
 #include "pt.hpp"
 #include "stdio.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pt::cache (sizeof (Pt), 32);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Pt::cache { sizeof (Pt), Kobject::alignment };
 
-Pt::Pt (Pd *, mword, Ec *e, Mtd m, mword addr) : Kobject (Kobject::Type::PT), ec (e), mtd (m), ip (addr), id (0)
+Pt::Pt (Ec *e, uintptr_t i) : Kobject (Kobject::Type::PT), ec (e), ip (i)
 {
-    trace (TRACE_SYSCALL, "PT:%p created (EC:%p IP:%#lx)", this, e, ip);
+    trace (TRACE_CREATE, "PT:%p created (EC:%p IP:%#lx)", static_cast<void *>(this), static_cast<void *>(e), ip);
 }

@@ -34,6 +34,7 @@ class Space_obj;
 class Space_pio;
 
 class Ec;
+class Pt;
 class Sc;
 
 class Pd final : public Kobject
@@ -89,4 +90,5 @@ class Pd final : public Kobject
         static Pd *create_pd (Status &, Space_obj *, unsigned long, unsigned);
         static Ec *create_ec (Status &, Space_obj *, unsigned long, Pd *, unsigned, uintptr_t, uintptr_t, uintptr_t, uint8);
         static Sc *create_sc (Status &, Space_obj *, unsigned long, Ec *, unsigned, uint16, uint8, uint16);
+        static Pt *create_pt (Status &, Space_obj *, unsigned long, Ec *, uintptr_t);
 };

@@ -152,7 +152,7 @@ void Ec::send_msg (Ec *const self)
 
     assert (ec->subtype == Kobject::Subtype::EC_LOCAL);
 
-    self->rendezvous (ec, C, recv_kern, pt->ip, pt->id, pt->mtd);
+    self->rendezvous (ec, C, recv_kern, pt->ip, pt->get_id(), pt->get_mtd());
 
     self->help (ec, send_msg<C>);
 
@@ -175,7 +175,7 @@ void Ec::sys_ipc_call (Ec *const self)
 
     assert (ec->subtype == Kobject::Subtype::EC_LOCAL);
 
-    self->rendezvous (ec, Ec_arch::ret_user_hypercall, recv_user, pt->ip, pt->id, r.mtd());
+    self->rendezvous (ec, Ec_arch::ret_user_hypercall, recv_user, pt->ip, pt->get_id(), r.mtd());
 
     if (EXPECT_FALSE (r.timeout()))
         sys_finish<Status::TIMEOUT> (self);
@@ -290,35 +290,23 @@ void Ec::sys_create_pt (Ec *const self)
 {
     Sys_create_pt r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx EC:%#lx EIP:%#lx", static_cast<void *>(self), __func__, r.sel(), r.ec(), r.eip());
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx EC:%#lx IP:%#lx", static_cast<void *>(self), __func__, r.sel(), r.pd(), r.ec(), r.ip());
 
-    auto cpd { self->get_obj()->lookup (r.pd()) };
-    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::PT))) {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r.pd());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const cpd { self->get_obj()->lookup (r.pd()) };
+    auto const cec { self->get_obj()->lookup (r.ec()) };
 
-    auto cec { self->get_obj()->lookup (r.ec()) };
-    if (EXPECT_FALSE (!cec.validate (Capability::Perm_ec::BIND_PT))) {
-        trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r.ec());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (EXPECT_FALSE (!cpd.validate (Capability::Perm_pd::PT) || !cec.validate (Capability::Perm_ec::BIND_PT)))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    auto ec = static_cast<Ec *>(cec.obj());
+    auto const ec { static_cast<Ec *>(cec.obj()) };
 
-    if (EXPECT_FALSE (ec->subtype != Kobject::Subtype::EC_LOCAL)) {
-        trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    if (EXPECT_FALSE (ec->subtype != Kobject::Subtype::EC_LOCAL))
+        self->sys_finish_status (Status::BAD_CAP);
 
-    auto pt = new Pt (nullptr, r.sel(), ec, r.mtd(), r.eip());
-    if (self->get_obj()->insert (r.sel(), Capability (pt, static_cast<unsigned>(Capability::Perm_pt::DEFINED))) != Status::SUCCESS) {
-        trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r.sel());
-        delete pt;
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    Status s;
+    Pd::create_pt (s, self->get_obj(), r.sel(), ec, r.ip());
 
-    sys_finish<Status::SUCCESS> (self);
+    self->sys_finish_status (s);
 }
 
 void Ec::sys_create_sm (Ec *const self)
@@ -438,19 +426,19 @@ void Ec::sys_ctrl_pt (Ec *const self)
 {
     Sys_ctrl_pt r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx ID:%#lx", static_cast<void *>(self), __func__, r.pt(), r.id());
+    trace (TRACE_SYSCALL, "EC:%p %s PT:%#lx ID:%#lx MTD:%#x", static_cast<void *>(self), __func__, r.pt(), r.id(), static_cast<unsigned>(r.mtd()));
 
-    auto cap = self->get_obj()->lookup (r.pt());
-    if (EXPECT_FALSE (!cap.validate (Capability::Perm_pt::CTRL))) {
-        trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r.pt());
-        sys_finish<Status::BAD_CAP> (self);
-    }
+    auto const cpt { self->get_obj()->lookup (r.pt()) };
 
-    auto pt = static_cast<Pt *>(cap.obj());
+    if (EXPECT_FALSE (!cpt.validate (Capability::Perm_pt::CTRL)))
+        self->sys_finish_status (Status::BAD_CAP);
+
+    auto const pt { static_cast<Pt *>(cpt.obj()) };
 
     pt->set_id (r.id());
+    pt->set_mtd (r.mtd());
 
-    sys_finish<Status::SUCCESS> (self);
+    self->sys_finish_status (Status::SUCCESS);
 }
 
 void Ec::sys_ctrl_sm (Ec *const self)
