@@ -123,35 +123,35 @@ class alignas (16) Cpu_regs final
         void vmx_set_cpu_ter (uint64_t) const;
 
         void svm_set_bmp_exc() const { vmcb->intercept_exc = set_exc() | exc.intcpt_exc; }
-        void vmx_set_bmp_exc() const { Vmcs::write (Vmcs::Encoding::EXC_BITMAP, set_exc() | exc.intcpt_exc); }
+        void vmx_set_bmp_exc() const { Vmcs::write<Vmcs::Encoding::BITMAP_EXC>(set_exc() | exc.intcpt_exc); }
 
-        void vmx_set_msk_cr0() const { Vmcs::write (Vmcs::Encoding::CR0_MASK, msk_cr0<Vmcs>() | exc.intcpt_cr0); }
-        void vmx_set_msk_cr4() const { Vmcs::write (Vmcs::Encoding::CR4_MASK, msk_cr4<Vmcs>() | exc.intcpt_cr4); }
+        void vmx_set_msk_cr0() const { Vmcs::write<Vmcs::Encoding::CR0_MASK>(msk_cr0<Vmcs>() | exc.intcpt_cr0); }
+        void vmx_set_msk_cr4() const { Vmcs::write<Vmcs::Encoding::CR4_MASK>(msk_cr4<Vmcs>() | exc.intcpt_cr4); }
 
-        void vmx_set_rsh_cr0 (uintptr_t v) { Vmcs::write (Vmcs::Encoding::CR0_READ_SHADOW, exc.shadow_cr0 = v); }
-        void vmx_set_rsh_cr4 (uintptr_t v) { Vmcs::write (Vmcs::Encoding::CR4_READ_SHADOW, exc.shadow_cr4 = v); }
+        void vmx_set_rsh_cr0 (uintptr_t v) { Vmcs::write<Vmcs::Encoding::CR0_READ_SHADOW>(exc.shadow_cr0 = v); }
+        void vmx_set_rsh_cr4 (uintptr_t v) { Vmcs::write<Vmcs::Encoding::CR4_READ_SHADOW>(exc.shadow_cr4 = v); }
 
         void vmx_set_gst_cr0 (uintptr_t v)
         {
             vmx_set_rsh_cr0 (v);
-            Vmcs::write (Vmcs::Encoding::GUEST_CR0, (v & ~msk_cr0<Vmcs>()) | set_cr0<Vmcs>());
+            Vmcs::write<Vmcs::Encoding::GUEST_CR0>((v & ~msk_cr0<Vmcs>()) | set_cr0<Vmcs>());
         }
 
         void vmx_set_gst_cr4 (uintptr_t v)
         {
             vmx_set_rsh_cr4 (v);
-            Vmcs::write (Vmcs::Encoding::GUEST_CR4, (v & ~msk_cr4<Vmcs>()) | set_cr4<Vmcs>());
+            Vmcs::write<Vmcs::Encoding::GUEST_CR4>((v & ~msk_cr4<Vmcs>()) | set_cr4<Vmcs>());
         }
 
         auto vmx_get_gst_cr0() const
         {
             auto const msk { msk_cr0<Vmcs>() };
-            return (Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_CR0) & ~msk) | (exc.shadow_cr0 & msk);
+            return (Vmcs::read<Vmcs::Encoding::GUEST_CR0>() & ~msk) | (exc.shadow_cr0 & msk);
         }
 
         auto vmx_get_gst_cr4() const
         {
             auto const msk { msk_cr4<Vmcs>() };
-            return (Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_CR4) & ~msk) | (exc.shadow_cr4 & msk);
+            return (Vmcs::read<Vmcs::Encoding::GUEST_CR4>() & ~msk) | (exc.shadow_cr4 & msk);
         }
 };

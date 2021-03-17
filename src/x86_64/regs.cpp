@@ -44,12 +44,12 @@ void Cpu_regs::vmx_set_cpu_pri (uint32_t val) const
     if (!(val & Vmcs::CPU_TPR_SHADOW))
         val |= Vmcs::CPU_CR8_LOAD | Vmcs::CPU_CR8_STORE;
 
-    Vmcs::write (Vmcs::Encoding::CPU_EXEC_CTRL0, (val | Vmcs::ctrl_cpu[0].set) & Vmcs::ctrl_cpu[0].clr);
+    Vmcs::write<Vmcs::Encoding::CPU_CONTROLS_PRI>((val | Vmcs::cpu_pri_set) & Vmcs::cpu_pri_clr);
 }
 
 void Cpu_regs::vmx_set_cpu_sec (uint32_t val) const
 {
-    Vmcs::write (Vmcs::Encoding::CPU_EXEC_CTRL1, (val | Vmcs::ctrl_cpu[1].set) & Vmcs::ctrl_cpu[1].clr);
+    Vmcs::write<Vmcs::Encoding::CPU_CONTROLS_SEC>((val | Vmcs::cpu_sec_set) & Vmcs::cpu_sec_clr);
 }
 
 void Cpu_regs::fpu_ctrl (bool on)
