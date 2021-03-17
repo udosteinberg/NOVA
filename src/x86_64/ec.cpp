@@ -72,11 +72,10 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), cpu_t c, unsigned e, mword u, mword s) 
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
-            regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
-                                  0, // FIXME: pd->Space_pio::walk(),
-                                  Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
-                                  pd->Space_gst::get_phys(),
-                                  Vpid::alloc (cpu));
+            regs.vmcs = new Vmcs;
+            regs.vmcs->init (0, reinterpret_cast<mword>(sys_regs() + 1),
+                             Kmem::ptr_to_phys (pd->loc[c].root_init (false)),
+                             0, Vpid::alloc (cpu));
 
             regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
@@ -130,7 +129,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::TSC_OFFSET, current->regs.tsc_offset);
+            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.tsc_offset);
         } else
             current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
     }
@@ -182,11 +181,10 @@ void Ec::ret_user_vmresume()
                   "vmresume;"
                   "vmlaunch;"
                   "lea %1, %%rsp;"
+                  "jmp vmx_failure;"
                   : : "m" (current->regs), "m" (DSTK_TOP) : "memory");
 
-    trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
-
-    die ("VMENTRY");
+    UNREACHED;
 }
 
 void Ec::ret_user_vmrun()
