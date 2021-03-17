@@ -233,30 +233,30 @@ class Cpu_regs : public Exc_regs
 };
 
 template <> inline uint64 Exc_regs::get_g_efer<Vmcb>()         const { return vmcb->efer; }
-template <> inline uint64 Exc_regs::get_g_efer<Vmcs>()         const { return Vmcs::read<uint64> (Vmcs::GUEST_EFER); }
+template <> inline uint64 Exc_regs::get_g_efer<Vmcs>()         const { return Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER); }
 
 template <> inline mword  Exc_regs::get_g_cr0<Vmcb>()          const { return static_cast<mword>(vmcb->cr0); }
 template <> inline mword  Exc_regs::get_g_cr2<Vmcb>()          const { return static_cast<mword>(vmcb->cr2); }
 template <> inline mword  Exc_regs::get_g_cr3<Vmcb>()          const { return static_cast<mword>(vmcb->cr3); }
 template <> inline mword  Exc_regs::get_g_cr4<Vmcb>()          const { return static_cast<mword>(vmcb->cr4); }
-template <> inline mword  Exc_regs::get_g_cr0<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::GUEST_CR0); }
+template <> inline mword  Exc_regs::get_g_cr0<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::Encoding::GUEST_CR0); }
 template <> inline mword  Exc_regs::get_g_cr2<Vmcs>()          const { return cr2; }
-template <> inline mword  Exc_regs::get_g_cr3<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::GUEST_CR3); }
-template <> inline mword  Exc_regs::get_g_cr4<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::GUEST_CR4); }
+template <> inline mword  Exc_regs::get_g_cr3<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::Encoding::GUEST_CR3); }
+template <> inline mword  Exc_regs::get_g_cr4<Vmcs>()          const { return Vmcs::read<mword>  (Vmcs::Encoding::GUEST_CR4); }
 
 template <> inline void   Exc_regs::set_g_cr0<Vmcb> (mword v)  const { vmcb->cr0 = v; }
 template <> inline void   Exc_regs::set_g_cr2<Vmcb> (mword v)        { vmcb->cr2 = v; }
 template <> inline void   Exc_regs::set_g_cr3<Vmcb> (mword v)  const { vmcb->cr3 = v; }
 template <> inline void   Exc_regs::set_g_cr4<Vmcb> (mword v)  const { vmcb->cr4 = v; }
-template <> inline void   Exc_regs::set_g_cr0<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR0, v); }
+template <> inline void   Exc_regs::set_g_cr0<Vmcs> (mword v)  const { Vmcs::write (Vmcs::Encoding::GUEST_CR0, v); }
 template <> inline void   Exc_regs::set_g_cr2<Vmcs> (mword v)        { cr2 = v; }
-template <> inline void   Exc_regs::set_g_cr3<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR3, v); }
-template <> inline void   Exc_regs::set_g_cr4<Vmcs> (mword v)  const { Vmcs::write (Vmcs::GUEST_CR4, v); }
+template <> inline void   Exc_regs::set_g_cr3<Vmcs> (mword v)  const { Vmcs::write (Vmcs::Encoding::GUEST_CR3, v); }
+template <> inline void   Exc_regs::set_g_cr4<Vmcs> (mword v)  const { Vmcs::write (Vmcs::Encoding::GUEST_CR4, v); }
 
 template <> inline void   Exc_regs::set_s_cr0<Vmcb> (mword v)        { cr0_shadow = v; }
 template <> inline void   Exc_regs::set_s_cr4<Vmcb> (mword v)        { cr4_shadow = v; }
-template <> inline void   Exc_regs::set_s_cr0<Vmcs> (mword v)        { Vmcs::write (Vmcs::CR0_READ_SHADOW, cr0_shadow = v); }
-template <> inline void   Exc_regs::set_s_cr4<Vmcs> (mword v)        { Vmcs::write (Vmcs::CR4_READ_SHADOW, cr4_shadow = v); }
+template <> inline void   Exc_regs::set_s_cr0<Vmcs> (mword v)        { Vmcs::write (Vmcs::Encoding::CR0_READ_SHADOW, cr0_shadow = v); }
+template <> inline void   Exc_regs::set_s_cr4<Vmcs> (mword v)        { Vmcs::write (Vmcs::Encoding::CR4_READ_SHADOW, cr4_shadow = v); }
 
 template <> inline void   Exc_regs::set_e_bmp<Vmcb> (uint32 v) const { vmcb->intercept_exc = v; }
-template <> inline void   Exc_regs::set_e_bmp<Vmcs> (uint32 v) const { Vmcs::write (Vmcs::EXC_BITMAP, v); }
+template <> inline void   Exc_regs::set_e_bmp<Vmcs> (uint32 v) const { Vmcs::write (Vmcs::Encoding::BITMAP_EXC, v); }
