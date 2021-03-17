@@ -74,9 +74,11 @@ class Cpu final
             MCE                     =  1 * 32 +  7,     // Machine Check Exception
             SEP                     =  1 * 32 + 11,     // SYSENTER/SYSEXIT Instructions
             MCA                     =  1 * 32 + 14,     // Machine Check Architecture
+            PAT                     =  1 * 32 + 16,     // Page Attribute Table
             ACPI                    =  1 * 32 + 22,     // Thermal Monitor and Software Controlled Clock Facilities
             HTT                     =  1 * 32 + 28,     // Hyper-Threading Technology
             // EAX=0x6 (EAX)
+            ARAT                    =  2 * 32 +  2,     // Always Running APIC Timer
             // EAX=0x7 ECX=0x0 (EBX)
             SMEP                    =  3 * 32 +  7,     // Supervisor Mode Execution Prevention
             SMAP                    =  3 * 32 + 20,     // Supervisor Mode Access Prevention
