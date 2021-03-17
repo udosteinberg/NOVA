@@ -74,8 +74,7 @@ class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element,
         static bool handle_exc_gp (Exc_regs *);
         static bool handle_exc_pf (Exc_regs *);
 
-        [[noreturn]]
-        static inline void svm_exception (mword);
+        [[noreturn]] static void svm_exception (uint64_t);
 
         [[noreturn]]
         static inline void vmx_exception();
