@@ -67,6 +67,9 @@ class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
         static void handle_vmx() asm ("vmx_handler");
 
         [[noreturn]]
+        static void failed_vmx() asm ("vmx_failure");
+
+        [[noreturn]]
         static void handle_svm() asm ("svm_handler");
 
         static void handle_exc_nm();
