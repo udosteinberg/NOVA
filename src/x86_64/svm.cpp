@@ -28,25 +28,26 @@
 #include "stdio.hpp"
 #include "svm.hpp"
 
-Paddr       Vmcb::root;
+uint64_t    Vmcb::root;
 unsigned    Vmcb::asid_ctr;
-uint32      Vmcb::svm_version;
-uint32      Vmcb::svm_feature;
+uint32_t    Vmcb::svm_version;
+uint32_t    Vmcb::svm_feature;
 
-Vmcb::Vmcb (mword bmp, mword nptp) : base_io (bmp), asid (++asid_ctr), int_control (1ul << 24), npt_cr3 (nptp), efer (EFER_SVME), g_pat (0x7040600070406ull)
+Vmcb::Vmcb (uintptr_t bmp, uintptr_t nptp) : base_io (bmp), asid (++asid_ctr), int_control (1ul << 24), npt_cr3 (nptp), efer (EFER_SVME), g_pat (0x7040600070406ull)
 {
     base_msr = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
+    assert (base_msr);
 }
 
 void Vmcb::init()
 {
-    if (!Cpu::feature (Cpu::Feature::SVM)) {
-        Hip::hip->clr_feature (Hip::FEAT_SVM);
+    if (!Cpu::feature (Cpu::Feature::SVM))
         return;
-    }
 
     Msr::write (Msr::Reg64::IA32_EFER, Msr::read (Msr::Reg64::IA32_EFER) | EFER_SVME);
     Msr::write (Msr::Reg64::AMD_SVM_HSAVE_PA, root = Kmem::ptr_to_phys (new Vmcb));
 
-    trace (TRACE_VIRT, "VMCB:%#010lx REV:%#x NPT:%d", root, svm_version, has_npt());
+    trace (TRACE_VIRT, "VMCB: %#010lx REV:%#x NPT:%u", root, svm_version, has_npt());
+
+    Hip::hip->set_feature (Hip::FEAT_SVM);
 }
