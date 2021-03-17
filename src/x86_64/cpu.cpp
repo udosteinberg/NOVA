@@ -304,6 +304,7 @@ void Cpu::fini()
 
     if (s.state() > 1) {
         Fpu::fini();
+        Vmcs::fini();
     }
 
     Acpi::fini (s);
