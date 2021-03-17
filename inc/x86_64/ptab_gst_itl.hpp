@@ -22,6 +22,7 @@
 #pragma once
 
 #include "ptab_pte.hpp"
+#include "vmx.hpp"
 
 class Pte_gst_itl final : public Pte_ept<Pte_gst_itl, uint64_t, uint64_t>
 {
@@ -91,7 +92,7 @@ struct Ptab_gst_itl final : Ptab<Pte_gst_itl, uint64_t, uint64_t>
         uint128_t const desc { root_hw() };
 
         bool ret;
-        asm volatile ("invept %1, %2" : "=@cca" (ret) : "m" (desc), "r" (1UL) : "memory");
+        asm volatile ("invept %1, %2" : "=@cca" (ret) : "m" (desc), "r" (Vmcs::has_invept_sgl() ? 1UL : 2UL) : "memory");
         return ret;
     }
 };
