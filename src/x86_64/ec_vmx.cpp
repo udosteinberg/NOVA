@@ -28,20 +28,20 @@
 
 void Ec::vmx_exception()
 {
-    uint32 vect_info = Vmcs::read<uint32> (Vmcs::IDT_VECT_INFO);
+    uint32 vect_info = Vmcs::read<uint32> (Vmcs::Encoding::IDT_VECT_INFO);
 
     if (vect_info & 0x80000000) {
 
-        Vmcs::write (Vmcs::ENT_INTR_INFO, vect_info & ~0x1000);
+        Vmcs::write (Vmcs::Encoding::ENT_INTR_INFO, vect_info & ~0x1000);
 
         if (vect_info & 0x800)
-            Vmcs::write (Vmcs::ENT_INTR_ERROR, Vmcs::read<uint32> (Vmcs::IDT_VECT_ERROR));
+            Vmcs::write (Vmcs::Encoding::ENT_INTR_ERROR, Vmcs::read<uint32> (Vmcs::Encoding::IDT_VECT_ERROR));
 
         if ((vect_info >> 8 & 0x7) >= 4 && (vect_info >> 8 & 0x7) <= 6)
-            Vmcs::write (Vmcs::ENT_INST_LEN, Vmcs::read<uint32> (Vmcs::EXI_INST_LEN));
+            Vmcs::write (Vmcs::Encoding::ENT_INST_LEN, Vmcs::read<uint32> (Vmcs::Encoding::EXI_INST_LEN));
     };
 
-    uint32 intr_info = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO);
+    uint32 intr_info = Vmcs::read<uint32> (Vmcs::Encoding::EXI_INTR_INFO);
 
     switch (intr_info & 0x7ff) {
 
@@ -63,7 +63,7 @@ void Ec::vmx_exception()
 
 void Ec::vmx_extint()
 {
-    uint32 vector = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & 0xff;
+    uint32 vector = Vmcs::read<uint32> (Vmcs::Encoding::EXI_INTR_INFO) & 0xff;
 
     if (vector >= VEC_IPI)
         Interrupt::handle_ipi (vector);
@@ -81,7 +81,7 @@ void Ec::handle_vmx()
 {
     Cpu::hazard = (Cpu::hazard | HZD_DS_ES | HZD_TR) & ~HZD_FPU;
 
-    uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
+    uint32 reason = Vmcs::read<uint32> (Vmcs::Encoding::EXI_REASON) & 0xff;
 
     Counter::vmi[reason].inc();
 
