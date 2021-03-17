@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2020 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,7 +24,7 @@
 #include "kmem.hpp"
 #include "utcb.hpp"
 
-class Vmcb
+class Vmcb final
 {
     public:
         union {
@@ -33,8 +33,8 @@ class Vmcb
                 uint32      intercept_cr;           // 0x0
                 uint32      intercept_dr;           // 0x4
                 uint32      intercept_exc;          // 0x8
-                uint32      intercept_cpu[2];       // 0xc
-                uint32      reserved1[11];          // 0x14
+                uint32      intercept_cpu[3];       // 0xc
+                uint32      reserved1[10];          // 0x18
                 uint64      base_io;                // 0x40
                 uint64      base_msr;               // 0x48
                 uint64      tsc_offset;             // 0x50
@@ -72,52 +72,89 @@ class Vmcb
         static uint32       svm_version CPULOCAL;
         static uint32       svm_feature CPULOCAL;
 
-        static mword const fix_cr0_set = 0;
-        static mword const fix_cr0_clr = 0;
-        static mword const fix_cr4_set = 0;
-        static mword const fix_cr4_clr = 0;
+        static constexpr uintptr_t fix_cr0_set { 0 };
+        static constexpr uintptr_t fix_cr0_clr { 0 };
+        static constexpr uintptr_t fix_cr4_set { 0 };
+        static constexpr uintptr_t fix_cr4_clr { 0 };
 
         enum Ctrl0
         {
-            CPU_INTR        = 1ul << 0,
-            CPU_NMI         = 1ul << 1,
-            CPU_INIT        = 1ul << 3,
-            CPU_VINTR       = 1ul << 4,
-            CPU_INVD        = 1ul << 22,
-            CPU_HLT         = 1ul << 24,
-            CPU_INVLPG      = 1ul << 25,
-            CPU_IO          = 1ul << 27,
-            CPU_MSR         = 1ul << 28,
-            CPU_SHUTDOWN    = 1ul << 31,
+            CPU_INTR        = BIT  (0),
+            CPU_NMI         = BIT  (1),
+            CPU_SMI         = BIT  (2),
+            CPU_INIT        = BIT  (3),
+            CPU_VINTR       = BIT  (4),
+            CPU_W_CR0       = BIT  (5),
+            CPU_R_IDTR      = BIT  (6),
+            CPU_R_GDTR      = BIT  (7),
+            CPU_R_LDTR      = BIT  (8),
+            CPU_R_TR        = BIT  (9),
+            CPU_W_IDTR      = BIT (10),
+            CPU_W_GDTR      = BIT (11),
+            CPU_W_LDTR      = BIT (12),
+            CPU_W_TR        = BIT (13),
+            CPU_RDTSC       = BIT (14),
+            CPU_RDPMC       = BIT (15),
+            CPU_PUSHF       = BIT (16),
+            CPU_POPF        = BIT (17),
+            CPU_CPUID       = BIT (18),
+            CPU_RSM         = BIT (19),
+            CPU_IRET        = BIT (20),
+            CPU_INTN        = BIT (21),
+            CPU_INVD        = BIT (22),
+            CPU_PAUSE       = BIT (23),
+            CPU_HLT         = BIT (24),
+            CPU_INVLPG      = BIT (25),
+            CPU_INVLPGA     = BIT (26),
+            CPU_IO          = BIT (27),
+            CPU_MSR         = BIT (28),
+            CPU_TASK_SWITCH = BIT (29),
+            CPU_FERR_FREEZE = BIT (30),
+            CPU_SHUTDOWN    = BIT (31),
         };
 
         enum Ctrl1
         {
-            CPU_VMLOAD      = 1ul << 2,
-            CPU_VMSAVE      = 1ul << 3,
-            CPU_CLGI        = 1ul << 5,
-            CPU_SKINIT      = 1ul << 6,
+            CPU_VMRUN       = BIT  (0),
+            CPU_VMMCALL     = BIT  (1),
+            CPU_VMLOAD      = BIT  (2),
+            CPU_VMSAVE      = BIT  (3),
+            CPU_STGI        = BIT  (4),
+            CPU_CLGI        = BIT  (5),
+            CPU_SKINIT      = BIT  (6),
+            CPU_RDTSCP      = BIT  (7),
+            CPU_ICEBP       = BIT  (8),
+            CPU_WBINVD      = BIT  (9),
+            CPU_MONITOR     = BIT (10),
+            CPU_MWAIT       = BIT (11),
+            CPU_MWAIT_ARMED = BIT (12),
+            CPU_XSETBV      = BIT (13),
+            CPU_RDPRU       = BIT (14),
+            CPU_EFER        = BIT (15),
         };
 
-        static uint32 const force_ctrl0 =   CPU_INTR    |
-                                            CPU_NMI     |
-                                            CPU_INIT    |
-                                            CPU_INVD    |
-                                            CPU_HLT     |
-                                            CPU_IO      |
-                                            CPU_MSR     |
-                                            CPU_SHUTDOWN;
-
-        static uint32 const force_ctrl1 =   CPU_VMLOAD  |
-                                            CPU_VMSAVE  |
-                                            CPU_CLGI    |
-                                            CPU_SKINIT;
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t)
+        enum Ctrl2
         {
-            return Buddy::alloc (0, Buddy::Fill::BITS0);
-        }
+            CPU_INVLPGB     = BIT  (0),
+            CPU_INVLPGB_INV = BIT  (1),
+            CPU_PCID        = BIT  (2),
+            CPU_MCOMMIT     = BIT  (3),
+            CPU_TLBSYNC     = BIT  (4),
+        };
+
+        static constexpr uint32 force_ctrl0 {   CPU_INTR        |
+                                                CPU_NMI         |
+                                                CPU_INIT        |
+                                                CPU_INVD        |
+                                                CPU_HLT         |
+                                                CPU_IO          |
+                                                CPU_MSR         |
+                                                CPU_SHUTDOWN    };
+
+        static constexpr uint32 force_ctrl1 {   CPU_VMLOAD      |
+                                                CPU_VMSAVE      |
+                                                CPU_CLGI        |
+                                                CPU_SKINIT      };
 
         Vmcb (mword, mword);
 
@@ -131,4 +168,17 @@ class Vmcb
         static bool has_urg() { return true; }
 
         static void init();
+
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return Buddy::alloc (0, Buddy::Fill::BITS0);
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                Buddy::free (ptr);
+        }
 };
