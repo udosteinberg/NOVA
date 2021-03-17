@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,12 +22,12 @@
 #include "ec.hpp"
 #include "svm.hpp"
 
-void Ec::svm_exception (mword reason)
+void Ec::svm_exception (uint64_t reason)
 {
     if (current->regs.vmcb->exitintinfo & 0x80000000) {
 
-        mword t = static_cast<mword>(current->regs.vmcb->exitintinfo) >> 8 & 0x7;
-        mword v = static_cast<mword>(current->regs.vmcb->exitintinfo) & 0xff;
+        auto const t { current->regs.vmcb->exitintinfo >> 8 & 0x7 };
+        auto const v { current->regs.vmcb->exitintinfo & 0xff };
 
         if (t == 0 || (t == 3 && v != 3 && v != 4))
             current->regs.vmcb->inj_control = current->regs.vmcb->exitintinfo;
@@ -51,7 +51,7 @@ void Ec::handle_svm()
 {
     current->regs.vmcb->tlb_control = 0;
 
-    mword reason = static_cast<mword>(current->regs.vmcb->exitcode);
+    auto reason { current->regs.vmcb->exitcode };
 
     switch (reason) {
         case -1UL:              // Invalid state
