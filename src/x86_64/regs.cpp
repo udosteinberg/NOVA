@@ -40,14 +40,12 @@ template <> void Exc_regs::set_cpu_ctrl1<Vmcb> (uint32 val)
 
 template <> void Exc_regs::set_cpu_ctrl0<Vmcs> (uint32 val)
 {
-    Vmcs::write (Vmcs::CPU_EXEC_CTRL0, (val | Vmcs::ctrl_cpu[0].set) & Vmcs::ctrl_cpu[0].clr);
+    Vmcs::write (Vmcs::Encoding::CPU_CONTROLS_PRI, (val | Vmcs::cpu_pri_set) & Vmcs::cpu_pri_clr);
 }
 
 template <> void Exc_regs::set_cpu_ctrl1<Vmcs> (uint32 val)
 {
-    val |= Vmcs::CPU_EPT;
-
-    Vmcs::write (Vmcs::CPU_EXEC_CTRL1, (val | Vmcs::ctrl_cpu[1].set) & Vmcs::ctrl_cpu[1].clr);
+    Vmcs::write (Vmcs::Encoding::CPU_CONTROLS_SEC, (val | Vmcs::cpu_sec_set) & Vmcs::cpu_sec_clr);
 }
 
 template <> void Exc_regs::nst_ctrl<Vmcb>()
@@ -77,12 +75,12 @@ template <> void Exc_regs::nst_ctrl<Vmcs>()
     set_cr3<Vmcs> (cr3);
     set_cr4<Vmcs> (cr4);
 
-    set_cpu_ctrl0<Vmcs> (Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL0));
-    set_cpu_ctrl1<Vmcs> (Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL1));
+    set_cpu_ctrl0<Vmcs> (Vmcs::read<uint32> (Vmcs::Encoding::CPU_CONTROLS_PRI));
+    set_cpu_ctrl1<Vmcs> (Vmcs::read<uint32> (Vmcs::Encoding::CPU_CONTROLS_SEC));
     set_exc<Vmcs>();
 
-    Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
-    Vmcs::write (Vmcs::CR4_MASK, cr4_msk<Vmcs>());
+    Vmcs::write (Vmcs::Encoding::CR0_MASK, cr0_msk<Vmcs>());
+    Vmcs::write (Vmcs::Encoding::CR4_MASK, cr4_msk<Vmcs>());
 }
 
 void Exc_regs::fpu_ctrl (bool on)
@@ -97,7 +95,7 @@ void Exc_regs::fpu_ctrl (bool on)
 
         set_exc<Vmcs>();
 
-        Vmcs::write (Vmcs::CR0_MASK, cr0_msk<Vmcs>());
+        Vmcs::write (Vmcs::Encoding::CR0_MASK, cr0_msk<Vmcs>());
 
     } else {
 
@@ -118,10 +116,10 @@ template <> void Exc_regs::write_efer<Vmcb> (uint64 val)
 
 template <> void Exc_regs::write_efer<Vmcs> (uint64 val)
 {
-    Vmcs::write (Vmcs::GUEST_EFER, val);
+    Vmcs::write (Vmcs::Encoding::GUEST_EFER, val);
 
     if (val & EFER_LMA)
-        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
+        Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::Encoding::ENT_CONTROLS) |  Vmcs::ENT_GUEST_64);
     else
-        Vmcs::write (Vmcs::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
+        Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, Vmcs::read<uint32> (Vmcs::Encoding::ENT_CONTROLS) & ~Vmcs::ENT_GUEST_64);
 }
