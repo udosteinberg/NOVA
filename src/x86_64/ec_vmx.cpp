@@ -21,30 +21,25 @@
 
 #include "ec.hpp"
 #include "interrupt.hpp"
+#include "stdio.hpp"
 #include "vmx.hpp"
 
 void Ec::vmx_exception()
 {
-    uint32 vect_info = Vmcs::read<uint32> (Vmcs::IDT_VECT_INFO);
+    auto const vect_info { Vmcs::read<uint32_t> (Vmcs::Encoding::ORG_EVENT_IDENT) };
 
-    if (vect_info & 0x80000000) {
+    if (vect_info & BIT (31)) {
 
-        Vmcs::write (Vmcs::ENT_INTR_INFO, vect_info & ~0x1000);
+        Vmcs::write (Vmcs::Encoding::INJ_EVENT_IDENT, vect_info & ~0x1000);
 
-        if (vect_info & 0x800)
-            Vmcs::write (Vmcs::ENT_INTR_ERROR, Vmcs::read<uint32> (Vmcs::IDT_VECT_ERROR));
+        if (vect_info & BIT (11))
+            Vmcs::write (Vmcs::Encoding::INJ_EVENT_ERROR, Vmcs::read<uint32_t> (Vmcs::Encoding::ORG_EVENT_ERROR));
 
         if ((vect_info >> 8 & 0x7) >= 4 && (vect_info >> 8 & 0x7) <= 6)
-            Vmcs::write (Vmcs::ENT_INST_LEN, Vmcs::read<uint32> (Vmcs::EXI_INST_LEN));
+            Vmcs::write (Vmcs::Encoding::ENT_INST_LEN, Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_INST_LEN));
     };
 
-    uint32 intr_info = Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO);
-
-    switch (intr_info & 0x7ff) {
-
-        default:
-            current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
-            break;
+    switch (Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_EVENT_IDENT) & BIT_RANGE (10, 0)) {
 
         case 0x202:         // NMI
             asm volatile ("int $0x2" : : : "memory");
@@ -55,12 +50,14 @@ void Ec::vmx_exception()
             ret_user_vmresume();
     }
 
+    current->exc_regs().set_ep (Vmcs::VMX_EXC_NMI);
+
     send_msg<ret_user_vmresume>();
 }
 
 void Ec::vmx_extint()
 {
-    Interrupt::handler (Vmcs::read<uint32> (Vmcs::EXI_INTR_INFO) & BIT_RANGE (7, 0));
+    Interrupt::handler (Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_EVENT_IDENT) & BIT_RANGE (7, 0));
 
     ret_user_vmresume();
 }
@@ -71,7 +68,7 @@ void Ec::handle_vmx()
 
     Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
-    uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
+    auto const reason { Vmcs::read<uint32_t> (Vmcs::Encoding::EXI_REASON) & BIT_RANGE (7, 0) };
 
     switch (reason) {
         case Vmcs::VMX_EXC_NMI:     vmx_exception();
@@ -81,4 +78,11 @@ void Ec::handle_vmx()
     current->exc_regs().set_ep (reason);
 
     send_msg<ret_user_vmresume>();
+}
+
+void Ec::failed_vmx()
+{
+    trace (TRACE_ERROR, "VM entry failed with error %#x", Vmcs::read<uint32_t> (Vmcs::Encoding::VMX_INST_ERROR));
+
+    die ("VM entry failure");
 }

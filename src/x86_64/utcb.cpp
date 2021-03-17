@@ -124,7 +124,7 @@ bool Utcb::load_vmx (Cpu_regs const &c)
         rcx = s.rcx;
         rdx = s.rdx;
         rbx = s.rbx;
-        rsp = Vmcs::read<mword> (Vmcs::GUEST_RSP);
+        rsp = Vmcs::read<mword> (Vmcs::Encoding::GUEST_RSP);
         rbp = s.rbp;
         rsi = s.rsi;
         rdi = s.rdi;
@@ -142,82 +142,82 @@ bool Utcb::load_vmx (Cpu_regs const &c)
     }
 
     if (m & Mtd_arch::RIP) {
-        rip      = Vmcs::read<mword>  (Vmcs::GUEST_RIP);
-        inst_len = Vmcs::read<uint32> (Vmcs::EXI_INST_LEN);
+        rip      = Vmcs::read<mword>  (Vmcs::Encoding::GUEST_RIP);
+        inst_len = Vmcs::read<uint32> (Vmcs::Encoding::EXI_INST_LEN);
     }
 
     if (m & Mtd_arch::RFLAGS)
-        rflags = Vmcs::read<mword> (Vmcs::GUEST_RFLAGS);
+        rflags = Vmcs::read<mword> (Vmcs::Encoding::GUEST_RFLAGS);
 
     if (m & Mtd_arch::DS_ES) {
-        ds.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_DS), Vmcs::read<mword> (Vmcs::GUEST_BASE_DS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_DS), Vmcs::read<uint32> (Vmcs::GUEST_AR_DS));
-        es.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_ES), Vmcs::read<mword> (Vmcs::GUEST_BASE_ES), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_ES), Vmcs::read<uint32> (Vmcs::GUEST_AR_ES));
+        ds.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_DS), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_DS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_DS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_DS));
+        es.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_ES), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_ES), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_ES), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_ES));
     }
 
     if (m & Mtd_arch::FS_GS) {
-        fs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_FS), Vmcs::read<mword> (Vmcs::GUEST_BASE_FS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_FS), Vmcs::read<uint32> (Vmcs::GUEST_AR_FS));
-        gs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_GS), Vmcs::read<mword> (Vmcs::GUEST_BASE_GS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GS), Vmcs::read<uint32> (Vmcs::GUEST_AR_GS));
+        fs.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_FS), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_FS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_FS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_FS));
+        gs.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_GS), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_GS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_GS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_GS));
     }
 
     if (m & Mtd_arch::CS_SS) {
-        cs.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_CS), Vmcs::read<mword> (Vmcs::GUEST_BASE_CS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_CS), Vmcs::read<uint32> (Vmcs::GUEST_AR_CS));
-        ss.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_SS), Vmcs::read<mword> (Vmcs::GUEST_BASE_SS), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_SS), Vmcs::read<uint32> (Vmcs::GUEST_AR_SS));
+        cs.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_CS), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_CS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_CS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_CS));
+        ss.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_SS), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_SS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_SS), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_SS));
     }
 
     if (m & Mtd_arch::TR)
-        tr.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_TR), Vmcs::read<mword> (Vmcs::GUEST_BASE_TR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_TR), Vmcs::read<uint32> (Vmcs::GUEST_AR_TR));
+        tr.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_TR), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_TR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_TR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_TR));
 
     if (m & Mtd_arch::LDTR)
-        ld.set_vmx (Vmcs::read<uint16> (Vmcs::GUEST_SEL_LDTR), Vmcs::read<mword> (Vmcs::GUEST_BASE_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_LDTR), Vmcs::read<uint32> (Vmcs::GUEST_AR_LDTR));
+        ld.set_vmx (Vmcs::read<uint16> (Vmcs::Encoding::GUEST_SEL_LDTR), Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_LDTR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_LDTR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_AR_LDTR));
 
     if (m & Mtd_arch::GDTR)
-        gd.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_GDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_GDTR), 0);
+        gd.set_vmx (0, Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_GDTR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_GDTR), 0);
 
     if (m & Mtd_arch::IDTR)
-        id.set_vmx (0, Vmcs::read<mword> (Vmcs::GUEST_BASE_IDTR), Vmcs::read<uint32> (Vmcs::GUEST_LIMIT_IDTR), 0);
+        id.set_vmx (0, Vmcs::read<mword> (Vmcs::Encoding::GUEST_BASE_IDTR), Vmcs::read<uint32> (Vmcs::Encoding::GUEST_LIMIT_IDTR), 0);
 
     if (m & Mtd_arch::CR) {
         cr0 = c.vmx_get_gst_cr0();
         cr4 = c.vmx_get_gst_cr4();
         cr2 = c.cr2;
         cr3 = Vmcs::read<mword> (Vmcs::Encoding::GUEST_CR3);
-        pdpte[0] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE0);
-        pdpte[1] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE1);
-        pdpte[2] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE2);
-        pdpte[3] = Vmcs::read<uint64> (Vmcs::GUEST_PDPTE3);
+        pdpte[0] = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_PDPTE0);
+        pdpte[1] = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_PDPTE1);
+        pdpte[2] = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_PDPTE2);
+        pdpte[3] = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_PDPTE3);
     }
 
     if (m & Mtd_arch::DR)
-        dr7 = Vmcs::read<mword> (Vmcs::GUEST_DR7);
+        dr7 = Vmcs::read<mword> (Vmcs::Encoding::GUEST_DR7);
 
     if (m & Mtd_arch::SYSENTER) {
-        sysenter_cs  = Vmcs::read<uint32> (Vmcs::GUEST_SYSENTER_CS);
-        sysenter_rsp = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_ESP);
-        sysenter_rip = Vmcs::read<mword>  (Vmcs::GUEST_SYSENTER_EIP);
+        sysenter_cs  = Vmcs::read<uint32> (Vmcs::Encoding::GUEST_SYSENTER_CS);
+        sysenter_rsp = Vmcs::read<mword>  (Vmcs::Encoding::GUEST_SYSENTER_ESP);
+        sysenter_rip = Vmcs::read<mword>  (Vmcs::Encoding::GUEST_SYSENTER_EIP);
     }
 
     if (m & Mtd_arch::QUAL) {
-        qual[0] = Vmcs::read<mword>  (Vmcs::EXI_QUALIFICATION);
-        qual[1] = Vmcs::read<uint64> (Vmcs::INFO_PHYS_ADDR);
+        qual[0] = Vmcs::read<mword>  (Vmcs::Encoding::EXI_QUALIFICATION);
+        qual[1] = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_PHYSICAL_ADDRESS);
     }
 
     if (m & Mtd_arch::INJ) {
         if (c.exc.ep() == 33 || c.exc.ep() == NUM_VMI - 1) {
-            intr_info  = Vmcs::read<uint32> (Vmcs::ENT_INTR_INFO);
-            intr_error = Vmcs::read<uint32> (Vmcs::ENT_INTR_ERROR);
+            intr_info  = Vmcs::read<uint32> (Vmcs::Encoding::INJ_EVENT_IDENT);
+            intr_error = Vmcs::read<uint32> (Vmcs::Encoding::INJ_EVENT_ERROR);
         } else {
-            intr_info  = Vmcs::read<uint32> (Vmcs::IDT_VECT_INFO);
-            intr_error = Vmcs::read<uint32> (Vmcs::IDT_VECT_ERROR);
+            intr_info  = Vmcs::read<uint32> (Vmcs::Encoding::ORG_EVENT_IDENT);
+            intr_error = Vmcs::read<uint32> (Vmcs::Encoding::ORG_EVENT_ERROR);
         }
     }
 
     if (m & Mtd_arch::STA) {
-        intr_state = Vmcs::read<uint32> (Vmcs::GUEST_INTR_STATE);
-        actv_state = Vmcs::read<uint32> (Vmcs::GUEST_ACTV_STATE);
+        intr_state = Vmcs::read<uint32> (Vmcs::Encoding::GUEST_INTR_STATE);
+        actv_state = Vmcs::read<uint32> (Vmcs::Encoding::GUEST_ACTV_STATE);
     }
 
     if (m & Mtd_arch::EFER)
-        efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
+        efer = Vmcs::read<uint64> (Vmcs::Encoding::GUEST_EFER);
 
     barrier();
     mtd = m;
@@ -237,7 +237,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         s.rcx = rcx;
         s.rdx = rdx;
         s.rbx = rbx;
-        Vmcs::write (Vmcs::GUEST_RSP, rsp);
+        Vmcs::write (Vmcs::Encoding::GUEST_RSP, rsp);
         s.rbp = rbp;
         s.rsi = rsi;
         s.rdi = rdi;
@@ -255,68 +255,68 @@ bool Utcb::save_vmx (Cpu_regs &c) const
     }
 
     if (mtd & Mtd_arch::RIP) {
-        Vmcs::write (Vmcs::GUEST_RIP, rip);
-        Vmcs::write (Vmcs::ENT_INST_LEN, static_cast<uint32> (inst_len));
+        Vmcs::write (Vmcs::Encoding::GUEST_RIP, rip);
+        Vmcs::write (Vmcs::Encoding::ENT_INST_LEN, static_cast<uint32> (inst_len));
     }
 
     if (mtd & Mtd_arch::RFLAGS)
-        Vmcs::write (Vmcs::GUEST_RFLAGS, rflags);
+        Vmcs::write (Vmcs::Encoding::GUEST_RFLAGS, rflags);
 
     if (mtd & Mtd_arch::DS_ES) {
-        Vmcs::write (Vmcs::GUEST_SEL_DS,   ds.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_DS,  static_cast<mword>(ds.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_DS, ds.limit);
-        Vmcs::write (Vmcs::GUEST_AR_DS,   (ds.ar << 4 & 0x1f000) | (ds.ar & 0xff));
-        Vmcs::write (Vmcs::GUEST_SEL_ES,   es.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_ES,  static_cast<mword>(es.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_ES, es.limit);
-        Vmcs::write (Vmcs::GUEST_AR_ES,   (es.ar << 4 & 0x1f000) | (es.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_DS,   ds.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_DS,  static_cast<mword>(ds.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_DS, ds.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_DS,   (ds.ar << 4 & 0x1f000) | (ds.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_ES,   es.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_ES,  static_cast<mword>(es.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_ES, es.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_ES,   (es.ar << 4 & 0x1f000) | (es.ar & 0xff));
     }
 
     if (mtd & Mtd_arch::FS_GS) {
-        Vmcs::write (Vmcs::GUEST_SEL_FS,   fs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_FS,  static_cast<mword>(fs.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_FS, fs.limit);
-        Vmcs::write (Vmcs::GUEST_AR_FS,   (fs.ar << 4 & 0x1f000) | (fs.ar & 0xff));
-        Vmcs::write (Vmcs::GUEST_SEL_GS,   gs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_GS,  static_cast<mword>(gs.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_GS, gs.limit);
-        Vmcs::write (Vmcs::GUEST_AR_GS,   (gs.ar << 4 & 0x1f000) | (gs.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_FS,   fs.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_FS,  static_cast<mword>(fs.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_FS, fs.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_FS,   (fs.ar << 4 & 0x1f000) | (fs.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_GS,   gs.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_GS,  static_cast<mword>(gs.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_GS, gs.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_GS,   (gs.ar << 4 & 0x1f000) | (gs.ar & 0xff));
     }
 
     if (mtd & Mtd_arch::CS_SS) {
-        Vmcs::write (Vmcs::GUEST_SEL_CS,   cs.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_CS,  static_cast<mword>(cs.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_CS, cs.limit);
-        Vmcs::write (Vmcs::GUEST_AR_CS,   (cs.ar << 4 & 0x1f000) | (cs.ar & 0xff));
-        Vmcs::write (Vmcs::GUEST_SEL_SS,   ss.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_SS,  static_cast<mword>(ss.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_SS, ss.limit);
-        Vmcs::write (Vmcs::GUEST_AR_SS,   (ss.ar << 4 & 0x1f000) | (ss.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_CS,   cs.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_CS,  static_cast<mword>(cs.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_CS, cs.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_CS,   (cs.ar << 4 & 0x1f000) | (cs.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_SS,   ss.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_SS,  static_cast<mword>(ss.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_SS, ss.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_SS,   (ss.ar << 4 & 0x1f000) | (ss.ar & 0xff));
     }
 
     if (mtd & Mtd_arch::TR) {
-        Vmcs::write (Vmcs::GUEST_SEL_TR,     tr.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_TR,    static_cast<mword>(tr.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_TR,   tr.limit);
-        Vmcs::write (Vmcs::GUEST_AR_TR,     (tr.ar << 4 & 0x1f000) | (tr.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_TR,     tr.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_TR,    static_cast<mword>(tr.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_TR,   tr.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_TR,     (tr.ar << 4 & 0x1f000) | (tr.ar & 0xff));
     }
 
     if (mtd & Mtd_arch::LDTR) {
-        Vmcs::write (Vmcs::GUEST_SEL_LDTR,   ld.sel);
-        Vmcs::write (Vmcs::GUEST_BASE_LDTR,  static_cast<mword>(ld.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_LDTR, ld.limit);
-        Vmcs::write (Vmcs::GUEST_AR_LDTR,   (ld.ar << 4 & 0x1f000) | (ld.ar & 0xff));
+        Vmcs::write (Vmcs::Encoding::GUEST_SEL_LDTR,   ld.sel);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_LDTR,  static_cast<mword>(ld.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_LDTR, ld.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_AR_LDTR,   (ld.ar << 4 & 0x1f000) | (ld.ar & 0xff));
     }
 
     if (mtd & Mtd_arch::GDTR) {
-        Vmcs::write (Vmcs::GUEST_BASE_GDTR,  static_cast<mword>(gd.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_GDTR, gd.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_GDTR,  static_cast<mword>(gd.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_GDTR, gd.limit);
     }
 
     if (mtd & Mtd_arch::IDTR) {
-        Vmcs::write (Vmcs::GUEST_BASE_IDTR,  static_cast<mword>(id.base));
-        Vmcs::write (Vmcs::GUEST_LIMIT_IDTR, id.limit);
+        Vmcs::write (Vmcs::Encoding::GUEST_BASE_IDTR,  static_cast<mword>(id.base));
+        Vmcs::write (Vmcs::Encoding::GUEST_LIMIT_IDTR, id.limit);
     }
 
     if (mtd & Mtd_arch::CR) {
@@ -324,19 +324,19 @@ bool Utcb::save_vmx (Cpu_regs &c) const
         c.vmx_set_gst_cr4 (cr4);
         c.cr2 = cr2;
         Vmcs::write (Vmcs::Encoding::GUEST_CR3, cr3);
-        Vmcs::write (Vmcs::GUEST_PDPTE0, pdpte[0]);
-        Vmcs::write (Vmcs::GUEST_PDPTE1, pdpte[1]);
-        Vmcs::write (Vmcs::GUEST_PDPTE2, pdpte[2]);
-        Vmcs::write (Vmcs::GUEST_PDPTE3, pdpte[3]);
+        Vmcs::write (Vmcs::Encoding::GUEST_PDPTE0, pdpte[0]);
+        Vmcs::write (Vmcs::Encoding::GUEST_PDPTE1, pdpte[1]);
+        Vmcs::write (Vmcs::Encoding::GUEST_PDPTE2, pdpte[2]);
+        Vmcs::write (Vmcs::Encoding::GUEST_PDPTE3, pdpte[3]);
     }
 
     if (mtd & Mtd_arch::DR)
-        Vmcs::write (Vmcs::GUEST_DR7, dr7);
+        Vmcs::write (Vmcs::Encoding::GUEST_DR7, dr7);
 
     if (mtd & Mtd_arch::SYSENTER) {
-        Vmcs::write (Vmcs::GUEST_SYSENTER_CS,  sysenter_cs);
-        Vmcs::write (Vmcs::GUEST_SYSENTER_ESP, sysenter_rsp);
-        Vmcs::write (Vmcs::GUEST_SYSENTER_EIP, sysenter_rip);
+        Vmcs::write (Vmcs::Encoding::GUEST_SYSENTER_CS,  sysenter_cs);
+        Vmcs::write (Vmcs::Encoding::GUEST_SYSENTER_ESP, sysenter_rsp);
+        Vmcs::write (Vmcs::Encoding::GUEST_SYSENTER_EIP, sysenter_rip);
     }
 
     if (mtd & Mtd_arch::CTRL) {
@@ -346,7 +346,7 @@ bool Utcb::save_vmx (Cpu_regs &c) const
 
     if (mtd & Mtd_arch::INJ) {
 
-        uint32 val = Vmcs::read<uint32> (Vmcs::CPU_EXEC_CTRL0);
+        uint32 val = Vmcs::read<uint32> (Vmcs::Encoding::CPU_CONTROLS_PRI);
 
         if (intr_info & 0x1000)
             val |=  Vmcs::CPU_INTR_WINDOW;
@@ -360,27 +360,27 @@ bool Utcb::save_vmx (Cpu_regs &c) const
 
         c.vmx_set_cpu_pri (val);
 
-        Vmcs::write (Vmcs::ENT_INTR_INFO,  intr_info & ~0x3000);
-        Vmcs::write (Vmcs::ENT_INTR_ERROR, intr_error);
+        Vmcs::write (Vmcs::Encoding::INJ_EVENT_IDENT, intr_info & ~0x3000);
+        Vmcs::write (Vmcs::Encoding::INJ_EVENT_ERROR, intr_error);
     }
 
     if (mtd & Mtd_arch::STA) {
-        Vmcs::write (Vmcs::GUEST_INTR_STATE, intr_state);
-        Vmcs::write (Vmcs::GUEST_ACTV_STATE, actv_state);
+        Vmcs::write (Vmcs::Encoding::GUEST_INTR_STATE, intr_state);
+        Vmcs::write (Vmcs::Encoding::GUEST_ACTV_STATE, actv_state);
     }
 
     if (mtd & Mtd_arch::EFER) {
 
-        Vmcs::write (Vmcs::GUEST_EFER, efer);
+        Vmcs::write (Vmcs::Encoding::GUEST_EFER, efer);
 
-        auto ent { Vmcs::read<uint32> (Vmcs::ENT_CONTROLS) };
+        auto ent { Vmcs::read<uint32> (Vmcs::Encoding::ENT_CONTROLS) };
 
         if (efer & EFER_LMA)
             ent |= Vmcs::ENT_GUEST_64;
         else
             ent &= ~Vmcs::ENT_GUEST_64;
 
-        Vmcs::write (Vmcs::ENT_CONTROLS, ent);
+        Vmcs::write (Vmcs::Encoding::ENT_CONTROLS, ent);
     }
 
     return mtd & Mtd_arch::FPU;
