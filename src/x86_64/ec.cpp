@@ -71,11 +71,12 @@ Ec::Ec (Pd *, mword, Pd *p, void (*f)(), unsigned c, unsigned e, mword u, mword 
 
         if (Hip::hip->feature() & Hip::FEAT_VMX) {
 
-            regs.vmcs = new Vmcs (reinterpret_cast<mword>(sys_regs() + 1),
-                                  0, // FIXME: pd->Space_pio::walk(),
-                                  pd->loc[c].init_root (false),
-                                  pd->ept.init_root (false),
-                                  pd->vpid());
+            regs.vmcs = new Vmcs;
+            regs.vmcs->init (reinterpret_cast<mword>(sys_regs() + 1),
+                             0, // FIXME: pd->Space_pio::walk(),
+                             pd->loc[c].init_root (false),
+                             pd->ept.init_root (false),
+                             pd->vpid());
 
             regs.nst_ctrl<Vmcs>();
             regs.vmcs->clear();
@@ -129,7 +130,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 
         if (func == ret_user_vmresume) {
             current->regs.vmcs->make_current();
-            Vmcs::write (Vmcs::TSC_OFFSET, current->regs.tsc_offset);
+            Vmcs::write (Vmcs::Encoding::TSC_OFFSET, current->regs.tsc_offset);
         } else
             current->regs.vmcb->tsc_offset = current->regs.tsc_offset;
     }
@@ -189,7 +190,7 @@ void Ec::ret_user_vmresume()
                   "mov %1, %%rsp;"
                   : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
 
-    trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
+    trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::Encoding::VMX_INST_ERROR));
 
     die ("VMENTRY");
 }
