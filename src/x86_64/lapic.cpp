@@ -48,7 +48,7 @@ void Lapic::init()
     if (!(svr & BIT (8)))
         write (Register32::SVR, svr | BIT (8));
 
-    bool dl = Cpu::feature (Cpu::FEAT_TSC_DEADLINE) && !Cmdline::nodl;
+    bool dl = Cpu::feature (Cpu::Feature::TSC_DEADLINE) && !Cmdline::nodl;
 
     switch (lvt_max()) {
         default:
