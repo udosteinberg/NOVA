@@ -27,12 +27,12 @@ unsigned Mca::banks;
 
 void Mca::init()
 {
-    if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCE)))
+    if (EXPECT_FALSE (!Cpu::feature (Cpu::Feature::MCE)))
         return;
 
     set_cr4 (get_cr4() | CR4_MCE);
 
-    if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCA)))
+    if (EXPECT_FALSE (!Cpu::feature (Cpu::Feature::MCA)))
         return;
 
     uint32 cap = static_cast<uint32>(Msr::read (Msr::IA32_MCG_CAP));
@@ -44,7 +44,7 @@ void Mca::init()
 
     banks = cap & 0xff;
 
-    for (unsigned i = (Cpu::vendor == Cpu::INTEL && Cpu::family == 6 && Cpu::model < 0x1a); i < banks; i++) {
+    for (unsigned i = (Cpu::vendor == Cpu::Vendor::INTEL && Cpu::family == 6 && Cpu::model < 0x1a); i < banks; i++) {
         Msr::write (Msr::Register (4 * i + Msr::IA32_MCI_CTL), ~0ULL);
         Msr::write (Msr::Register (4 * i + Msr::IA32_MCI_STATUS), 0);
     }
