@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -24,101 +25,117 @@
 #include "atomic.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
+#include "kmem.hpp"
+#include "macros.hpp"
 #include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
 {
     private:
-        static char const * const vendor_string[];
+        ALWAYS_INLINE
+        static inline uint32 remote_topology (unsigned c) { return *Kmem::loc_to_glob (&topology, c); }
 
         ALWAYS_INLINE
-        static inline void check_features();
+        static inline void check_features (uint32 (&)[12], unsigned &, unsigned &, unsigned &);
 
         ALWAYS_INLINE
-        static inline void setup_thermal();
+        static inline void setup_msr();
 
-        ALWAYS_INLINE
-        static inline void setup_sysenter();
-
-        ALWAYS_INLINE
-        static inline void setup_pcid();
+        // Must agree with enum class Vendor below
+        static constexpr char const *vendor_string[] =
+        {
+            "Unknown",
+            "GenuineIntel",
+            "AuthenticAMD"
+        };
 
         static inline Spinlock boot_lock    asm ("__boot_lock");
 
     public:
-        enum Vendor
+        enum class Vendor
         {
             UNKNOWN,
             INTEL,
-            AMD
+            AMD,
         };
 
-        enum Feature
+        enum class Feature
         {
-            FEAT_MCE            =  7,
-            FEAT_SEP            = 11,
-            FEAT_MCA            = 14,
-            FEAT_ACPI           = 22,
-            FEAT_HTT            = 28,
-            FEAT_VMX            = 37,
-            FEAT_PCID           = 49,
-            FEAT_TSC_DEADLINE   = 56,
-            FEAT_SMEP           = 103,
-            FEAT_1GB_PAGES      = 154,
-            FEAT_CMP_LEGACY     = 161,
-            FEAT_SVM            = 162,
+            // 0x1.EDX
+            MCE             = 0 * 32 +  7,      // Machine Check Exception
+            SEP             = 0 * 32 + 11,      // SYSENTER/SYSEXIT Instructions
+            MCA             = 0 * 32 + 14,      // Machine Check Architecture
+            ACPI            = 0 * 32 + 22,      // Thermal Monitor and Software Controlled Clock Facilities
+            // 0x1.ECX
+            VMX             = 1 * 32 +  5,      // Virtual Machine Extensions
+            PCID            = 1 * 32 + 17,      // Process Context Identifiers
+            TSC_DEADLINE    = 1 * 32 + 24,      // TSC Deadline Support
+            // 0x6.EAX
+            ARAT            = 2 * 32 +  2,      // Always Running APIC Timer
+            // 0x7.EBX
+            SMEP            = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
+            RDT_M           = 3 * 32 + 12,      // Platform QoS Monitoring
+            RDT_A           = 3 * 32 + 15,      // Platform QoS Allocation
+            SMAP            = 3 * 32 + 20,      // Supervisor Mode Access Prevention
+            // 0x7.ECX
+            UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
+            // 0x7.EDX
+            HYBRID          = 5 * 32 + 15,      // Hybrid Processor
+            // 0x80000001.EDX
+            GB_PAGES        = 6 * 32 + 26,      // 1GB-Pages Support
+            LM              = 6 * 32 + 29,      // Long Mode Support
+            // 0x80000001.ECX
+            CMP_LEGACY      = 7 * 32 +  1,
+            SVM             = 7 * 32 +  2,
         };
 
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;
-        static unsigned package             CPULOCAL;
-        static unsigned core                CPULOCAL;
-        static unsigned thread              CPULOCAL;
 
         static Vendor   vendor              CPULOCAL;
         static unsigned platform            CPULOCAL;
         static unsigned family              CPULOCAL;
         static unsigned model               CPULOCAL;
         static unsigned stepping            CPULOCAL;
-        static unsigned brand               CPULOCAL;
         static unsigned patch               CPULOCAL;
 
-        static uint32 name[12]              CPULOCAL;
-        static uint32 features[6]           CPULOCAL;
+        static uint32 features[8]           CPULOCAL;
+        static uint32 topology              CPULOCAL;
         static bool bsp                     CPULOCAL;
 
         static inline Atomic<unsigned>      online { 0 };
 
-        static unsigned count;
-        static uint8    acpi_id[NUM_CPU];
-        static uint8    apic_id[NUM_CPU];
+        static inline unsigned  count;
+        static inline uint8     acpi_id[NUM_CPU];
+        static inline uint8     apic_id[NUM_CPU];
 
         static void init();
+        static void fini();
 
         ALWAYS_INLINE
         static inline bool feature (Feature f)
         {
-            return features[f / 32] & 1U << f % 32;
+            return features[static_cast<unsigned>(f) / 32] & BIT (static_cast<unsigned>(f) % 32);
         }
 
         ALWAYS_INLINE
         static inline void defeature (Feature f)
         {
-            features[f / 32] &= ~(1U << f % 32);
+            features[static_cast<unsigned>(f) / 32] &= ~BIT (static_cast<unsigned>(f) % 32);
         }
 
         ALWAYS_INLINE
-        static inline void preempt_disable()
-        {
-            asm volatile ("cli" : : : "memory");
-        }
+        static inline void preemption_disable() { asm volatile ("cli" : : : "memory"); }
 
         ALWAYS_INLINE
-        static inline void preempt_enable()
-        {
-            asm volatile ("sti" : : : "memory");
-        }
+        static inline void preemption_enable() { asm volatile ("sti" : : : "memory"); }
+
+        ALWAYS_INLINE
+        static inline void preemption_point() { asm volatile ("sti; nop; cli" : : : "memory"); }
+
+        ALWAYS_INLINE
+        static inline void halt() { asm volatile ("sti; hlt; cli" : : : "memory"); }
 
         ALWAYS_INLINE
         static inline void cpuid (unsigned leaf, uint32 &eax, uint32 &ebx, uint32 &ecx, uint32 &edx)
@@ -130,6 +147,16 @@ class Cpu
         static inline void cpuid (unsigned leaf, unsigned subleaf, uint32 &eax, uint32 &ebx, uint32 &ecx, uint32 &edx)
         {
             asm volatile ("cpuid" : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx) : "a" (leaf), "c" (subleaf));
+        }
+
+        ALWAYS_INLINE
+        static inline unsigned find_by_topology (uint32 t)
+        {
+            for (unsigned c = 0; c < count; c++)
+                if (remote_topology (c) == t)
+                    return c;
+
+            return -1U;
         }
 
         ALWAYS_INLINE
