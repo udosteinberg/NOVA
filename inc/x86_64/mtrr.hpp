@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -46,10 +47,20 @@ class Mtrr : public List<Mtrr>
         ALWAYS_INLINE
         explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
         static void init();
 
         static unsigned memtype (uint64, uint64 &);
+
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 };
