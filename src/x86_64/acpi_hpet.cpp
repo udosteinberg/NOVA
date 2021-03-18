@@ -21,5 +21,5 @@
 void Acpi_table_hpet::parse() const
 {
     if (hpet.asid == Acpi_gas::MEMORY)
-        new Hpet (static_cast<Paddr>(hpet.addr), id);
+        new Hpet (id);
 }
