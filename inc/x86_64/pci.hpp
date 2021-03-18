@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -81,9 +82,6 @@ class Pci : public List<Pci>
         Pci (unsigned, unsigned);
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
         static inline void claim_all (Smmu *s)
         {
             for (Pci *pci = list; pci; pci = pci->next)
@@ -119,5 +117,18 @@ class Pci : public List<Pci>
             Pci *pci = find_dev (r);
 
             return pci ? pci->smmu : nullptr;
+        }
+
+        NODISCARD ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
         }
 };
