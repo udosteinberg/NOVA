@@ -22,7 +22,6 @@
 
 #include "acpi.hpp"
 #include "barrier.hpp"
-#include "cmdline.hpp"
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
@@ -50,7 +49,7 @@ void Lapic::init (uint32 clk, uint32 rat)
     if (!(svr & BIT (8)))
         write (Register32::SVR, svr | BIT (8));
 
-    bool dl = Cpu::feature (Cpu::FEAT_TSC_DEADLINE) && !Cmdline::nodl;
+    bool dl = Cpu::feature (Cpu::Feature::TSC_DEADLINE);
 
     switch (lvt_max()) {
         default:
