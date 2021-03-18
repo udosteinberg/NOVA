@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,22 +28,22 @@
 
 class Smmu;
 
-class Pci : public List<Pci>
+class Pci final : public List<Pci>
 {
     friend class Acpi_table_mcfg;
 
     private:
-        mword  const        reg_base;
-        uint16 const        rid;
-        uint16 const        lev;
+        uintptr_t   const   reg_base;
+        uint16      const   rid;
+        uint16      const   lev;
         Smmu *              smmu;
 
-        static unsigned     bus_base;
-        static Paddr        cfg_base;
-        static size_t       cfg_size;
-
-        static Pci *        list;
-        static Slab_cache   cache;
+        static          Slab_cache  cache;                      // PCI Slab Cache
+        static inline   Pci *       list    { nullptr };        // PCI List
+        static inline   uintptr_t   mmap    { MMAP_GLB_PCIE };  // PCI Memory Map Pointer
+        static inline   unsigned    bus_base;
+        static inline   Paddr       cfg_base;
+        static inline   size_t      cfg_size;
 
         static struct quirk_map
         {
@@ -81,9 +82,6 @@ class Pci : public List<Pci>
         Pci (unsigned, unsigned);
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
         static inline void claim_all (Smmu *s)
         {
             for (Pci *pci = list; pci; pci = pci->next)
@@ -119,5 +117,18 @@ class Pci : public List<Pci>
             Pci *pci = find_dev (r);
 
             return pci ? pci->smmu : nullptr;
+        }
+
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
         }
 };

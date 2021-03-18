@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,25 +19,20 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
+#include "ptab_hpt.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
 Slab_cache Pci::cache (sizeof (Pci), 8);
-
-unsigned    Pci::bus_base;
-Paddr       Pci::cfg_base;
-size_t      Pci::cfg_size;
-Pci *       Pci::list;
 
 struct Pci::quirk_map Pci::map[] =
 {
 };
 
-Pci::Pci (unsigned r, unsigned l) : List<Pci> (list), reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
+Pci::Pci (unsigned r, unsigned l) : List (list), reg_base (mmap), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
 {
+    mmap += PAGE_SIZE;
+
     Hptp::master_map (reg_base, cfg_base + (rid << PAGE_BITS), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
     for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
