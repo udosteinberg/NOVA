@@ -44,14 +44,12 @@ bool Acpi_table_dmar::Scope::parse (uint16_t const s, pci_t &sbdf) const
         if ((ptr += sizeof (list_t)) == end)
             return true;
 
-#if 0
         // Every other pair identifies a bridge whose secondary bus the next pair resides on
         auto const fun { Pci::Function::lookup (sbdf) };
         if (!fun || (fun->read (Pci::Cfg::Reg8::HDR) & BIT_RANGE (6, 0)) != 1) [[unlikely]]
             return false;
 
         b = static_cast<uint8_t>(fun->read (Pci::Cfg::Reg32::BUS_NUM) >> 8);
-#endif
     }
 
     return false;
@@ -70,7 +68,7 @@ bool Acpi_table_dmar::Remapping_drhd::parse() const
 #endif
 
     if (flags & BIT (0))
-        Pci::claim_all (smmu);
+        Pci::Function::claim_all (smmu);
 
     using list_t = Scope;
     auto       ptr { reinterpret_cast<uintptr_t>(this + 1) };
@@ -95,7 +93,7 @@ bool Acpi_table_dmar::Remapping_drhd::parse() const
 
         switch (s->type()) {
             case Scope::Type::PCI_EP:
-            case Scope::Type::PCI_SH: Pci::claim_dev (smmu, sbdf); break;
+            case Scope::Type::PCI_SH: Pci::Function::claim_dev (smmu, sbdf); break;
             case Scope::Type::IOAPIC: Ioapic::claim_dev (sbdf, s->id); break;
             default: break;
         }
@@ -141,7 +139,7 @@ bool Acpi_table_dmar::Remapping_rmrr::parse() const
         Smmu *smmu { nullptr }; uintptr_t x;
 
         switch (s->type()) {
-            case Scope::Type::PCI_EP: smmu = Pci::find_smmu (sbdf); break;
+            case Scope::Type::PCI_EP: smmu = Pci::Function::find_smmu (sbdf); break;
             default: break;
         }
 
