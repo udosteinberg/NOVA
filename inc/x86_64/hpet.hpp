@@ -1,7 +1,8 @@
 /*
  * High Precision Event Timer (HPET)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -35,9 +36,6 @@ class Hpet : public List<Hpet>
         explicit inline Hpet (Paddr p, unsigned i) : List<Hpet> (list), phys (p), id (i), rid (0) {}
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
         static inline bool claim_dev (unsigned r, unsigned i)
         {
             for (Hpet *hpet = list; hpet; hpet = hpet->next)
@@ -57,5 +55,18 @@ class Hpet : public List<Hpet>
                     return hpet->rid;
 
             return ~0U;
+        }
+
+        NODISCARD ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
         }
 };
