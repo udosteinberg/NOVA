@@ -27,15 +27,14 @@ unsigned Mtrr::count;
 unsigned Mtrr::dtype;
 Mtrr *   Mtrr::list;
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Mtrr::cache (sizeof (Mtrr), 8);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Mtrr::cache { sizeof (Mtrr), alignof (Mtrr) };
 
 void Mtrr::init()
 {
     count = Msr::read (Msr::Register::IA32_MTRR_CAP) & 0xff;
     dtype = Msr::read (Msr::Register::IA32_MTRR_DEF_TYPE) & 0xff;
 
-    for (unsigned i = 0; i < count; i++)
+    for (unsigned i { 0 }; i < count; i++)
         new Mtrr (Msr::read (Msr::Array::IA32_MTRR_PHYS_BASE, 2, i),
                   Msr::read (Msr::Array::IA32_MTRR_PHYS_MASK, 2, i));
 }
@@ -62,12 +61,12 @@ unsigned Mtrr::memtype (uint64 phys, uint64 &next)
 
     unsigned type = ~0U; next = ~0ULL;
 
-    for (Mtrr *mtrr = list; mtrr; mtrr = mtrr->next) {
+    for (auto mtrr { list }; mtrr; mtrr = mtrr->next) {
 
         if (!(mtrr->mask & 0x800))
             continue;
 
-        uint64 base = mtrr->base & ~OFFS_MASK;
+        auto const base { mtrr->base & ~OFFS_MASK };
 
         if (phys < base)
             next = min (next, base);
