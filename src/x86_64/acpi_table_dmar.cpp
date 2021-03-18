@@ -42,7 +42,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
     for (auto a { addr + sizeof (*this) }; a < addr + length; ) {
 
         auto const s { reinterpret_cast<Scope const *>(a) };
-        auto const d { s->dev() };
+        auto const d { Pci::bdf (s->b, s->d, s->f) };
 
         trace (TRACE_FIRM | TRACE_PARSE, "SMMU: %#lx Scope Type %u Device %02x:%02x.%x", phys, s->type, s->b, s->d, s->f);
 
@@ -67,7 +67,7 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
     for (auto a { addr + sizeof (*this) }; a < addr + length; ) {
 
         auto const s { reinterpret_cast<Scope const *>(a) };
-        auto const d { s->dev() };
+        auto const d { Pci::bdf (s->b, s->d, s->f) };
 
         trace (TRACE_FIRM | TRACE_PARSE, "RMRR: %#010lx-%#010lx Scope Type %u Device %02x:%02x.%x", base, limit, s->type, s->b, s->d, s->f);
 

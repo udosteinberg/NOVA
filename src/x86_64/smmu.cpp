@@ -23,6 +23,7 @@
 #include "bits.hpp"
 #include "lapic.hpp"
 #include "pd.hpp"
+#include "pci.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
@@ -109,7 +110,7 @@ bool Smmu::configure (Space_dma *dma, uintptr_t dad, bool inv)
     if (EXPECT_TRUE (inv))
         invalidate_ctx (sid, zap);
 
-    trace (TRACE_SMMU, "SMMU: %#010lx Device %02x:%02x.%x assigned to Domain %u", phys_base, sid >> 8, sid >> 3 & BIT_RANGE (4, 0), sid & BIT_RANGE (2, 0), static_cast<unsigned>(sdid));
+    trace (TRACE_SMMU, "SMMU: %#010lx Device %02x:%02x.%x assigned to Domain %u", phys_base, Pci::bus (sid), Pci::dev (sid), Pci::fun (sid), static_cast<unsigned>(sdid));
 
     return true;
 }
