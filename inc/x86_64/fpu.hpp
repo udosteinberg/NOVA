@@ -27,32 +27,40 @@
 #include "hazard.hpp"
 #include "slab.hpp"
 
-class Fpu
+class Fpu final
 {
     private:
         char data[512];
 
-        static Slab_cache cache;
-
     public:
-        ALWAYS_INLINE
-        inline void save() { asm volatile ("fxsave %0" : "=m" (*data)); }
+        static void init();
+        static void fini();
 
-        ALWAYS_INLINE
-        inline void load() { asm volatile ("fxrstor %0" : : "m" (*data)); }
+        void load() const { asm volatile ("fxrstor64 %0" : : "m" (*this)); }
 
-        ALWAYS_INLINE
-        static inline void init() { asm volatile ("fninit"); }
+        void save() { asm volatile ("fxsave64 %0" : "=m" (*this)); }
 
-        ALWAYS_INLINE
-        static inline void enable() { asm volatile ("clts"); Cpu::hazard |= Hazard::FPU; }
+        static void disable()
+        {
+            Cr::set_cr0 (Cr::get_cr0() | CR0_TS);
 
-        ALWAYS_INLINE
-        static inline void disable() { Cr::set_cr0 (Cr::get_cr0() | CR0_TS); Cpu::hazard &= ~Hazard::FPU; }
+            Cpu::hazard &= ~Hazard::FPU;
+        }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        static void enable()
+        {
+            asm volatile ("clts");
 
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+            Cpu::hazard |= Hazard::FPU;
+        }
+
+        [[nodiscard]] static void *operator new (size_t, Slab_cache &cache) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static void operator delete (void *ptr, Slab_cache &cache)
+        {
+            cache.free (ptr);
+        }
 };
