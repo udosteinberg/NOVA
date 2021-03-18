@@ -20,6 +20,7 @@
  */
 
 #include "ioapic.hpp"
+#include "pci.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
 
@@ -38,7 +39,7 @@ Ioapic::Ioapic (uint64_t p, uint8_t i, unsigned g) : List (list), reg_base (mmap
 
 void Ioapic::init()
 {
-    trace (TRACE_INTR, "APIC: I/O:%#04x VER:%#x GSI:%#04x-%#04x (%02x:%02x.%x)", id, ver(), gsi_base, gsi_base + mre(), dev >> 8, dev >> 3 & BIT_RANGE (4, 0), dev & BIT_RANGE (2, 0));
+    trace (TRACE_INTR, "APIC: I/O:%#04x VER:%#x GSI:%#04x-%#04x (%02x:%02x.%x)", id, ver(), gsi_base, gsi_base + mre(), Pci::bus (dev), Pci::dev (dev), Pci::fun (dev));
 
     for (unsigned i { 0 }; i <= mre(); i++)
         set_cfg (gsi_base + i);
