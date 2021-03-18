@@ -60,8 +60,6 @@ class Acpi_table_dmar final
             uint8_t     length;                         // 1 + n
             uint16_t    reserved;                       // 2 + n
             uint8_t     id, b, d, f;                    // 4 + n
-
-            inline auto dev() const { return static_cast<pci_t>(b << 8 | d << 3 | f); }
         };
 
         /*
