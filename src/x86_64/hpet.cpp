@@ -1,7 +1,8 @@
 /*
  * High Precision Event Timer (HPET)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,7 +18,4 @@
 
 #include "hpet.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Hpet::cache (sizeof (Hpet), 8);
-
-Hpet *Hpet::list;
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Hpet::cache { sizeof (Hpet), alignof (Hpet) };
