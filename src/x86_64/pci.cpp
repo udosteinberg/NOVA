@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,47 +19,42 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
 #include "pci.hpp"
-#include "pd.hpp"
-#include "stdio.hpp"
+#include "ptab_hpt.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Pci::cache (sizeof (Pci), 8);
-
-unsigned    Pci::bus_base;
-Paddr       Pci::cfg_base;
-size_t      Pci::cfg_size;
-Pci *       Pci::list;
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Pci::cache { sizeof (Pci), alignof (Pci) };
 
 struct Pci::quirk_map Pci::map[] =
 {
 };
 
-Pci::Pci (unsigned r, unsigned l) : List<Pci> (list), reg_base (hwdev_addr -= PAGE_SIZE), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
+Pci::Pci (unsigned r, unsigned l) : List (list), reg_base (mmap), rid (static_cast<uint16>(r)), lev (static_cast<uint16>(l))
 {
+    mmap += PAGE_SIZE;
+
     Hptp::master_map (reg_base, cfg_base + (rid << PAGE_BITS), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
 
-    for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
-        if (read<uint16>(REG_VID) == map[i].vid && read<uint16>(REG_DID) == map[i].did)
+    for (unsigned i { 0 }; i < sizeof map / sizeof *map; i++)
+        if (cfg_read (Register32::DID_VID) == map[i].didvid)
             (this->*map[i].func)();
 }
 
 void Pci::init (unsigned b, unsigned l)
 {
-    for (unsigned r = b << 8; r < (b + 1) << 8; r++) {
+    for (auto r { b << 8 }; r < (b + 1) << 8; r++) {
 
-        if (*static_cast<uint32 *>(Hptp::map (cfg_base + (r << PAGE_BITS))) == ~0U)
+        if (*static_cast<uint32 *>(Hptp::map (cfg_base + (r << PAGE_BITS))) == BIT_RANGE (31, 0))
             continue;
 
-        Pci *p = new Pci (r, l);
+        auto const pci { new Pci (r, l) };
+        auto const hdr { pci->cfg_read (Register8::HTYPE) };
 
-        unsigned h = p->read<uint8>(REG_HDR);
+        // PCI-PCI Bridge
+        if ((hdr & BIT_RANGE (6, 0)) == 1)
+            init (pci->cfg_read (Register8::BUS_SEC), l + 1);
 
-        if ((h & 0x7f) == 1)
-            init (p->read<uint8>(REG_SBUSN), l + 1);
-
-        if (!(r & 0x7) && !(h & 0x80))
+        // Multi-Function Device
+        if (!(r & 0x7) && !(hdr & BIT (7)))
             r += 7;
     }
 }
