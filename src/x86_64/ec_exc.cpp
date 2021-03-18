@@ -31,9 +31,9 @@ void Ec::load_fpu()
         regs.fpu_ctrl (true);
 
     if (!fpu) [[unlikely]]
-        Fpu::init();
-    else
-        fpu->load();
+        fpu = new (pd->fpu_cache) Fpu;
+
+    fpu->load();
 }
 
 void Ec::save_fpu()
@@ -42,7 +42,7 @@ void Ec::save_fpu()
         regs.fpu_ctrl (false);
 
     if (!fpu) [[unlikely]]
-        fpu = new Fpu;
+        fpu = new (pd->fpu_cache) Fpu;
 
     fpu->save();
 }
