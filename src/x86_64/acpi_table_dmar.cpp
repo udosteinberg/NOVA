@@ -35,20 +35,20 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
     auto const smmu { new Smmu (phys) };
 
     if (flags & Flags::INCLUDE_PCI_ALL)
-        Pci::claim_all (smmu);
+        Pci::Device::claim_all (smmu);
 
     auto const addr { reinterpret_cast<uintptr_t>(this) };
 
     for (auto a { addr + sizeof (*this) }; a < addr + length; ) {
 
         auto const s { reinterpret_cast<Scope const *>(a) };
-        auto const d { s->dev() };
+        auto const d { Pci::bdf (s->b, s->d, s->f) };
 
         trace (TRACE_FIRM | TRACE_PARSE, "SMMU: %#lx Scope Type %u Device %02x:%02x.%x", phys, s->type, s->b, s->d, s->f);
 
         switch (s->type) {
             case Scope::PCI_EP:
-            case Scope::PCI_SH: Pci::claim_dev (smmu, d); break;
+            case Scope::PCI_SH: Pci::Device::claim_dev (smmu, d); break;
             case Scope::IOAPIC: Ioapic::claim_dev (d, s->id); break;
             case Scope::HPET: Hpet::claim_dev (d, s->id); break;
             default: break;
@@ -67,14 +67,14 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
     for (auto a { addr + sizeof (*this) }; a < addr + length; ) {
 
         auto const s { reinterpret_cast<Scope const *>(a) };
-        auto const d { s->dev() };
+        auto const d { Pci::bdf (s->b, s->d, s->f) };
 
         trace (TRACE_FIRM | TRACE_PARSE, "RMRR: %#010lx-%#010lx Scope Type %u Device %02x:%02x.%x", base, limit, s->type, s->b, s->d, s->f);
 
         Smmu *smmu { nullptr };
 
         switch (s->type) {
-            case Scope::PCI_EP: smmu = Pci::find_smmu (d); break;
+            case Scope::PCI_EP: smmu = Pci::Device::find_smmu (d); break;
             default: break;
         }
 

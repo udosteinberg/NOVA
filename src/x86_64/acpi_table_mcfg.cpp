@@ -21,6 +21,7 @@
 
 #include "acpi_table_mcfg.hpp"
 #include "pci.hpp"
+#include "ptab_hpt.hpp"
 #include "stdio.hpp"
 
 void Acpi_table_mcfg::Allocation::parse() const
@@ -31,11 +32,16 @@ void Acpi_table_mcfg::Allocation::parse() const
         return;
     }
 
-    trace (TRACE_FIRM, "MCFG: Bus %#04x-%#04x", sbn, ebn);
+    auto virt { MMAP_GLB_PCIE };
+    auto phys { static_cast<uint64_t>(phys_base_hi) << 32 | phys_base_lo };
+    auto size { static_cast<uint64_t>(ebn + 1) << 20 };
 
-    Pci::bus_base = 0;
-    Pci::cfg_base = static_cast<uint64_t>(phys_base_hi) << 32 | phys_base_lo;
-    Pci::cfg_size = (ebn + 1) * 256 * PAGE_SIZE (0);
+    trace (TRACE_FIRM, "MCFG: %#018lx-%#018lx Bus %#04x-%#04x", phys, phys + size, sbn, ebn);
+
+    for (unsigned o; size; size -= BITN (o), phys += BITN (o), virt += BITN (o))
+        Hptp::master_map (virt, phys, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
+
+    for (auto bus { sbn }; (bus = Pci::init (bus, ebn)) < ebn; bus++) ;
 }
 
 void Acpi_table_mcfg::parse() const
@@ -44,6 +50,4 @@ void Acpi_table_mcfg::parse() const
 
     for (auto p { ptr + sizeof (*this) }; p < ptr + table.header.length; p += sizeof (Allocation))
         reinterpret_cast<Allocation const *>(p)->parse();
-
-    Pci::init();
 }
