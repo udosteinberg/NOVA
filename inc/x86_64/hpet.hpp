@@ -1,7 +1,8 @@
 /*
  * High Precision Event Timer (HPET)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,42 +21,31 @@
 #include "list.hpp"
 #include "slab.hpp"
 
-class Hpet : public List<Hpet>
+class Hpet final : public List<Hpet>
 {
     private:
-        Paddr    const      phys;
-        unsigned const      id;
-        uint16              rid;
+        uint8_t const   id;                                     // Enumeration ID
+        pci_t           pci                 { 0 };              // PCI S:B:D:F
 
-        static Hpet *       list;
-        static Slab_cache   cache;
+        static inline   Hpet *      list    { nullptr };        // HPET List
+        static          Slab_cache  cache;                      // HPET Slab Cache
 
     public:
-        ALWAYS_INLINE
-        explicit inline Hpet (Paddr p, unsigned i) : List<Hpet> (list), phys (p), id (i), rid (0) {}
+        explicit Hpet (uint8_t i) : List { list }, id { i } {}
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline bool claim_dev (unsigned r, unsigned i)
+        static bool claim_dev (pci_t p, uint8_t i)
         {
-            for (Hpet *hpet = list; hpet; hpet = hpet->next)
-                if (hpet->rid == 0 && hpet->id == i) {
-                    hpet->rid = static_cast<uint16>(r);
+            for (auto l { list }; l; l = l->next)
+                if (l->pci == 0 && l->id == i) {
+                    l->pci = p;
                     return true;
                 }
 
             return false;
         }
 
-        ALWAYS_INLINE
-        static inline unsigned phys_to_rid (Paddr p)
+        [[nodiscard]] static void *operator new (size_t) noexcept
         {
-            for (Hpet *hpet = list; hpet; hpet = hpet->next)
-                if (hpet->phys == p)
-                    return hpet->rid;
-
-            return ~0U;
+            return cache.alloc();
         }
 };
