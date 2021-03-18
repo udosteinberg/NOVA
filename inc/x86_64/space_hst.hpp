@@ -68,7 +68,7 @@ class Space_hst : public Space_mem<Space_hst>
 
             current = this;
 
-            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? p : 0);
+            loc[Cpu::id].make_current (Cpu::feature (Cpu::Feature::PCID) ? p : 0);
         }
 
         inline auto get_pcid() const { return pcid; }

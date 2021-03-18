@@ -16,10 +16,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.hpp"
 #include "compiler.hpp"
 #include "cpu.hpp"
-#include "lowlevel.hpp"
 #include "mca.hpp"
 #include "msr.hpp"
 #include "stdio.hpp"
@@ -28,7 +26,7 @@ unsigned Mca::banks;
 
 void Mca::init()
 {
-    if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCA)))
+    if (EXPECT_FALSE (!Cpu::feature (Cpu::Feature::MCA)))
         return;
 
     uint32 cap = static_cast<uint32>(Msr::read (Msr::Register::IA32_MCG_CAP));
@@ -40,7 +38,7 @@ void Mca::init()
 
     banks = cap & 0xff;
 
-    for (unsigned i = (Cpu::vendor == Cpu::INTEL && Cpu::family == 6 && Cpu::model < 0x1a); i < banks; i++) {
+    for (unsigned i = (Cpu::vendor == Cpu::Vendor::INTEL && Cpu::family == 6 && Cpu::model < 0x1a); i < banks; i++) {
         Msr::write (Msr::Array::IA32_MC_CTL, 4, i, ~0ULL);
         Msr::write (Msr::Array::IA32_MC_STATUS, 4, i, 0);
     }
