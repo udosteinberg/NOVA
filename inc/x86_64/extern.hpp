@@ -38,4 +38,3 @@ extern char __init_aps, __wake_vec, __desc_gdt__;
 extern char entry_sys;
 extern char entry_vmx;
 extern mword handlers[];
-extern mword hwdev_addr;
