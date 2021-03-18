@@ -68,7 +68,7 @@ class Space_mem
             return hpt.replace (v, p);
         }
 
-        void insert_root (uint64, uint64, mword = 0x7);
+        void insert_root (uint64_t, uint64_t, mword = 0x7);
 
         bool insert_utcb (mword);
 

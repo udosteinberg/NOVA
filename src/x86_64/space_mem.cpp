@@ -64,13 +64,13 @@ void Space_mem::shootdown()
     }
 }
 
-void Space_mem::insert_root (uint64 s, uint64 e, mword)
+void Space_mem::insert_root (uint64_t s, uint64_t e, mword)
 {
-    for (uint64 p = s; p < e; s = p) {
+    for (uint64_t p = s; p < e; s = p) {
 
         unsigned t = Mtrr::memtype (s, p);
 
-        for (uint64 n; p < e; p = n)
+        for (uint64_t n; p < e; p = n)
             if (Mtrr::memtype (p, n) != t)
                 break;
 
