@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,11 +25,11 @@
 #include "list.hpp"
 #include "slab.hpp"
 
-class Mtrr : public List<Mtrr>
+class Mtrr final : public List<Mtrr>
 {
     private:
-        uint64 const        base;
-        uint64 const        mask;
+        uint64_t const      base;
+        uint64_t const      mask;
 
         static unsigned     count;
         static unsigned     dtype;
@@ -37,20 +37,27 @@ class Mtrr : public List<Mtrr>
         static Mtrr *       list;
         static Slab_cache   cache;
 
-        uint64 size() const
+        uint64_t size() const
         {
-            return 1ULL << (static_cast<mword>(mask) ? bit_scan_forward (static_cast<mword>(mask >> 12)) + 12 :
-                                                       bit_scan_forward (static_cast<mword>(mask >> 32)) + 32);
+            return 1ULL << (static_cast<uintptr_t>(mask) ? bit_scan_forward (static_cast<uintptr_t>(mask >> 12)) + 12 :
+                                                           bit_scan_forward (static_cast<uintptr_t>(mask >> 32)) + 32);
         }
 
     public:
-        ALWAYS_INLINE
-        explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
-
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        explicit Mtrr (uint64_t b, uint64_t m) : List<Mtrr> (list), base (b), mask (m) {}
 
         static void init();
 
-        static unsigned memtype (uint64, uint64 &);
+        static unsigned memtype (uint64_t, uint64_t &);
+
+        [[nodiscard]] static void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 };
