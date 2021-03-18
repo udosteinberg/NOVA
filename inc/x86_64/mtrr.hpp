@@ -25,7 +25,7 @@
 #include "list.hpp"
 #include "slab.hpp"
 
-class Mtrr : public List<Mtrr>
+class Mtrr final : public List<Mtrr>
 {
     private:
         uint64 const        base;
@@ -47,10 +47,20 @@ class Mtrr : public List<Mtrr>
         ALWAYS_INLINE
         explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
         static void init();
 
         static unsigned memtype (uint64, uint64 &);
+
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t) noexcept
+        {
+            return cache.alloc();
+        }
+
+        ALWAYS_INLINE
+        static inline void operator delete (void *ptr)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 };
