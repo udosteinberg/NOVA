@@ -306,5 +306,9 @@ void Cpu::fini()
 
     auto s = Acpi::get_transition();
 
+    if (s.state() > 1) {
+        Fpu::fini();
+    }
+
     Acpi::fini (s);
 }
