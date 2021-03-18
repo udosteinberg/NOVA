@@ -230,7 +230,7 @@ void Ec::idle()
         if (EXPECT_FALSE (hzd))
             handle_hazard (hzd, idle);
 
-        asm volatile ("sti; hlt; cli" : : : "memory");
+        Cpu::halt();
     }
 }
 

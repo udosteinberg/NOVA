@@ -24,6 +24,7 @@
 #include "cache.hpp"
 #include "cmdline.hpp"
 #include "counter.hpp"
+#include "extern.hpp"
 #include "gdt.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
@@ -219,7 +220,7 @@ void Cpu::init()
 
     Mca::init();
 
-    trace (TRACE_CPU, "CORE:%x:%x:%x %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
+    trace (TRACE_CPU, "CORE: %x:%x:%x %x:%x:%x:%x [%x] %.48s", package, core, thread, family, model, stepping, platform, patch, reinterpret_cast<char *>(name));
 
     Hip::hip->add_cpu();
 

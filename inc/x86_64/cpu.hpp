@@ -58,8 +58,11 @@ class Cpu
             FEAT_ACPI           = 22,
             FEAT_HTT            = 28,
             FEAT_VMX            = 37,
+            FEAT_EIST           = 39,
             FEAT_PCID           = 49,
+            FEAT_X2APIC         = 53,
             FEAT_TSC_DEADLINE   = 56,
+            FEAT_TURBO_MODE     = 65,
             FEAT_SMEP           = 103,
             FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,
@@ -114,6 +117,11 @@ class Cpu
         static inline void preempt_enable()
         {
             asm volatile ("sti" : : : "memory");
+        }
+
+        static inline void halt()
+        {
+            asm volatile ("sti; hlt; cli" : : : "memory");
         }
 
         ALWAYS_INLINE
