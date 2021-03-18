@@ -71,7 +71,7 @@ void Space_mem::insert_root (uint64_t, uint64_t, uintptr_t)
 
         unsigned t = Mtrr::memtype (s, p);
 
-        for (uint64 n; p < e; p = n)
+        for (uint64_t n; p < e; p = n)
             if (Mtrr::memtype (p, n) != t)
                 break;
 
