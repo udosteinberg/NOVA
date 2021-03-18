@@ -37,7 +37,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
         panic ("SMMU allocation failed");
 
     if (flags & BIT (0))
-        Pci::claim_all (smmu);
+        Pci::Device::claim_all (smmu);
 
     for (auto ptr { reinterpret_cast<uintptr_t>(this + 1) }; ptr < reinterpret_cast<uintptr_t>(this) + length; ) {
 
@@ -48,7 +48,7 @@ void Acpi_table_dmar::Remapping_drhd::parse() const
 
         switch (s->type()) {
             case Scope::Type::PCI_EP:
-            case Scope::Type::PCI_SH: Pci::claim_dev (smmu, d); break;
+            case Scope::Type::PCI_SH: Pci::Device::claim_dev (smmu, d); break;
             case Scope::Type::IOAPIC: Ioapic::claim_dev (d, s->id); break;
             case Scope::Type::HPET: Hpet::claim_dev (d, s->id); break;
             default: break;
@@ -76,7 +76,7 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
         Smmu *smmu { nullptr };
 
         switch (s->type()) {
-            case Scope::Type::PCI_EP: smmu = Pci::find_smmu (d); break;
+            case Scope::Type::PCI_EP: smmu = Pci::Device::find_smmu (d); break;
             default: break;
         }
 
