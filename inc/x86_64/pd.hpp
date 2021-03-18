@@ -61,7 +61,7 @@ class Pd : public Kobject, public Space_obj, public Space_hst, public Space_gst,
 
             current = this;
 
-            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? p : 0);
+            loc[Cpu::id].make_current (Cpu::feature (Cpu::Feature::PCID) ? p : 0);
         }
 
         ALWAYS_INLINE
