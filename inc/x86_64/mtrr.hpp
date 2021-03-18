@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,36 +21,16 @@
 
 #pragma once
 
-#include "bits.hpp"
-#include "list.hpp"
-#include "slab.hpp"
+#include "msr.hpp"
 
-class Mtrr : public List<Mtrr>
+class Mtrr final
 {
-    private:
-        uint64 const        base;
-        uint64 const        mask;
-
-        static unsigned     count;
-        static unsigned     dtype;
-
-        static Mtrr *       list;
-        static Slab_cache   cache;
-
-        uint64 size() const
-        {
-            return 1ULL << (static_cast<mword>(mask) ? bit_scan_forward (static_cast<mword>(mask >> 12)) + 12 :
-                                                       bit_scan_forward (static_cast<mword>(mask >> 32)) + 32);
-        }
-
     public:
-        ALWAYS_INLINE
-        explicit inline Mtrr (uint64 b, uint64 m) : List<Mtrr> (list), base (b), mask (m) {}
+        static auto get_vcnt() { return static_cast<unsigned>(Msr::read (Msr::Register::IA32_MTRR_CAP) & BIT_RANGE (7, 0)); }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        static auto get_base (unsigned n) { return Msr::read (Msr::Array::IA32_MTRR_PHYS_BASE, 2, n); }
+        static auto get_mask (unsigned n) { return Msr::read (Msr::Array::IA32_MTRR_PHYS_MASK, 2, n); }
 
-        static void init();
-
-        static unsigned memtype (uint64, uint64 &);
+        static void set_base (unsigned n, uint64_t v) { Msr::write (Msr::Array::IA32_MTRR_PHYS_BASE, 2, n, v); }
+        static void set_mask (unsigned n, uint64_t v) { Msr::write (Msr::Array::IA32_MTRR_PHYS_MASK, 2, n, v); }
 };
