@@ -30,9 +30,9 @@ void Ec::load_fpu()
         regs.fpu_ctrl (true);
 
     if (EXPECT_FALSE (!fpu))
-        Fpu::init();
-    else
-        fpu->load();
+        fpu = new Fpu;
+
+    fpu->load();
 }
 
 void Ec::save_fpu()
