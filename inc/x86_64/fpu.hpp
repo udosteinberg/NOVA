@@ -32,27 +32,42 @@ class Fpu
     private:
         char data[512];
 
-        static Slab_cache cache;
-
     public:
         ALWAYS_INLINE
-        inline void save() { asm volatile ("fxsave %0" : "=m" (*data)); }
+        inline void load() const { asm volatile ("fxrstor64 %0" : : "m" (*this)); }
 
         ALWAYS_INLINE
-        inline void load() { asm volatile ("fxrstor %0" : : "m" (*data)); }
+        inline void save() { asm volatile ("fxsave64 %0" : "=m" (*this)); }
 
         ALWAYS_INLINE
-        static inline void init() { asm volatile ("fninit"); }
+        static inline void disable()
+        {
+            Cr::set_cr0 (Cr::get_cr0() | CR0_TS);
+
+            Cpu::hazard &= ~HZD_FPU;
+        }
 
         ALWAYS_INLINE
-        static inline void enable() { asm volatile ("clts"); Cpu::hazard |= HZD_FPU; }
+        static inline void enable()
+        {
+            asm volatile ("clts");
+
+            Cpu::hazard |= HZD_FPU;
+        }
+
+        [[nodiscard]] ALWAYS_INLINE
+        static inline void *operator new (size_t, Slab_cache &cache) noexcept
+        {
+            return cache.alloc();
+        }
 
         ALWAYS_INLINE
-        static inline void disable() { Cr::set_cr0 (Cr::get_cr0() | CR0_TS); Cpu::hazard &= ~HZD_FPU; }
+        static inline void operator delete (void *ptr, Slab_cache &cache)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
-
-        ALWAYS_INLINE
-        static inline void operator delete (void *ptr) { cache.free (ptr); }
+        static void init();
+        static void fini();
 };

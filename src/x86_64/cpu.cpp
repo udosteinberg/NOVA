@@ -25,7 +25,7 @@
 #include "cache.hpp"
 #include "cmdline.hpp"
 #include "counter.hpp"
-#include "cr.hpp"
+#include "fpu.hpp"
 #include "gdt.hpp"
 #include "hazards.hpp"
 #include "idt.hpp"
@@ -287,6 +287,7 @@ void Cpu::init()
                                  feature (Feature::UMIP)  * CR4_UMIP    |
                                  feature (Feature::MCE)   * CR4_MCE);
 
+    Fpu::init();
     Mca::init();
 
     Vmcb::init();
@@ -300,6 +301,10 @@ void Cpu::init()
 void Cpu::fini()
 {
     auto s = Acpi::get_transition();
+
+    if (s.state() > 1) {
+        Fpu::fini();
+    }
 
     Acpi::fini (s);
 }

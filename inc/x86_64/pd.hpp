@@ -21,6 +21,7 @@
 #pragma once
 
 #include "atomic.hpp"
+#include "fpu.hpp"
 #include "kmem.hpp"
 #include "slab.hpp"
 #include "space_mem.hpp"
@@ -33,12 +34,14 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         static Slab_cache cache;
 
     public:
+        Slab_cache fpu_cache;
+
         static Atomic<Pd *> current CPULOCAL;
         static Pd kern, root;
 
         Pd (Pd *);
 
-        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD) {}
+        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), fpu_cache (sizeof (Fpu), 16) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()
