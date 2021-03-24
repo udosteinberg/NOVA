@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -20,12 +22,12 @@
 
 #include "compiler.hpp"
 
-class Io
+class Io final
 {
     public:
         template <typename T>
         ALWAYS_INLINE
-        static inline unsigned in (unsigned port)
+        static inline T in (unsigned port)
         {
             T val;
             asm volatile ("in %w1, %0" : "=a" (val) : "Nd" (port));
