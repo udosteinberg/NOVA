@@ -199,6 +199,10 @@ void Ec::create_root()
             }
     }
 
+    Hip::hip->build (root_s, root_e);
+
+    hst->update (info_addr, Kmem::ptr_to_phys (Hip::hip), 0, Paging::Permissions (Paging::K | Paging::U | Paging::R), Memattr::ram());
+
     Scheduler::unblock (sc);
 
     Console::flush();
