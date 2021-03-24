@@ -158,6 +158,10 @@ void Ec::create_root()
             hst->delegate (&Space_hst::nova, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Memattr::ram());
     }
 
+    Hip::hip->build (root_s, root_e);
+
+    hst->update (info_addr, Kmem::ptr_to_phys (Hip::hip), 0, Paging::Permissions (Paging::K | Paging::U | Paging::R), Memattr::ram());
+
     Scheduler::unblock (sc);
 
     Console::flush();

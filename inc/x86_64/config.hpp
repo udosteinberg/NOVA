@@ -21,8 +21,6 @@
 
 #pragma once
 
-#define CFG_VER         7
-
 #define NUM_CPU         64
 #define NUM_EXC         32
 #define NUM_VEC         256
