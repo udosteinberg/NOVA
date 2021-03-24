@@ -45,12 +45,15 @@ vector_table:
 .org                    vector_table + 0x200        // Synchronous
                         DECR_STACK
                         SAVE_STATE_EXC
-                        b       1f
+                        mov     x0, sp
+                        adr     lr, 1f
+                        b       handle_exc_kern
 
 .org                    vector_table + 0x280        // IRQ
                         DECR_STACK
                         SAVE_STATE
-                        b       1f
+                        adr     lr, 1f
+                        b       handle_irq_kern
 
 .org                    vector_table + 0x300        // FIQ
                         b       .
@@ -58,43 +61,61 @@ vector_table:
 .org                    vector_table + 0x380        // SError
                         DECR_STACK
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adr     lr, 1f
+                        b       handle_exc_kern
 
 /*
  * Entry from EL0/EL1 with EL1 using AArch64
  */
 .org                    vector_table + 0x400        // Synchronous
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_exc_user
 
 .org                    vector_table + 0x480        // IRQ
                         SAVE_STATE
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_irq_user
 
 .org                    vector_table + 0x500        // FIQ
                         b       .
 
 .org                    vector_table + 0x580        // SError
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_exc_user
 
 /*
  * Entry from EL0/EL1 with EL1 using AArch32
  */
 .org                    vector_table + 0x600        // Synchronous
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_exc_user
 
 .org                    vector_table + 0x680        // IRQ
                         SAVE_STATE
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_irq_user
 
 .org                    vector_table + 0x700        // FIQ
                         b       .
 
 .org                    vector_table + 0x780        // SError
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       handle_exc_user
 
 /*
  * Exit to EL2
