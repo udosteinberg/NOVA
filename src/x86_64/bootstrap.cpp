@@ -23,7 +23,6 @@
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
-#include "msr.hpp"
 
 extern "C" [[noreturn]]
 void bootstrap()
@@ -38,8 +37,6 @@ void bootstrap()
 
     // Barrier: wait for all ECs to arrive here
     for (++barrier; barrier != Cpu::online; pause()) ;
-
-    Msr::write<uint64>(Msr::IA32_TSC, 0);
 
     // Create root task
     if (Cpu::bsp) {

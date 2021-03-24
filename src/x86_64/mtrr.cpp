@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -30,31 +31,31 @@ Slab_cache Mtrr::cache (sizeof (Mtrr), 8);
 
 void Mtrr::init()
 {
-    count = Msr::read<uint32>(Msr::IA32_MTRR_CAP) & 0xff;
-    dtype = Msr::read<uint32>(Msr::IA32_MTRR_DEF_TYPE) & 0xff;
+    count = Msr::read (Msr::Reg64::IA32_MTRR_CAP) & 0xff;
+    dtype = Msr::read (Msr::Reg64::IA32_MTRR_DEF_TYPE) & 0xff;
 
     for (unsigned i = 0; i < count; i++)
-        new Mtrr (Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_BASE + 2 * i)),
-                  Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_PHYS_MASK + 2 * i)));
+        new Mtrr (Msr::read (Msr::Arr64::IA32_MTRR_PHYS_BASE, 2, i),
+                  Msr::read (Msr::Arr64::IA32_MTRR_PHYS_MASK, 2, i));
 }
 
 unsigned Mtrr::memtype (uint64 phys, uint64 &next)
 {
     if (phys < 0x80000) {
         next = 1 + (phys | 0xffff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_MTRR_FIX64K_BASE) >>
+        return static_cast<unsigned>(Msr::read (Msr::Arr64::IA32_MTRR_FIX64K_BASE, 1, 0) >>
                                     (phys >> 13 & 0x38)) & 0xff;
     }
 
     if (phys < 0xc0000) {
         next = 1 + (phys | 0x3fff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX16K_BASE + (phys >> 17 & 0x1))) >>
+        return static_cast<unsigned>(Msr::read (Msr::Arr64::IA32_MTRR_FIX16K_BASE, 1, phys >> 17 & 0x1) >>
                                     (phys >> 11 & 0x38)) & 0xff;
     }
 
     if (phys < 0x100000) {
         next = 1 + (phys | 0xfff);
-        return static_cast<unsigned>(Msr::read<uint64>(Msr::Register (Msr::IA32_MTRR_FIX4K_BASE  + (phys >> 15 & 0x7))) >>
+        return static_cast<unsigned>(Msr::read (Msr::Arr64::IA32_MTRR_FIX4K_BASE, 1, phys >> 15 & 0x7) >>
                                     (phys >>  9 & 0x38)) & 0xff;
     }
 
