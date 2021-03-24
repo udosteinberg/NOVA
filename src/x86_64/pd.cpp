@@ -22,6 +22,7 @@
 #include "dc.hpp"
 #include "ec_arch.hpp"
 #include "fpu.hpp"
+#include "hip.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
 #include "space_dma.hpp"
@@ -156,6 +157,11 @@ Space_gst *Pd::create_gst (Status &s, Space_obj *obj, unsigned long sel)
 
 Space_dma *Pd::create_dma (Status &s, Space_obj *obj, unsigned long sel)
 {
+    if (!Hip::feature (Hip_arch::Feature::SMMU)) [[unlikely]] {
+        s = Status::BAD_FTR;
+        return nullptr;
+    }
+
     auto const o { Space_dma::create (s, this) };
 
     if (o) [[likely]] {

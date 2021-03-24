@@ -121,7 +121,7 @@ class Smmu : public List<Smmu>, protected Mmio
                     ret &= smmu->init();
 
                 if (list && ret) [[likely]]
-                    Hip::hip->set_feature (Hip::FEAT_IOMMU);
+                    Hip::set_feature (Hip_arch::Feature::SMMU);
             }
 
             return ret;

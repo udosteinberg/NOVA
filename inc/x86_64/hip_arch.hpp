@@ -1,10 +1,6 @@
 /*
- * External Symbols
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (x86)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -21,11 +17,28 @@
 
 #pragma once
 
+#include "macros.hpp"
 #include "types.hpp"
 
-extern char GIT_VER, NOVA_HPAS, PTAB_HPAS, KMEM_HVAS, DSTK_TOP;
-extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
+class Hip_arch final
+{
+    private:
+        uint8_t     num_vec;
+        uint16_t    num_pin;
+        uint32_t    num_gsi;
+        uint64_t    elog_phys;
+        uint32_t    elog_size;
+        uint32_t    elog_offs;
 
-extern char entry_sys;
-extern char entry_vmx;
-extern uintptr_t handlers[];
+    public:
+        enum class Feature : uint64_t
+        {
+            SMMU    = BIT (0),
+            VMX     = BIT (1),
+            SVM     = BIT (2),
+        };
+
+        void build();
+};
+
+static_assert (__is_standard_layout (Hip_arch) && sizeof (Hip_arch) == 24);
