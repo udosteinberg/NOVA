@@ -33,7 +33,7 @@
 
 void Lapic::init()
 {
-    Paddr apic_base = Msr::read<Paddr>(Msr::IA32_APIC_BASE);
+    Paddr apic_base = static_cast<Paddr>(Msr::read (Msr::Reg64::IA32_APIC_BASE));
 
 #if 0   // FIXME
     Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK (0));
@@ -41,7 +41,7 @@ void Lapic::init()
 
     Hptp (Hpt::current()).update (MMAP_CPU_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~OFFS_MASK (0));
 
-    Msr::write (Msr::IA32_APIC_BASE, apic_base | 0x800);
+    Msr::write (Msr::Reg64::IA32_APIC_BASE, apic_base | 0x800);
 
     uint32 svr = read (LAPIC_SVR);
     if (!(svr & 0x100))
@@ -130,7 +130,7 @@ void Lapic::error_handler()
 
 void Lapic::timer_handler()
 {
-    bool const expired { (ratio ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0 };
+    bool const expired { (ratio ? read (LAPIC_TMR_CCR) : Msr::read (Msr::Reg64::IA32_TSC_DEADLINE)) == 0 };
 
     if (expired)
         Timeout::check();
