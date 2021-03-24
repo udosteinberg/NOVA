@@ -89,8 +89,6 @@ SECTIONS
         . = ALIGN(4K) + 4K;
         PROVIDE_HIDDEN (STACK = . - OFFSET);
 
-        PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
-
         PROVIDE_HIDDEN (PTAB_HPAS = . - OFFSET);
         PROVIDE_HIDDEN (PT3S_HPAS = . - OFFSET); . += 4K;
         PROVIDE_HIDDEN (PT2H_HPAS = . - OFFSET); . += 4K;
@@ -103,6 +101,8 @@ SECTIONS
         *(.bss .bss.* .gnu.linkonce.b.*)
 
         . = ALIGN(4K);
+
+        PROVIDE_HIDDEN (MHIP_HVAS = .); . += 4K;
 
         PROVIDE_HIDDEN (KMEM_HVAS = .);
 
