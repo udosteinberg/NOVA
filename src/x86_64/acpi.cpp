@@ -155,11 +155,11 @@ unsigned Acpi::hw_read (Acpi_gas *gas)
     if (gas->asid == Acpi_gas::IO) {
         switch (gas->bits) {
             case 8:
-                return Io::in<uint8>(static_cast<unsigned>(gas->addr));
+                return Io::in<uint8>(static_cast<port_t>(gas->addr));
             case 16:
-                return Io::in<uint16>(static_cast<unsigned>(gas->addr));
+                return Io::in<uint16>(static_cast<port_t>(gas->addr));
             case 32:
-                return Io::in<uint32>(static_cast<unsigned>(gas->addr));
+                return Io::in<uint32>(static_cast<port_t>(gas->addr));
         }
     }
 
@@ -174,14 +174,11 @@ void Acpi::hw_write (Acpi_gas *gas, unsigned val)
     if (gas->asid == Acpi_gas::IO) {
         switch (gas->bits) {
             case 8:
-                Io::out (static_cast<unsigned>(gas->addr), static_cast<uint8>(val));
-                return;
+                return Io::out (static_cast<port_t>(gas->addr), static_cast<uint8>(val));
             case 16:
-                Io::out (static_cast<unsigned>(gas->addr), static_cast<uint16>(val));
-                return;
+                return Io::out (static_cast<port_t>(gas->addr), static_cast<uint16>(val));
             case 32:
-                Io::out (static_cast<unsigned>(gas->addr), static_cast<uint32>(val));
-                return;
+                return Io::out (static_cast<port_t>(gas->addr), static_cast<uint32>(val));
         }
     }
 
