@@ -15,8 +15,10 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "ec.hpp"
 #include "fpu.hpp"
 
 void Fpu::fini()
 {
+    Ec::switch_fpu (nullptr);
 }

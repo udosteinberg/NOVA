@@ -1,0 +1,33 @@
+/*
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (Arm)
+ *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
+ * This file is part of the NOVA microhypervisor.
+ *
+ * NOVA is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NOVA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License version 2 for more details.
+ */
+
+#include "hip_arch.hpp"
+#include "interrupt.hpp"
+#include "smmu.hpp"
+
+void Hip_arch::build()
+{
+    num_spi  = static_cast<uint16_t>(Interrupt::num_spi);
+    num_espi = static_cast<uint16_t>(Interrupt::num_espi);
+    num_lpi  = static_cast<uint32_t>(Interrupt::num_lpi);
+
+    num_smg = Smmu::avail_smg();
+    num_ctx = Smmu::avail_ctx();
+
+    trace (TRACE_HIP, "INFO: SMG#: %5u", num_smg);
+    trace (TRACE_HIP, "INFO: CTX#: %5u", num_ctx);
+}
