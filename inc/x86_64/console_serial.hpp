@@ -43,9 +43,9 @@ class Console_serial final : public Console
 
         unsigned base;
 
-        auto in (Register r) const { return Io::in<uint8>(base + r); }
+        auto in (Register r) const { return Io::in<uint8>(static_cast<port_t>(base + r)); }
 
-        void out (Register r, uint8_t v) const { Io::out (base + r, v); }
+        void out (Register r, uint8_t v) const { Io::out (static_cast<port_t>(base + r), v); }
 
         bool outc (char) const override final;
 
