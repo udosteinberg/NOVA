@@ -158,9 +158,9 @@ void Cpu::setup_thermal()
 void Cpu::setup_sysenter()
 {
     Msr::write (Msr::IA32_SYSENTER_CS, 0);
-    Msr::write (Msr::IA32_STAR,  static_cast<mword>(SEL_USER_CODE) << 48 | static_cast<mword>(SEL_KERN_CODE) << 32);
-    Msr::write (Msr::IA32_LSTAR, reinterpret_cast<mword>(&entry_sys));
-    Msr::write (Msr::IA32_FMASK, RFL_DF | RFL_IF);
+    Msr::write (Msr::IA32_STAR,  static_cast<uint64>(SEL_USER_CODE) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32);
+    Msr::write (Msr::IA32_LSTAR, reinterpret_cast<uint64>(&entry_sys));
+    Msr::write (Msr::IA32_FMASK, RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF);
 }
 
 void Cpu::setup_pcid()
