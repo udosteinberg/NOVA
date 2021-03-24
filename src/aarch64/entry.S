@@ -44,12 +44,15 @@ vector_table:
 .org                    vector_table + 0x200
                         DECR_STACK
                         SAVE_STATE
+                        mov     x0, sp
+                        bl      exc_kern_handler
                         b       ret_kern_exception
 
 // Current EL with EL2 using SPx, IRQ
 .org                    vector_table + 0x280
                         DECR_STACK
                         SAVE_STATE
+                        bl      irq_kern_handler
                         b       ret_kern_exception
 
 // Current EL with EL2 using SPx, FIQ
@@ -67,12 +70,17 @@ vector_table:
 // Lower EL with EL1 using AArch64, Synchronous
 .org                    vector_table + 0x400
                         SAVE_STATE
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       exc_user_handler
 
 // Lower EL with EL1 using AArch64, IRQ
 .org                    vector_table + 0x480
                         SAVE_STATE
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       irq_user_handler
 
 // Lower EL with EL1 using AArch64, FIQ
 .org                    vector_table + 0x500
@@ -87,12 +95,17 @@ vector_table:
 // Lower EL with EL1 using AArch32, Synchronous
 .org                    vector_table + 0x600
                         SAVE_STATE
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       exc_user_handler
 
 // Lower EL with EL1 using AArch32, IRQ
 .org                    vector_table + 0x680
                         SAVE_STATE
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       irq_user_handler
 
 // Lower EL with EL1 using AArch32, FIQ
 .org                    vector_table + 0x700
