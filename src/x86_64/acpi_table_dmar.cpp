@@ -112,5 +112,5 @@ void Acpi_table_dmar::parse() const
         p += r->length;
     }
 
-    Hip::hip->set_feature (Hip::FEAT_SMMU);
+    Hip::set_feature (Hip_arch::Feature::SMMU);
 }
