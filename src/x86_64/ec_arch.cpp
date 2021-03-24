@@ -123,8 +123,8 @@ Ec_arch::Ec_arch (bool t, Fpu *f, Space_obj *obj, Space_hst *hst, Vmcb *v, cpu_t
 // Factory: GST EC
 Ec *Ec::create_gst (Status &s, Pd *pd, bool t, bool fpu, cpu_t cpu, unsigned long evt, uintptr_t sp, uintptr_t hva)
 {
-    auto const has_vmx { Hip::hip->feature() & Hip::FEAT_VMX };
-    auto const has_svm { Hip::hip->feature() & Hip::FEAT_SVM };
+    auto const has_vmx { Hip::feature (Hip_arch::Feature::VMX) };
+    auto const has_svm { Hip::feature (Hip_arch::Feature::SVM) };
 
     if (EXPECT_FALSE (!has_vmx && !has_svm)) {
         s = Status::BAD_FTR;

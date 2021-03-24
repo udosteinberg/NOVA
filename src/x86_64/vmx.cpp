@@ -194,7 +194,7 @@ void Vmcs::init()
         if (!(root = new Vmcs))
             return;
 
-        Hip::hip->set_feature (Hip::FEAT_VMX);
+        Hip::set_feature (Hip_arch::Feature::VMX);
     }
 
     Cr::set_cr0 ((Cr::get_cr0() & ~fix_cr0_clr) | fix_cr0_set);
