@@ -121,8 +121,8 @@ Ec_arch::Ec_arch (Space_obj *obj, Space_hst *hst, Fpu *f, Vmcb *v, unsigned c, u
 // Factory: Virtual CPU
 Ec *Ec::create (Status &s, Pd *pd, bool fpu, unsigned c, unsigned long e, bool t)
 {
-    auto const has_vmx { Hip::hip->feature() & Hip::FEAT_VMX };
-    auto const has_svm { Hip::hip->feature() & Hip::FEAT_SVM };
+    auto const has_vmx { Hip::feature (Hip_arch::Feature::VMX) };
+    auto const has_svm { Hip::feature (Hip_arch::Feature::SVM) };
 
     if (EXPECT_FALSE (!has_vmx && !has_svm)) {
         s = Status::BAD_FTR;
