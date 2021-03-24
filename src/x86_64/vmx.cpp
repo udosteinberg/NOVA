@@ -113,13 +113,13 @@ void Vmcs::init()
     fix_cr0_clr |= CR0_CD | CR0_NW;
 
     basic.val       = Msr::read (Msr::IA32_VMX_BASIC);
-    ctrl_exi.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_EXIT  : Msr::IA32_VMX_CTRL_EXIT);
-    ctrl_ent.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_ENTRY : Msr::IA32_VMX_CTRL_ENTRY);
-    ctrl_pin.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_PIN   : Msr::IA32_VMX_CTRL_PIN);
-    ctrl_cpu[0].val = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_CPU0  : Msr::IA32_VMX_CTRL_CPU0);
+    ctrl_exi.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_EXI : Msr::IA32_VMX_CTRL_EXI_PRI);
+    ctrl_ent.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_ENT : Msr::IA32_VMX_CTRL_ENT);
+    ctrl_pin.val    = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_PIN : Msr::IA32_VMX_CTRL_PIN);
+    ctrl_cpu[0].val = Msr::read (basic.ctrl ? Msr::IA32_VMX_TRUE_CPU : Msr::IA32_VMX_CTRL_CPU_PRI);
 
     if (has_secondary())
-        ctrl_cpu[1].val = Msr::read (Msr::IA32_VMX_CTRL_CPU1);
+        ctrl_cpu[1].val = Msr::read (Msr::IA32_VMX_CTRL_CPU_SEC);
     if (has_ept() || has_vpid())
         ept_vpid.val = Msr::read (Msr::IA32_VMX_EPT_VPID);
     if (has_ept())
