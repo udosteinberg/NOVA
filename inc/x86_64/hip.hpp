@@ -1,11 +1,12 @@
 /*
- * Hypervisor Information Page (HIP)
+ * Hypervisor Information Page (HIP): Architecture-Independent Part
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,96 +22,48 @@
 
 #pragma once
 
-#include "extern.hpp"
-#include "vectors.hpp"
+#include "atomic.hpp"
+#include "hip_arch.hpp"
+#include "std.hpp"
 
-class Hip_cpu
-{
-    public:
-        uint8   flags;
-        uint8   thread;
-        uint8   core;
-        uint8   package;
-        uint8   acpi_id;
-        uint8   reserved[3];
-};
-
-class Hip_mem
-{
-    public:
-        enum {
-            HYPERVISOR  = -1u,
-            MB_MODULE   = -2u
-        };
-
-        uint64  addr;
-        uint64  size;
-        uint32  type;
-        uint32  aux;
-};
-
-class Hip
+class Hip final
 {
     private:
-        uint32  signature;              // 0x0
-        uint16  checksum;               // 0x4
-        uint16  length;                 // 0x6
-        uint16  cpu_offs;               // 0x8
-        uint16  cpu_size;               // 0xa
-        uint16  mem_offs;               // 0xc
-        uint16  mem_size;               // 0xe
-        uint32  api_flg;                // 0x10
-        uint32  api_ver;                // 0x14
-        uint32  sel_num;                // 0x18
-        uint32  sel_exc;                // 0x1c
-        uint32  sel_vmi;                // 0x20
-        uint32  sel_gsi;                // 0x24
-        uint32  cfg_page;               // 0x28
-        uint32  cfg_utcb;               // 0x2c
-        uint32  freq_tsc;               // 0x30
-        uint32  reserved;               // 0x34
-        Hip_cpu cpu_desc[NUM_CPU];
-        Hip_mem mem_desc[];
+        using feat_t = uint64;
+
+        uint32          signature;                                                  // 0x0
+        uint16          checksum, length;                                           // 0x4
+        uint64          nova_p_addr, nova_e_addr;                                   // 0x8
+        uint64          mbuf_p_addr, mbuf_e_addr;                                   // 0x18
+        uint64          root_p_addr, root_e_addr;                                   // 0x28
+        uint64          acpi_rsdp_addr, uefi_mmap_addr;                             // 0x38
+        uint32          uefi_mmap_size;                                             // 0x48
+        uint16          uefi_desc_size, uefi_desc_vers;                             // 0x4c
+        uint64          tmr_frq, sel_num;                                           // 0x50
+        uint16          sel_hst_arch, sel_hst_nova, sel_gst_arch, sel_gst_nova;     // 0x60
+        uint16          cpu_num, cpu_bsp, int_pin, int_msi;                         // 0x68
+        uint8           mco_obj, mco_hst, mco_gst, mco_dma, mco_pio, mco_msr;       // 0x70
+        uint16          kimax;                                                      // 0x76
+        Atomic<feat_t>  features;                                                   // 0x78
+        Hip_arch        arch;                                                       // 0x80
 
     public:
         static Hip *hip;
 
-        enum Feature {
-            FEAT_IOMMU  = 1U << 0,
-            FEAT_VMX    = 1U << 1,
-            FEAT_SVM    = 1U << 2,
-        };
-
-        static mword root_addr;
-        static mword root_size;
-
-        uint32 feature()
+        static inline bool feature (Hip_arch::Feature f)
         {
-            return api_flg;
+            return hip->features & std::to_underlying (f);
         }
 
-        void set_feature (Feature f)
+        static inline void set_feature (Hip_arch::Feature f)
         {
-            __atomic_or_fetch (&api_flg, static_cast<decltype (api_flg)>(f), __ATOMIC_SEQ_CST);
+            hip->features |= std::to_underlying (f);
         }
 
-        void clr_feature (Feature f)
+        static inline void clr_feature (Hip_arch::Feature f)
         {
-            __atomic_and_fetch (&api_flg, ~static_cast<decltype (api_flg)>(f), __ATOMIC_SEQ_CST);
+            hip->features &= ~std::to_underlying (f);
         }
 
-        bool cpu_online (unsigned long cpu)
-        {
-            return cpu < NUM_CPU && cpu_desc[cpu].flags & 1;
-        }
-
-        void build (mword);
-
-        void add_mem (Hip_mem *&, mword, size_t);
-
-        void add_mod (Hip_mem *&, mword, size_t);
-
-        void add_mhv (Hip_mem *&);
-
-        void add_check();
+        void build (uint64, uint64);
 };
