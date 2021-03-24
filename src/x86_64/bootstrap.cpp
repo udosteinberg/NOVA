@@ -22,7 +22,6 @@
 #include "acpi.hpp"
 #include "compiler.hpp"
 #include "ec.hpp"
-#include "hip.hpp"
 #include "timer.hpp"
 
 extern "C" [[noreturn]] void bootstrap()
@@ -39,10 +38,8 @@ extern "C" [[noreturn]] void bootstrap()
     if (Acpi::resume)
         Timer::set_time (Acpi::resume);
 
-    else if (Cpu::bsp) {
-        Hip::hip->add_check();
+    else if (Cpu::bsp)
         Ec::create_root();
-    }
 
     if (Cpu::bsp)
         Acpi::wake_restore();

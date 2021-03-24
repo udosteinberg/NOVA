@@ -23,8 +23,6 @@
 
 #include "types.hpp"
 
-extern char PAGE_H;
-
 extern char GIT_VER, NOVA_HPAS, KMEM_HVAS, KMEM_HVAF, PTAB_HVAS, DSTK_TOP;
 extern void (*CTORS_S[])(), (*CTORS_E[])(), (*CTORS_C[])(), (*CTORS_L[])();
 
