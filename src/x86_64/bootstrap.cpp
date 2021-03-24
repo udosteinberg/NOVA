@@ -22,7 +22,6 @@
 #include "acpi.hpp"
 #include "compiler.hpp"
 #include "ec.hpp"
-#include "hip.hpp"
 #include "timer.hpp"
 
 extern "C" [[noreturn]]
@@ -42,10 +41,8 @@ void bootstrap()
         Ec::create_idle();
 
         // Create root EC
-        if (Cpu::bsp) {
-            Hip::hip->add_check();
+        if (Cpu::bsp)
             Ec::create_root();
-        }
     }
 
     if (Cpu::bsp)
