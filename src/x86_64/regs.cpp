@@ -71,7 +71,7 @@ template <> void Cpu_regs::set_cpu_ctrl1<Vmcs> (uint32 val) const
 
 void Cpu_regs::fpu_ctrl (bool on)
 {
-    if (Hip::hip->feature() & Hip::FEAT_VMX) {
+    if (Hip::feature (Hip_arch::Feature::VMX)) {
 
         vmcs->make_current();
 
