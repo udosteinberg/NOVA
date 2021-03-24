@@ -156,6 +156,8 @@ void Ec::root_invoke (Ec *const self)
     auto c = __atomic_load_n (&e->ph_count, __ATOMIC_RELAXED);
     auto p = static_cast<Ph const *>(Hptp::map (root + __atomic_load_n (&e->ph_offset, __ATOMIC_RELAXED)));
 
+    uint64 root_e = 0, root_s = root_e - 1;
+
     for (unsigned i = 0; i < c; i++, p++) {
 
         if (p->type == 1) {
@@ -165,12 +167,17 @@ void Ec::root_invoke (Ec *const self)
                                              Paging::XU * !!(p->flags & BIT (0)) |
                                              Paging::U);
 
+            trace (TRACE_ROOT | TRACE_PARSE, "ROOT: P:%#llx => V:%#llx PM:%#x FS:%#llx MS:%#llx", p->f_offs + root, p->v_addr, perm, p->f_size, p->m_size);
+
             if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != (p->f_offs + root) % PAGE_SIZE)
                 self->kill ("Bad ELF");
 
             uint64 phys = align_dn (p->f_offs + root, PAGE_SIZE);
             uint64 virt = align_dn (p->v_addr, PAGE_SIZE);
             uint64 size = align_up (p->v_addr + p->f_size, PAGE_SIZE) - virt;
+
+            root_s = min (root_s, phys);
+            root_e = max (root_e, phys + size);
 
             for (unsigned o; size; size -= BIT64 (o), phys += BIT64 (o), virt += BIT64 (o))
                 self->pd->delegate_mem (&Pd_kern::nova(), phys >> PAGE_BITS, virt >> PAGE_BITS, (o = static_cast<unsigned>(min (max_order (phys, size), max_order (virt, size)))) - PAGE_BITS, perm, Space::Index::CPU_HST, Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
@@ -183,6 +190,7 @@ void Ec::root_invoke (Ec *const self)
         else
             trace (TRACE_ROOT, "ROOT: INTR: %u unavailable", i);
 
+    Hip::hip->build (root_s, root_e);
     self->pd->Space_mem::update (hip_addr, Kmem::ptr_to_phys (Hip::hip), 0, Paging::Permissions (Paging::K | Paging::U | Paging::R), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
 
     self->pd->Space_obj::insert (Space_obj::num - 1, Capability (&Pd_kern::nova(),          static_cast<unsigned>(Capability::Perm_pd::CTRL)));
