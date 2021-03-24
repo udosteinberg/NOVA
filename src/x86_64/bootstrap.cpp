@@ -37,10 +37,8 @@ void bootstrap()
     for (++barrier; barrier != Cpu::online; pause()) ;
 
     // Create root task
-    if (Cpu::bsp) {
-        Hip::hip->add_check();
+    if (Cpu::bsp)
         Ec::create_root();
-    }
 
     Scheduler::schedule();
 }

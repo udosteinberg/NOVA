@@ -108,7 +108,7 @@ template <> void Cpu_regs::nst_ctrl<Vmcs>()
 
 void Cpu_regs::fpu_ctrl (bool on)
 {
-    if (Hip::hip->feature() & Hip::FEAT_VMX) {
+    if (Hip::feature (Hip_arch::Feature::VMX)) {
 
         vmcs->make_current();
 
