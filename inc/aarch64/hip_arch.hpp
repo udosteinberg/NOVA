@@ -1,5 +1,5 @@
 /*
- * Floating Point Unit (FPU)
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (Arm)
  *
  * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
@@ -15,10 +15,28 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "fpu.hpp"
+#pragma once
 
-void Fpu::fini()
+#include "macros.hpp"
+#include "types.hpp"
+
+class Hip_arch final
 {
-    Ec::switch_fpu (nullptr);
-}
+    private:
+        uint16_t    num_spi;
+        uint16_t    num_espi;
+        uint32_t    num_lpi;
+        uint16_t    num_smg;
+        uint16_t    num_ctx;
+        uint32_t    reserved;
+
+    public:
+        enum class Feature : uint64_t
+        {
+            SMMU_DMA    = BIT (0),
+        };
+
+        void build();
+};
+
+static_assert (__is_standard_layout (Hip_arch) && sizeof (Hip_arch) == 16);
