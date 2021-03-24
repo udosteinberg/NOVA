@@ -140,7 +140,7 @@ class Lapic
                 uint32 icr;
                 write (LAPIC_TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / ratio) > 0 ? icr : 1);
             } else
-                Msr::write (Msr::IA32_TSC_DEADLINE, tsc);
+                Msr::write (Msr::Reg64::IA32_TSC_DEADLINE, tsc);
         }
 
         ALWAYS_INLINE
