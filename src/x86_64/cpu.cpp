@@ -30,7 +30,6 @@
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "mca.hpp"
-#include "msr.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -85,8 +84,8 @@ void Cpu::check_features()
     vendor = Vendor (v);
 
     if (vendor == INTEL) {
-        Msr::write<uint64>(Msr::IA32_BIOS_SIGN_ID, 0);
-        platform = static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_PLATFORM_ID) >> 50) & 7;
+        Msr::write (Msr::Register::IA32_BIOS_SIGN_ID, 0);
+        platform = static_cast<unsigned>(Msr::read (Msr::Register::IA32_PLATFORM_ID) >> 50) & 7;
     }
 
     switch (static_cast<uint8>(eax)) {
@@ -111,7 +110,7 @@ void Cpu::check_features()
             Cache::init (8 * (ebx >> 8 & 0xff));
     }
 
-    patch = static_cast<unsigned>(Msr::read<uint64>(Msr::IA32_BIOS_SIGN_ID) >> 32);
+    patch = static_cast<unsigned>(Msr::read (Msr::Register::IA32_BIOS_SIGN_ID) >> 32);
 
     cpuid (0x80000000, eax, ebx, ecx, edx);
 
@@ -144,24 +143,6 @@ void Cpu::check_features()
     thread  = top            & ((1u << t_bits) - 1);
     core    = top >>  t_bits & ((1u << c_bits) - 1);
     package = top >> (t_bits + c_bits);
-
-    // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
-    if (vendor == AMD)
-        if (family > 0xf || (family == 0xf && model >= 0x40))
-            Msr::write (Msr::AMD_IPMR, Msr::read<uint32>(Msr::AMD_IPMR) & ~(3ul << 27));
-}
-
-void Cpu::setup_thermal()
-{
-    Msr::write (Msr::IA32_THERM_INTERRUPT, 0x10);
-}
-
-void Cpu::setup_sysenter()
-{
-    Msr::write<mword>(Msr::IA32_SYSENTER_CS, 0);
-    Msr::write<mword>(Msr::IA32_STAR,  static_cast<uint64>(SEL_USER_CODE32) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32);
-    Msr::write<mword>(Msr::IA32_LSTAR, reinterpret_cast<uint64>(&entry_sys));
-    Msr::write<mword>(Msr::IA32_FMASK, RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF);
 }
 
 void Cpu::setup_pcid()
@@ -173,6 +154,27 @@ void Cpu::setup_pcid()
         return;
 
     Cr::set_cr4 (Cr::get_cr4() | CR4_PCIDE);
+}
+
+void Cpu::setup_msr()
+{
+    if (EXPECT_TRUE (feature (FEAT_ACPI)))
+        Msr::write (Msr::Register::IA32_THERM_INTERRUPT, 0x10);
+
+    if (EXPECT_TRUE (feature (FEAT_SEP)))
+        Msr::write (Msr::Register::IA32_SYSENTER_CS, 0);
+
+    if (EXPECT_TRUE (feature (FEAT_LM))) {
+        Msr::write (Msr::Register::IA32_STAR,  hst_sys.star);
+        Msr::write (Msr::Register::IA32_LSTAR, hst_sys.lstar);
+        Msr::write (Msr::Register::IA32_FMASK, hst_sys.fmask);
+        Msr::write (Msr::Register::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
+    }
+
+    // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
+    if (vendor == Vendor::AMD)
+        if (family > 0xf || (family == 0xf && model >= 0x40))
+            Msr::write (Msr::Register::AMD_IPMR, Msr::read (Msr::Register::AMD_IPMR) & ~(3UL << 27));
 }
 
 void Cpu::init()
@@ -198,11 +200,7 @@ void Cpu::init()
     Pd::kern.Space_mem::insert (MMAP_GLB_DATA + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
     Hpt::ord = min (Hpt::ord, feature (FEAT_1GB_PAGES) ? 26UL : 17UL);
 
-    if (EXPECT_TRUE (feature (FEAT_ACPI)))
-        setup_thermal();
-
-    if (EXPECT_TRUE (feature (FEAT_SEP)))
-        setup_sysenter();
+    setup_msr();
 
     setup_pcid();
 
