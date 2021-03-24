@@ -1,10 +1,6 @@
 /*
- * Bootstrap Code
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (x86)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -19,23 +15,22 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "compiler.hpp"
-#include "ec.hpp"
-#include "hip.hpp"
+#pragma once
 
-extern "C" NORETURN
-void bootstrap()
+#include "macros.hpp"
+#include "types.hpp"
+
+class Hip_arch
 {
-    Cpu::init();
+    private:
 
-    Ec::create_idle();
+    public:
+        enum class Feature
+        {
+            IOMMU   = BIT (0),
+            VMX     = BIT (1),
+            SVM     = BIT (2),
+        };
 
-    // Barrier: wait for all CPUs to arrive here
-    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
-
-    // Create root task
-    if (Cpu::bsp)
-        Ec::create_root();
-
-    Scheduler::schedule();
-}
+        void build();
+};

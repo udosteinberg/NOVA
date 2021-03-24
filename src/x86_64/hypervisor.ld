@@ -81,8 +81,8 @@ SECTIONS
 
         PROVIDE (PAGE_0 = .); . += 4K;
         PROVIDE (PAGE_1 = .); . += 4K;
-        PROVIDE (PAGE_H = .); . += 4K;
 
+        PROVIDE (MHIP_HVAS = .); . += 4K;
         PROVIDE (PTAB_HVAS = .);
         PROVIDE (PT3S_HPAS = . - OFFSET); . += 4K;
         PROVIDE (PT2H_HPAS = . - OFFSET); . += 4K;

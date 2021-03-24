@@ -118,14 +118,14 @@ Ec *Ec::create (Pd *p, bool fpu, unsigned c, unsigned long e, bool t)
     Ec *ec;
     auto f = fpu ? new Fpu : nullptr;
 
-    if (Hip::hip->feature() & Hip::FEAT_VMX) {
+    if (Hip::feature (Hip_arch::Feature::VMX)) {
         auto v = new Vmcs;
         if (EXPECT_TRUE ((!fpu || f) && v && (ec = new Ec_arch (p, f, v, c, e, t))))
             return ec;
         delete v;
     }
 
-    if (Hip::hip->feature() & Hip::FEAT_SVM) {
+    if (Hip::feature (Hip_arch::Feature::SVM)) {
         auto v = new Vmcb;
         if (EXPECT_TRUE ((!fpu || f) && v && (ec = new Ec_arch (p, f, v, c, e, t))))
             return ec;
@@ -139,7 +139,7 @@ Ec *Ec::create (Pd *p, bool fpu, unsigned c, unsigned long e, bool t)
 
 bool Ec::vcpu_supported()
 {
-    return (Hip::hip->feature() & Hip::FEAT_VMX) || (Hip::hip->feature() & Hip::FEAT_SVM);
+    return Hip::feature (Hip_arch::Feature::VMX) || Hip::feature (Hip_arch::Feature::SVM);
 }
 
 void Ec::adjust_offset_ticks (uint64 t)
