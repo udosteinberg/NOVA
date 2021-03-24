@@ -16,6 +16,7 @@
  */
 
 #include "bits.hpp"
+#include "hip.hpp"
 #include "interrupt.hpp"
 #include "lock_guard.hpp"
 #include "lowlevel.hpp"
@@ -77,6 +78,8 @@ Smmu::Smmu (Board::Smmu const &brd) : List (list), board (brd)
 
     // Advance memory map pointer
     mmap += smmu_size;
+
+    Hip::set_feature (Hip_arch::Feature::SMMU);
 }
 
 void Smmu::init()
