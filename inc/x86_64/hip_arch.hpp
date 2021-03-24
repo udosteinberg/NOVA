@@ -1,10 +1,6 @@
 /*
- * Configuration
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (x86)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -21,7 +17,21 @@
 
 #pragma once
 
-#define NUM_CPU         128
-#define NUM_EXC         32
-#define NUM_VEC         256
-#define NUM_VMI         256
+#include "macros.hpp"
+#include "types.hpp"
+
+class Hip_arch final
+{
+    private:
+        uint64_t    elog_p_addr, elog_e_addr;
+
+    public:
+        enum class Feature : uint64_t
+        {
+            IOMMU   = BIT (0),
+            VMX     = BIT (1),
+            SVM     = BIT (2),
+        };
+
+        void build();
+};
