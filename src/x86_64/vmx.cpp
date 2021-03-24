@@ -201,7 +201,7 @@ void Vmcs::init()
         if (!(root = new Vmcs)) [[unlikely]]
             return;
 
-        Hip::hip->set_feature (Hip::FEAT_VMX);
+        Hip::set_feature (Hip_arch::Feature::VIRT_VMX);
     }
 
     Cr::set_cr0 ((Cr::get_cr0() & ~fix_cr0_clr) | fix_cr0_set);

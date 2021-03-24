@@ -136,8 +136,15 @@ class Smmu : public List<Smmu>, protected Mmio
                 for (auto smmu { list }; smmu; smmu = smmu->next)
                     ret &= smmu->init();
 
-                if (list && ret) [[likely]]
-                    Hip::hip->set_feature (Hip::FEAT_IOMMU);
+                if (list && ret) [[likely]] {
+
+                    // DMA remapping enabled
+                    Hip::set_feature (Hip_arch::Feature::SMMU_DMA);
+
+                    // INT remapping enabled
+                    if (!noir)
+                        Hip::set_feature (Hip_arch::Feature::SMMU_INT);
+                }
             }
 
             return ret;
