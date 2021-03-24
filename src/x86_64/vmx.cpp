@@ -155,5 +155,5 @@ void Vmcs::init()
 
     vmxon();
 
-    Hip::hip->set_feature (Hip::FEAT_VMX);
+    Hip::set_feature (Hip_arch::Feature::VMX);
 }

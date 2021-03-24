@@ -90,5 +90,5 @@ void Acpi_table_dmar::parse() const
 
     Smmu::enable (flags);
 
-    Hip::hip->set_feature (Hip::FEAT_IOMMU);
+    Hip::set_feature (Hip_arch::Feature::IOMMU);
 }
