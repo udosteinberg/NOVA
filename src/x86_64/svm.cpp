@@ -53,5 +53,5 @@ void Vmcb::init()
 
     trace (TRACE_VIRT, "VIRT: SVM:%#x", svm_version);
 
-    Hip::hip->set_feature (Hip::FEAT_SVM);
+    Hip::set_feature (Hip_arch::Feature::VIRT_SVM);
 }

@@ -38,10 +38,10 @@ class Space_gst final : public Space_mem<Space_gst>
 
         static Type type()
         {
-            if (Hip::hip->feature() & Hip::FEAT_VMX)
+            if (Hip::feature (Hip_arch::Feature::VIRT_VMX))
                 return Type::ITL;
 
-            if (Hip::hip->feature() & Hip::FEAT_SVM)
+            if (Hip::feature (Hip_arch::Feature::VIRT_SVM))
                 return Type::AMD;
 
             return Type::NONE;

@@ -1,0 +1,30 @@
+/*
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (x86)
+ *
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
+ *
+ * This file is part of the NOVA microhypervisor.
+ *
+ * NOVA is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * NOVA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License version 2 for more details.
+ */
+
+#include "hip_arch.hpp"
+#include "interrupt.hpp"
+
+void Hip_arch::build()
+{
+    num_vec = Interrupt::num_vec;
+    num_pin = Interrupt::num_pin;
+    num_gsi = Interrupt::num_gsi;
+
+    elog_phys = 0;
+    elog_size = 0;
+    elog_offs = 0;
+}
