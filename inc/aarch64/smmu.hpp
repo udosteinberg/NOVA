@@ -18,6 +18,7 @@
 #pragma once
 
 #include "cmdline.hpp"
+#include "hip.hpp"
 #include "intid.hpp"
 #include "list.hpp"
 #include "lock_guard.hpp"
@@ -107,6 +108,9 @@ class Smmu : public List<Smmu>, protected Mmio
 
                 for (auto smmu { list }; smmu; smmu = smmu->next)
                     ret &= smmu->init();
+
+                if (list && ret) [[likely]]
+                    Hip::set_feature (Hip_arch::Feature::SMMU_DMA);
             }
 
             return ret;
