@@ -1,5 +1,5 @@
 /*
- * Floating Point Unit (FPU)
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (Arm)
  *
  * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
@@ -15,10 +15,19 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "fpu.hpp"
+#include "hip_arch.hpp"
+#include "interrupt.hpp"
+#include "smmu.hpp"
 
-void Fpu::fini()
+void Hip_arch::build()
 {
-    Ec::switch_fpu (nullptr);
+    num_spi  = static_cast<uint16_t>(Interrupt::num_spi);
+    num_espi = static_cast<uint16_t>(Interrupt::num_espi);
+    num_lpi  = static_cast<uint32_t>(Interrupt::num_lpi);
+
+    num_smg = Smmu::avail_smg();
+    num_ctx = Smmu::avail_ctx();
+
+    trace (TRACE_ROOT, "INFO: SMG#: %5u", num_smg);
+    trace (TRACE_ROOT, "INFO: CTX#: %5u", num_ctx);
 }

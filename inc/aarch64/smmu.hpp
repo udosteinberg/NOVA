@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "hip.hpp"
 #include "intid.hpp"
 #include "list.hpp"
 #include "mmio.hpp"
@@ -59,6 +60,9 @@ class Smmu : public List<Smmu>, protected Mmio
             for (auto smmu { list }; smmu; smmu = smmu->next)
                 if (!smmu->init()) [[unlikely]]
                     return false;
+
+            if (list) [[likely]]
+                Hip::set_feature (Hip_arch::Feature::SMMU);
 
             return true;
         }
