@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,24 +20,20 @@
 
 #pragma once
 
-#include "compiler.hpp"
+#include "types.hpp"
 
-class Io
+class Io final
 {
     public:
-        template <typename T>
-        ALWAYS_INLINE
-        static inline unsigned in (unsigned port)
+        template<typename T> static auto in (port_t p)
         {
-            T val;
-            asm volatile ("in %w1, %0" : "=a" (val) : "Nd" (port));
-            return val;
+            T v;
+            asm volatile ("in %w1, %0" : "=a" (v) : "Nd" (p));
+            return v;
         }
 
-        template <typename T>
-        ALWAYS_INLINE
-        static inline void out (unsigned port, T val)
+        template<typename T> static void out (port_t p, T v)
         {
-            asm volatile ("out %0, %w1" : : "a" (val), "Nd" (port));
+            asm volatile ("out %0, %w1" : : "a" (v), "Nd" (p));
         }
 };
