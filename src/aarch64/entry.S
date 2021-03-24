@@ -44,13 +44,16 @@ vector_table:
 .org                    vector_table + 0x200
                         DECR_STACK
                         SAVE_STATE_EXC
-                        b       ret_kern_exception
+                        mov     x0, sp
+                        adr     lr, ret_kern_exception
+                        b       exc_kern_handler
 
 // Current EL with EL2 using SPx, IRQ
 .org                    vector_table + 0x280
                         DECR_STACK
                         SAVE_STATE_IRQ
-                        b       ret_kern_exception
+                        adr     lr, ret_kern_exception
+                        b       irq_kern_handler
 
 // Current EL with EL2 using SPx, FIQ
 .org                    vector_table + 0x300
@@ -67,12 +70,17 @@ vector_table:
 // Lower EL with EL1 using AArch64, Synchronous
 .org                    vector_table + 0x400
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       exc_user_handler
 
 // Lower EL with EL1 using AArch64, IRQ
 .org                    vector_table + 0x480
                         SAVE_STATE_IRQ
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       irq_user_handler
 
 // Lower EL with EL1 using AArch64, FIQ
 .org                    vector_table + 0x500
@@ -87,12 +95,17 @@ vector_table:
 // Lower EL with EL1 using AArch32, Synchronous
 .org                    vector_table + 0x600
                         SAVE_STATE_EXC
-                        b       .
+                        mov     x0, sp
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       exc_user_handler
 
 // Lower EL with EL1 using AArch32, IRQ
 .org                    vector_table + 0x680
                         SAVE_STATE_IRQ
-                        b       .
+                        adrp    x1, STCK_TOP
+                        mov     sp, x1
+                        b       irq_user_handler
 
 // Lower EL with EL1 using AArch32, FIQ
 .org                    vector_table + 0x700
