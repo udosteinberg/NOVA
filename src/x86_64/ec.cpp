@@ -235,6 +235,10 @@ void Ec::create_root()
         return;
     }
 
+    Hip::hip->build (root_s, root_e);
+
+    hst->update (Space_hst::info_addr(), Kmem::ptr_to_phys (Hip::hip), 0, Paging::Permissions (Paging::K | Paging::U | Paging::R), Memattr::ram());
+
     auto const ec { Pd::root->create_ec (s, obj, Space_obj::selectors - 4, Cpu::id, 0, 0, Space_hst::utcb_addr(), BIT (2) | BIT (1)) };
     auto const sc { Pd::root->create_sc (s, obj, Space_obj::selectors - 5, ec, Cpu::id, 1000, Scheduler::priorities - 1, 0) };
 
