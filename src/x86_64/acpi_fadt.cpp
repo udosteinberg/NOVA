@@ -55,7 +55,7 @@ void Acpi_table_fadt::parse() const
     }
 
     if (smi_cmd && acpi_enable) {
-        Io::out (smi_cmd, acpi_enable);
+        Io::out (static_cast<port_t>(smi_cmd), acpi_enable);
         while (!(Acpi::read (Acpi::PM1_CNT) & Acpi::PM1_CNT_SCI_EN))
             pause();
     }
