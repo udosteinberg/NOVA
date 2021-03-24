@@ -44,8 +44,8 @@ void Vmcb::init()
         return;
     }
 
-    Msr::write (Msr::IA32_EFER, Msr::read<uint32>(Msr::IA32_EFER) | EFER_SVME);
-    Msr::write (Msr::AMD_SVM_HSAVE_PA, root = Kmem::ptr_to_phys (new Vmcb));
+    Msr::write (Msr::Register::IA32_EFER, Msr::read (Msr::Register::IA32_EFER) | EFER_SVME);
+    Msr::write (Msr::Register::AMD_SVM_HSAVE_PA, root = Kmem::ptr_to_phys (new Vmcb));
 
     trace (TRACE_VIRT, "VMCB:%#010lx REV:%#x NPT:%d", root, svm_version, has_npt());
 }

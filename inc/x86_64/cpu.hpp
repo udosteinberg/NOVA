@@ -21,8 +21,12 @@
 
 #pragma once
 
+#include "arch.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
+#include "extern.hpp"
+#include "msr.hpp"
+#include "selectors.hpp"
 #include "spinlock.hpp"
 #include "types.hpp"
 
@@ -35,10 +39,7 @@ class Cpu
         static inline void check_features();
 
         ALWAYS_INLINE
-        static inline void setup_thermal();
-
-        ALWAYS_INLINE
-        static inline void setup_sysenter();
+        static inline void setup_msr();
 
         ALWAYS_INLINE
         static inline void setup_pcid();
@@ -66,8 +67,22 @@ class Cpu
             FEAT_SMEP           = 103,
             FEAT_SMAP           = 116,
             FEAT_1GB_PAGES      = 154,
+            FEAT_LM             = 157,
             FEAT_CMP_LEGACY     = 161,
             FEAT_SVM            = 162,
+        };
+
+        static inline constexpr struct State
+        {
+            uint64  star            { 0 };
+            uint64  lstar           { 0 };
+            uint64  fmask           { 0 };
+            uint64  kernel_gs_base  { 0 };
+        } hstate {
+            .star  = static_cast<uint64>(SEL_USER_CODE32) << 48 | static_cast<uint64>(SEL_KERN_CODE) << 32,
+            .lstar = reinterpret_cast<uintptr_t>(&entry_sys),
+            .fmask = RFL_VIP | RFL_VIF | RFL_AC | RFL_VM | RFL_RF | RFL_NT | RFL_IOPL | RFL_DF | RFL_IF | RFL_TF,
+            .kernel_gs_base = 0,
         };
 
         static unsigned online;
