@@ -1,11 +1,7 @@
 /*
- * Configuration
+ * Hypervisor Information Page (HIP): Architecture-Specific Part (x86)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
- * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,9 +15,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "hip_arch.hpp"
 
-#define NUM_CPU         64
-#define NUM_EXC         32
-#define NUM_VEC         256
-#define NUM_VMI         256
+void Hip_arch::build()
+{
+}

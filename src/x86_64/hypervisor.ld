@@ -91,8 +91,7 @@ SECTIONS
 
         PROVIDE_HIDDEN (KMEM_HVAS = .);
 
-        PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
-
+        PROVIDE_HIDDEN (MHIP_HVAS = .); . += 4K;
         PROVIDE_HIDDEN (PTAB_HVAS = .);
         PROVIDE_HIDDEN (PT3S_HPAS = . - OFFSET); . += 4K;
         PROVIDE_HIDDEN (PT2H_HPAS = . - OFFSET); . += 4K;
