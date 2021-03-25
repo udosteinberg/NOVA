@@ -96,6 +96,7 @@ class Msr final
             IA32_MC_STATUS                  = 0x401,        // IA32_MCG_CAP[7:0] > 0
             IA32_MC_ADDR                    = 0x402,        // IA32_MCG_CAP[7:0] > 0
             IA32_MC_MISC                    = 0x403,        // IA32_MCG_CAP[7:0] > 0
+            IA32_X2APIC                     = 0x800,        // X2APIC
         };
 
         static auto read (Register msr)

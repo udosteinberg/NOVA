@@ -148,7 +148,7 @@ void Sc::remote_enqueue()
             next->prev = prev->next = this;
         } else {
             r->queue = prev = next = this;
-            Lapic::send_ipi (cpu, VEC_IPI_RRQ);
+            Lapic::send_cpu (VEC_IPI_RRQ, cpu);
         }
     }
 }
