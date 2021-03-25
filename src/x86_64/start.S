@@ -22,6 +22,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 #include "selectors.hpp"
 
 #define PTE_ATTR_P      BIT (0)     // Present
@@ -68,6 +69,12 @@
                         mov     %eax, %cr0
 .endm
 
+.macro                  RECTIME SYMBOL
+                        rdtsc
+                        mov     %eax, 0 + \SYMBOL - OFFSET(%ebp)
+                        mov     %edx, 4 + \SYMBOL - OFFSET(%ebp)
+.endm
+
 .macro                  REL_SYM SYMBOL
                         add     %ebp, \SYMBOL(%ebp)
 .endm
@@ -82,7 +89,18 @@
  */
 .code32
 
-__init_bsp:             // Determine relocation offset
+__init_bsp:             // Check if we launched via Multiboot v2
+                        cmp     $MULTIBOOT_V2_LOADER, %eax
+                        je      .Lvalid_launch
+
+                        // Check if we launched via Multiboot v1
+                        cmp     $MULTIBOOT_V1_LOADER, %eax
+                        je      .Lvalid_launch
+
+                        hlt
+                        jmp     .
+.Lvalid_launch:
+                        // Determine relocation offset
                         xchg    %ebx, %esp
                         pop     %esi
                         call    .Lret_addr
@@ -91,7 +109,99 @@ __init_bsp:             // Determine relocation offset
             dec %esi;   sub     $.Lret_addr, %ebp
                         xchg    %ebx, %esp
 
-                        // Ensure flags are in a defined state
+                        // Store boot parameters
+                        mov     %eax, multiboot_p0 - OFFSET(%ebp)
+                        mov     %ebx, multiboot_p1 - OFFSET(%ebp)
+
+                        RECTIME multiboot_t0
+
+                        // Store image end address
+                        lea     NOVA_HPAE(%ebp), %eax
+                        mov     %eax, multiboot_ea - OFFSET(%ebp)
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        cmpl    $MULTIBOOT_V2_LOADER, multiboot_p0 - OFFSET(%ebp)
+                        jne     .Lmb1_launch
+
+                        // Prepare tag loop
+                        lea     8(%ebx), %ecx       // Tag Ptr
+                        add     0(%ebx), %ebx       // Tag End
+                        xor     %esi, %esi          // EFI Sys
+                        xor     %edi, %edi          // EFI Img
+.Lmb2_tag_loop:
+                        cmpl    $MULTIBOOT_V2_INFO_END, (%ecx)
+                        je      .Lmb2_end
+
+                        cmpl    $MULTIBOOT_V2_INFO_CMD, (%ecx)
+                        jne     .Lmb2_not_cmd
+                        lea     8(%ecx), %eax
+                        mov     %eax, multiboot_cl - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmpl    $MULTIBOOT_V2_INFO_MOD, (%ecx)
+                        jne     .Lmb2_not_mod
+                        cmpl    $0x0, multiboot_ra - OFFSET(%ebp)
+                        jne     .Lmb2_nxt_tag
+                        mov     8(%ecx), %eax
+                        mov     %eax, multiboot_ra - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_mod:
+                        cmpl    $MULTIBOOT_V2_INFO_SYS, (%ecx)
+                        jne     .Lmb2_not_sys
+                        mov     8(%ecx), %esi
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_sys:
+                        cmpl    $MULTIBOOT_V2_INFO_IMG, (%ecx)
+                        jne     .Lmb2_not_img
+                        mov     8(%ecx), %edi
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_img:
+                        cmpl    $MULTIBOOT_V2_INFO_KMEM, (%ecx)
+                        jne     .Lmb2_nxt_tag
+                        mov     $0x20000000, %edx
+                        sub     $(NOVA_HPAE - LOAD_ADDR), %edx
+                        mov     8(%ecx), %eax
+                        cmp     %edx, %eax
+                        cmova   %edx, %eax
+                        and     $~OFFS_MASK (1), %eax
+                        add     %eax, multiboot_ea - OFFSET(%ebp)
+.Lmb2_nxt_tag:
+                        mov     4(%ecx), %eax
+                        lea     7(%ecx,%eax), %ecx
+                        and     $~7, %ecx
+                        cmp     %ebx, %ecx
+                        jb      .Lmb2_tag_loop
+.Lmb2_end:
+                        // Initialize UEFI
+                        test    %edi, %edi
+                        jz      .Lmb_end
+                        test    %esi, %esi
+                        jz      .Lmb_end
+                        lea     uefi_info - OFFSET(%ebp), %edx
+                        call    uefi_init
+                        jmp     .Lmb_end
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        cmpl    $MULTIBOOT_V1_LOADER, multiboot_p0 - OFFSET(%ebp)
+                        jne     .Lmb_end
+
+                        testb   $BIT (MULTIBOOT_V1_INFO_CMD), (%ebx)
+                        jz      .Lmb1_not_cmd
+                        mov     16(%ebx), %eax
+                        mov     %eax, multiboot_cl - OFFSET(%ebp)
+.Lmb1_not_cmd:
+                        testb   $BIT (MULTIBOOT_V1_INFO_MOD), (%ebx)
+                        jz      .Lmb_end
+                        mov     20(%ebx), %eax
+                        test    %eax, %eax
+                        jz      .Lmb_end
+                        mov     24(%ebx), %eax
+                        mov     (%eax), %eax
+                        mov     %eax, multiboot_ra - OFFSET(%ebp)
+.Lmb_end:
+                        RECTIME multiboot_t1
+
+                        // Ensure flags are in a defined state (after UEFI init)
                         cli
                         cld
 
@@ -113,16 +223,18 @@ __init_bsp:             // Determine relocation offset
 
                         lea     PT1H_HPAS + __SIZEOF_POINTER__ * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & (BIT (PTE_BPL) - 1))(%ebp), %edx
                         lea     NOVA_HPAS + (PTE_ATTR_G | PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P)(%ebp), %ecx
-                        lea     NOVA_HPAE(%ebp), %eax
+                        mov     multiboot_ea - OFFSET(%ebp), %eax
 .Lpte_loop:             mov     %ecx, (%edx)
                         add     $__SIZEOF_POINTER__, %edx
                         add     $PAGE_SIZE (1), %ecx
                         cmp     %eax, %ecx
                         jb      .Lpte_loop
 
+                        RECTIME multiboot_t2
+
                         // Initialize jump target
-                        lea     __init_all(%ebp), %eax
-                        mov     %eax,           __relo_jip - OFFSET(%ebp)
+                        lea     __init_all(%ebp), %ebx
+                        mov     %ebx,           __relo_jip - OFFSET(%ebp)
                         movw    $SEL_KERN_CODE, __relo_jcs - OFFSET(%ebp)
 
                         INIT_PAGING
@@ -204,7 +316,6 @@ __init_all:             mov     $.Lhigh, %rax
                         REL_SYM .Lrelo_jip
                         REL_SYM .Lrelo_pdb
 
-                        mov     %rbx, %rdi
                         call    init
 .Lskip_init:
                         // Determine topology
@@ -239,13 +350,3 @@ __relo_jip:             .long   0                               // Jump IP
 __relo_jcs:             .word   0                               // Jump CS
 __relo_pdl:             .word   .Lboot_gdt - __boot_gdt - 1     // Pseudo Descriptor Limit
 __relo_pdb:             .quad   __boot_gdt                      // Pseudo Descriptor Base
-
-.section .init
-
-/*
- * Multiboot Header
- */
-                        .balign 8
-                        .long   0x1badb002
-                        .long   BIT (0)
-                        .long  -0x1badb002 - BIT (0)

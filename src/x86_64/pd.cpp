@@ -20,6 +20,7 @@
  */
 
 #include "mtrr.hpp"
+#include "multiboot.hpp"
 #include "pd.hpp"
 #include "stdio.hpp"
 
@@ -37,7 +38,7 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own))
     Mtrr::init();
 
     Space_mem::insert_root (0, LOAD_ADDR);
-    Space_mem::insert_root (reinterpret_cast<mword>(&NOVA_HPAE), USER_ADDR);
+    Space_mem::insert_root (Multiboot::ea, USER_ADDR);
 
     // HIP
     Space_mem::insert_root (Kmem::ptr_to_phys (&PAGE_H), Kmem::ptr_to_phys (&PAGE_H) + PAGE_SIZE (0), 1);
