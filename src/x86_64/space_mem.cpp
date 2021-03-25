@@ -52,7 +52,7 @@ void Space_mem::shootdown()
 
         auto ctr = Counter::req[1].get (cpu);
 
-        Lapic::send_ipi (cpu, VEC_IPI + 1);
+        Lapic::send_cpu (VEC_IPI + 1, cpu);
 
         while (Counter::req[1].get (cpu) == ctr)
             pause();

@@ -15,7 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.hpp"
+#include "lapic.hpp"
 #include "patch.hpp"
 #include "string.hpp"
 
@@ -27,6 +27,10 @@ void Patch::detect()
 
     switch (static_cast<uint8_t>(eax)) {
         default:
+            Cpu::cpuid (0x1, 0x0, eax, ebx, ecx, edx);
+            Lapic::x2apic = ecx & BIT (21);
+            [[fallthrough]];
+        case 0x0:
             break;
     }
 
