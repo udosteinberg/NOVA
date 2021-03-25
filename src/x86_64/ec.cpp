@@ -25,6 +25,7 @@
 #include "elf.hpp"
 #include "entry.hpp"
 #include "hip.hpp"
+#include "multiboot.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -222,8 +223,8 @@ void Ec::idle()
 
 void Ec::root_invoke()
 {
-    auto e = static_cast<Eh const *>(Hpt::remap (Hip::root_addr));
-    if (!Hip::root_addr || !e->valid (ELF_MACHINE))
+    auto const e { static_cast<Eh const *>(Hpt::remap (Multiboot::ra)) };
+    if (!Multiboot::ra || !e->valid (ELF_MACHINE))
         die ("No ELF");
 
     current->exc_regs().sp() = USER_ADDR - PAGE_SIZE (0);
