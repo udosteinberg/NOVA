@@ -34,7 +34,7 @@ class Cmdline final
         static inline bool nouart   { false };
         static inline bool novpid   { false };
 
-        static void init (Paddr);
+        static void init();
 
     private:
         static constexpr struct
