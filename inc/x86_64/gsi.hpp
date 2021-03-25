@@ -21,13 +21,16 @@
 #pragma once
 
 #include "assert.hpp"
-#include "config.hpp"
+#include "vectors.hpp"
 
 class Ioapic;
 class Sm;
 
 class Gsi
 {
+    private:
+        static auto gsi_to_vec (unsigned gsi) { return static_cast<uint8_t>(gsi + VEC_GSI); }
+
     public:
         Sm *            sm;
         Ioapic *        ioapic;
