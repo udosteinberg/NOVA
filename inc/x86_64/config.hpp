@@ -28,6 +28,6 @@
 #define NUM_EXC         32
 #define NUM_VMI         256
 #define NUM_GSI         128
-#define NUM_LVT         6
+#define NUM_LVT         5
 #define NUM_MSI         1
 #define NUM_IPI         2
