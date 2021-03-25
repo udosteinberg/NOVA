@@ -27,7 +27,7 @@ extern char PAGE_0;
 extern char PAGE_1;
 extern char PAGE_H;
 
-extern char GIT_VER, NOVA_HPAS, NOVA_HPAE, PTAB_HVAS, DSTK_TOP;
+extern char GIT_VER, NOVA_HPAS, PTAB_HVAS, DSTK_TOP;
 extern void (*CTORS_S)(), (*CTORS_E)(), (*CTORS_C)(), (*CTORS_L)();
 
 extern char entry_sys;
