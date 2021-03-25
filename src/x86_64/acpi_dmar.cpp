@@ -27,6 +27,7 @@
 #include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
+#include "lapic.hpp"
 #include "pci.hpp"
 #include "pd.hpp"
 
@@ -75,6 +76,10 @@ void Acpi_rmrr::parse() const
 
 void Acpi_table_dmar::parse() const
 {
+    // Check if firmware opts out of X2APIC support
+    if ((flags & BIT_RANGE (1, 0)) == BIT_RANGE (1, 0))
+        Lapic::x2apic = false;
+
     if (Cmdline::nosmmu) [[unlikely]]
         return;
 
