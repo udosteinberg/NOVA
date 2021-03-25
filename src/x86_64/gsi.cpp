@@ -56,9 +56,9 @@ uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic) {
-        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : aid);
-        ioapic->set_irt (gsi, gsi_table[gsi].irt);
-        rid = ioapic->get_rid();
+        ioapic->set_dst (gsi, Dmar::ire() ? gsi << 17 | BIT (16) : aid << 24);
+        ioapic->set_cfg (gsi, false, gsi_table[gsi].trg, gsi_table[gsi].pol);
+        rid = ioapic->rid();
     } else {
         msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
         msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
@@ -74,7 +74,7 @@ void Gsi::mask (unsigned gsi)
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic)
-        ioapic->set_irt (gsi, 1U << 16 | gsi_table[gsi].irt);
+        ioapic->set_cfg (gsi, true, gsi_table[gsi].trg, gsi_table[gsi].pol);
 }
 
 void Gsi::unmask (unsigned gsi)
@@ -82,7 +82,7 @@ void Gsi::unmask (unsigned gsi)
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 
     if (ioapic)
-        ioapic->set_irt (gsi, 0U << 16 | gsi_table[gsi].irt);
+        ioapic->set_cfg (gsi, false, gsi_table[gsi].trg, gsi_table[gsi].pol);
 }
 
 void Gsi::vector (unsigned vector)
