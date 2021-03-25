@@ -22,6 +22,7 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 #include "selectors.hpp"
 
 #define PTE_ATTR_P      BIT (0)     // Present
@@ -84,6 +85,12 @@
                         add     %ebp, \SYMBOL(%ebp)
 .endm
 
+.macro                  RECTIME SYMBOL
+                        rdtsc
+                        mov     %eax, 0 + \SYMBOL - OFFSET(%ebp)
+                        mov     %edx, 4 + \SYMBOL - OFFSET(%ebp)
+.endm
+
 /*
  * Initialization Code
  */
@@ -98,6 +105,18 @@ __init_bsp:             // Ensure flags are in a defined state
                         cld
                         cli
 
+                        // Check if we launched via Multiboot v2
+                        cmp     $MULTIBOOT_V2_LOADER, %eax
+                        je      .Lrel_offs
+
+                        // Check if we launched via Multiboot v1
+                        cmp     $MULTIBOOT_V1_LOADER, %eax
+                        je      .Lrel_offs
+
+.Lcrash:                // Crash and burn
+                        ud2
+                        jmp     .
+
 .Lrel_offs:             // Determine relocation offset
             dec %edx;   mov     %esp, %edi
                         mov     %ebx, %esp
@@ -107,6 +126,165 @@ __init_bsp:             // Ensure flags are in a defined state
                         push    %esi
             dec %edx;   sub     $.Lret_addr, %ebp
             dec %edx;   mov     %edi, %esp
+
+                        // Crash if load skew is misaligned
+                        test    $ALIGNMENT_OFFS (ALIGNMENT_NOVA), %ebp
+                        jnz     .Lcrash
+
+                        // Store boot parameters
+                        mov     %eax, multiboot_p0 - OFFSET(%ebp)
+                        mov     %ebx, multiboot_p1 - OFFSET(%ebp)
+                        mov     %ecx, multiboot_p2 - OFFSET(%ebp)
+
+                        RECTIME multiboot_t0
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        cmpl    $MULTIBOOT_V2_LOADER, multiboot_p0 - OFFSET(%ebp)
+                        jne     .Lmb1_launch
+
+                        // Prepare tag loop
+                        xor     %edi, %edi
+                        xor     %esi, %esi
+                        mov     (%ebx), %ecx
+                        mov     $0x8, %edx
+.Lmb2_nxt_tag:
+                        lea     15(%edx), %edx
+                        and     $~7, %edx
+                        sub     %edx, %ecx
+                        jb      .Lmb2_end
+                        add     %edx, %ebx
+                        jc      .Lcrash             // Crash if >= 2^32
+                        mov     -0x8(%ebx), %eax
+                        mov     -0x4(%ebx), %edx
+                        sub     $0x8, %edx
+                        cmp     %edx, %ecx
+                        jb      .Lmb2_end
+
+                        cmp     $MULTIBOOT_V2_INFO_END, %eax
+                        je      .Lmb2_end
+
+                        cmp     $MULTIBOOT_V2_INFO_CMD, %eax
+                        jne     .Lmb2_not_cmd
+                        test    %edx, %edx
+                        jz      .Lmb2_end
+                        lea     (%ebx, %edx), %eax
+                        cmpb    $0, -1(%eax)
+                        jne     .Lmb2_end
+                        mov     %ebx, multiboot_cs - OFFSET(%ebp)
+                        mov     %eax, multiboot_ce - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmp     $MULTIBOOT_V2_INFO_MOD_32, %eax
+                        jne     .Lmb2_not_mod_32
+                        cmp     $8, %edx
+                        jbe     .Lmb2_end
+                        mov     multiboot_re + 0 - OFFSET(%ebp), %eax
+                        or      multiboot_re + 4 - OFFSET(%ebp), %eax
+                        jnz     .Lmb2_nxt_tag
+                        mov     0x0(%ebx), %eax
+                        mov     %eax, multiboot_rs + 0 - OFFSET(%ebp)
+                        mov     0x4(%ebx), %eax
+                        mov     %eax, multiboot_re + 0 - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_mod_32:
+                        cmp     $MULTIBOOT_V2_INFO_SYS_64, %eax
+                        jne     .Lmb2_not_sys_64
+                        cmp     $8, %edx
+                        jne     .Lmb2_end
+            dec %eax;   mov     0x0(%ebx), %esi
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_sys_64:
+                        cmp     $MULTIBOOT_V2_INFO_RSDP_2, %eax
+                        jne     .Lmb2_not_rsdp_2
+                        cmp     $35, %edx
+                        jbe     .Lmb2_end
+                        mov     %ebx, uefi_info - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_rsdp_2:
+                        cmp     $MULTIBOOT_V2_INFO_IMG_64, %eax
+                        jne     .Lmb2_not_img_64
+                        cmp     $8, %edx
+                        jne     .Lmb2_end
+            dec %eax;   mov     0x0(%ebx), %edi
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_img_64:
+                        cmp     $MULTIBOOT_V2_INFO_MOD_64, %eax
+                        jne     .Lmb2_not_mod_64
+                        cmp     $16, %edx
+                        jbe     .Lmb2_end
+                        mov     multiboot_re + 0 - OFFSET(%ebp), %eax
+                        or      multiboot_re + 4 - OFFSET(%ebp), %eax
+                        jnz     .Lmb2_nxt_tag
+                        mov     0x0(%ebx), %eax
+                        mov     %eax, multiboot_rs + 0 - OFFSET(%ebp)
+                        mov     0x4(%ebx), %eax
+                        mov     %eax, multiboot_rs + 4 - OFFSET(%ebp)
+                        mov     0x8(%ebx), %eax
+                        mov     %eax, multiboot_re + 0 - OFFSET(%ebp)
+                        mov     0xc(%ebx), %eax
+                        mov     %eax, multiboot_re + 4 - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_mod_64:
+                        cmp     $MULTIBOOT_V2_INFO_KMEM, %eax
+                        jne     .Lmb2_nxt_tag
+                        cmp     $8, %edx
+                        jne     .Lmb2_end
+                        mov     $(MMAP_GLB_MMIO - LINK_ADDR), %eax
+                        sub     $(NOVA_HPAE - LOAD_ADDR), %eax
+                        cmpl    $0, 0x4(%ebx)
+                        jnz     .Lmb2_kmem_limit
+                        cmp     %eax, (%ebx)
+                        cmovb   (%ebx), %eax
+.Lmb2_kmem_limit:       and     $~OFFS_MASK (1), %eax
+                        mov     %eax, multiboot_ea - OFFSET(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_end:
+                        // Check if 64-bit UEFI init is applicable
+                        xor     %eax, %eax
+            dec %eax;   test    %eax, %eax
+                        jnz     .Lmb_end
+            dec %eax;   test    %edi, %edi
+                        jz      .Lmb_end
+            dec %eax;   test    %esi, %esi
+                        jz      .Lmb_end
+
+                        // UEFI execution environment requires IF=1 and guarantees >= 128K stack space
+                        sti
+                        lea     uefi_info - OFFSET(%ebp), %edx
+                        call    uefi_init
+
+                        // Ensure flags are in a defined state again
+                        cld
+                        cli
+                        jmp     .Lmb_end
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        cmpl    $MULTIBOOT_V1_LOADER, multiboot_p0 - OFFSET(%ebp)
+                        jne     .Lmb_end
+
+                        testb   $BIT (MULTIBOOT_V1_INFO_CMD), (%ebx)
+                        jz      .Lmb1_not_cmd
+                        mov     16(%ebx), %ecx
+                        mov     %ecx, multiboot_cs - OFFSET(%ebp)
+                        mov     %ecx, multiboot_ce - OFFSET(%ebp)   // FIXME
+.Lmb1_not_cmd:
+                        testb   $BIT (MULTIBOOT_V1_INFO_MOD), (%ebx)
+                        jz      .Lmb_end
+                        mov     20(%ebx), %ecx
+                        test    %ecx, %ecx
+                        jz      .Lmb_end
+                        mov     24(%ebx), %ecx
+                        mov     0(%ecx), %eax
+                        mov     4(%ecx), %edx
+                        mov     %eax, multiboot_rs - OFFSET(%ebp)
+                        mov     %edx, multiboot_re - OFFSET(%ebp)
+.Lmb_end:
+                        RECTIME multiboot_t1
+
+                        // Compute image end address with heap extension
+                        lea     NOVA_HPAE(%ebp), %eax
+                        add     %eax, multiboot_ea - OFFSET(%ebp)
+                        jc      .Lcrash             // Crash if >= 2^32
 
                         // Load relocated boot GDT
                         REL_SYM (__relo_pdb - OFFSET)
@@ -126,12 +304,14 @@ __init_bsp:             // Ensure flags are in a defined state
 
                         lea     PT1H_HPAS + __SIZEOF_POINTER__ * (LINK_ADDR >> LEVL_BITS (1) & (BIT (PTE_BPL) - 1))(%ebp), %edx
                         lea     NOVA_HPAS + (PTE_ATTR_G | PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P)(%ebp), %ecx
-                        lea     NOVA_HPAE(%ebp), %eax
+                        mov     multiboot_ea - OFFSET(%ebp), %eax
 .Lpte_loop:             mov     %ecx, (%edx)
                         add     $__SIZEOF_POINTER__, %edx
                         add     $PAGE_SIZE (1), %ecx
                         cmp     %eax, %ecx
                         jb      .Lpte_loop
+
+                        RECTIME multiboot_t2
 
                         // Disable any active firmware paging mode because it may differ from ours
                         mov     %cr0, %ecx
@@ -225,7 +405,6 @@ __init_all:             mov     $.Lhigh, %rax
                         REL_SYM .Lrelo_jip
                         REL_SYM .Lrelo_pdb
 
-                        mov     %rbx, %rdi
                         call    init
 .Lskip_init:
                         // Determine topology
@@ -260,13 +439,3 @@ __relo_jip:             .long   0                               // Jump IP
 __relo_jcs:             .word   0                               // Jump CS
 __relo_pdl:             .word   .Lboot_gdt - __boot_gdt - 1     // Pseudo Descriptor Limit
 __relo_pdb:             .quad   __boot_gdt                      // Pseudo Descriptor Base
-
-.section .init
-
-/*
- * Multiboot Header
- */
-                        .balign 8
-                        .long   0x1badb002
-                        .long   BIT (0)
-                        .long  -0x1badb002 - BIT (0)
