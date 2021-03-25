@@ -29,6 +29,7 @@ extern char PAGE_0;
 extern char PAGE_1;
 extern char PAGE_H;
 
+extern uintptr_t __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts;
 extern uintptr_t NOVA_HPAS, NOVA_HPAE, PTAB_HVAS;
 
 extern void (*CTORS_L)();
