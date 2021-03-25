@@ -37,6 +37,7 @@ SECTIONS
     .init LOAD_ADDR :
     {
         *(.init .init.*)
+        KEEP (*(.multiboot))
     } : init
 
     .stack :

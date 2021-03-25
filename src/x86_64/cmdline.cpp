@@ -21,6 +21,7 @@
  */
 
 #include "cmdline.hpp"
+#include "extern.hpp"
 #include "hpt.hpp"
 #include "string.hpp"
 
@@ -43,7 +44,10 @@ void Cmdline::parse (char const *line)
                 options[i].var = true;
 }
 
-void Cmdline::init (Paddr addr)
+void Cmdline::init()
 {
-    parse (static_cast<char const *>(Hpt::remap (addr)));
+    auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
+
+    if (addr)
+        parse (static_cast<char const *>(Hpt::remap (addr)));
 }
