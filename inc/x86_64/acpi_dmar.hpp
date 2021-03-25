@@ -32,7 +32,7 @@ class Acpi_scope
         uint8       id, b, d, f;
 
         ALWAYS_INLINE
-        inline unsigned rid() const { return b << 8 | d << 3 | f; }
+        inline pci_t rid() const { return b << 8 | d << 3 | f; }
 };
 
 /*
