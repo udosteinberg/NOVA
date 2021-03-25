@@ -254,6 +254,9 @@ void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], 
         }
     }
 
+    if (Cmdline::nodl) [[unlikely]]
+        defeature (Feature::TSC_DEADLINE);
+
     if (Cmdline::nopcid) [[unlikely]]
         defeature (Feature::PCID);
 
@@ -299,7 +302,7 @@ void Cpu::init()
 
     enumerate_features (clk, rat, lvl, name);
 
-    Lapic::init();
+    Lapic::init (clk, rat);
 
     mword attr;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
