@@ -73,6 +73,7 @@ class Cpu final
             // 0x1.ECX
             VMX                     = 1 * 32 +  5,      // Virtual Machine Extensions
             PCID                    = 1 * 32 + 17,      // Process Context Identifiers
+            X2APIC                  = 1 * 32 + 21,      // x2APIC Support
             TSC_DEADLINE            = 1 * 32 + 24,      // TSC Deadline Support
             // 0x7.EBX
             SMEP                    = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
