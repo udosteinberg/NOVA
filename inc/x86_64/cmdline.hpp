@@ -36,7 +36,7 @@ class Cmdline final
         SEC_HASH static inline bool nouart   { false };
         SEC_HASH static inline bool novpid   { false };
 
-        static void init (Paddr);
+        static void init();
 
     private:
         static constexpr struct

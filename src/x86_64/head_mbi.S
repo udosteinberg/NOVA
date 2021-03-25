@@ -1,11 +1,10 @@
 /*
- * Command Line Parser
+ * Multiboot Headers
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
  * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -20,32 +19,23 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cmdline.hpp"
-#include "hpt.hpp"
+#include "macros.hpp"
 #include "multiboot.hpp"
-#include "string.hpp"
 
-size_t Cmdline::arg_len (char const *&line)
-{
-    for (; *line == ' '; line++) ;
+.section .head
+                        .balign 8
 
-    char const *p;
+.Lmb2:                  .long   MULTIBOOT_V2_HEADER
+                        .long   0
+                        .long   .Lmb1 - .Lmb2
+                        .long -(.Lmb1 - .Lmb2) - MULTIBOOT_V2_HEADER
+                        .quad   0x0000000800000006
+                        .quad   0x0000000800000007
+                        .quad   0x000000180000000a
+                        .quad   0xffffffff00200000
+                        .quad   0x0000000200200000
+                        .quad   0x0000000800000000
 
-    for (p = line; *p && *p != ' '; p++) ;
-
-    return static_cast<size_t>(p - line);
-}
-
-void Cmdline::parse (char const *line)
-{
-    for (size_t len; (len = arg_len (line)); line += len)
-        for (unsigned i { 0 }; i < sizeof (options) / sizeof (*options); i++)
-            if (!strncmp (options[i].str, line, len))
-                options[i].var = true;
-}
-
-void Cmdline::init()
-{
-    if (Multiboot::cl)
-        parse (static_cast<char const *>(Hpt::remap (Multiboot::cl)));
-}
+.Lmb1:                  .long   MULTIBOOT_V1_HEADER
+                        .long   BIT (0)
+                        .long  -BIT (0) - MULTIBOOT_V1_HEADER
