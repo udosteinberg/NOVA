@@ -58,7 +58,7 @@ void Space_mem::shootdown()
 
         auto ctr = Counter::req[1].get (cpu);
 
-        Lapic::send_ipi (cpu, VEC_IPI_RKE);
+        Lapic::send_cpu (VEC_IPI_RKE, cpu);
 
         while (Counter::req[1].get (cpu) == ctr)
             pause();

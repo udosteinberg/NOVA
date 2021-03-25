@@ -1,5 +1,5 @@
 /*
- * Local Advanced Programmable Interrupt Controller (Local APIC)
+ * Local Advanced Programmable Interrupt Controller (LAPIC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,7 +21,7 @@
  */
 
 #include "acpi.hpp"
-#include "cmdline.hpp"
+#include "barrier.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
 #include "lapic.hpp"
@@ -31,91 +31,88 @@
 #include "string.hpp"
 #include "vectors.hpp"
 
-void Lapic::init()
+void Lapic::init (uint32_t clk, uint32_t rat)
 {
-    Paddr apic_base = static_cast<Paddr>(Msr::read (Msr::Reg64::IA32_APIC_BASE));
+    auto const apic_base { Msr::read (Msr::Reg64::IA32_APIC_BASE) };
 
 #if 0   // FIXME
     Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK (0));
 #endif
 
+    // Map MMIO region
     Hptp (Hpt::current()).update (MMAP_CPU_APIC, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, apic_base & ~OFFS_MASK (0));
 
-    Msr::write (Msr::Reg64::IA32_APIC_BASE, apic_base | 0x800);
+    // Determine CPU number from the APIC ID of the currently enabled interface
+    Cpu::id = lookup (apic_base & BIT (10) ? read_x2apic (Reg32::IDR) : read_legacy (Reg32::IDR) >> 24);
 
-    uint32 svr = read (LAPIC_SVR);
-    if (!(svr & 0x100))
-        write (LAPIC_SVR, svr | 0x100);
+    // HW enable
+    Msr::write (Msr::Reg64::IA32_APIC_BASE, apic_base | BIT (11) | BIT (10) * x2apic);
 
-    bool dl = Cpu::feature (Cpu::Feature::TSC_DEADLINE) && !Cmdline::nodl;
+    // SW enable
+    write (Reg32::SVR, read (Reg32::SVR) | BIT (8));
+
+    bool const dl { Cpu::feature (Cpu::Feature::TSC_DEADLINE) };
 
     switch (lvt_max()) {
         default:
-            set_lvt (LAPIC_LVT_THERM, DLV_FIXED, VEC_LVT_THERM);
+            set_lvt (Reg32::LVT_THERM, Delivery::DLV_FIXED, VEC_LVT_THERM);
             [[fallthrough]];
         case 4:
-            set_lvt (LAPIC_LVT_PERFM, DLV_FIXED, VEC_LVT_PERFM);
+            set_lvt (Reg32::LVT_PERFM, Delivery::DLV_FIXED, VEC_LVT_PERFM);
             [[fallthrough]];
         case 3:
-            set_lvt (LAPIC_LVT_ERROR, DLV_FIXED, VEC_LVT_ERROR);
+            set_lvt (Reg32::LVT_ERROR, Delivery::DLV_FIXED, VEC_LVT_ERROR);
             [[fallthrough]];
         case 2:
-            set_lvt (LAPIC_LVT_LINT1, DLV_NMI, 0);
+            set_lvt (Reg32::LVT_LINT1, Delivery::DLV_NMI, 0);
             [[fallthrough]];
         case 1:
-            set_lvt (LAPIC_LVT_LINT0, DLV_EXTINT, 0, 1U << 16);
+            set_lvt (Reg32::LVT_LINT0, Delivery::DLV_EXTINT, 0, BIT (16));
             [[fallthrough]];
         case 0:
-            set_lvt (LAPIC_LVT_TIMER, DLV_FIXED, VEC_LVT_TIMER, dl ? 2U << 17 : 0);
+            set_lvt (Reg32::LVT_TIMER, Delivery::DLV_FIXED, VEC_LVT_TIMER, BIT (18) * dl);
     }
 
-    write (LAPIC_TPR, 0x10);
-    write (LAPIC_TMR_DCR, 0xb);
+    write (Reg32::TPR, 0x10);
+    write (Reg32::TMR_DCR, 0xb);
 
-    Cpu::id = lookup (idr());
-
-    if ((Cpu::bsp = apic_base & 0x100)) {
+    if ((Cpu::bsp = apic_base & BIT (8))) {
 
         extern char __init_aps, __init_aps__;
 
         memcpy (Hpt::remap (0x1000), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__init_aps__ - &__init_aps);
 
-        send_ipi (0, 0, DLV_INIT, DSH_EXC_SELF);
+        send_exc (0, Delivery::DLV_INIT);
 
-        write (LAPIC_TMR_ICR, ~0U);
+        write (Reg32::TMR_ICR, ~0U);
 
-        auto v1 = read (LAPIC_TMR_CCR);
-        auto t1 = time();
+        auto const c1 { read (Reg32::TMR_CCR) };
+        auto const t1 { time() };
         Acpi::delay (10);
-        auto v2 = read (LAPIC_TMR_CCR);
-        auto t2 = time();
+        auto const c2 { read (Reg32::TMR_CCR) };
+        auto const t2 { time() };
 
-        auto v = v1 - v2;
-        auto t = t2 - t1;
+        auto const c { c1 - c2 };
+        auto const t { t2 - t1 };
+        auto const f { static_cast<uint64_t>(clk) * rat };
 
-        ratio = dl ? 0 : static_cast<unsigned>((t + v / 2) / v);
+        ratio = dl ? 0 : f ? rat : static_cast<unsigned>((t + c / 2) / c);
 
-        Stc::freq = t * 100;
+        Stc::freq = f ? f : t * 100;
 
-        trace (TRACE_INTR, "FREQ: TSC:%lu Hz Ratio:%u", Stc::freq, ratio);
+        trace (TRACE_INTR, "FREQ: %lu Hz (%s) Ratio:%u", Stc::freq, f ? "enumerated" : "measured", ratio);
 
-        send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
+        send_exc (1, Delivery::DLV_SIPI);
         Acpi::delay (1);
-        send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
+        send_exc (1, Delivery::DLV_SIPI);
     }
 
-    write (LAPIC_TMR_ICR, 0);
+    write (Reg32::TMR_ICR, 0);
 
-    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~OFFS_MASK (0), idr(), version(), lvt_max(), ratio ? "OS" : "DL");
-}
+    // Enforce ordering between the LVT MMIO write that enables TSC deadline mode and later WRMSRs to IA32_TSC_DEADLINE
+    Barrier::fmb();
 
-void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
-{
-    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
-        pause();
-
-    write (LAPIC_ICR_HI, id[cpu] << 24);
-    write (LAPIC_ICR_LO, dsh | 1U << 14 | dlv | vector);
+    trace (TRACE_INTR, "APIC: LOC:%#04x VER:%#x SUP:%u LVT:%#x (x%sAPIC %s Mode)", id[Cpu::id], version(), eoi_sup(), lvt_max(), x2apic ? "2" : "", ratio ? "OS" : "DL");
 }
 
 void Lapic::therm_handler() {}
@@ -124,13 +121,13 @@ void Lapic::perfm_handler() {}
 
 void Lapic::error_handler()
 {
-    write (LAPIC_ESR, 0);
-    write (LAPIC_ESR, 0);
+    write (Reg32::ESR, 0);
+    write (Reg32::ESR, 0);
 }
 
 void Lapic::timer_handler()
 {
-    bool const expired { (ratio ? read (LAPIC_TMR_CCR) : Msr::read (Msr::Reg64::IA32_TSC_DEADLINE)) == 0 };
+    bool const expired { (ratio ? read (Reg32::TMR_CCR) : Msr::read (Msr::Reg64::IA32_TSC_DEADLINE)) == 0 };
 
     if (expired)
         Timeout::check();
@@ -138,7 +135,7 @@ void Lapic::timer_handler()
 
 void Lapic::lvt_vector (unsigned vector)
 {
-    unsigned lvt = vector - VEC_LVT;
+    auto const lvt { vector - VEC_LVT };
 
     switch (vector) {
         case VEC_LVT_TIMER: timer_handler(); break;
@@ -154,7 +151,7 @@ void Lapic::lvt_vector (unsigned vector)
 
 void Lapic::ipi_vector (unsigned vector)
 {
-    unsigned ipi = vector - VEC_IPI;
+    auto const ipi { vector - VEC_IPI };
 
     switch (vector) {
         case VEC_IPI_RRQ: Sc::rrq_handler(); break;
