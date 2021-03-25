@@ -24,7 +24,6 @@
 #include "cpu.hpp"
 #include "hip.hpp"
 #include "hpt.hpp"
-#include "multiboot.hpp"
 #include "space_obj.hpp"
 #include "stc.hpp"
 
@@ -33,7 +32,7 @@ mword Hip::root_size;
 
 Hip *Hip::hip = reinterpret_cast<Hip *>(&PAGE_H);
 
-void Hip::build (mword addr)
+void Hip::build (mword)
 {
     signature  = 0x41564f4e;
     cpu_offs   = reinterpret_cast<mword>(cpu_desc) - reinterpret_cast<mword>(this);
@@ -49,63 +48,7 @@ void Hip::build (mword addr)
     cfg_page   = PAGE_SIZE;
     cfg_utcb   = PAGE_SIZE;
 
-    Multiboot *mbi = static_cast<Multiboot *>(Hpt::remap (addr));
-
-    uint32 flags       = mbi->flags;
-    uint32 cmdline     = mbi->cmdline;
-    uint32 mmap_addr   = mbi->mmap_addr;
-    uint32 mmap_len    = mbi->mmap_len;
-    uint32 mods_addr   = mbi->mods_addr;
-    uint32 mods_count  = mbi->mods_count;
-
-    if (flags & Multiboot::CMDLINE)
-        Cmdline::init (cmdline);
-
-    Hip_mem *mem = mem_desc;
-
-    if (flags & Multiboot::MEMORY_MAP)
-        add_mem (mem, mmap_addr, mmap_len);
-
-    if (flags & Multiboot::MODULES)
-        add_mod (mem, mods_addr, mods_count);
-
-    add_mhv (mem);
-
-    length = static_cast<uint16>(reinterpret_cast<mword>(mem) - reinterpret_cast<mword>(this));
-}
-
-void Hip::add_mem (Hip_mem *&mem, mword addr, size_t len)
-{
-    char *mmap_addr = static_cast<char *>(Hpt::remap (addr));
-
-    for (char *ptr = mmap_addr; ptr < mmap_addr + len; mem++) {
-
-        Multiboot_mmap *map = reinterpret_cast<Multiboot_mmap *>(ptr);
-
-        mem->addr = map->addr;
-        mem->size = map->len;
-        mem->type = map->type;
-        mem->aux  = 0;
-
-        ptr += map->size + 4;
-    }
-}
-
-void Hip::add_mod (Hip_mem *&mem, mword addr, size_t count)
-{
-    Multiboot_module *mod = static_cast<Multiboot_module *>(Hpt::remap (addr));
-
-    if (count) {
-        root_addr = mod->s_addr;
-        root_size = mod->e_addr - mod->s_addr;
-    }
-
-    for (unsigned i = 0; i < count; i++, mod++, mem++) {
-        mem->addr = mod->s_addr;
-        mem->size = mod->e_addr - mod->s_addr;
-        mem->type = Hip_mem::MB_MODULE;
-        mem->aux  = mod->cmdline;
-    }
+    length = static_cast<uint16>(reinterpret_cast<mword>(mem_desc) - reinterpret_cast<mword>(this));
 }
 
 void Hip::add_mhv (Hip_mem *&mem)
