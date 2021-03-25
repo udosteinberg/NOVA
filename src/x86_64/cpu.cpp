@@ -176,6 +176,8 @@ void Cpu::setup_pcid()
 
 void Cpu::init()
 {
+    uint32 clk { 0 }, rat { 0 };
+
     for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
 
     Gdt::build();
@@ -189,7 +191,7 @@ void Cpu::init()
     // Initialize CPU number and check features
     check_features();
 
-    Lapic::init();
+    Lapic::init (clk, rat);
 
     Paddr phys; mword attr;
     Pd::kern.Space_mem::loc[id] = Hptp (Hpt::current());
