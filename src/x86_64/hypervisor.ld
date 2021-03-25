@@ -41,6 +41,7 @@ SECTIONS
     .init :
     {
         *(.init .init.*)
+        KEEP (*(.head))
     } : init
 
     .text . + OFFSET : AT (ADDR (.text) - OFFSET)
