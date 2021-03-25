@@ -60,7 +60,7 @@ void Acpi_table_madt::parse_ioapic (Acpi_apic const *ptr)
     Ioapic *ioapic = new Ioapic (p->phys, p->id, p->gsi);
 
     unsigned gsi = p->gsi;
-    unsigned max = ioapic->irt_max();
+    unsigned max = ioapic->mre();
 
     for (unsigned short i = 0; i <= max && gsi < NUM_GSI; i++, gsi++)
         Gsi::gsi_table[gsi].ioapic = ioapic;
