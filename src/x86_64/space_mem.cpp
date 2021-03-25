@@ -40,7 +40,7 @@ void Space_mem::init (unsigned cpu)
 
 void Space_mem::shootdown()
 {
-    for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
+    for (cpu_t cpu { 0 }; cpu < NUM_CPU; cpu++) {
 
         if (!Hip::hip->cpu_online (cpu))
             continue;
@@ -57,7 +57,7 @@ void Space_mem::shootdown()
 
         auto ctr = Counter::req[1].get (cpu);
 
-        Lapic::send_ipi (cpu, VEC_IPI_RKE);
+        Lapic::send_cpu (VEC_IPI_RKE, cpu);
 
         while (Counter::req[1].get (cpu) == ctr)
             pause();

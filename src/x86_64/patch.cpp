@@ -16,7 +16,7 @@
  */
 
 #include "assert.hpp"
-#include "cpu.hpp"
+#include "lapic.hpp"
 #include "patch.hpp"
 #include "string.hpp"
 
@@ -30,6 +30,10 @@ void Patch::init()
 
     switch (static_cast<uint8_t>(eax)) {
         default:
+            Cpu::cpuid (0x1, 0x0, eax, ebx, ecx, edx);
+            Lapic::x2apic = ecx & BIT (21);
+            [[fallthrough]];
+        case 0x0:
             break;
     }
 
