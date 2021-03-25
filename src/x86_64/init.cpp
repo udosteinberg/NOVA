@@ -20,10 +20,10 @@
  */
 
 #include "acpi.hpp"
+#include "cmdline.hpp"
 #include "compiler.hpp"
 #include "console_serial.hpp"
 #include "gsi.hpp"
-#include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
 #include "pic.hpp"
@@ -51,7 +51,7 @@ uintptr_t kern_ptab_setup (apic_t)
 }
 
 extern "C"
-void init (uintptr_t mbi)
+void init()
 {
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
@@ -59,7 +59,7 @@ void init (uintptr_t mbi)
 
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
-    Hip::hip->build (mbi);
+    Cmdline::init();
 
     for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
 

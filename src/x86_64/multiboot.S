@@ -19,19 +19,27 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "macros.hpp"
+#include "multiboot.hpp"
 
-#define MULTIBOOT_V1_HEADER     0x1badb002
-#define MULTIBOOT_V1_LOADER     0x2badb002
+.section .multiboot
 
-#define MULTIBOOT_V1_INFO_CMD   2
-#define MULTIBOOT_V1_INFO_MOD   3
+/*
+ * Multiboot Headers
+ */
+.balign                 8
 
-#define MULTIBOOT_V2_HEADER     0xe85250d6
-#define MULTIBOOT_V2_LOADER     0x36d76289
+2:                      .long   MULTIBOOT_V2_HEADER
+                        .long   0
+                        .long   1f - 2b
+                        .long -(1f - 2b) - MULTIBOOT_V2_HEADER
+                        .quad   0x0000000800000006
+                        .quad   0x0000000800000007
+                        .quad   0x000000180000000a
+                        .quad   0xffffffff00200000
+                        .quad   0x0000000200200000
+                        .quad   0x0000000800000000
 
-#define MULTIBOOT_V2_INFO_END   0
-#define MULTIBOOT_V2_INFO_CMD   1
-#define MULTIBOOT_V2_INFO_MOD   3
-#define MULTIBOOT_V2_INFO_SYS   12
-#define MULTIBOOT_V2_INFO_IMG   20
+1:                      .long   MULTIBOOT_V1_HEADER
+                        .long   BIT (0)
+                        .long  -BIT (0)  - MULTIBOOT_V1_HEADER
