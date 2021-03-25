@@ -1,11 +1,12 @@
 /*
- * Local Advanced Programmable Interrupt Controller (Local APIC)
+ * Local Advanced Programmable Interrupt Controller (LAPIC)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,72 +23,82 @@
 #pragma once
 
 #include "compiler.hpp"
-#include "lowlevel.hpp"
 #include "memory.hpp"
 #include "msr.hpp"
 
 class Lapic
 {
     private:
-        enum Register
+        enum class Register32
         {
-            LAPIC_IDR       = 0x2,
-            LAPIC_LVR       = 0x3,
-            LAPIC_TPR       = 0x8,
-            LAPIC_PPR       = 0xa,
-            LAPIC_EOI       = 0xb,
-            LAPIC_LDR       = 0xd,
-            LAPIC_DFR       = 0xe,
-            LAPIC_SVR       = 0xf,
-            LAPIC_ISR       = 0x10,
-            LAPIC_TMR       = 0x18,
-            LAPIC_IRR       = 0x20,
-            LAPIC_ESR       = 0x28,
-            LAPIC_ICR_LO    = 0x30,
-            LAPIC_ICR_HI    = 0x31,
-            LAPIC_LVT_TIMER = 0x32,
-            LAPIC_LVT_THERM = 0x33,
-            LAPIC_LVT_PERFM = 0x34,
-            LAPIC_LVT_LINT0 = 0x35,
-            LAPIC_LVT_LINT1 = 0x36,
-            LAPIC_LVT_ERROR = 0x37,
-            LAPIC_TMR_ICR   = 0x38,
-            LAPIC_TMR_CCR   = 0x39,
-            LAPIC_TMR_DCR   = 0x3e,
-            LAPIC_IPI_SELF  = 0x3f,
+            IDR         = 0x2,
+            LVR         = 0x3,
+            TPR         = 0x8,
+            PPR         = 0xa,
+            EOI         = 0xb,
+            LDR         = 0xd,
+            DFR         = 0xe,
+            SVR         = 0xf,
+            ISR         = 0x10,
+            TMR         = 0x18,
+            IRR         = 0x20,
+            ESR         = 0x28,
+            ICR         = 0x30,
+            LVT_TIMER   = 0x32,
+            LVT_THERM   = 0x33,
+            LVT_PERFM   = 0x34,
+            LVT_LINT0   = 0x35,
+            LVT_LINT1   = 0x36,
+            LVT_ERROR   = 0x37,
+            TMR_ICR     = 0x38,
+            TMR_CCR     = 0x39,
+            TMR_DCR     = 0x3e,
+            IPI_SELF    = 0x3f,
         };
 
-        enum Delivery_mode
+        enum class Register64
         {
-            DLV_FIXED       = 0U << 8,
-            DLV_NMI         = 4U << 8,
-            DLV_INIT        = 5U << 8,
-            DLV_SIPI        = 6U << 8,
-            DLV_EXTINT      = 7U << 8,
+            ICR         = 0x30,
         };
 
-        enum Shorthand
+        enum class Delivery
         {
-            DSH_NONE        = 0U << 18,
-            DSH_EXC_SELF    = 3U << 18,
+            DLV_FIXED   = VAL_SHIFT (0, 8),
+            DLV_NMI     = VAL_SHIFT (4, 8),
+            DLV_INIT    = VAL_SHIFT (5, 8),
+            DLV_SIPI    = VAL_SHIFT (6, 8),
+            DLV_EXTINT  = VAL_SHIFT (7, 8),
+        };
+
+        enum class Shorthand
+        {
+            NONE        = VAL_SHIFT (0, 18),
+            EXC_SELF    = VAL_SHIFT (3, 18),
         };
 
         ALWAYS_INLINE
-        static inline uint32 read (Register reg)
+        static inline auto read (Register32 r)
         {
-            return *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (reg << 4));
+            return *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (static_cast<unsigned>(r) << 4));
         }
 
         ALWAYS_INLINE
-        static inline void write (Register reg, uint32 val)
+        static inline void write (Register32 r, uint32 v)
         {
-            *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (reg << 4)) = val;
+            *reinterpret_cast<uint32 volatile *>(CPU_LOCAL_APIC + (static_cast<unsigned>(r) << 4)) = v;
         }
 
         ALWAYS_INLINE
-        static inline void set_lvt (Register reg, Delivery_mode dlv, unsigned vector, unsigned misc = 0)
+        static inline void write (Register64 r, uint64 v)
         {
-            write (reg, misc | dlv | vector);
+            write (Register32 (static_cast<unsigned>(r) + 1), static_cast<uint32>(v >> 32));
+            write (Register32 (static_cast<unsigned>(r) + 0), static_cast<uint32>(v));
+        }
+
+        ALWAYS_INLINE
+        static inline void set_lvt (Register32 r, Delivery d, unsigned v, unsigned misc = 0)
+        {
+            write (r, misc | static_cast<uint32>(d) | v);
         }
 
         ALWAYS_INLINE
@@ -103,53 +114,31 @@ class Lapic
         static inline void therm_handler();
 
     public:
-        static unsigned freq_tsc;
-        static unsigned freq_bus;
+        static inline unsigned freq_tsc { 0 };
+        static inline unsigned freq_bus { 0 };
 
-        ALWAYS_INLINE
-        static inline unsigned id()
-        {
-            return read (LAPIC_IDR) >> 24 & 0xff;
-        }
+        static inline auto id()         { return read (Register32::IDR) >> 24 & BIT_RANGE (7, 0); }
+        static inline auto eoi_sup()    { return read (Register32::LVR) >> 24 & BIT (0); }
+        static inline auto lvt_max()    { return read (Register32::LVR) >> 16 & BIT_RANGE (7, 0); }
+        static inline auto version()    { return read (Register32::LVR)       & BIT_RANGE (7, 0); }
+        static inline auto get_timer()  { return read (Register32::TMR_CCR); }
 
-        ALWAYS_INLINE
-        static inline unsigned version()
-        {
-            return read (LAPIC_LVR) & 0xff;
-        }
-
-        ALWAYS_INLINE
-        static inline unsigned lvt_max()
-        {
-            return read (LAPIC_LVR) >> 16 & 0xff;
-        }
-
-        ALWAYS_INLINE
-        static inline void eoi()
-        {
-            write (LAPIC_EOI, 0);
-        }
+        static inline void eoi()        { write (Register32::EOI, 0); }
 
         ALWAYS_INLINE
         static inline void set_timer (uint64 tsc)
         {
             if (freq_bus) {
-                uint64 now = rdtsc();
+                uint64 now = __builtin_ia32_rdtsc();
                 uint32 icr;
-                write (LAPIC_TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / (freq_tsc / freq_bus)) > 0 ? icr : 1);
+                write (Register32::TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / (freq_tsc / freq_bus)) > 0 ? icr : 1);
             } else
                 Msr::write (Msr::IA32_TSC_DEADLINE, tsc);
         }
 
-        ALWAYS_INLINE
-        static inline unsigned get_timer()
-        {
-            return read (LAPIC_TMR_CCR);
-        }
-
         static void init();
 
-        static void send_ipi (unsigned, unsigned, Delivery_mode = DLV_FIXED, Shorthand = DSH_NONE);
+        static void send_ipi (unsigned, unsigned, Delivery = Delivery::DLV_FIXED, Shorthand = Shorthand::NONE);
 
         static void lvt_vector (unsigned) asm ("lvt_vector");
 
