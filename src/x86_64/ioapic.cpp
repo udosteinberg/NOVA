@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,19 +23,13 @@
 #include "pd.hpp"
 #include "stdio.hpp"
 
-INIT_PRIORITY (PRIO_SLAB)
-Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
+INIT_PRIORITY (PRIO_SLAB) Slab_cache Ioapic::cache { sizeof (Ioapic), alignof (Ioapic) };
 
-Ioapic *Ioapic::list;
-
-Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base ((hwdev_addr -= PAGE_SIZE (0)) | (p & OFFS_MASK (0))), gsi_base (g), id (i), rid (0)
+void Ioapic::init()
 {
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (p & ~OFFS_MASK (0));
-#endif
+    trace (TRACE_INTR, "APIC: I/O:%#04x VER:%#x GSI:%#04x-%#04x (%04x:%02x:%02x.%x)", id, ver(), gsi_base, gsi_last, Pci::seg (pci), Pci::bus (pci), Pci::dev (pci), Pci::fun (pci));
 
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK (0));
-
-    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
-           p, i, version(), irt_max(), prq(), gsi_base);
+    // Mask all entries
+    for (auto i { gsi_base }; i <= gsi_last; i++)
+        set_cfg (i);
 }
