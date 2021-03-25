@@ -25,7 +25,6 @@
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
-#include "vectors.hpp"
 
 Gsi         Gsi::gsi_table[NUM_GSI];
 unsigned    Gsi::irq_table[NUM_IRQ];
@@ -35,8 +34,6 @@ void Gsi::setup()
     for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
 
         Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, NUM_CPU + gsi));
-
-        gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
 
         if (gsi < NUM_IRQ) {
             irq_table[gsi] = gsi;
@@ -49,40 +46,37 @@ void Gsi::setup()
     }
 }
 
-uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
+uint64 Gsi::set (unsigned gsi, cpu_t cpu)
 {
-    uint32 msi_addr = 0, msi_data = 0, aid = Lapic::id[cpu];
+    Atomic<uintptr_t> eoi;
 
-    Ioapic *ioapic = gsi_table[gsi].ioapic;
+    gsi_table[gsi].dst = static_cast<uint8_t>(Lapic::id[cpu]);
 
+    auto const ioapic { gsi_table[gsi].ioapic };
     if (ioapic) {
-        ioapic->set_cpu (gsi, Dmar::ire() ? 0 : aid);
-        ioapic->set_irt (gsi, gsi_table[gsi].irt);
-        rid = ioapic->get_rid();
-    } else {
-        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
-        msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
+        ioapic->rte_set_compat (eoi, gsi, false, gsi_table[gsi].trg, gsi_table[gsi].pol, gsi_table[gsi].dst, gsi_to_vec (gsi));
+        return 0;
     }
 
-    Dmar::set_irt (gsi, rid, aid, VEC_GSI + gsi, gsi_table[gsi].trg);
-
-    return static_cast<uint64>(msi_addr) << 32 | msi_data;
+    return static_cast<uint64>(0xfee00000 | gsi_table[gsi].dst << 12) << 32 | gsi_to_vec (gsi);
 }
 
 void Gsi::mask (unsigned gsi)
 {
-    Ioapic *ioapic = gsi_table[gsi].ioapic;
+    Atomic<uintptr_t> eoi;
 
+    auto const ioapic { gsi_table[gsi].ioapic };
     if (ioapic)
-        ioapic->set_irt (gsi, 1U << 16 | gsi_table[gsi].irt);
+        ioapic->rte_set_compat (eoi, gsi, true, gsi_table[gsi].trg, gsi_table[gsi].pol, gsi_table[gsi].dst, gsi_to_vec (gsi));
 }
 
 void Gsi::unmask (unsigned gsi)
 {
-    Ioapic *ioapic = gsi_table[gsi].ioapic;
+    Atomic<uintptr_t> eoi;
 
+    auto const ioapic { gsi_table[gsi].ioapic };
     if (ioapic)
-        ioapic->set_irt (gsi, 0U << 16 | gsi_table[gsi].irt);
+        ioapic->rte_set_compat (eoi, gsi, false, gsi_table[gsi].trg, gsi_table[gsi].pol, gsi_table[gsi].dst, gsi_to_vec (gsi));
 }
 
 void Gsi::handle_ipi (unsigned n)

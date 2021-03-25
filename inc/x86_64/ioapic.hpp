@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,105 +21,194 @@
 
 #pragma once
 
-#include "list.hpp"
 #include "lock_guard.hpp"
-#include "slab.hpp"
+#include "mmio.hpp"
+#include "pci.hpp"
 
-class Ioapic : public List<Ioapic>
+class alignas (256) Ioapic final : public List<Ioapic>, private Mmio
 {
     private:
-        mword    const      reg_base;
-        unsigned const      gsi_base;
-        unsigned const      id;
-        uint16              rid;
-        Spinlock            lock;
-
-        static Ioapic *     list;
-        static Slab_cache   cache;
-
-        enum
+        enum class Reg32 : unsigned         // Direct Registers
         {
-            IOAPIC_IDX  = 0x0,
-            IOAPIC_WND  = 0x10,
-            IOAPIC_PAR  = 0x20,
-            IOAPIC_EOI  = 0x40,
+            IDX     = 0x00,                 // rw Index Register
+            DAT     = 0x10,                 // rw Data Register
+            PAR     = 0x20,                 // -w Pin Assertion Register
+            EOI     = 0x40,                 // -w EOI Register
         };
 
-        enum Register
+        enum class Ind32 : unsigned         // Indirect Registers
         {
-            IOAPIC_ID   = 0x0,
-            IOAPIC_VER  = 0x1,
-            IOAPIC_ARB  = 0x2,
-            IOAPIC_BCFG = 0x3,
-            IOAPIC_IRT  = 0x10,
+            ID      = 0x00,                 // rw ID Register
+            VER     = 0x01,                 // r- Version Register
+            ARB     = 0x02,                 // r- Arbitration ID Register
+            BCFG    = 0x03,                 // rw Boot Configuration Register
+            RTE     = 0x10,                 // rw Redirection Table Entry Register
         };
 
-        ALWAYS_INLINE
-        inline void index (Register reg)
+        auto read  (Reg32 r) const      { return *std::start_lifetime_as<uint32_t volatile> (mmio + std::to_underlying (r)); }
+        void write (Reg32 r, uint32_t v) const { *std::start_lifetime_as<uint32_t volatile> (mmio + std::to_underlying (r)) = v; }
+
+        // @pre caller must hold lock
+        auto ind_read (Ind32 r) const
         {
-            *reinterpret_cast<uint8 volatile *>(reg_base + IOAPIC_IDX) = reg;
+            write (Reg32::IDX, std::to_underlying (r));
+
+            return read (Reg32::DAT);
         }
 
-        ALWAYS_INLINE
-        inline uint32 read (Register reg)
+        // @pre caller must hold lock
+        void ind_write (Ind32 r, uint32_t v) const
         {
-            Lock_guard <Spinlock> guard (lock);
-            index (reg);
-            return *reinterpret_cast<uint32 volatile *>(reg_base + IOAPIC_WND);
+            write (Reg32::IDX, std::to_underlying (r));
+
+            write (Reg32::DAT, v);
         }
 
-        ALWAYS_INLINE
-        inline void write (Register reg, uint32 val)
+        auto read (Ind32 r) const
         {
-            Lock_guard <Spinlock> guard (lock);
-            index (reg);
-            *reinterpret_cast<uint32 volatile *>(reg_base + IOAPIC_WND) = val;
+            Lock_guard <Spinlock> guard { lock };
+
+            return ind_read (r);
         }
+
+        void write (Ind32 r, uint32_t v) const
+        {
+            Lock_guard <Spinlock> guard { lock };
+
+            ind_write (r, v);
+        }
+
+        auto rte_read (unsigned pin) const
+        {
+            auto const idx { std::to_underlying (Ind32::RTE) + 2 * pin };
+
+            Lock_guard <Spinlock> guard { lock };
+
+            auto const hi { ind_read (Ind32 { idx + 1 }) };
+            auto const lo { ind_read (Ind32 { idx + 0 }) };
+
+            return uint64_t { hi } << 32 | lo;
+        }
+
+        void rte_write (unsigned pin, uint64_t v) const
+        {
+            auto const idx { std::to_underlying (Ind32::RTE) + 2 * pin };
+
+            Lock_guard <Spinlock> guard { lock };
+
+            // If RTE shall be level-triggered then force RIRR=0 via transient masked/edge configuration
+            if (v & BIT (15)) [[unlikely]]
+                ind_write (Ind32 { idx }, BIT (16));
+
+            ind_write (Ind32 { idx + 1 }, static_cast<uint32_t>(v >> 32));
+            ind_write (Ind32 { idx + 0 }, static_cast<uint32_t>(v));
+        }
+
+        void rte_mask (unsigned pin) const
+        {
+            auto const idx { std::to_underlying (Ind32::RTE) + 2 * pin };
+
+            Lock_guard <Spinlock> guard { lock };
+
+            ind_write (Ind32 { idx }, BIT (16));
+        }
+
+        void init() const;
+
+        Spinlock       lock;                        // Indirect Register Lock
+        pci_t          sbdf;                        // PCI S:B:D:F
+        unsigned const gsi_base;
+        unsigned const gsi_last;
+        uint8_t  const id;                          // Enumeration ID
+
+        static Slab_cache cache;                    // IOAPIC Slab Cache
+        static inline constinit Ioapic *list {};    // IOAPIC Device List
 
     public:
-        Ioapic (Paddr, unsigned, unsigned);
+        auto src() const { return sbdf; }
+        auto ver() const { return static_cast<uint8_t>(read (Ind32::VER)); }
+        auto mre() const { return static_cast<uint8_t>(read (Ind32::VER) >> 16); }
 
-        ALWAYS_INLINE
-        static inline void *operator new (size_t) { return cache.alloc(); }
+        explicit Ioapic (uint64_t p, uint8_t i, unsigned g) : List { list }, Mmio { p, PAGE_SIZE (0), Memattr::dev() }, sbdf { 0 }, gsi_base { g }, gsi_last { g + mre() }, id { i } {}
 
-        ALWAYS_INLINE
-        static inline bool claim_dev (unsigned r, unsigned i)
+        void eoi (uint8_t val) const { write (Reg32::EOI, val); }
+
+        auto get_pin (unsigned gsi) const { return gsi - gsi_base; }
+
+        void rte_clr_compat (Atomic<uintptr_t> &ise, unsigned gsi, uint8_t dst, uint8_t vec) const
         {
-            for (Ioapic *ioapic = list; ioapic; ioapic = ioapic->next)
-                if (ioapic->rid == 0 && ioapic->id == i) {
-                    ioapic->rid  = static_cast<uint16>(r);
+            auto const pin { get_pin (gsi) };
+            auto const rte { rte_read (pin) };
+
+            // Zap RTE (only if DST:VEC is the live sink)
+            if (static_cast<uint8_t>(rte >> 56) == dst && static_cast<uint8_t>(rte) == vec) {
+                rte_mask (pin);
+                ise = 0;
+            }
+        }
+
+        void rte_set_compat (Atomic<uintptr_t> &ise, unsigned gsi, bool msk, bool trg, bool pol, uint8_t dst, uint8_t vec) const
+        {
+            assert (msk || (vec >= 0x10 && vec <= 0xfe));
+
+            auto const pin { get_pin (gsi) };
+
+            // Update interrupt source encoding before the interrupt can fire
+            ise = trg ? reinterpret_cast<uintptr_t>(this) | vec : 0;
+
+            rte_write (pin, uint64_t { dst } << 56 | msk << 16 | trg << 15 | pol << 13 | vec);
+        }
+
+        void rte_set_ir_amd (Atomic<uintptr_t> &ise, unsigned gsi, bool msk, bool trg, bool pol) const
+        {
+            auto const pin { get_pin (gsi) };
+
+            // Update interrupt source encoding before the interrupt can fire
+            ise = trg ? reinterpret_cast<uintptr_t>(this) | pin : 0;
+
+            rte_write (pin, msk << 16 | trg << 15 | pol << 13 | pin);
+        }
+
+        void rte_set_ir_itl (Atomic<uintptr_t> &ise, unsigned gsi, bool msk, bool trg, bool pol) const
+        {
+            auto const pin { get_pin (gsi) };
+
+            // Update interrupt source encoding before the interrupt can fire
+            ise = trg ? reinterpret_cast<uintptr_t>(this) | pin : 0;
+
+            rte_write (pin, uint64_t { gsi & BIT_RANGE (14, 0) } << 49 | BIT64 (48) | msk << 16 | trg << 15 | pol << 13 | (gsi & BIT (15)) >> 4 | pin);
+        }
+
+        static Ioapic const *lookup (uint16_t seg, uint16_t gsi)
+        {
+            for (auto ioapic { list }; ioapic; ioapic = ioapic->next)
+                if (seg == Pci::seg (ioapic->sbdf) && gsi >= ioapic->gsi_base && gsi <= ioapic->gsi_last)
+                    return ioapic;
+
+            return nullptr;
+        }
+
+        static bool claim_dev (pci_t sbdf, uint8_t id)
+        {
+            for (auto ioapic { list }; ioapic; ioapic = ioapic->next)
+                if (ioapic->id == id) {
+                    ioapic->sbdf = sbdf;
                     return true;
                 }
 
             return false;
         }
 
-        ALWAYS_INLINE
-        inline uint16 get_rid() const { return rid; }
-
-        ALWAYS_INLINE
-        inline unsigned get_gsi() const { return gsi_base; }
-
-        ALWAYS_INLINE
-        inline unsigned version() { return read (IOAPIC_VER) & 0xff; }
-
-        ALWAYS_INLINE
-        inline unsigned prq() { return read (IOAPIC_VER) >> 15 & 0x1; }
-
-        ALWAYS_INLINE
-        inline unsigned irt_max() { return read (IOAPIC_VER) >> 16 & 0xff; }
-
-        ALWAYS_INLINE
-        inline void set_irt (unsigned gsi, unsigned val)
+        /*
+         * Initialize all IOAPICs
+         */
+        static void initialize()
         {
-            unsigned pin = gsi - gsi_base;
-            write (Register (IOAPIC_IRT + 2 * pin), val);
+            for (auto ioapic { list }; ioapic; ioapic = ioapic->next)
+                ioapic->init();
         }
 
-        ALWAYS_INLINE
-        inline void set_cpu (unsigned gsi, unsigned cpu)
-        {
-            unsigned pin = gsi - gsi_base;
-            write (Register (IOAPIC_IRT + 2 * pin + 1), cpu << 24 | gsi << 17 | 1ul << 16);
-        }
+        [[nodiscard]] static void *operator new (size_t) noexcept { return cache.alloc(); }
 };
+
+static_assert (alignof (Ioapic) == 256);
