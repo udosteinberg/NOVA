@@ -22,10 +22,11 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 #include "paging.hpp"
 #include "selectors.hpp"
 
-.globl                  __init_bsp, __init_aps, __wake_vec, __desc_gdt__
+.globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp, __init_aps, __wake_vec, __desc_gdt__
 
 /*
  * Macros
@@ -71,7 +72,18 @@
  */
 .code32
 
-__init_bsp:             // Determine relocation offset
+__init_bsp:             // Check if we launched via Multiboot v2
+                        cmp     $MULTIBOOT_V2_LOADER, %eax
+                        je      .Lvalid_launch
+
+                        // Check if we launched via Multiboot v1
+                        cmp     $MULTIBOOT_V1_LOADER, %eax
+                        je      .Lvalid_launch
+
+                        hlt
+                        jmp     .
+.Lvalid_launch:
+                        // Determine relocation offset
                         xchg    %ebx, %esp
                         pop     %esi
                         call    .Lret_addr
@@ -80,11 +92,89 @@ __init_bsp:             // Determine relocation offset
             dec %esi;   sub     $.Lret_addr, %ebp
                         xchg    %ebx, %esp
 
+                        // Store boot parameters
+                        mov     %eax, __boot_p0(%ebp)
+                        mov     %ebx, __boot_p1(%ebp)
+
+                        // Store boot time
+                        rdtsc
+                        mov     %eax, 0 + __boot_ts(%ebp)
+                        mov     %edx, 4 + __boot_ts(%ebp)
+
                         // Apply relocations
                         add     %ebp, 0 + __addr_gdt(%ebp)
                         add     %ebp, 2 + __jump_aps(%ebp)
+.Lmb2_launch:
+                        // Multiboot v2 Launch
+                        cmpl    $MULTIBOOT_V2_LOADER, __boot_p0(%ebp)
+                        jne     .Lmb1_launch
 
-                        // Ensure flags are in a defined state
+                        // Prepare tag loop
+                        lea     8(%ebx), %ecx       // Tag Ptr
+                        add     0(%ebx), %ebx       // Tag End
+                        xor     %esi, %esi          // EFI Sys
+                        xor     %edi, %edi          // EFI Img
+.Lmb2_tag_loop:
+                        cmpb    $MULTIBOOT_V2_INFO_END, (%ecx)
+                        je      .Lmb2_end
+
+                        cmpb    $MULTIBOOT_V2_INFO_CMD, (%ecx)
+                        jne     .Lmb2_not_cmd
+                        lea     8(%ecx), %eax
+                        mov     %eax, __boot_cl(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_cmd:
+                        cmpb    $MULTIBOOT_V2_INFO_MOD, (%ecx)
+                        jne     .Lmb2_not_mod
+                        cmpl    $0x0, __boot_ra(%ebp)
+                        jne     .Lmb2_nxt_tag
+                        mov     8(%ecx), %eax
+                        mov     %eax, __boot_ra(%ebp)
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_mod:
+                        cmpb    $MULTIBOOT_V2_INFO_SYS, (%ecx)
+                        jne     .Lmb2_not_sys
+                        mov     8(%ecx), %esi
+                        jmp     .Lmb2_nxt_tag
+.Lmb2_not_sys:
+                        cmpb    $MULTIBOOT_V2_INFO_IMG, (%ecx)
+                        jne     .Lmb2_nxt_tag
+                        mov     8(%ecx), %edi
+.Lmb2_nxt_tag:
+                        mov     4(%ecx), %eax
+                        lea     7(%ecx,%eax), %ecx
+                        and     $~7, %ecx
+                        cmp     %ebx, %ecx
+                        jb      .Lmb2_tag_loop
+.Lmb2_end:
+                        // Initialize UEFI
+                        test    %edi, %edi
+                        jz      .Lmb_end
+                        test    %esi, %esi
+                        jz      .Lmb_end
+                        lea     __uefi_info(%ebp), %edx
+                        call    __uefi_init
+                        jmp     .Lmb_end
+.Lmb1_launch:
+                        // Multiboot v1 Launch
+                        cmpl    $MULTIBOOT_V1_LOADER, __boot_p0(%ebp)
+                        jne     .Lmb_end
+
+                        testb   $BIT (MULTIBOOT_V1_INFO_CMD), (%ebx)
+                        jz      .Lmb1_not_cmd
+                        mov     16(%ebx), %eax
+                        mov     %eax, __boot_cl(%ebp)
+.Lmb1_not_cmd:
+                        testb   $BIT (MULTIBOOT_V1_INFO_MOD), (%ebx)
+                        jz      .Lmb_end
+                        mov     20(%ebx), %eax
+                        test    %eax, %eax
+                        jz      .Lmb_end
+                        mov     24(%ebx), %eax
+                        mov     (%eax), %eax
+                        mov     %eax, __boot_ra(%ebp)
+.Lmb_end:
+                        // Ensure flags are in a defined state (after UEFI init)
                         cli
                         cld
 
@@ -144,6 +234,13 @@ __desc_gdt__:           .quad   0x00a09b0000000000
                         .quad   0x00a0f30000000000
 __boot_gdt__:
 
+__boot_cl:              .quad   0
+__boot_ra:              .quad   0
+__boot_p0:              .quad   0
+__boot_p1:              .quad   0
+__boot_p2:              .quad   0
+__boot_ts:              .quad   0
+
 /*
  * 64-bit Startup Code: All Processors
  */
@@ -169,7 +266,6 @@ __init_all:             lea     .Lhigh, %rax
                         lea     NOVA_HPAS(%ebp), %rax
                         lea     LINK_ADDR, %rdi
                         sub     %rax, %rdi
-                        mov     %rbx, %rsi
                         call    init
 .Linit_end:
                         // Acquire boot lock
@@ -189,14 +285,3 @@ __init_all:             lea     .Lhigh, %rax
                         mov     %rax, %cr3
                         lea     DSTK_TOP, %rsp
                         jmp     bootstrap
-
-.section .init
-
-/*
- * Multiboot Header
- */
-.balign                 0x8
-
-                        .long   0x1badb002
-                        .long   BIT (0)
-                        .long  -0x1badb002 - BIT (0)
