@@ -22,10 +22,11 @@
 #include "arch.hpp"
 #include "memattr.hpp"
 #include "memory.hpp"
+#include "multiboot.hpp"
 #include "paging.hpp"
 #include "selectors.hpp"
 
-.globl                  __init_bsp, __init_aps, __wake_vec, __desc_gdt__
+.globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp, __init_aps, __wake_vec, __desc_gdt__
 
 /*
  * Macros
@@ -67,23 +68,125 @@
 .section .init
 
 /*
- * 32-bit Startup Code: Bootstrap Processor (BSP)
+ * 32/64-bit Startup Code: Bootstrap Processor (BSP)
  */
 .code32
 
 __init_bsp:             cli
                         cld
 
+                        // Check if we launched via Multiboot v1
+                        cmp     $MULTIBOOT_LOADER_MAGIC_V1, %eax
+                        je      1f
+
+                        // Check if we launched via Multiboot v2
+                        cmp     $MULTIBOOT_LOADER_MAGIC_V2, %eax
+                        je      1f
+
+                        hlt
+                        jmp     .
+
                         // Determine relocation offset
-                        lea     16(%ebx), %esp
-                        call    1f
-1:                      pop     %ebp
-                        sub     $1b, %ebp
+1:                      xchg    %ebx, %esp
+                        pop     %esi
+                        call    2f
+2:                      pop     %ebp
+                        push    %esi
+            dec %esi;   sub     $2b, %ebp
+                        xchg    %ebx, %esp
+
+                        // Store boot parameters
+                        mov     %eax, __boot_p0(%ebp)
+                        mov     %ebx, __boot_p1(%ebp)
+
+                        // Store boot time
+                        rdtsc
+                        mov     %eax, 0 + __boot_ts(%ebp)
+                        mov     %edx, 4 + __boot_ts(%ebp)
 
                         // Apply relocations
                         add     %ebp, 0 + __addr_gdt(%ebp)
                         add     %ebp, 2 + __jump_aps(%ebp)
 
+                        // Multiboot v2 Launch
+5:                      cmpl    $MULTIBOOT_LOADER_MAGIC_V2, __boot_p0(%ebp)
+                        jne     5f
+                        lea     8(%ebx), %ecx       // Tag Ptr
+                        add     0(%ebx), %ebx       // Tag End
+                        xor     %esi, %esi
+                        xor     %edi, %edi
+
+                        // Tag Loop
+1:
+                        // Terminator
+                        cmpb    $0, (%ecx)
+                        je      4f
+
+                        // Command Line
+                        cmpb    $1, (%ecx)
+                        jne     2f
+                        lea     8(%ecx), %eax
+                        mov     %eax, __boot_cl(%ebp)
+                        jmp     3f
+2:
+                        // Modules
+                        cmpb    $3, (%ecx)
+                        jne     2f
+                        cmpl    $0x0, __boot_ra(%ebp)
+                        jne     3f
+                        mov     8(%ecx), %eax
+                        mov     %eax, __boot_ra(%ebp)
+                        jmp     3f
+2:
+                        // EFI64 System Table
+                        cmpb    $12, (%ecx)
+                        jne     2f
+                        mov     8(%ecx), %esi
+                        jmp     3f
+2:
+                        // EFI64 Image Handle
+                        cmpb    $20, (%ecx)
+                        jne     2f
+                        mov     8(%ecx), %edi
+//                      jmp     3f
+2:
+                        // Next Tag
+3:                      mov     4(%ecx), %eax
+                        lea     7(%ecx,%eax), %ecx
+                        and     $~7, %ecx
+                        cmp     %ebx, %ecx
+                        jb      1b
+
+                        // Initialize UEFI
+4:                      test    %edi, %edi
+                        jz      6f
+                        test    %esi, %esi
+                        jz      6f
+                        lea     __uefi_info(%ebp), %edx
+                        call    __uefi_init
+                        cli
+                        jmp     6f
+
+                        // Multiboot v1 Launch
+5:                      cmpl    $MULTIBOOT_LOADER_MAGIC_V1, __boot_p0(%ebp)
+                        jne     5f
+
+                        // Command line
+                        testb   $BIT(2), (%ebx)
+                        jz      2f
+                        mov     16(%ebx), %eax
+                        mov     %eax, __boot_cl(%ebp)
+2:
+                        // Modules
+                        testb   $BIT(3), (%ebx)
+                        jz      2f
+                        mov     20(%ebx), %eax
+                        test    %eax, %eax
+                        jz      2f
+                        mov     24(%ebx), %eax
+                        mov     (%eax), %eax
+                        mov     %eax, __boot_ra(%ebp)
+2: 5: 6:
                         // Configure Page Tables: Load Section (2M page)
                         PTE_REL 3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, ATTR_A | ATTR_U | ATTR_W | ATTR_P
                         PTE_REL 2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, ATTR_A | ATTR_U | ATTR_W | ATTR_P
@@ -140,6 +243,13 @@ __desc_gdt__:           .quad   0x00a09b0000000000
                         .quad   0x00a0f30000000000
 __boot_gdt__:
 
+__boot_cl:              .quad   0
+__boot_ra:              .quad   0
+__boot_p0:              .quad   0
+__boot_p1:              .quad   0
+__boot_p2:              .quad   0
+__boot_ts:              .quad   0
+
 /*
  * 64-bit Startup Code: All Processors
  */
@@ -165,7 +275,6 @@ high:                   mov     $SEL_KERN_DATA, %ecx
                         lea     NOVA_HPAS(%ebp), %rax
                         lea     LINK_ADDR, %rdi
                         sub     %rax, %rdi
-                        mov     %rbx, %rsi
                         call    init
 1:
                         // Acquire boot lock
@@ -185,14 +294,3 @@ high:                   mov     $SEL_KERN_DATA, %ecx
                         mov     %rax, %cr3
                         lea     STCK_TOP, %rsp
                         jmp     bootstrap
-
-.section .init
-
-/*
- * Multiboot Header
- */
-.balign                 0x8
-
-                        .long   0x1badb002
-                        .long   BIT (0)
-                        .long  -0x1badb002 - BIT (0)

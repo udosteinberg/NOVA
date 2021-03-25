@@ -20,10 +20,10 @@
  */
 
 #include "acpi.hpp"
+#include "cmdline.hpp"
 #include "compiler.hpp"
 #include "console_serial.hpp"
 #include "gsi.hpp"
-#include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
 #include "kmem.hpp"
@@ -52,7 +52,7 @@ mword kern_ptab_setup()
 }
 
 extern "C"
-void init (uintptr_t offset, uintptr_t mbi)
+void init (uintptr_t offset)
 {
     Kmem::init (offset);
 
@@ -62,7 +62,9 @@ void init (uintptr_t offset, uintptr_t mbi)
 
     for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
-    Hip::hip->build (mbi);
+    auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
+    if (addr)
+        Cmdline::parse (static_cast<char const *>(Hpt::remap (addr)));
 
     for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
 
