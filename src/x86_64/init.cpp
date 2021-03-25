@@ -26,6 +26,7 @@
 #include "gsi.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "ioapic.hpp"
 #include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
@@ -74,4 +75,6 @@ void init()
     Acpi::setup();
 
     Pic::init();
+
+    Ioapic::init_all();
 }
