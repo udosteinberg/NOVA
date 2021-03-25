@@ -33,23 +33,21 @@ class Gsi
         static void handle_lvt (unsigned);
         static void handle_gsi (unsigned);
 
+        static auto gsi_to_vec (unsigned gsi) { return static_cast<uint8_t>(gsi + VEC_GSI); }
+
     public:
         Sm *            sm;
         Ioapic *        ioapic;
-        union {
-            uint16      irt;
-            struct {
-                uint8   vec;
-                uint8   dlv:3, dst:1, sts:1, pol:1, irr:1, trg:1;
-            };
-        };
+        uint8_t         dst;
+        bool            trg;
+        bool            pol;
 
         static Gsi      gsi_table[NUM_GSI];
         static unsigned irq_table[NUM_IRQ];
 
         static void setup();
 
-        static uint64 set (unsigned, unsigned = 0, unsigned = 0);
+        static uint64 set (unsigned, cpu_t = 0);
 
         static void mask (unsigned);
         static void unmask (unsigned);
