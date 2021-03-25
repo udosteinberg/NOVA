@@ -26,6 +26,7 @@
 #include "gsi.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "ioapic.hpp"
 #include "kmem.hpp"
 #include "pic.hpp"
 #include "string.hpp"
@@ -76,4 +77,6 @@ void init (uintptr_t offset)
     Acpi::setup();
 
     Pic::init();
+
+    Ioapic::init_all();
 }
