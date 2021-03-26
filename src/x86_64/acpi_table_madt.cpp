@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,13 +20,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
-#include "acpi_madt.hpp"
+#include "acpi_table_madt.hpp"
 #include "cpu.hpp"
 #include "interrupt.hpp"
 #include "io.hpp"
 #include "ioapic.hpp"
-#include "lapic.hpp"
 #include "vectors.hpp"
 
 void Acpi_table_madt::parse() const
@@ -33,18 +32,18 @@ void Acpi_table_madt::parse() const
     parse_entry (Acpi_apic::LAPIC,  &parse_lapic);
     parse_entry (Acpi_apic::IOAPIC, &parse_ioapic);
 
-    if (flags & 1) {
-        Io::out<uint8>(0x20, 0x11);
-        Io::out<uint8>(0x21, VEC_GSI);
-        Io::out<uint8>(0x21, 0x4);
-        Io::out<uint8>(0x21, 0x1);
-        Io::out<uint8>(0x21, 0xff);
+    if (flags & BIT (0)) {
+        Io::out<uint8>(0x20, BIT (4) | BIT (0));    // ICW1
+        Io::out<uint8>(0x21, VEC_GSI);              // ICW2
+        Io::out<uint8>(0x21, BIT (2));              // ICW3
+        Io::out<uint8>(0x21, BIT (0));              // ICW4
+        Io::out<uint8>(0x21, BIT_RANGE (7, 0));     // OCW1
     }
 }
 
 void Acpi_table_madt::parse_entry (Acpi_apic::Type type, void (*handler)(Acpi_apic const *)) const
 {
-    for (Acpi_apic const *ptr = apic; ptr < reinterpret_cast<Acpi_apic *>(reinterpret_cast<mword>(this) + length); ptr = reinterpret_cast<Acpi_apic *>(reinterpret_cast<mword>(ptr) + ptr->length))
+    for (Acpi_apic const *ptr = apic; ptr < reinterpret_cast<Acpi_apic *>(reinterpret_cast<uintptr_t>(this) + length); ptr = reinterpret_cast<Acpi_apic *>(reinterpret_cast<uintptr_t>(ptr) + ptr->length))
         if (ptr->type == type)
             (*handler)(ptr);
 }

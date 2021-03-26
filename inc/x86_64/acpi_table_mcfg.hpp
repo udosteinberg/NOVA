@@ -19,24 +19,29 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
+#pragma once
+
 #include "acpi_table.hpp"
-#include "stdio.hpp"
 
-bool Acpi_table::validate (uint64 phys) const
+#pragma pack(1)
+
+class Acpi_mcfg
 {
-    auto v = valid();
+    public:
+        uint64      addr;
+        uint16      seg;
+        uint8       bus_s;
+        uint8       bus_e;
+        uint32      reserved;
+};
 
-    trace (TRACE_FIRM, "%.4s: %#010llx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%5u (%#04x) %s",
-           reinterpret_cast<char const *>(&signature), phys, revision,
-           oem_table_id, oem_id, length, checksum, v ? "ok" : "bad");
+class Acpi_table_mcfg : public Acpi_table
+{
+    public:
+        uint64      reserved;
+        Acpi_mcfg   mcfg[];
 
-    if (!v)
-        return false;
+        void parse() const;
+};
 
-    for (unsigned i = 0; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
-        if (signature == Acpi::tables[i].sig)
-            Acpi::tables[i].var = phys;
-
-    return true;
-}
+#pragma pack()

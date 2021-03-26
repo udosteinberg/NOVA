@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,88 +21,81 @@
 
 #pragma once
 
-#include "acpi_gas.hpp"
+#include "acpi_table.hpp"
+#include "acpi_table_dmar.hpp"
+#include "acpi_table_fadt.hpp"
+#include "acpi_table_hpet.hpp"
+#include "acpi_table_madt.hpp"
+#include "acpi_table_mcfg.hpp"
+#include "acpi_table_rsdp.hpp"
+#include "acpi_table_rsdt.hpp"
 #include "ptab_hpt.hpp"
 
 class Acpi
 {
+    friend class Acpi_table;
     friend class Acpi_table_fadt;
-    friend class Acpi_table_rsdt;
-    friend class Acpi_rsdp;
 
     private:
-        enum Register
+        static inline uint64 dmar { 0 }, facs { 0 }, fadt { 0 }, hpet { 0 }, madt { 0 }, mcfg { 0 };
+        static inline uint32 fflg { 0 };    // Feature Flags
+        static inline uint16 bflg { 0 };    // Boot Flags
+
+        static constexpr struct
         {
-            PM1_STS,
-            PM1_ENA,
-            PM1_CNT,
-            PM2_CNT,
-            PM_TMR,
-            RESET
+            uint32 const    sig;
+            uint64 &        var;
+        } tables[] =
+        {
+            { Acpi_table::sig ("APIC"), madt },
+            { Acpi_table::sig ("DMAR"), dmar },
+            { Acpi_table::sig ("FACP"), fadt },
+            { Acpi_table::sig ("HPET"), hpet },
+            { Acpi_table::sig ("MCFG"), mcfg },
         };
 
-        enum PM1_Status
+        static inline uintptr_t rsdp_probe (uintptr_t map, uintptr_t off, size_t len)
         {
-            PM1_STS_TMR         = 1U << 0,      // 0x1
-            PM1_STS_BM          = 1U << 4,      // 0x10
-            PM1_STS_GBL         = 1U << 5,      // 0x20
-            PM1_STS_PWRBTN      = 1U << 8,      // 0x100
-            PM1_STS_SLPBTN      = 1U << 9,      // 0x200
-            PM1_STS_RTC         = 1U << 10,     // 0x400
-            PM1_STS_PCIE_WAKE   = 1U << 14,     // 0x4000
-            PM1_STS_WAKE        = 1U << 15      // 0x8000
-        };
+            for (auto ptr = map + off; ptr < map + off + len; ptr += 16)
+                if (reinterpret_cast<Acpi_table_rsdp *>(ptr)->valid())
+                    return ptr - map;
 
-        enum PM1_Enable
+            return 0;
+        }
+
+        /*
+         * OSPM finds the Root System Description Pointer (RSDP) structure by
+         * searching physical memory ranges on 16-byte boundaries for a
+         * valid Root System Description Pointer structure signature and
+         * checksum match as follows:
+         * - The first 1 KB of the Extended BIOS Data Area (EBDA). For EISA
+         *   or MCA systems, the EBDA can be found in the two-byte location
+         *   40:0Eh on the BIOS data area.
+         * - The BIOS read-only memory space between 0E0000h and 0FFFFFh.
+         */
+        static inline uintptr_t rsdp_find()
         {
-            PM1_ENA_TMR         = 1U << 0,      // 0x1
-            PM1_ENA_GBL         = 1U << 5,      // 0x20
-            PM1_ENA_PWRBTN      = 1U << 8,      // 0x100
-            PM1_ENA_SLPBTN      = 1U << 9,      // 0x200
-            PM1_ENA_RTC         = 1U << 10,     // 0x400
-            PM1_ENA_PCIE_WAKE   = 1U << 14      // 0x4000
-        };
+            uintptr_t addr, map = reinterpret_cast<uintptr_t>(Hptp::map (0));
 
-        enum PM1_Control
+            if (!(addr = rsdp_probe (map, *reinterpret_cast<uint16 *>(map + 0x40e) << 4, 0x400)) &&
+                !(addr = rsdp_probe (map, 0xe0000, 0x20000)))
+                return 0;
+
+            return addr;
+        }
+
+        static inline void parse_arch_tables()
         {
-            PM1_CNT_SCI_EN      = 1U << 0,      // 0x1
-            PM1_CNT_BM_RLD      = 1U << 1,      // 0x2
-            PM1_CNT_GBL_RLS     = 1U << 2,      // 0x4
-            PM1_CNT_SLP_TYP     = 7U << 10,     // 0x400
-            PM1_CNT_SLP_EN      = 1U << 13      // 0x2000
-        };
-
-        static constexpr unsigned timer_frequency = 3579545;
-
-        static Paddr dmar, fadt, hpet, madt, mcfg, rsdt, xsdt;
-
-        static Acpi_gas pm1a_sts;
-        static Acpi_gas pm1b_sts;
-        static Acpi_gas pm1a_ena;
-        static Acpi_gas pm1b_ena;
-        static Acpi_gas pm1a_cnt;
-        static Acpi_gas pm1b_cnt;
-        static Acpi_gas pm2_cnt;
-        static Acpi_gas pm_tmr;
-        static Acpi_gas reset_reg;
-
-        static uint32   tmr_ovf;
-        static uint32   feature;
-        static uint8    reset_val;
-
-        static unsigned hw_read (Acpi_gas *);
-        static unsigned read (Register);
-
-        static void hw_write (Acpi_gas *, unsigned);
-        static void write (Register, unsigned);
-
-        ALWAYS_INLINE
-        static inline mword tmr_msb() { return feature & 0x100 ? 31 : 23; }
+            if (hpet)
+                static_cast<Acpi_table_hpet *>(Hptp::map (hpet))->parse();
+            if (madt)
+                static_cast<Acpi_table_madt *>(Hptp::map (madt))->parse();
+            if (mcfg)
+                static_cast<Acpi_table_mcfg *>(Hptp::map (mcfg))->parse();
+            if (dmar)
+                static_cast<Acpi_table_dmar *>(Hptp::map (dmar))->parse();
+        }
 
     public:
-        static void delay (unsigned);
-        static uint64 time();
-        static void reset();
-
-        static void setup();
+        static bool init();
 };
