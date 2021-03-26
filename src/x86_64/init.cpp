@@ -74,5 +74,5 @@ void init (uintptr_t offset)
 
     Idt::build();
     Interrupt::init();
-    Acpi::setup();
+    Acpi::init();
 }

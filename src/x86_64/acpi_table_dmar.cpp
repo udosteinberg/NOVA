@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,10 +20,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_dmar.hpp"
+#include "acpi_table_dmar.hpp"
 #include "cmdline.hpp"
 #include "dmar.hpp"
-#include "dpt.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
@@ -36,7 +36,7 @@ void Acpi_dmar::parse() const
     if (flags & 1)
         Pci::claim_all (dmar);
 
-    for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
+    for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(s) + s->length)) {
 
         switch (s->type) {
             case 1 ... 2:
@@ -57,7 +57,7 @@ void Acpi_rmrr::parse() const
     for (uint64 hpa = base & ~PAGE_MASK; hpa < limit; hpa += PAGE_SIZE)
         Pd::kern.dpt.update (hpa, hpa, 0, Paging::Permissions (Paging::R | Paging::W), Memattr::Cacheability::MEM_WB, Memattr::Shareability::NONE);
 
-    for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
+    for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<uintptr_t>(s) + s->length)) {
 
         Dmar *dmar = nullptr;
 
@@ -77,7 +77,7 @@ void Acpi_table_dmar::parse() const
     if (!Cmdline::iommu)
         return;
 
-    for (Acpi_remap const *r = remap; r < reinterpret_cast<Acpi_remap *>(reinterpret_cast<mword>(this) + length); r = reinterpret_cast<Acpi_remap *>(reinterpret_cast<mword>(r) + r->length)) {
+    for (Acpi_remap const *r = remap; r < reinterpret_cast<Acpi_remap *>(reinterpret_cast<uintptr_t>(this) + length); r = reinterpret_cast<Acpi_remap *>(reinterpret_cast<uintptr_t>(r) + r->length)) {
         switch (r->type) {
             case Acpi_remap::DMAR:
                 static_cast<Acpi_dmar const *>(r)->parse();

@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,12 +19,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_mcfg.hpp"
+#include "acpi_table_mcfg.hpp"
 #include "pci.hpp"
 
 void Acpi_table_mcfg::parse() const
 {
-    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
+    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<uintptr_t>(this) + length); x++)
         if (!x->seg) {
             Pci::bus_base = x->bus_s;
             Pci::cfg_base = static_cast<Paddr>(x->addr);
