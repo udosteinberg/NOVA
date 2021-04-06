@@ -4,6 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,10 +20,15 @@
 
 #pragma once
 
-#define HZD_SCHED       0x1
-#define HZD_DS_ES       0x2
-#define HZD_TR          0x4
-#define HZD_FPU         0x8
-#define HZD_RCU         0x10
-#define HZD_TSC         0x20000000
-#define HZD_RECALL      0x80000000
+#include "macros.hpp"
+
+#define HZD_SCHED       BIT  (0)
+#define HZD_DS_ES       BIT  (1)
+#define HZD_TR          BIT  (2)
+#define HZD_RCU         BIT  (4)
+#define HZD_BOOT_HST    BIT  (5)
+#define HZD_BOOT_GST    BIT  (6)
+#define HZD_FPU         BIT (16)
+#define HZD_TSC         BIT (29)
+#define HZD_RECALL      BIT (30)
+#define HZD_ILLEGAL     BIT (31)
