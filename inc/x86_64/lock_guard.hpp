@@ -1,8 +1,10 @@
 /*
- * Generic Lock Guard
+ * Lock Guard
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,21 +23,18 @@
 #include "compiler.hpp"
 
 template <typename T>
-class Lock_guard
+class Lock_guard final
 {
     private:
-        T &_lock;
+        T &lock;
 
     public:
         ALWAYS_INLINE
-        inline Lock_guard (T &l) : _lock (l)
-        {
-            _lock.lock();
-        }
+        inline Lock_guard (T &l) : lock (l) { lock.lock(); }
 
         ALWAYS_INLINE
-        inline ~Lock_guard()
-        {
-            _lock.unlock();
-        }
+        inline ~Lock_guard() { lock.unlock(); }
+
+        Lock_guard            (Lock_guard const &) = delete;
+        Lock_guard& operator= (Lock_guard const &) = delete;
 };
