@@ -23,10 +23,8 @@
 #include "acpi_madt.hpp"
 #include "cpu.hpp"
 #include "gsi.hpp"
-#include "io.hpp"
 #include "ioapic.hpp"
-#include "lapic.hpp"
-#include "vectors.hpp"
+#include "pic.hpp"
 
 void Acpi_table_madt::parse() const
 {
@@ -34,13 +32,8 @@ void Acpi_table_madt::parse() const
     parse_entry (Acpi_apic::IOAPIC, &parse_ioapic);
     parse_entry (Acpi_apic::INTR,   &parse_intr);
 
-    if (flags & 1) {
-        Io::out<uint8>(0x20, 0x11);
-        Io::out<uint8>(0x21, VEC_GSI);
-        Io::out<uint8>(0x21, 0x4);
-        Io::out<uint8>(0x21, 0x1);
-        Io::out<uint8>(0x21, 0xff);
-    }
+    if (flags & 1)
+        Pic::init();
 }
 
 void Acpi_table_madt::parse_entry (Acpi_apic::Type type, void (*handler)(Acpi_apic const *)) const
