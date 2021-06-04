@@ -26,6 +26,7 @@
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "pic.hpp"
 #include "string.hpp"
 
 extern "C" uintptr_t kern_ptab_setup()
@@ -71,4 +72,6 @@ extern "C" void init (uintptr_t mbi)
     Idt::build();
     Gsi::setup();
     Acpi::setup();
+
+    Pic::init();
 }
