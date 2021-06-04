@@ -26,6 +26,7 @@
 #include "hip.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "pic.hpp"
 #include "string.hpp"
 
 extern "C"
@@ -68,4 +69,6 @@ void init (mword mbi)
     Idt::build();
     Gsi::setup();
     Acpi::setup();
+
+    Pic::init();
 }
