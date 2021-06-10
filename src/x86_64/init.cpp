@@ -29,7 +29,7 @@
 #include "pic.hpp"
 #include "string.hpp"
 
-extern "C" uintptr_t kern_ptab_setup()
+extern "C" uintptr_t kern_ptab_setup (apic_t)
 {
     Hptp hpt;
 
