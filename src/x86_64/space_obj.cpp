@@ -29,7 +29,7 @@ Paddr Space_obj::walk (mword idx)
 {
     mword virt = idx_to_virt (idx); Paddr phys; void *ptr;
 
-    if (!space_mem()->lookup (virt, phys) || (phys & ~OFFS_MASK (0)) == reinterpret_cast<Paddr>(&FRAME_0)) {
+    if (!space_mem()->lookup (virt, phys) || (phys & ~OFFS_MASK (0)) == Kmem::ptr_to_phys (&PAGE_0)) {
 
         Paddr p = Kmem::ptr_to_phys (ptr = Buddy::allocator.alloc (0, Buddy::FILL_0));
 
@@ -50,7 +50,7 @@ void Space_obj::update (mword idx, Capability cap)
 size_t Space_obj::lookup (mword idx, Capability &cap)
 {
     Paddr phys;
-    if (!space_mem()->lookup (idx_to_virt (idx), phys) || (phys & ~OFFS_MASK (0)) == reinterpret_cast<Paddr>(&FRAME_0))
+    if (!space_mem()->lookup (idx_to_virt (idx), phys) || (phys & ~OFFS_MASK (0)) == Kmem::ptr_to_phys (&PAGE_0))
         return 0;
 
     cap = *static_cast<Capability *>(Kmem::phys_to_ptr (phys));
@@ -81,5 +81,5 @@ void Space_obj::page_fault (mword addr, mword error)
     assert (!(error & Hpt::ERR_W));
 
     if (!Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
-        Pd::current->Space_mem::replace (addr, reinterpret_cast<Paddr>(&FRAME_0) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
+        Pd::current->Space_mem::replace (addr, Kmem::ptr_to_phys (&PAGE_0) | Hpt::HPT_NX | Hpt::HPT_A | Hpt::HPT_P);
 }
