@@ -59,7 +59,7 @@
 #define MMAP_GLB_MAP0   VIRT_ADDR (511, 510, 496,   0)          //   4M + gap
 #define MMAP_GLB_UART   VIRT_ADDR (511, 510, 488,   0)          //  16M
 #define MMAP_GLB_MMIO   VIRT_ADDR (511, 510, 448,   0)          //  64M
-#define LINK_ADDR       0xffffffff81000000
+#define LINK_ADDR       VIRT_ADDR (511, 510,   0,   0)          // 896M
 
 #define MMAP_GLB_CPUS   VIRT_ADDR (511, 509,   0,   0)          //   1G (262144 CPUs)
 #define MMAP_GLB_PCIE   MMAP_GLB_CPUS
