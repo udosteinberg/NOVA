@@ -95,7 +95,7 @@ bool Ec::handle_exc_pf (Exc_regs *r)
     if (r->err & Hpt::ERR_U)
         return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
 
-    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), addr, MMAP_CPU))
+    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp (Kmem::ptr_to_phys (&PTAB_HVAS)), addr, MMAP_CPU))
         return true;
 
     // Kernel fault in PIO space

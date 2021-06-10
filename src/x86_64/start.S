@@ -24,42 +24,30 @@
 #include "memory.hpp"
 #include "selectors.hpp"
 
-/*
- * Initialization Code
- */
-.section .init
+#define PTE_ATTR_P      BIT (0)     // Present
+#define PTE_ATTR_W      BIT (1)     // Writable
+#define PTE_ATTR_U      BIT (2)     // User
+#define PTE_ATTR_A      BIT (5)     // Accessed
+#define PTE_ATTR_D      BIT (6)     // Dirty
+#define PTE_ATTR_S      BIT (7)     // Superpage
+#define PTE_ATTR_G      BIT (8)     // Global
 
-.globl                  __start_bsp
-
-/*
- * Multiboot Header
- */
-__boot_header:          .long   0x1badb002
-                        .long   0x0
-                        .long  -0x1badb002
+.globl                  __init_bsp, __init_aps, __wake_vec, __desc_gdt__
 
 /*
- * Global Descriptor Table (GDT)
+ * Macros
  */
-.align                  8, 0x90
-__boot_gdt:             .word   0
-                        .word   __boot_gdt__ - __boot_gdt - 1
-                        .long   __boot_gdt
-                        .quad   0x00a09b0000000000
-                        .quad   0x00a0930000000000
-                        .quad   0x00a0fb0000000000
-                        .quad   0x00a0f30000000000
-__boot_gdt__:
+.macro                  PTE_FIX L, PTAB, VIRT, PHYS, ATTR
+                        lea     (\PHYS) + (\ATTR)(%ebp), %ecx
+                        mov     %ecx, (\PTAB) + __SIZEOF_POINTER__ * ((\VIRT) >> ((\L) * PTE_BPL + PAGE_BITS) & (BIT (PTE_BPL) - 1))(%ebp)
+.endm
 
-.macro                  INIT_STATE
-                        mov     $SEL_KERN_DATA, %ecx
-                        mov     %ecx, %ss
-                        xor     %ecx, %ecx
-                        mov     %ecx, %ds
-                        mov     %ecx, %es
-                        mov     %ecx, %fs
-                        mov     %ecx, %gs
-                        mov     $STACK, %esp
+.macro                  PTE_REL L, PTAB, VIRT, PHYS, ATTR
+                        lea     (\PHYS) + (\ATTR)(%ebp), %ecx
+                        lea     (\VIRT)(%ebp), %edx
+                        shr     $((\L) * PTE_BPL + PAGE_BITS), %edx
+                        and     $(BIT (PTE_BPL) - 1), %edx
+                        mov     %ecx, (\PTAB)(%ebp, %edx, __SIZEOF_POINTER__)
 .endm
 
 .macro                  INIT_PAGING
@@ -71,7 +59,8 @@ __boot_gdt__:
                         xor     %edx, %edx
                         mov     $(EFER_NXE | EFER_LME | EFER_SCE), %eax
                         wrmsr
-                        mov     $PDBR, %ecx
+                        lea     STACK(%ebp), %esp
+                        lea     PT3S_HPAS(%ebp), %ecx
                         mov     $(CR4_OSXMMEXCPT | CR4_OSFXSR | CR4_PGE | CR4_PAE | CR4_PSE | CR4_DE), %edx
                         mov     $(CR0_PG | CR0_WP | CR0_NE | CR0_TS | CR0_MP | CR0_PE), %eax
                         mov     %edx, %cr4
@@ -80,67 +69,114 @@ __boot_gdt__:
 .endm
 
 /*
- * AP Startup Code
+ * Initialization Code
  */
-.code16
-
-__start_ap:             INIT_PAGING
-                        lgdtl   %cs:__gdt_desc - __start_ap
-                        ljmpl   $SEL_KERN_CODE, $__start_all
-
-__gdt_desc:             .word   __boot_gdt__ - __boot_gdt - 1
-                        .long   __boot_gdt
+.section .init
 
 /*
- * BSP Startup Code
+ * 32/64-bit Startup Code: Bootstrap Processor (BSP)
  */
 .code32
 
-__start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
-                        mov     $__start_ap, %esi
-                        mov     $0x1000, %edi
-                        rep     movsb
+__init_bsp:             // Determine relocation offset
+                        xchg    %ebx, %esp
+                        pop     %esi
+                        call    .Lret_addr
+.Lret_addr:             pop     %ebp
+                        push    %esi
+            dec %esi;   sub     $.Lret_addr, %ebp
+                        xchg    %ebx, %esp
 
-                        mov     $(LVL3L + 0x27), %ecx
-                        mov     %ecx, LVL4  + __SIZEOF_POINTER__ * (LOAD_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
-                        mov     $(LVL2L + 0x27), %ecx
-                        mov     %ecx, LVL3L + __SIZEOF_POINTER__ * (LOAD_ADDR >> (2 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        // Apply relocations
+                        add     %ebp, 0 + __addr_gdt(%ebp)
+                        add     %ebp, 2 + __jump_aps(%ebp)
 
-                        mov     $(LVL3H + 0x27), %ecx
-                        mov     %ecx, LVL4  + __SIZEOF_POINTER__ * (LINK_ADDR >> (3 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
-                        mov     $(LVL2H + 0x27), %ecx
-                        mov     %ecx, LVL3H + __SIZEOF_POINTER__ * (LINK_ADDR >> (2 * PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))
+                        // Ensure flags are in a defined state
+                        cli
+                        cld
 
-                        mov     $0xe3, %ecx
-                        mov     $LVL2L, %edi
-1:                      mov     %ecx, (%edi)
-                        add     $(1 << (PTE_BPL + PAGE_BITS)), %ecx
-                        add     $__SIZEOF_POINTER__, %edi
-                        cmp     $LOAD_E, %ecx
-                        jb      1b
+                        // Configure Page Tables: Load Section (2M page)
+                        PTE_REL 3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
+                        PTE_REL 2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
+                        PTE_REL 1, PT1L_HPAS, NOVA_HPAS, NOVA_HPAS, PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P
 
-                        mov     $(LOAD_ADDR + 0x1e3), %ecx
-                        mov     $(LVL2H + __SIZEOF_POINTER__ * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & ((1 << PTE_BPL) - 1))), %edi
-1:                      mov     %ecx, (%edi)
-                        add     $(1 << (PTE_BPL + PAGE_BITS)), %ecx
-                        add     $__SIZEOF_POINTER__, %edi
-                        cmp     $LINK_E, %ecx
-                        jb      1b
+                        // FIXME: AP Startup Code mapping
+                        PTE_REL 1, PT1L_HPAS, 0, 0, PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P
+
+                        // Configure Page Tables: Link Section (2M pages)
+                        PTE_FIX 3, PT3S_HPAS, LINK_ADDR, PT2H_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
+                        PTE_FIX 2, PT2H_HPAS, LINK_ADDR, PT1H_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
+
+                        lea     PT1H_HPAS + __SIZEOF_POINTER__ * (LINK_ADDR >> (PTE_BPL + PAGE_BITS) & (BIT (PTE_BPL) - 1))(%ebp), %edx
+                        lea     NOVA_HPAS + (PTE_ATTR_G | PTE_ATTR_S | PTE_ATTR_D | PTE_ATTR_A | PTE_ATTR_W | PTE_ATTR_P)(%ebp), %ecx
+                        lea     NOVA_HPAE(%ebp), %eax
+.Lpte_loop:             mov     %ecx, (%edx)
+                        add     $__SIZEOF_POINTER__, %edx
+                        add     $(BIT (PTE_BPL + PAGE_BITS)), %ecx
+                        cmp     %eax, %ecx
+                        jb      .Lpte_loop
 
                         INIT_PAGING
-                        lgdt    __boot_gdt + 2
-                        ljmp    $SEL_KERN_CODE, $__start_all
+.code64
+                        lea     __init_all(%rbp), %eax
+                        lgdt    __desc_gdt(%rbp)
+                        pushq   $SEL_KERN_CODE
+                        pushq   %rax
+                        lretq
 
 /*
- * Common Startup Code
+ * 16-bit Startup Code: Application Processors (APs)
+ */
+.code16
+
+__init_aps:             jmp     .Lskip_vec
+__wake_vec:             orb     $1, %bl
+.Lskip_vec:             mov     %cs:__addr_gdt - __init_aps, %ebp
+                        sub     $__boot_gdt, %ebp
+                        INIT_PAGING
+                        lgdtl   %cs:__desc_gdt - __init_aps
+__jump_aps:             ljmpl   $SEL_KERN_CODE, $__init_all
+
+/*
+ * Global Descriptor Table (GDT)
+ */
+.balign                 0x8, 0x90
+
+__boot_gdt:             .word   0
+__desc_gdt:             .word   __boot_gdt__ - __boot_gdt - 1
+__addr_gdt:             .long   __boot_gdt
+__desc_gdt__:           .quad   0x00a09b0000000000
+                        .quad   0x00a0930000000000
+                        .quad   0x00a0fb0000000000
+                        .quad   0x00a0f30000000000
+__boot_gdt__:
+
+/*
+ * 64-bit Startup Code: All Processors
  */
 .code64
 
-__start_all:            INIT_STATE
+__init_all:             lea     .Lhigh, %rax
+                        jmp     *%rax
+
+.text
+
+.Lhigh:                 mov     $SEL_KERN_DATA, %ecx
+                        mov     %cx, %ss
+                        xor     %ecx, %ecx
+                        mov     %cx, %ds
+                        mov     %cx, %es
+                        mov     %cx, %fs
+                        mov     %cx, %gs
+
                         test    %rbx, %rbx
                         jz      .Linit_end
 
-                        mov     %rbx, %rdi
+                        // Note: %rbp has upper bits 0, not sign-extended
+                        lea     NOVA_HPAS(%ebp), %rax
+                        lea     LINK_ADDR, %rdi
+                        sub     %rax, %rdi
+                        mov     %rbx, %rsi
                         call    init
 .Linit_end:
                         // Acquire boot lock
@@ -154,11 +190,22 @@ __start_all:            INIT_STATE
                         movzwl  __boot_lock, %edx
                         jmp     .Llock_retry
 .Llock_end:
+                        mov     $0x1, %eax
+                        cpuid
+                        shr     $0x18, %ebx
+                        mov     %rbx, %rdi
                         call    kern_ptab_setup
-                        jmp     1f
-
-.text
-
-1:                      mov     %rax, %cr3
+                        mov     %rax, %cr3
                         lea     DSTK_TOP, %rsp
                         jmp     bootstrap
+
+.section .init
+
+/*
+ * Multiboot Header
+ */
+.balign                 0x8
+
+                        .long   0x1badb002
+                        .long   BIT (0)
+                        .long  -0x1badb002 - BIT (0)
