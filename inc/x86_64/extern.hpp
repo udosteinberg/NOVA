@@ -23,24 +23,11 @@
 
 #include "types.hpp"
 
-extern char GIT_VER;
-
 extern char PAGE_0;
 extern char PAGE_1;
 extern char PAGE_H;
 
-extern char FRAME_0;
-extern char FRAME_1;
-extern char FRAME_H;
-
-extern char PDBR;
-
-extern char LINK_P;
-extern char LINK_E;
-extern char LOAD_E;
-
-extern char DSTK_TOP;
-
+extern char GIT_VER, NOVA_HPAS, NOVA_HPAE, PTAB_HVAS, DSTK_TOP;
 extern void (*CTORS_S)(), (*CTORS_E)(), (*CTORS_C)(), (*CTORS_L)();
 
 extern char entry_sys;
