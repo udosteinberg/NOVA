@@ -23,11 +23,13 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "ec.hpp"
+#include "extern.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "rcu.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
+#include "string.hpp"
 #include "vectors.hpp"
 
 void Lapic::init()
@@ -71,6 +73,10 @@ void Lapic::init()
     Cpu::id = Cpu::find_by_apic_id (id());
 
     if ((Cpu::bsp = apic_base & 0x100)) {
+
+        extern char __init_aps, __desc_gdt__;
+
+        memcpy (Hpt::remap (0x1000), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__desc_gdt__ - &__init_aps);
 
         send_ipi (0, 0, DLV_INIT, DSH_EXC_SELF);
 
