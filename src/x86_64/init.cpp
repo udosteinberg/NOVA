@@ -29,7 +29,7 @@
 #include "pic.hpp"
 #include "string.hpp"
 
-extern "C" mword kern_ptab_setup()
+extern "C" uintptr_t kern_ptab_setup (apic_t)
 {
     Hptp hpt;
 
@@ -49,7 +49,7 @@ extern "C" mword kern_ptab_setup()
     return hpt.addr();
 }
 
-extern "C" void init (mword mbi)
+extern "C" void init (uintptr_t mbi)
 {
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE (0));

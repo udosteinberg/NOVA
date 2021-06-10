@@ -259,7 +259,7 @@ void Ec::root_invoke()
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, Kmem::ptr_to_phys (&PAGE_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);
