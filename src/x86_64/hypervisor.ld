@@ -24,7 +24,7 @@
 
 OUTPUT_ARCH(BFD_ARCH)
 OUTPUT_FORMAT(BFD_FORMAT)
-ENTRY(__start_bsp)
+ENTRY(__init_bsp)
 
 PHDRS
 {
@@ -36,12 +36,13 @@ SECTIONS
 {
     .init LOAD_ADDR :
     {
-        *(.init)
+        *(.init .init.*)
     } : init
 
-    . = ALIGN(4K) + 4K; PROVIDE_HIDDEN (STACK = .);
-
-    PROVIDE_HIDDEN (LOAD_E = .);
+    .stack :
+    {
+        . = ALIGN(4K); PROVIDE_HIDDEN (STACK = .);
+    } : init
 
     .text . + OFFSET : AT (ADDR (.text) - OFFSET)
     {
@@ -78,27 +79,27 @@ SECTIONS
         . = ALIGN(4K);
         _mempool_l = .; PROVIDE_HIDDEN (_mempool_p = _mempool_l - OFFSET);
 
-        PROVIDE_HIDDEN (PAGE_0 = .); PROVIDE_HIDDEN (FRAME_0 = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (PAGE_1 = .); PROVIDE_HIDDEN (FRAME_1 = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (PAGE_H = .); PROVIDE_HIDDEN (FRAME_H = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PAGE_0 = .); . += 4K;
+        PROVIDE_HIDDEN (PAGE_1 = .); . += 4K;
+        PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
 
-        PROVIDE_HIDDEN (PDBR  = . - OFFSET);
-        PROVIDE_HIDDEN (LVL4  = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (LVL3L = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (LVL3H = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (LVL2L = . - OFFSET); . += 4K;
-        PROVIDE_HIDDEN (LVL2H = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PTAB_HVAS = .);
+        PROVIDE_HIDDEN (PT3S_HPAS = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PT2H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PT1H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PT2L_HPAS = . - OFFSET); . += 4K;
+        PROVIDE_HIDDEN (PT1L_HPAS = . - OFFSET); . += 4K;
 
-        _mempool_f = .;
+        PROVIDE_HIDDEN (_mempool_f = .);
 
-        . += 16M;
-        . = ALIGN(4M);
-
-        PROVIDE_HIDDEN (LINK_E = . - OFFSET);
+        . = ALIGN(16M);
 
         PROVIDE_HIDDEN (_mempool_e = .);
 
     } : kern
+
+    PROVIDE_HIDDEN (NOVA_HPAS = LOAD_ADDR);
+    PROVIDE_HIDDEN (NOVA_HPAE = . - OFFSET);
 
     PROVIDE_HIDDEN (DSTK_TOP = MMAP_CPU_DSTK + PAGE_SIZE);
 
