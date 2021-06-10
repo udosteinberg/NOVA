@@ -24,7 +24,7 @@
 
 OUTPUT_ARCH(BFD_ARCH)
 OUTPUT_FORMAT(BFD_FORMAT)
-ENTRY(__start_bsp)
+ENTRY(__init_bsp)
 
 PHDRS
 {
@@ -36,12 +36,13 @@ SECTIONS
 {
     .init LOAD_ADDR :
     {
-        *(.init)
+        *(.init .init.*)
     } : init
 
-    . = ALIGN(4K) + 4K; PROVIDE (STACK = .);
-
-    PROVIDE (LOAD_E = .);
+    .stack :
+    {
+        . = ALIGN(4K); PROVIDE (STACK = .);
+    } : init
 
     .text . + OFFSET : AT (ADDR (.text) - OFFSET)
     {
@@ -78,27 +79,29 @@ SECTIONS
         . = ALIGN(4K);
         _mempool_l = .; PROVIDE (_mempool_p = _mempool_l - OFFSET);
 
-        PROVIDE (PAGE_0 = .); PROVIDE (FRAME_0 = . - OFFSET); . += 4K;
-        PROVIDE (PAGE_1 = .); PROVIDE (FRAME_1 = . - OFFSET); . += 4K;
-        PROVIDE (PAGE_H = .); PROVIDE (FRAME_H = . - OFFSET); . += 4K;
+        PROVIDE (PAGE_0 = .); . += 4K;
+        PROVIDE (PAGE_1 = .); . += 4K;
+        PROVIDE (PAGE_H = .); . += 4K;
 
-        PROVIDE (PDBR  = . - OFFSET);
-        PROVIDE (LVL4  = . - OFFSET); . += 4K;
-        PROVIDE (LVL3L = . - OFFSET); . += 4K;
-        PROVIDE (LVL3H = . - OFFSET); . += 4K;
-        PROVIDE (LVL2L = . - OFFSET); . += 4K;
-        PROVIDE (LVL2H = . - OFFSET); . += 4K;
+        PROVIDE (PTAB_HVAS = .);
+        PROVIDE (PT3S_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1H_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT2L_HPAS = . - OFFSET); . += 4K;
+        PROVIDE (PT1L_HPAS = . - OFFSET); . += 4K;
 
-        _mempool_f = .;
+        PROVIDE (_mempool_f = .);
 
-        . += 16M;
-        . = ALIGN(4M);
-
-        PROVIDE (LINK_E = . - OFFSET);
+        . = ALIGN(16M);
 
         PROVIDE (_mempool_e = .);
 
     } : kern
+
+    PROVIDE (NOVA_HPAS = LOAD_ADDR);
+    PROVIDE (NOVA_HPAE = . - OFFSET);
+
+    PROVIDE (STCK_TOP = MMAP_CPU_STCK + PAGE_SIZE);
 
     .cpulocal MMAP_CPU_DATA :
     {
