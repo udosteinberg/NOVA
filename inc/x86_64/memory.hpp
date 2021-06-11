@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,29 +21,55 @@
 
 #pragma once
 
+#include "macros.hpp"
+
+#define LOAD_ADDR       0x400000
+
 #define PTE_BPL         9
 #define PAGE_BITS       12
-#define PAGE_SIZE       (1 << PAGE_BITS)
-#define PAGE_MASK       (PAGE_SIZE - 1)
+#define LEVL_BITS(L)    ((L) * PTE_BPL + PAGE_BITS)
+#define PAGE_SIZE(L)    BITN (LEVL_BITS (L))
+#define OFFS_MASK(L)    (PAGE_SIZE (L) - 1)
 
-#define LOAD_ADDR       0x200000
-
-#define USER_ADDR       0x00007ffffffff000
-#define LINK_ADDR       0xffffffff81000000
-#define CPU_LOCAL       0xffffffffbfe00000
-#define SPC_LOCAL       0xffffffffc0000000
-
-#define OFFSET          (LINK_ADDR - LOAD_ADDR)
-
-#define CPU_GLOBL_DATA  (CPU_LOCAL - 0x1000000)
-
-#define CPU_LOCAL_STCK  (SPC_LOCAL - PAGE_SIZE * 3)
-#define CPU_LOCAL_APIC  (SPC_LOCAL - PAGE_SIZE * 2)
-#define CPU_LOCAL_DATA  (SPC_LOCAL - PAGE_SIZE * 1)
-
-#define SPC_LOCAL_IOP   (SPC_LOCAL)
-#define SPC_LOCAL_IOP_E (SPC_LOCAL_IOP + PAGE_SIZE * 2)
-#define SPC_LOCAL_REMAP (SPC_LOCAL_OBJ - 0x1000000)
-#define SPC_LOCAL_OBJ   (END_SPACE_LIM - 0x20000000)
+#define VIRT_ADDR(L3,L2,L1,L0)  (VALN_SHIFT (0xffff, LEVL_BITS (4)) | VALN_SHIFT (L3, LEVL_BITS (3)) | VALN_SHIFT (L2, LEVL_BITS (2)) | VALN_SHIFT (L1, LEVL_BITS (1)) | VALN_SHIFT (L0, LEVL_BITS (0)))
 
 #define END_SPACE_LIM   (~0UL + 1)
+#define MMAP_SPC_OBJ    (END_SPACE_LIM - 0x20000000)
+
+// Space-Local Area
+#define MMAP_SPC_PIO_E  VIRT_ADDR (511, 511,   0,   2)
+#define MMAP_SPC_PIO    VIRT_ADDR (511, 511,   0,   0)
+#define MMAP_SPC        VIRT_ADDR (511, 511,   0,   0)
+
+// CPU-Local Area
+#define MMAP_CPU_DATA   VIRT_ADDR (511, 510, 511, 511)          //   4K
+#define MMAP_CPU_DSTT   VIRT_ADDR (511, 510, 511, 391)          // Data Stack Top
+#define MMAP_CPU_DSTB   VIRT_ADDR (511, 510, 511, 390)          // Data Stack Base
+#define MMAP_CPU_ISTT   VIRT_ADDR (511, 510, 511, 389)          // Intr Stack Top
+#define MMAP_CPU_ISTB   VIRT_ADDR (511, 510, 511, 388)          // Intr Stack Base
+#define MMAP_CPU_DTKN  (VIRT_ADDR (511, 510, 511, 387) - 8)     // Data Supervisor Shadow Stack Token
+#define MMAP_CPU_DSSS   VIRT_ADDR (511, 510, 511, 386)          // Data Supervisor Shadow Stack
+#define MMAP_CPU_ITKN  (VIRT_ADDR (511, 510, 511, 385) - 8)     // Intr Supervisor Shadow Stack Token
+#define MMAP_CPU_ISSS   VIRT_ADDR (511, 510, 511, 384)          // Intr Supervisor Shadow Stack
+#define MMAP_CPU_APIC   VIRT_ADDR (511, 510, 511, 256)          //   4K
+#define MMAP_CPU        VIRT_ADDR (511, 510, 511,   0)          //   2M
+
+// Global Area
+#define MMAP_GLB_MAP1   VIRT_ADDR (511, 510, 500,   0)          //   4M + gap
+#define MMAP_GLB_MAP0   VIRT_ADDR (511, 510, 496,   0)          //   4M + gap
+#define MMAP_GLB_UART   VIRT_ADDR (511, 510, 488,   0)          //  16M
+#define MMAP_GLB_MMIO   VIRT_ADDR (511, 510, 448,   0)          //  64M
+#define LINK_ADDR       0xffffffff81000000
+
+#define MMAP_GLB_CPUS   VIRT_ADDR (511, 509,   0,   0)          //   1G (262144 CPUs)
+#define MMAP_GLB_PCIE   MMAP_GLB_CPUS
+#define MMAP_GLB_PCIS   VIRT_ADDR (511, 253,   0,   0)          // 256G (1024 PCI Segment Groups)
+#define MMAP_TMP_RW1E   MMAP_GLB_PCIS
+#define MMAP_TMP_RW1S   VIRT_ADDR (511, 252,   0,   0)          //   1G (Remap Window 1)
+#define MMAP_TMP_RW0E   MMAP_TMP_RW1S
+#define MMAP_TMP_RW0S   VIRT_ADDR (511, 251,   0,   0)          //   1G (Remap Window 0)
+#define BASE_ADDR       MMAP_GLB_PCIS
+
+#define USER_ADDR       0x00007ffffffff000
+
+#define OFFSET          (LINK_ADDR - LOAD_ADDR)

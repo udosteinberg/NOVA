@@ -28,31 +28,36 @@
 #include "idt.hpp"
 #include "string.hpp"
 
-extern "C" mword kern_ptab_setup()
+extern "C" uintptr_t kern_ptab_setup()
 {
     Hptp hpt;
 
     // Allocate and map cpu page
-    hpt.update (CPU_LOCAL_DATA, 0,
+    hpt.update (MMAP_CPU_DATA, 0,
                 Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
-    // Allocate and map kernel stack
-    hpt.update (CPU_LOCAL_STCK, 0,
+    // Allocate and map data stack
+    hpt.update (MMAP_CPU_DSTB, 0,
+                Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
+                Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
+
+    // Allocate and map intr stack
+    hpt.update (MMAP_CPU_ISTB, 0,
                 Kmem::ptr_to_phys (Buddy::allocator.alloc (0, Buddy::FILL_0)),
                 Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P);
 
     // Sync kernel code and data
-    hpt.sync_master_range (LINK_ADDR, CPU_LOCAL);
+    hpt.sync_master_range (BASE_ADDR, MMAP_CPU);
 
     return hpt.addr();
 }
 
-extern "C" void init (mword mbi)
+extern "C" void init (uintptr_t mbi)
 {
     // Setup 0-page and 1-page
-    memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
-    memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
+    memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE (0));
+    memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE (0));
 
     for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
 

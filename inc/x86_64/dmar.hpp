@@ -63,13 +63,13 @@ class Dmar_ctx
         inline bool present() const { return lo & 1; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~PAGE_MASK; }
+        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~OFFS_MASK (0); }
 
         ALWAYS_INLINE
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE (0)); }
 };
 
 class Dmar_irt
@@ -82,7 +82,7 @@ class Dmar_irt
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }
 
         ALWAYS_INLINE
-        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE); }
+        static inline void *operator new (size_t) { return flush (Buddy::allocator.alloc (0, Buddy::FILL_0), PAGE_SIZE (0)); }
 };
 
 class Dmar : public List<Dmar>
@@ -102,7 +102,7 @@ class Dmar : public List<Dmar>
         static Slab_cache   cache;
 
         static unsigned const ord = 0;
-        static unsigned const cnt = (PAGE_SIZE << ord) / sizeof (Dmar_qi);
+        static unsigned const cnt = (PAGE_SIZE (0) << ord) / sizeof (Dmar_qi);
 
         enum Reg
         {

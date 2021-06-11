@@ -32,7 +32,7 @@ class Space_pio : public Space
         ALWAYS_INLINE
         static inline mword idx_to_virt (mword idx)
         {
-            return SPC_LOCAL_IOP + (idx / 8 / sizeof (mword)) * sizeof (mword);
+            return MMAP_SPC_PIO + (idx / 8 / sizeof (mword)) * sizeof (mword);
         }
 
         ALWAYS_INLINE
