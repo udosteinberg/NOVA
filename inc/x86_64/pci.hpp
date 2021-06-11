@@ -109,7 +109,7 @@ class Pci : public List<Pci>
         ALWAYS_INLINE
         static inline unsigned phys_to_rid (Paddr p)
         {
-            return p - cfg_base < cfg_size ? static_cast<unsigned>((bus_base << 8) + (p - cfg_base) / PAGE_SIZE) : ~0U;
+            return p - cfg_base < cfg_size ? static_cast<unsigned>((bus_base << 8) + (p - cfg_base) / PAGE_SIZE (0)) : ~0U;
         }
 
         ALWAYS_INLINE

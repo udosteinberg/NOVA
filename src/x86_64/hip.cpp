@@ -45,8 +45,8 @@ void Hip::build (mword addr)
     sel_gsi    = NUM_GSI;
     sel_exc    = NUM_EXC;
     sel_vmi    = NUM_VMI;
-    cfg_page   = PAGE_SIZE;
-    cfg_utcb   = PAGE_SIZE;
+    cfg_page   = PAGE_SIZE (0);
+    cfg_utcb   = PAGE_SIZE (0);
 
     Multiboot *mbi = static_cast<Multiboot *>(Hpt::remap (addr));
 
