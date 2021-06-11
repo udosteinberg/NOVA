@@ -27,7 +27,7 @@ void Acpi_table_mcfg::parse() const
         if (!x->seg) {
             Pci::bus_base = x->bus_s;
             Pci::cfg_base = static_cast<Paddr>(x->addr);
-            Pci::cfg_size = ((x->bus_e - x->bus_s + 1) << 8) * PAGE_SIZE;
+            Pci::cfg_size = ((x->bus_e - x->bus_s + 1) << 8) * PAGE_SIZE (0);
         }
 
     Pci::init();
