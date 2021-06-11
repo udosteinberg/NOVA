@@ -39,6 +39,8 @@ extern char LINK_P;
 extern char LINK_E;
 extern char LOAD_E;
 
+extern uintptr_t DSTK_TOP;
+
 extern void (*CTORS_S)(), (*CTORS_E)(), (*CTORS_C)(), (*CTORS_L)();
 
 extern char entry_sys;

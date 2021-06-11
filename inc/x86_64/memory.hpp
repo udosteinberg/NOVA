@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,28 +21,37 @@
 
 #pragma once
 
+#include "macros.hpp"
+
+#define LOAD_ADDR       0x400000
+
 #define PAGE_BITS       12
-#define PAGE_SIZE       (1 << PAGE_BITS)
-#define PAGE_MASK       (PAGE_SIZE - 1)
-
-#define LOAD_ADDR       0x200000
-
-#define USER_ADDR       0x00007ffffffff000
-#define LINK_ADDR       0xffffffff81000000
-#define CPU_LOCAL       0xffffffffbfe00000
-#define SPC_LOCAL       0xffffffffc0000000
-
-#define OFFSET          (LINK_ADDR - LOAD_ADDR)
-
-#define CPU_GLOBL_DATA  (CPU_LOCAL - 0x1000000)
-
-#define CPU_LOCAL_STCK  (SPC_LOCAL - PAGE_SIZE * 3)
-#define CPU_LOCAL_APIC  (SPC_LOCAL - PAGE_SIZE * 2)
-#define CPU_LOCAL_DATA  (SPC_LOCAL - PAGE_SIZE * 1)
-
-#define SPC_LOCAL_IOP   (SPC_LOCAL)
-#define SPC_LOCAL_IOP_E (SPC_LOCAL_IOP + PAGE_SIZE * 2)
-#define SPC_LOCAL_REMAP (SPC_LOCAL_OBJ - 0x1000000)
-#define SPC_LOCAL_OBJ   (END_SPACE_LIM - 0x20000000)
+#define PAGE_SIZE       BITN (PAGE_BITS)
+#define OFFS_MASK       (PAGE_SIZE - 1)
 
 #define END_SPACE_LIM   (~0UL + 1)
+#define MMAP_SPC_OBJ    (END_SPACE_LIM - 0x20000000)
+
+// Space-Local Area           [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_SPC_PIO_E  0xffffffffc0002000      // 511 511 000 002
+#define MMAP_SPC_PIO    0xffffffffc0000000      // 511 511 000 000
+#define MMAP_SPC        0xffffffffc0000000      // 511 511 000 000
+
+// CPU-Local Area             [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_CPU_DATA   0xffffffffbffff000      // 511 510 511 511    4K
+#define MMAP_CPU_DSTK   0xffffffffbfffd000      // 511 510 511 509    4K + gap
+#define MMAP_CPU_APIC   0xffffffffbfffb000      // 511 510 511 507    4K + gap
+#define MMAP_CPU_TMAP   0xffffffffbfa00000      // 511 510 509 000    4M
+#define MMAP_CPU        0xffffffffb0000000      // 511 510 384 000
+
+// Global Area                [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_GLB_PCIE   0xffffffffac000000      // 511 510 352 000   64M
+#define MMAP_GLB_APIC   0xffffffffa8000000      // 511 510 320 000   64M
+#define MMAP_GLB_UART   0xffffffffa4000000      // 511 510 288 000   64M
+#define MMAP_GLB_SMMU   0xffffffffa0000000      // 511 510 256 000   64M
+#define MMAP_GLB_DATA   0xffffffff90000000      // 511 510 128 000  256M
+#define LINK_ADDR       0xffffffff81000000
+
+#define USER_ADDR       0x00007ffffffff000
+
+#define OFFSET          (LINK_ADDR - LOAD_ADDR)
