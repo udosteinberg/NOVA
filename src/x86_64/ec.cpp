@@ -177,8 +177,8 @@ void Ec::ret_user_vmresume()
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
-                  "mov %1, %%rsp;"
-                  : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  "lea %1, %%rsp;"
+                  : : "m" (current->regs), "m" (DSTK_TOP) : "memory");
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
 
@@ -204,12 +204,12 @@ void Ec::ret_user_vmrun()
                   "vmsave;"
                   EXPAND (SAVE_GPR)
                   "mov %1, %%rax;"
-                  "mov %2, %%rsp;"
+                  "lea %2, %%rsp;"
                   "vmload;"
                   "cli;"
                   "stgi;"
                   "jmp svm_handler;"
-                  : : "m" (current->regs), "m" (Vmcb::root), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "m" (Vmcb::root), "m" (DSTK_TOP) : "memory");
 
     UNREACHED;
 }

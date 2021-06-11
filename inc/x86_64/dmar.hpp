@@ -63,7 +63,7 @@ class Dmar_ctx
         inline bool present() const { return lo & 1; }
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~PAGE_MASK; }
+        inline Paddr addr() const { return static_cast<Paddr>(lo) & ~OFFS_MASK; }
 
         ALWAYS_INLINE
         inline void set (uint64 h, uint64 l) { hi = h; lo = l; flush (this); }

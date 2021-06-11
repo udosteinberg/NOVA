@@ -65,7 +65,7 @@ unsigned Mtrr::memtype (uint64 phys, uint64 &next)
         if (!(mtrr->mask & 0x800))
             continue;
 
-        uint64 base = mtrr->base & ~PAGE_MASK;
+        uint64 base = mtrr->base & ~OFFS_MASK;
 
         if (phys < base)
             next = min (next, base);

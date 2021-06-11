@@ -104,7 +104,7 @@ void Slab_cache::free (void *ptr)
 {
     Lock_guard <Spinlock> guard (lock);
 
-    Slab *slab = reinterpret_cast<Slab *>(reinterpret_cast<mword>(ptr) & ~PAGE_MASK);
+    Slab *slab = reinterpret_cast<Slab *>(reinterpret_cast<mword>(ptr) & ~OFFS_MASK);
 
     bool was_full = slab->full();
 
