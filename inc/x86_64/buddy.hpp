@@ -64,13 +64,13 @@ class Buddy
         ALWAYS_INLINE
         inline signed long page_to_index (mword l_addr)
         {
-            return l_addr / PAGE_SIZE - base / PAGE_SIZE;
+            return l_addr / PAGE_SIZE (0) - base / PAGE_SIZE (0);
         }
 
         ALWAYS_INLINE
         inline mword index_to_page (signed long i)
         {
-            return base + i * PAGE_SIZE;
+            return base + i * PAGE_SIZE (0);
         }
 
         ALWAYS_INLINE
