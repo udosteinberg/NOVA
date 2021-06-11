@@ -161,5 +161,5 @@ __start_all:            INIT_STATE
 .text
 
 1:                      mov     %rax, %cr3
-                        lea     CPU_LOCAL_STCK + PAGE_SIZE - __SIZEOF_POINTER__, %rsp
+                        lea     DSTK_TOP - __SIZEOF_POINTER__, %rsp
                         jmp     bootstrap

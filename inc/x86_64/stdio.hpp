@@ -29,10 +29,10 @@
 
 static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_frame_address (0)); }
 
-#define trace(T,format,...)                                 \
-do {                                                        \
-    if ((trace_mask & (T)) == (T)) [[unlikely]]             \
-        Console::print ("[%3ld] " format, (stackptr() & ~PAGE_MASK) == CPU_LOCAL_STCK ? ACCESS_ONCE (Cpu::id) : ~0UL __VA_OPT__(,) __VA_ARGS__);    \
+#define trace(T,format,...)                         \
+do {                                                \
+    if ((trace_mask & (T)) == (T)) [[unlikely]]     \
+        Console::print ("[%3ld] " format, (stackptr() & ~OFFS_MASK (0)) == MMAP_CPU_DSTB ? ACCESS_ONCE (Cpu::id) : ~0UL __VA_OPT__(,) __VA_ARGS__); \
 } while (0)
 
 #define panic(format,...)                                   \
