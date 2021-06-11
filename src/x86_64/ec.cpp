@@ -185,7 +185,7 @@ void Ec::ret_user_vmresume()
                   "vmresume;"
                   "vmlaunch;"
                   "mov %1, %%rsp;"
-                  : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "i" (MMAP_CPU_STCK + PAGE_SIZE) : "memory");
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
 
@@ -216,7 +216,7 @@ void Ec::ret_user_vmrun()
                   "cli;"
                   "stgi;"
                   "jmp svm_handler;"
-                  : : "m" (current->regs), "m" (Vmcb::root), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "m" (Vmcb::root), "i" (MMAP_CPU_STCK + PAGE_SIZE) : "memory");
 
     UNREACHED;
 }

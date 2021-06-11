@@ -99,7 +99,7 @@ SECTIONS
 
     } : kern
 
-    .cpulocal CPU_LOCAL_DATA :
+    .cpulocal MMAP_CPU_DATA :
     {
         *(SORT_BY_ALIGNMENT (.cpulocal.hot))
         *(SORT_BY_ALIGNMENT (.cpulocal))
