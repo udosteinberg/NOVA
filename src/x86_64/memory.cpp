@@ -21,4 +21,4 @@
 #include "memory.hpp"
 #include "types.hpp"
 
-mword hwdev_addr = CPU_GLOBL_DATA;
+mword hwdev_addr = MMAP_GLB_DATA;

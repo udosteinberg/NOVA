@@ -60,7 +60,7 @@ class Hpt : public Pte<Hpt, uint64, 4, 9, false>
         };
 
         ALWAYS_INLINE
-        inline Paddr addr() const { return static_cast<Paddr>(val) & ~PAGE_MASK; }
+        inline Paddr addr() const { return static_cast<Paddr>(val) & ~OFFS_MASK; }
 
         ALWAYS_INLINE
         static inline mword hw_attr (mword a) { return a ? a | HPT_D | HPT_A | HPT_U | HPT_P : 0; }
