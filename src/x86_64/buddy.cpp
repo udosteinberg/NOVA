@@ -60,7 +60,7 @@ Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
 
     // Allocate block-index storage
     size -= size / (PAGE_SIZE + sizeof *index) * sizeof *index;
-    size &= ~PAGE_MASK;
+    size &= ~OFFS_MASK;
     min_idx = page_to_index (virt);
     max_idx = page_to_index (virt + size);
     index = reinterpret_cast<Block *>(virt + size) - min_idx;

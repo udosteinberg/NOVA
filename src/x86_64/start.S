@@ -157,5 +157,5 @@ __start_all:            INIT_STATE
 .text
 
 1:                      mov     %rax, %cr3
-                        mov     $(CPU_LOCAL_STCK + PAGE_SIZE), %rsp
+                        lea     DSTK_TOP, %rsp
                         jmp     bootstrap

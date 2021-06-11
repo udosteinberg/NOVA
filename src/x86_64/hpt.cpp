@@ -43,8 +43,8 @@ bool Hpt::sync_from (Hpt src, mword v, mword o)
 
 void Hpt::sync_master_range (mword s, mword e)
 {
-    for (mword l = (bit_scan_reverse (LINK_ADDR ^ CPU_LOCAL) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
-        sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), s, CPU_LOCAL);
+    for (mword l = (bit_scan_reverse (LINK_ADDR ^ MMAP_CPU) - PAGE_BITS) / bpl(); s < e; s += 1UL << (l * bpl() + PAGE_BITS))
+        sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), s, MMAP_CPU);
 }
 
 Paddr Hpt::replace (mword v, mword p)
@@ -67,13 +67,13 @@ void *Hpt::remap (Paddr phys)
     phys &= ~offset;
 
     Paddr old; mword attr;
-    if (hpt.lookup (SPC_LOCAL_REMAP, old, attr)) {
-        hpt.update (SPC_LOCAL_REMAP,        bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP);
-        hpt.update (SPC_LOCAL_REMAP + size, bpl(), 0, 0, Hpt::TYPE_DN); flush (SPC_LOCAL_REMAP + size);
+    if (hpt.lookup (MMAP_CPU_MAP0, old, attr)) {
+        hpt.update (MMAP_CPU_MAP0,        bpl(), 0, 0, Hpt::TYPE_DN); flush (MMAP_CPU_MAP0);
+        hpt.update (MMAP_CPU_MAP0 + size, bpl(), 0, 0, Hpt::TYPE_DN); flush (MMAP_CPU_MAP0 + size);
     }
 
-    hpt.update (SPC_LOCAL_REMAP,        bpl(), phys,        HPT_W | HPT_P);
-    hpt.update (SPC_LOCAL_REMAP + size, bpl(), phys + size, HPT_W | HPT_P);
+    hpt.update (MMAP_CPU_MAP0,        bpl(), phys,        HPT_W | HPT_P);
+    hpt.update (MMAP_CPU_MAP0 + size, bpl(), phys + size, HPT_W | HPT_P);
 
-    return reinterpret_cast<void *>(SPC_LOCAL_REMAP + offset);
+    return reinterpret_cast<void *>(MMAP_CPU_MAP0 + offset);
 }
