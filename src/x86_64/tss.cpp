@@ -26,6 +26,6 @@ ALIGNED(8) Tss Tss::dbf;
 
 void Tss::build()
 {
-    run.sp0     = CPU_LOCAL_STCK + PAGE_SIZE;
-    run.iobm    = static_cast<uint16>(SPC_LOCAL_IOP - reinterpret_cast<mword>(&run));
+    run.sp0     = MMAP_CPU_STCK + PAGE_SIZE;
+    run.iobm    = static_cast<uint16>(MMAP_SPC_IOP - reinterpret_cast<mword>(&run));
 }

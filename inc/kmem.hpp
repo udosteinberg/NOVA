@@ -46,6 +46,6 @@ class Kmem
         template <typename T>
         NONNULL static inline auto loc_to_glob (T *p, unsigned cpu)
         {
-            return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(p) - CPU_LOCAL_DATA + CPU_GLOBL_DATA + cpu * PAGE_SIZE);
+            return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(p) - MMAP_CPU_DATA + MMAP_GLB_DATA + cpu * PAGE_SIZE);
         }
 };

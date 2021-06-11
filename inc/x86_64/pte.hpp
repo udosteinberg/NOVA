@@ -39,7 +39,7 @@ class Pte
         inline bool super() const { return val & P::PTE_S; }
 
         ALWAYS_INLINE
-        inline mword attr() const { return static_cast<mword>(val) & PAGE_MASK; }
+        inline mword attr() const { return static_cast<mword>(val) & OFFS_MASK; }
 
         ALWAYS_INLINE
         inline Paddr addr() const { return static_cast<Paddr>(val) & ~((1UL << order()) - 1); }

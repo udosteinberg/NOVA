@@ -170,7 +170,7 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
             pd->make_current();
 
-            asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (CPU_LOCAL_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
+            asm volatile ("mov %0, %%rsp; jmp *%1" : : "g" (MMAP_CPU_STCK + PAGE_SIZE), "q" (cont) : "memory"); UNREACHED;
         }
 
         ALWAYS_INLINE

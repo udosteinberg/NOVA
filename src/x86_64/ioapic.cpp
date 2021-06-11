@@ -27,10 +27,10 @@ Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
 
 Ioapic *Ioapic::list;
 
-Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & PAGE_MASK)), gsi_base (g), id (i), rid (0)
+Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List<Ioapic> (list), reg_base ((hwdev_addr -= PAGE_SIZE) | (p & OFFS_MASK)), gsi_base (g), id (i), rid (0)
 {
-    Pd::kern.Space_mem::delreg (p & ~PAGE_MASK);
-    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~PAGE_MASK);
+    Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
+    Pd::kern.Space_mem::insert (reg_base, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_UC | Hpt::HPT_W | Hpt::HPT_P, p & ~OFFS_MASK);
 
     trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x IRT:%#x PRQ:%u GSI:%u",
            p, i, version(), irt_max(), prq(), gsi_base);
