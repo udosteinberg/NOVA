@@ -171,8 +171,8 @@ void Ec::ret_user_vmresume()
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"
                   "vmlaunch;"
-                  "mov %1, %%rsp;"
-                  : : "m" (current->regs), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  "lea %1, %%rsp;"
+                  : : "m" (current->regs), "m" (DSTK_TOP) : "memory");
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::VMX_INST_ERROR));
 
@@ -198,12 +198,12 @@ void Ec::ret_user_vmrun()
                   "vmsave;"
                   EXPAND (SAVE_GPR)
                   "mov %1, %%rax;"
-                  "mov %2, %%rsp;"
+                  "lea %2, %%rsp;"
                   "vmload;"
                   "cli;"
                   "stgi;"
                   "jmp svm_handler;"
-                  : : "m" (current->regs), "m" (Vmcb::root), "i" (CPU_LOCAL_STCK + PAGE_SIZE) : "memory");
+                  : : "m" (current->regs), "m" (Vmcb::root), "m" (DSTK_TOP) : "memory");
 
     UNREACHED;
 }
@@ -228,7 +228,7 @@ void Ec::root_invoke()
 
     unsigned count = e->ph_count;
     current->exc_regs().ip() = e->entry;
-    current->exc_regs().sp() = USER_ADDR - PAGE_SIZE;
+    current->exc_regs().sp() = USER_ADDR - PAGE_SIZE (0);
 
     auto p = static_cast<Ph const *>(Hpt::remap (Hip::root_addr + e->ph_offset));
 
@@ -240,12 +240,12 @@ void Ec::root_invoke()
                             !!(p->flags & 0x2) << 1 |   // W
                             !!(p->flags & 0x1) << 2;    // X
 
-            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE != p->f_offs % PAGE_SIZE)
+            if (p->f_size != p->m_size || p->v_addr % PAGE_SIZE (0) != p->f_offs % PAGE_SIZE (0))
                 die ("Bad ELF");
 
-            mword phys = aligned_dn (PAGE_SIZE, p->f_offs + Hip::root_addr);
-            mword virt = aligned_dn (PAGE_SIZE, p->v_addr);
-            mword size = aligned_up (PAGE_SIZE, p->f_size);
+            mword phys = aligned_dn (PAGE_SIZE (0), p->f_offs + Hip::root_addr);
+            mword virt = aligned_dn (PAGE_SIZE (0), p->v_addr);
+            mword size = aligned_up (PAGE_SIZE (0), p->f_size);
 
             for (unsigned long o; size; size -= 1UL << o, phys += 1UL << o, virt += 1UL << o)
                 Pd::current->delegate<Space_mem>(&Pd::kern, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = aligned_order (size, phys, virt)) - PAGE_BITS, attr);
@@ -253,7 +253,7 @@ void Ec::root_invoke()
     }
 
     // Map hypervisor information page
-    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE) >> PAGE_BITS, 0, 1);
+    Pd::current->delegate<Space_mem>(&Pd::kern, reinterpret_cast<Paddr>(&FRAME_H) >> PAGE_BITS, (USER_ADDR - PAGE_SIZE (0)) >> PAGE_BITS, 0, 1);
 
     Space_obj::insert_root (Pd::current);
     Space_obj::insert_root (Ec::current);
