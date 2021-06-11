@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,7 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "hpt.hpp"
+#include "memory.hpp"
 #include "tss.hpp"
 
 ALIGNED(8) Tss Tss::run;
@@ -26,6 +27,6 @@ ALIGNED(8) Tss Tss::dbf;
 
 void Tss::build()
 {
-    run.sp0     = CPU_LOCAL_STCK + PAGE_SIZE;
-    run.iobm    = static_cast<uint16>(SPC_LOCAL_IOP - reinterpret_cast<mword>(&run));
+    run.sp0  = 0;
+    run.iobm = static_cast<uint16>(MMAP_SPC_PIO - reinterpret_cast<uintptr_t>(&run));
 }

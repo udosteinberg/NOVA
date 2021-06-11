@@ -106,7 +106,9 @@ SECTIONS
 
     } : kern
 
-    .cpulocal CPU_LOCAL_DATA :
+    PROVIDE_HIDDEN (DSTK_TOP = MMAP_CPU_DSTK + PAGE_SIZE (0));
+
+    .cpulocal MMAP_CPU_DATA :
     {
         *(SORT_BY_ALIGNMENT (.cpulocal.hot))
         *(SORT_BY_ALIGNMENT (.cpulocal))

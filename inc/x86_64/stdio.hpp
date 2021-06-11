@@ -32,7 +32,7 @@ static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_fra
 #define trace(T,format,...)                         \
 do {                                                \
     if (EXPECT_FALSE ((trace_mask & (T)) == (T)))   \
-        Console::print ("[%2ld] " format, static_cast<long>(((stackptr() - 1) & ~PAGE_MASK) == CPU_LOCAL_STCK ? ACCESS_ONCE (Cpu::id) : ~0UL), ## __VA_ARGS__);   \
+        Console::print ("[%3ld] " format, static_cast<long>(((stackptr() - 1) & ~OFFS_MASK (0)) == MMAP_CPU_DSTK ? ACCESS_ONCE (Cpu::id) : ~0UL), ## __VA_ARGS__);   \
 } while (0)
 
 #define panic(format,...)                           \

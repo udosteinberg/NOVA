@@ -88,7 +88,7 @@ class Utcb_data
 class Utcb : public Utcb_head, private Utcb_data
 {
     private:
-        static mword const words = (PAGE_SIZE - sizeof (Utcb_head)) / sizeof (mword);
+        static mword const words = (PAGE_SIZE (0) - sizeof (Utcb_head)) / sizeof (mword);
 
     public:
         [[nodiscard]] bool load_exc (Cpu_regs *);
@@ -120,7 +120,7 @@ class Utcb : public Utcb_head, private Utcb_data
         }
 
         ALWAYS_INLINE
-        inline Xfer *xfer() { return reinterpret_cast<Xfer *>(this) + PAGE_SIZE / sizeof (Xfer) - 1; }
+        inline Xfer *xfer() { return reinterpret_cast<Xfer *>(this) + PAGE_SIZE (0) / sizeof (Xfer) - 1; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return Buddy::allocator.alloc (0, Buddy::FILL_0); }

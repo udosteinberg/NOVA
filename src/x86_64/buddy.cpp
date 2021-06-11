@@ -59,8 +59,8 @@ Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
     head = reinterpret_cast<Block *>(virt + size);
 
     // Allocate block-index storage
-    size -= size / (PAGE_SIZE + sizeof *index) * sizeof *index;
-    size &= ~PAGE_MASK;
+    size -= size / (PAGE_SIZE (0) + sizeof *index) * sizeof *index;
+    size &= ~OFFS_MASK (0);
     min_idx = page_to_index (virt);
     max_idx = page_to_index (virt + size);
     index = reinterpret_cast<Block *>(virt + size) - min_idx;
@@ -68,7 +68,7 @@ Buddy::Buddy (mword phys, mword virt, mword f_addr, size_t size)
     for (unsigned i = 0; i < order; i++)
         head[i].next = head[i].prev = head + i;
 
-    for (mword i = f_addr; i < virt + size; i += PAGE_SIZE)
+    for (mword i = f_addr; i < virt + size; i += PAGE_SIZE (0))
         free (i);
 }
 

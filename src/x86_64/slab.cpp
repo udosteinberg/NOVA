@@ -31,7 +31,7 @@ Slab::Slab (Slab_cache *slab_cache)
       next  (nullptr),
       head  (nullptr)
 {
-    char *link = reinterpret_cast<char *>(this) + PAGE_SIZE - cache->buff + cache->size;
+    char *link = reinterpret_cast<char *>(this) + PAGE_SIZE (0) - cache->buff + cache->size;
 
     for (unsigned long i = avail; i; i--, link -= cache->buff) {
         *reinterpret_cast<char **>(link) = head;
@@ -62,7 +62,7 @@ Slab_cache::Slab_cache (unsigned long elem_size, unsigned elem_align)
             head (nullptr),
             size (align_up (elem_size, sizeof (mword))),
             buff (align_up (size + sizeof (mword), elem_align)),
-            elem ((PAGE_SIZE - sizeof (Slab)) / buff)
+            elem ((PAGE_SIZE (0) - sizeof (Slab)) / buff)
 {
     trace (TRACE_MEMORY, "Slab Cache:%p (S:%lu A:%u)",
            this,
@@ -104,7 +104,7 @@ void Slab_cache::free (void *ptr)
 {
     Lock_guard <Spinlock> guard (lock);
 
-    Slab *slab = reinterpret_cast<Slab *>(reinterpret_cast<mword>(ptr) & ~PAGE_MASK);
+    Slab *slab = reinterpret_cast<Slab *>(reinterpret_cast<mword>(ptr) & ~OFFS_MASK (0));
 
     bool was_full = slab->full();
 
