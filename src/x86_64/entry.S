@@ -49,10 +49,10 @@ handlers:
                         SAVE_SEG
                         SAVE_GPR
                         mov     %rsp, %rbx
-                        cmp     $CPU_LOCAL_STCK, %rsp
+                        cmp     $MMAP_CPU_STCK, %rsp
                         jae     1f
                         cld
-                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
+                        lea     MMAP_CPU_STCK + PAGE_SIZE, %rsp
                         mov     $SEL_USER_DATA, %rax
                         mov     %rax, %ds
                         mov     %rax, %es
@@ -190,7 +190,7 @@ entry_sys:              mov     %rsp, %r11
                         mov     tss_run + 4, %rsp
                         lea     -11*SIZE(%rsp), %rsp
                         SAVE_GPR
-                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
+                        lea     MMAP_CPU_STCK + PAGE_SIZE, %rsp
                         and     $0xf, %rdi
                         jmp     *syscall(,%rdi,SIZE)
 
@@ -202,5 +202,5 @@ entry_sys:              mov     %rsp, %r11
 entry_vmx:              SAVE_GPR
                         mov     %cr2, %rax
                         mov     %rax, OFS_CR2 (%rsp)
-                        lea     CPU_LOCAL_STCK + PAGE_SIZE, %rsp
+                        lea     MMAP_CPU_STCK + PAGE_SIZE, %rsp
                         jmp     vmx_handler
