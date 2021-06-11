@@ -39,7 +39,7 @@ Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own))
     Space_mem::insert_root (reinterpret_cast<mword>(&LINK_E), 1ULL << 52);
 
     // HIP
-    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), reinterpret_cast<mword>(&FRAME_H) + PAGE_SIZE, 1);
+    Space_mem::insert_root (reinterpret_cast<mword>(&FRAME_H), reinterpret_cast<mword>(&FRAME_H) + PAGE_SIZE (0), 1);
 
     // I/O Ports
     Space_pio::addreg (0, 1UL << 16, 7);

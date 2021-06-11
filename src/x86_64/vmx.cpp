@@ -63,7 +63,7 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (EPTP, eptp | (Ept::max() - 1) << 3 | 6);
 
     write (IO_BITMAP_A, bmp);
-    write (IO_BITMAP_B, bmp + PAGE_SIZE);
+    write (IO_BITMAP_B, bmp + PAGE_SIZE (0));
 
     write (HOST_SEL_CS, SEL_KERN_CODE);
     write (HOST_SEL_SS, SEL_KERN_DATA);

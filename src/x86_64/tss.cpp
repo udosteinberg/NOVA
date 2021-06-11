@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,5 +26,6 @@ ALIGNED(8) Tss Tss::run;
 
 void Tss::build()
 {
-    run.iobm = static_cast<uint16>(SPC_LOCAL_IOP - reinterpret_cast<mword>(&run));
+    run.ist[1] = MMAP_CPU_ISTT;
+    run.iobm   = static_cast<uint16>(MMAP_SPC_PIO - reinterpret_cast<uintptr_t>(&run));
 }
