@@ -95,17 +95,17 @@ bool Ec::handle_exc_pf (Exc_regs *r)
     if (r->err & Hpt::ERR_U)
         return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
 
-    if (addr >= LINK_ADDR && addr < CPU_LOCAL && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), addr, CPU_LOCAL))
+    if (addr >= LINK_ADDR && addr < MMAP_CPU && Pd::current->Space_mem::loc[Cpu::id].sync_from (Hptp (reinterpret_cast<mword>(&PDBR)), addr, MMAP_CPU))
         return true;
 
     // Kernel fault in I/O space
-    if (addr >= SPC_LOCAL_IOP && addr <= SPC_LOCAL_IOP_E) {
+    if (addr >= MMAP_SPC_IOP && addr <= MMAP_SPC_IOP_E) {
         Space_pio::page_fault (addr, r->err);
         return true;
     }
 
     // Kernel fault in OBJ space
-    if (addr >= SPC_LOCAL_OBJ) {
+    if (addr >= MMAP_SPC_OBJ) {
         Space_obj::page_fault (addr, r->err);
         return true;
     }
