@@ -261,7 +261,7 @@ void Ec::sys_create_ec()
     }
     Pd *pd = static_cast<Pd *>(cap.obj());
 
-    if (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb())) [[unlikely]] {
+    if (r->utcb() >= USER_ADDR || r->utcb() & OFFS_MASK (0) || !pd->insert_utcb (r->utcb())) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Status::BAD_PAR>();
     }
