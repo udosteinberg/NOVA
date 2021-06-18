@@ -21,7 +21,7 @@
 
 #include "extern.hpp"
 #include "ioapic.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 INIT_PRIORITY (PRIO_SLAB)
@@ -29,9 +29,8 @@ Slab_cache Ioapic::cache (sizeof (Ioapic), 8);
 
 Ioapic::Ioapic (Paddr p, unsigned i, unsigned g) : List (list), reg_base (mmap | (p & OFFS_MASK)), gsi_base (g), id (i), rid (0)
 {
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
-#endif
+    // Reserve MMIO region
+    Pd_kern::remove_user_mem (p & ~OFFS_MASK, PAGE_SIZE);
 
     Hptp::master.update (reg_base, p & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
