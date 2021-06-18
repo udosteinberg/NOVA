@@ -20,6 +20,7 @@
  */
 
 #include "acpi.hpp"
+#include "pd_kern.hpp"
 #include "stdio.hpp"
 
 void Acpi_table_fadt::parse() const
@@ -70,9 +71,22 @@ void Acpi_table_fadt::parse() const
         { Acpi_fixed::pm_tmr,   x_pm_tmr_blk,   pm_tmr_blk,   pm_tmr_len,   1, 0, false },  // optional
     };
 
-    for (unsigned i = 0; i < sizeof (regs) / sizeof (*regs); i++)
+    for (unsigned i = 0; i < sizeof (regs) / sizeof (*regs); i++) {
+
         regs[i].reg = Acpi_gas (regs[i].x_blk, regs[i].blk, regs[i].len, regs[i].cnt, regs[i].idx);
 
-    if (smi_cmd)
+        if (regs[i].res)
+            switch (regs[i].reg.asid) {
+             // case Acpi_gas::Asid::MMIO:  Pd_kern::remove_user_mem (regs[i].reg.addr, regs[i].reg.bits / 8); break;
+                case Acpi_gas::Asid::PIO:   Pd_kern::remove_user_pio (regs[i].reg.addr, regs[i].reg.bits / 8); break;
+                default: break;
+            }
+    }
+
+    if (smi_cmd) {
+
         Acpi_fixed::enable (smi_cmd, acpi_enable, cstate_cnt, pstate_cnt);
+
+        Pd_kern::remove_user_pio (smi_cmd, 1);
+    }
 }
