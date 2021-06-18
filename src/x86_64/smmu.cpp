@@ -21,7 +21,7 @@
  */
 
 #include "bits.hpp"
-#include "pd.hpp"
+#include "pd_kern.hpp"
 #include "smmu.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
@@ -33,9 +33,8 @@ Smmu::Smmu (Paddr p) : List (list), phys_base (p), mmio_base (mmap), invq (stati
 {
     mmap += PAGE_SIZE;
 
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
-#endif
+    // Reserve MMIO region
+    Pd_kern::remove_user_mem (p, PAGE_SIZE);
 
     Hptp::master.update (mmio_base, phys_base, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
 
