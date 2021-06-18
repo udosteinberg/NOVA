@@ -30,9 +30,8 @@ Ioapic::Ioapic (uint64_t p, uint8_t i, unsigned g) : List (list), reg_base (mmap
 {
     mmap += PAGE_SIZE;
 
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (p & ~OFFS_MASK);
-#endif
+    // Reserve MMIO region
+    Space_hst::user_access (p & ~OFFS_MASK, PAGE_SIZE, false);
 
     Hptp::master_map (reg_base, p & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
 

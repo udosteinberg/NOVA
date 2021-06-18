@@ -25,8 +25,8 @@
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
-#include "ptab_hpt.hpp"
 #include "rcu.hpp"
+#include "space_hst.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
 #include "vectors.hpp"
@@ -37,9 +37,8 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
     if (!Acpi::resume) {
 
-    #if 0   // FIXME
-        Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK);
-    #endif
+        // Reserve MMIO region
+        Space_hst::user_access (apic_base & ~OFFS_MASK, PAGE_SIZE, false);
 
         // Map MMIO region
         Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
