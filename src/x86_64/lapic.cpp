@@ -25,6 +25,7 @@
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
+#include "pd_kern.hpp"
 #include "ptab_hpt.hpp"
 #include "rcu.hpp"
 #include "stc.hpp"
@@ -37,9 +38,8 @@ void Lapic::init (uint32 clk, uint32 rat)
 
     if (!Acpi::resume) {
 
-    #if 0   // FIXME
-        Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK);
-    #endif
+        // Reserve MMIO region
+        Pd_kern::remove_user_mem (apic_base & ~OFFS_MASK, PAGE_SIZE);
 
         Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
     }
