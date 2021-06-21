@@ -166,7 +166,7 @@ void Ec::ret_user_vmresume()
 
     current->regs.vmcs->make_current();
 
-    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+    if (EXPECT_FALSE (Pd::current->gtlb.tst (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
         Pd::current->ept.flush();
     }
@@ -191,7 +191,7 @@ void Ec::ret_user_vmrun()
     if (EXPECT_FALSE (hzd))
         handle_hazard (hzd, ret_user_vmrun);
 
-    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+    if (EXPECT_FALSE (Pd::current->gtlb.tst (Cpu::id))) {
         Pd::current->gtlb.clr (Cpu::id);
         current->regs.vmcb->tlb_control = 1;
     }
