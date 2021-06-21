@@ -33,7 +33,7 @@ unsigned Space_mem::did_ctr;
 
 void Space_mem::init (unsigned cpu)
 {
-    if (cpus.set (cpu)) {
+    if (!cpus.tas (cpu)) {
         loc[cpu].sync_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
         loc[cpu].sync_master_range (LINK_ADDR, MMAP_CPU);
     }
@@ -97,7 +97,7 @@ void Space_mem::shootdown()
 
         Pd *pd = Pd::remote (cpu);
 
-        if (!pd->htlb.chk (cpu) && !pd->gtlb.chk (cpu))
+        if (!pd->htlb.tst (cpu) && !pd->gtlb.tst (cpu))
             continue;
 
         if (Cpu::id == cpu) {
