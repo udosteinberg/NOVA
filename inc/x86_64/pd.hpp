@@ -51,7 +51,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         {
             mword pcid = did;
 
-            if (EXPECT_FALSE (htlb.chk (Cpu::id)))
+            if (EXPECT_FALSE (htlb.tst (Cpu::id)))
                 htlb.clr (Cpu::id);
 
             else {
