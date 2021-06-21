@@ -51,7 +51,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         {
             mword pcid = did;
 
-            if (htlb.chk (Cpu::id)) [[unlikely]]
+            if (htlb.tst (Cpu::id)) [[unlikely]]
                 htlb.clr (Cpu::id);
 
             else {
