@@ -49,7 +49,7 @@ void Ec::save_fpu()
 
 void Ec::transfer_fpu (Ec *ec)
 {
-    if (!(Cpu::hazard & HZD_FPU)) {
+    if (!(Cpu::hazard & Hazard::FPU)) {
 
         Fpu::enable();
 
@@ -80,8 +80,8 @@ void Ec::handle_exc_nm()
 
 bool Ec::handle_exc_gp (Exc_regs *)
 {
-    if (Cpu::hazard & HZD_TR) {
-        Cpu::hazard &= ~HZD_TR;
+    if (Cpu::hazard & Hazard::TR) {
+        Cpu::hazard &= ~Hazard::TR;
         Tss::load();
         return true;
     }

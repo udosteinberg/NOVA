@@ -20,7 +20,7 @@
  */
 
 #include "counter.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
@@ -53,7 +53,7 @@ void Space_mem::shootdown()
             continue;
 
         if (Cpu::id == cpu) {
-            Cpu::hazard |= HZD_SCHED;
+            Cpu::hazard |= Hazard::SCHED;
             continue;
         }
 
