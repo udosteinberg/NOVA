@@ -23,6 +23,7 @@
 #pragma once
 
 #include "arch.hpp"
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
 #include "extern.hpp"
@@ -139,8 +140,10 @@ class Cpu final
         static bool         bsp             CPULOCAL;
 
         static inline cpu_t                 count  { 0 };
+        static inline Atomic<cpu_t>         online { 0 };
 
         static void init();
+        static void fini();
 
         static bool feature (Feature f)
         {

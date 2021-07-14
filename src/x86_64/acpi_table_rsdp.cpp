@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,37 +19,16 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_table_rsdp.hpp"
+#include "compiler.hpp"
 
-#include "acpi_table.hpp"
-
-#pragma pack(1)
-
-/*
- * Root System Description Table (5.2.7 and 5.2.8)
- */
-class Acpi_table_rsdt : public Acpi_table
+bool Acpi_table_rsdp::parse (uint64_t &addr, size_t &size) const
 {
-    private:
-        static struct table_map
-        {
-            uint32  const sig;
-            Paddr * const ptr;
-        } map[];
+    if (EXPECT_FALSE (!valid()))
+        return false;
 
-        unsigned long entries (size_t size) const
-        {
-            return (length - sizeof (Acpi_table)) / size;
-        }
+    addr = revision > 1 ? static_cast<uint64_t>(xsdt_addr_hi) << 32 | xsdt_addr_lo : rsdt_addr;
+    size = revision > 1 ? sizeof (uint64_t) : sizeof (uint32_t);
 
-    public:
-        union
-        {
-            uint32  rsdt[1];
-            uint64  xsdt[1];
-        };
-
-        void parse (Paddr, size_t) const;
-};
-
-#pragma pack()
+    return true;
+}

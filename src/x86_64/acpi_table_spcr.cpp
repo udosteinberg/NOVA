@@ -1,8 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,29 +15,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_table_spcr.hpp"
+#include "stdio.hpp"
 
-#include "acpi_table.hpp"
-
-#pragma pack(1)
-
-class Acpi_mcfg
+void Acpi_table_spcr::parse() const
 {
-    public:
-        uint64      addr;
-        uint16      seg;
-        uint8       bus_s;
-        uint8       bus_e;
-        uint32      reserved;
-};
+    Console::bind (&regs, uart_type);
 
-class Acpi_table_mcfg : public Acpi_table
-{
-    public:
-        uint64      reserved;
-        Acpi_mcfg   mcfg[];
-
-        void parse() const;
-};
-
-#pragma pack()
+    trace (TRACE_FIRM, "SPCR: Console %#x at %u:%#lx:%u", std::to_underlying (uart_type), std::to_underlying (regs.asid), regs.addr, regs.bits);
+}
