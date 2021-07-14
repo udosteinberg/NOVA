@@ -24,24 +24,25 @@
 #include "barrier.hpp"
 #include "cmdline.hpp"
 #include "ec.hpp"
-#include "extern.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "rcu.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
-#include "string.hpp"
 #include "vectors.hpp"
 
 void Lapic::init (uint32 clk, uint32 rat)
 {
     auto apic_base = Msr::read (Msr::IA32_APIC_BASE);
 
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK);
-#endif
+    if (!Acpi::resume) {
 
-    Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
+    #if 0   // FIXME
+        Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK);
+    #endif
+
+        Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::Cacheability::MEM_UC, Memattr::Shareability::NONE);
+    }
 
     Msr::write (Msr::IA32_APIC_BASE, apic_base | BIT (11));
 
@@ -78,15 +79,13 @@ void Lapic::init (uint32 clk, uint32 rat)
 
     if ((Cpu::bsp = apic_base & BIT (8))) {
 
-        memcpy (Hptp::map (0x1000, true), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__desc_gdt__ - &__init_aps);
-
         send_exc (0, Delivery::DLV_INIT);
 
         write (Register32::TMR_ICR, ~0U);
 
         auto v1 = read (Register32::TMR_CCR);
         auto t1 = time();
-        Acpi::delay (10);
+        Acpi_fixed::delay (10);
         auto v2 = read (Register32::TMR_CCR);
         auto t2 = time();
 
@@ -101,7 +100,7 @@ void Lapic::init (uint32 clk, uint32 rat)
         trace (TRACE_INTR, "FREQ: %llu Hz (%s) Ratio:%u", Stc::freq, f ? "provided" : "measured", ratio);
 
         send_exc (1, Delivery::DLV_SIPI);
-        Acpi::delay (1);
+        Acpi_fixed::delay (1);
         send_exc (1, Delivery::DLV_SIPI);
     }
 
