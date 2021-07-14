@@ -20,23 +20,21 @@
  */
 
 #include "acpi.hpp"
-#include "acpi_table.hpp"
-#include "stdio.hpp"
+#include "ptab_hpt.hpp"
+#include "util.hpp"
 
-bool Acpi_table::validate (uint64_t phys) const
+void Acpi_table_rsdt::parse (uint64_t addr, size_t size) const
 {
-    auto const v { valid() };
+    if (!table.validate (addr))
+        return;
 
-    trace (TRACE_FIRM, "%.4s: %#010lx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%6u (%#04x) %s",
-           reinterpret_cast<char const *>(&header.signature), phys, revision,
-           oem_table_id, oem_id, header.length, checksum, v ? "ok" : "bad");
+    uint64_t tables[64];
+    auto n = min (count (size), sizeof (tables) / sizeof (*tables));
 
-    if (EXPECT_FALSE (!v))
-        return false;
+    // XSDT uses split loads to avoid unaligned accesses
+    for (unsigned i = 0; i < n; i++)
+        tables[i] = size == sizeof (uint64_t) ? static_cast<uint64_t>(entry (2 * i + 1)) << 32 | entry (2 * i) : entry (i);
 
-    for (unsigned i { 0 }; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
-        if (header.signature == Acpi::tables[i].sig)
-            Acpi::tables[i].var = phys;
-
-    return true;
+    for (unsigned i = 0; i < n; i++)
+        static_cast<Acpi_table *>(Hptp::map (tables[i]))->validate (tables[i]);
 }

@@ -19,24 +19,29 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
-#include "acpi_table.hpp"
+#include "acpi_table_mcfg.hpp"
+#include "pci.hpp"
 #include "stdio.hpp"
 
-bool Acpi_table::validate (uint64_t phys) const
+void Acpi_table_mcfg::Allocation::parse() const
 {
-    auto const v { valid() };
+    // We only handle PCI segment group 0 currently
+    if (seg)
+        return;
 
-    trace (TRACE_FIRM, "%.4s: %#010lx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%6u (%#04x) %s",
-           reinterpret_cast<char const *>(&header.signature), phys, revision,
-           oem_table_id, oem_id, header.length, checksum, v ? "ok" : "bad");
+    Pci::bus_base = bus_s;
+    Pci::cfg_base = static_cast<uint64_t>(phys_base_hi) << 32 | phys_base_lo;
+    Pci::cfg_size = ((bus_e - bus_s + 1) << 8) * PAGE_SIZE;
 
-    if (EXPECT_FALSE (!v))
-        return false;
+    trace (TRACE_FIRM | TRACE_PARSE, "MCFG: %#lx Bus %u-%u", Pci::cfg_base, bus_s, bus_e);
+}
 
-    for (unsigned i { 0 }; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
-        if (header.signature == Acpi::tables[i].sig)
-            Acpi::tables[i].var = phys;
+void Acpi_table_mcfg::parse() const
+{
+    auto const addr { reinterpret_cast<uintptr_t>(this) };
 
-    return true;
+    for (auto a { addr + sizeof (*this) }; a < addr + table.header.length; a += sizeof (Allocation))
+        reinterpret_cast<Allocation const *>(a)->parse();
+
+    Pci::init();
 }
