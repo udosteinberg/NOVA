@@ -19,33 +19,40 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.hpp"
+#include "acpi.hpp"
 #include "compiler.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
-#include "lowlevel.hpp"
+#include "timer.hpp"
 
 extern "C" [[noreturn]]
 void bootstrap()
 {
-    static Atomic<unsigned> barrier { 0 };
-
     Cpu::init();
 
-    // Create idle EC
-    Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
-    Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
-    // Barrier: wait for all ECs to arrive here
-    for (++barrier; barrier != Cpu::online; pause()) ;
+    if (Acpi::resume)
+        Timer::set_time (Acpi::resume);
 
-    // Create root task
-    if (Cpu::bsp) {
-        Hip::hip->add_check();
-        Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
-        Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
-        root_sc->remote_enqueue();
+    else {
+
+        // Create idle EC
+        Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
+        Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
+
+        // Create root EC
+        if (Cpu::bsp) {
+            Hip::hip->add_check();
+            Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE, 0);
+            Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);
+            root_sc->remote_enqueue();
+        }
     }
+
+    if (Cpu::bsp)
+        Acpi::wake_restore();
 
     Sc::schedule();
 }

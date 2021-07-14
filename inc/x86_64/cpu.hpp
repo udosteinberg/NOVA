@@ -22,6 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
+#include "atomic.hpp"
 #include "compiler.hpp"
 #include "config.hpp"
 #include "extern.hpp"
@@ -85,10 +86,6 @@ class Cpu
             .kernel_gs_base = 0,
         };
 
-        static unsigned online;
-        static uint8    acpi_id[NUM_CPU];
-        static uint8    apic_id[NUM_CPU];
-
         static unsigned id                  CPULOCAL_HOT;
         static unsigned hazard              CPULOCAL_HOT;
         static unsigned package             CPULOCAL;
@@ -106,6 +103,12 @@ class Cpu
         static uint32 name[12]              CPULOCAL;
         static uint32 features[6]           CPULOCAL;
         static bool bsp                     CPULOCAL;
+
+        static inline Atomic<unsigned>      online { 0 };
+
+        static unsigned count;
+        static uint8    acpi_id[NUM_CPU];
+        static uint8    apic_id[NUM_CPU];
 
         static void init();
 
