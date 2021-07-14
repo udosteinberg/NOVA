@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "counter.hpp"
 #include "dmar.hpp"
 #include "hazards.hpp"
@@ -51,6 +52,9 @@ void Interrupt::set_mask (unsigned gsi, bool msk)
 
 void Interrupt::rke_handler()
 {
+    if (Acpi::get_transition().state())
+        Cpu::hazard |= HZD_SLEEP;
+
     if (Pd::current->Space_mem::htlb.tst (Cpu::id))
         Cpu::hazard |= HZD_SCHED;
 }

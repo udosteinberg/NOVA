@@ -4,6 +4,9 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,23 +21,46 @@
 
 #pragma once
 
-#include "compiler.hpp"
+#include "macros.hpp"
 #include "types.hpp"
 
-#define SIG(A,B,C,D) (A + (B << 8) + (C << 16) + (D << 24))
-
-class Acpi_table
+/*
+ * 5.2.6: System Description Table Header
+ */
+struct Acpi_header
 {
-    public:
-        uint32      signature;                      // 0
-        uint32      length;                         // 4
-        uint8       revision;                       // 8
-        uint8       checksum;                       // 9
-        char        oem_id[6];                      // 10
-        char        oem_table_id[8];                // 16
-        uint32      oem_revision;                   // 24
-        char        creator_id[4];                  // 28
-        uint32      creator_revision;               // 32
+    uint32      const signature;                    //  0 (1.0)
+    uint32      const length;                       //  4 (1.0)
 
-        bool good_checksum (Paddr addr) const;
+    static inline constexpr auto sig_value (char const (&x)[5])
+    {
+        return x[3] << 24 | x[2] << 16 | x[1] << 8 | x[0];
+    }
 };
+
+struct Acpi_table
+{
+    Acpi_header const header;                       //  0 (1.0)
+    uint8       const revision;                     //  8 (1.0)
+    uint8       const checksum;                     //  9 (1.0)
+    char        const oem_id[6];                    // 10 (1.0)
+    char        const oem_table_id[8];              // 16 (1.0)
+    uint32      const oem_revision;                 // 24 (1.0)
+    char        const creator_id[4];                // 28 (1.0)
+    uint32      const creator_revision;             // 32 (1.0)
+
+    inline bool valid() const
+    {
+        uint8 check = 0;
+        for (auto ptr = reinterpret_cast<uint8 const *>(this);
+                  ptr < reinterpret_cast<uint8 const *>(this) + header.length;
+                  check = static_cast<uint8>(check + *ptr++)) ;
+
+        return !check;
+    }
+
+    bool validate (uint64) const;
+};
+
+static_assert (__is_standard_layout (Acpi_header) && sizeof (Acpi_header) == 8);
+static_assert (__is_standard_layout (Acpi_table)  && sizeof (Acpi_table) == 36);
