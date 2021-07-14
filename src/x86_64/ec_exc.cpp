@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -48,7 +49,7 @@ void Ec::save_fpu()
 
 void Ec::transfer_fpu (Ec *ec)
 {
-    if (!(Cpu::hazard & HZD_FPU)) {
+    if (!(Cpu::hazard & Hazard::FPU)) {
 
         Fpu::enable();
 
@@ -79,8 +80,8 @@ void Ec::handle_exc_nm()
 
 bool Ec::handle_exc_gp (Exc_regs *)
 {
-    if (Cpu::hazard & HZD_TR) {
-        Cpu::hazard &= ~HZD_TR;
+    if (Cpu::hazard & Hazard::TR) {
+        Cpu::hazard &= ~Hazard::TR;
         Tss::load();
         return true;
     }
