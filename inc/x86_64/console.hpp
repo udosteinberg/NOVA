@@ -22,6 +22,8 @@
 #pragma once
 
 #include <stdarg.h>
+#include "acpi_gas.hpp"
+#include "debug.hpp"
 #include "initprio.hpp"
 #include "list.hpp"
 #include "spinlock.hpp"
@@ -67,6 +69,10 @@ class Console : public List<Console>
         virtual bool init() const { return true; }
         virtual bool fini() const { return false; }
 
+        virtual bool match_dbgp (Debug::Type, Debug::Subtype) const { return false; }
+        virtual bool using_regs (Acpi_gas const &) const            { return false; }
+        virtual bool setup_regs (Acpi_gas const &)                  { return false; }
+
         void enable()
         {
             remove (dormant);
@@ -95,5 +101,23 @@ class Console : public List<Console>
                 if (e->fini())
                     e->disable();
             }
+        }
+
+        static void bind (Debug::Type t, Debug::Subtype s, Acpi_gas const &r)
+        {
+            if (EXPECT_FALSE (!r.addr || r.bits < 8))
+                return;
+
+            for (auto e { enabled }; e; e = e->next)
+                if (e->using_regs (r))
+                    return;
+
+            for (auto d { dormant }; d; d = d->next)
+                if (d->using_regs (r))
+                    return;
+
+            for (auto d { dormant }; d; d = d->next)
+                if (d->match_dbgp (t, s) && d->setup_regs (r))
+                    return;
         }
 };

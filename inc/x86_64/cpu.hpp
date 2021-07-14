@@ -143,6 +143,7 @@ class Cpu final
         static inline Atomic<cpu_t>         online { 0 };
 
         static void init();
+        static void fini();
 
         static bool feature (Feature f)
         {
