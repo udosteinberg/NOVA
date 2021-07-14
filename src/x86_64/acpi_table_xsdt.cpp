@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,17 +19,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_mcfg.hpp"
-#include "pci.hpp"
+#include "acpi_table_xsdt.hpp"
 
-void Acpi_table_mcfg::parse() const
+void Acpi_table_xsdt::parse() const
 {
-    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
-        if (!x->seg) {
-            Pci::bus_base = x->bus_s;
-            Pci::cfg_base = static_cast<Paddr>(x->addr);
-            Pci::cfg_size = ((x->bus_e - x->bus_s + 1) << 8) * PAGE_SIZE (0);
-        }
+    size_t const s { table.header.signature == Signature::u32 ("XSDT") ? sizeof (uint64_t) : sizeof (uint32_t) };
 
-    Pci::init();
+    for (auto ptr { reinterpret_cast<uintptr_t>(this + 1) }; ptr < reinterpret_cast<uintptr_t>(this) + table.header.length; ptr += s)
+        Acpi_table::consume (s == sizeof (uint64_t) ? *reinterpret_cast<Unaligned_le<uint64_t> const *>(ptr) : *reinterpret_cast<Unaligned_le<uint32_t> const *>(ptr));
 }
