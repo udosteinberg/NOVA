@@ -22,7 +22,7 @@
 #include "assert.hpp"
 #include "counter.hpp"
 #include "cpu.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "initprio.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
@@ -77,10 +77,10 @@ void Rcu::set_state (State s)
 void Rcu::quiet()
 {
     // Quiescent state reporting must be active
-    assert (Cpu::hazard & HZD_RCU);
+    assert (Cpu::hazard & Hazard::RCU);
 
     // Disable quiescent state reporting
-    Cpu::hazard &= ~HZD_RCU;
+    Cpu::hazard &= ~Hazard::RCU;
 
     // The last CPU that passes through a quiescent state completes the epoch
     if (!--count) [[unlikely]]
@@ -97,7 +97,7 @@ void Rcu::check()
     // Check if a new epoch started
     if (epoch_l != g) {
         epoch_l = g;
-        Cpu::hazard |= HZD_RCU;
+        Cpu::hazard |= Hazard::RCU;
     }
 
     // Check if the current callbacks have completed
