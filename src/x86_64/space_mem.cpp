@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,7 +20,7 @@
  */
 
 #include "counter.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "hip.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
@@ -52,7 +53,7 @@ void Space_mem::shootdown()
             continue;
 
         if (Cpu::id == cpu) {
-            Cpu::hazard |= HZD_SCHED;
+            Cpu::hazard |= Hazard::SCHED;
             continue;
         }
 
