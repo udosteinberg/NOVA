@@ -20,7 +20,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
+#include "acpi_fixed.hpp"
 #include "cmdline.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
@@ -85,7 +85,7 @@ void Lapic::init()
 
         auto v1 = read (Register32::TMR_CCR);
         auto t1 = static_cast<uint32>(time());
-        Acpi::delay (10);
+        Acpi_fixed::delay (10);
         auto v2 = read (Register32::TMR_CCR);
         auto t2 = static_cast<uint32>(time());
 
@@ -95,7 +95,7 @@ void Lapic::init()
         trace (TRACE_INTR, "FREQ: TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
 
         send_exc (1, Delivery::DLV_SIPI);
-        Acpi::delay (1);
+        Acpi_fixed::delay (1);
         send_exc (1, Delivery::DLV_SIPI);
     }
 

@@ -1,7 +1,8 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,14 +23,19 @@
 
 #pragma pack(1)
 
-class Acpi_table_hpet : public Acpi_table
+/*
+ * HPET Description Table (HPET)
+ */
+class Acpi_table_hpet final : private Acpi_table
 {
+    private:
+        uint32      cap;                                // 36
+        Acpi_gas    hpet;                               // 40
+        uint8       acpi_uid;                           // 52
+        uint16      tick;                               // 53 (unaligned)
+        uint8       attr;                               // 55
+                                                        // 56
     public:
-        uint32      cap;
-        Acpi_gas    hpet;
-        uint8       id;
-        uint16      tick;
-
         void parse() const;
 };
 

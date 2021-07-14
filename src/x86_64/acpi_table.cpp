@@ -4,6 +4,9 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -16,26 +19,24 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "acpi_table.hpp"
 #include "stdio.hpp"
 
-bool Acpi_table::good_checksum (Paddr addr) const
+bool Acpi_table::validate (uint64 phys) const
 {
-    uint8 check = 0;
+    auto v = valid();
 
-    for (uint8 const *ptr = reinterpret_cast<uint8 const *>(this);
-                      ptr < reinterpret_cast<uint8 const *>(this) + length;
-                      check = static_cast<uint8>(check + *ptr++)) ;
+    trace (TRACE_FIRM, "%.4s: %#010llx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%5u (%#04x) %s",
+           reinterpret_cast<char const *>(&signature), phys, revision,
+           oem_table_id, oem_id, length, checksum, v ? "ok" : "bad");
 
-    trace (TRACE_ACPI, "%.4s:%#010llx REV:%2d TBL:%8.8s OEM:%6.6s LEN:%5u (%s %#04x)",
-           reinterpret_cast<char const *>(&signature),
-           static_cast<uint64>(addr),
-           revision,
-           oem_table_id,
-           oem_id,
-           length,
-           check ? "bad" : "ok",
-           static_cast<unsigned int>(checksum));
+    if (!v)
+        return false;
 
-    return !check;
+    for (unsigned i = 0; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
+        if (signature == Acpi::tables[i].sig)
+            Acpi::tables[i].var = phys;
+
+    return true;
 }

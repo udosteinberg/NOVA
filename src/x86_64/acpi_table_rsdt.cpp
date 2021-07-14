@@ -19,40 +19,22 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi.hpp"
+#include "ptab_hpt.hpp"
+#include "util.hpp"
 
-#include "acpi_arch.hpp"
-#include "acpi_fixed.hpp"
-#include "atomic.hpp"
-
-class Acpi final : public Acpi_arch
+void Acpi_table_rsdt::parse (uint64 addr, size_t size) const
 {
-    friend class Acpi_table_fadt;
+    if (!validate (addr))
+        return;
 
-    private:
-        static inline uint32 fflg { 0 };    // Feature Flags
-        static inline uint16 bflg { 0 };    // Boot Flags
+    uint64 table[32];
+    auto n = min (count (size), sizeof (table) / sizeof (*table));
 
-        static inline Atomic<uint16> state { 0 };
+    // XSDT uses split loads to avoid unaligned accesses
+    for (unsigned i = 0; i < n; i++)
+        table[i] = size == sizeof (uint64) ? static_cast<uint64>(entry (2 * i + 1)) << 32 | entry (2 * i) : entry (i);
 
-    public:
-        static inline uint16 get_state() { return state; }
-
-        static inline void clr_state()
-        {
-            Acpi_fixed::wake_clr();
-
-            state = 0;
-        }
-
-        static inline bool set_state (uint16 s)
-        {
-            uint16 o = 0;
-
-            return state.compare_exchange (o, s);
-        }
-
-        static bool init();
-
-        static void sleep();
-};
+    for (unsigned i = 0; i < n; i++)
+        static_cast<Acpi_table *>(Hptp::map (table[i]))->validate (table[i]);
+}

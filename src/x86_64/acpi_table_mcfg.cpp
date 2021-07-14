@@ -19,40 +19,29 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_table_mcfg.hpp"
+#include "pci.hpp"
+#include "stdio.hpp"
 
-#include "acpi_arch.hpp"
-#include "acpi_fixed.hpp"
-#include "atomic.hpp"
-
-class Acpi final : public Acpi_arch
+void Acpi_table_mcfg::Allocation::parse() const
 {
-    friend class Acpi_table_fadt;
+    // We only handle PCI segment group 0 currently
+    if (seg)
+        return;
 
-    private:
-        static inline uint32 fflg { 0 };    // Feature Flags
-        static inline uint16 bflg { 0 };    // Boot Flags
+    Pci::bus_base = bus_s;
+    Pci::cfg_base = static_cast<uint64>(phys_base_hi) << 32 | phys_base_lo;
+    Pci::cfg_size = ((bus_e - bus_s + 1) << 8) * PAGE_SIZE;
 
-        static inline Atomic<uint16> state { 0 };
+    trace (TRACE_FIRM | TRACE_PARSE, "MCFG: %#lx Bus %u-%u", Pci::cfg_base, bus_s, bus_e);
+}
 
-    public:
-        static inline uint16 get_state() { return state; }
+void Acpi_table_mcfg::parse() const
+{
+    auto addr = reinterpret_cast<uintptr_t>(this);
 
-        static inline void clr_state()
-        {
-            Acpi_fixed::wake_clr();
+    for (auto a = addr + sizeof (*this); a < addr + length; a += sizeof (Allocation))
+        reinterpret_cast<Allocation const *>(a)->parse();
 
-            state = 0;
-        }
-
-        static inline bool set_state (uint16 s)
-        {
-            uint16 o = 0;
-
-            return state.compare_exchange (o, s);
-        }
-
-        static bool init();
-
-        static void sleep();
-};
+    Pci::init();
+}
