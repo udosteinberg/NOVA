@@ -19,23 +19,18 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
 #include "acpi_table.hpp"
-#include "stdio.hpp"
+#include "acpi_table_rsdp.hpp"
+#include "compiler.hpp"
+#include "ptab_hpt.hpp"
 
-bool Acpi_table::validate (uint64_t phys, bool override) const
+bool Acpi_table_rsdp::parse (uint64_t &phys, size_t &size) const
 {
-    auto const v { valid() };
+    if (EXPECT_FALSE (!valid()))
+        return false;
 
-    trace (TRACE_FIRM, "%.4s: %#010lx OEM:%6.6s TBL:%8.8s REV:%2u LEN:%7u (%#04x) %s",
-           reinterpret_cast<char const *>(&header.signature), phys,
-           oem_id, oem_table_id, revision, header.length, checksum, v ? "ok" : "bad");
+    phys = revision > 1 ? static_cast<uint64_t>(xsdt_addr_hi) << 32 | xsdt_addr_lo : rsdt_addr;
+    size = revision > 1 ? sizeof (uint64_t) : sizeof (uint32_t);
 
-    // A valid table can replace an existing table only if override is true
-    if (EXPECT_TRUE (v))
-        for (unsigned i { 0 }; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
-            if (Acpi::tables[i].sig == header.signature && (override || !Acpi::tables[i].var))
-                Acpi::tables[i].var = phys;
-
-    return v;
+    return static_cast<Acpi_table *>(Hptp::map (MMAP_GLB_MAP1, phys))->validate (phys);
 }

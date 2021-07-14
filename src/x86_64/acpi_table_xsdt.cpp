@@ -20,22 +20,24 @@
  */
 
 #include "acpi.hpp"
-#include "acpi_table.hpp"
-#include "stdio.hpp"
+#include "ptab_hpt.hpp"
 
-bool Acpi_table::validate (uint64_t phys, bool override) const
+void Acpi_table_xsdt::parse (size_t size) const
 {
-    auto const v { valid() };
+    auto const len { table.header.length };
+    auto const ptr { reinterpret_cast<uintptr_t>(this) };
 
-    trace (TRACE_FIRM, "%.4s: %#010lx OEM:%6.6s TBL:%8.8s REV:%2u LEN:%7u (%#04x) %s",
-           reinterpret_cast<char const *>(&header.signature), phys,
-           oem_id, oem_table_id, revision, header.length, checksum, v ? "ok" : "bad");
+    if (EXPECT_FALSE (len < sizeof (*this)))
+        return;
 
-    // A valid table can replace an existing table only if override is true
-    if (EXPECT_TRUE (v))
-        for (unsigned i { 0 }; i < sizeof (Acpi::tables) / sizeof (*Acpi::tables); i++)
-            if (Acpi::tables[i].sig == header.signature && (override || !Acpi::tables[i].var))
-                Acpi::tables[i].var = phys;
+    for (auto p { ptr + sizeof (*this) }; p < ptr + len; p += size) {
 
-    return v;
+        auto const e { reinterpret_cast<uint32_t const *>(p) };
+
+        // XSDT uses split loads to avoid unaligned accesses
+        auto const phys { (size == sizeof (uint64_t) ? static_cast<uint64_t>(*(e + 1)) << 32 : 0) | *e};
+
+        if (EXPECT_TRUE (phys))
+            static_cast<Acpi_table *>(Hptp::map (MMAP_GLB_MAP1, phys))->validate (phys);
+    }
 }

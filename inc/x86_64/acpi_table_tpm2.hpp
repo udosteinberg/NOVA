@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,20 +17,23 @@
 
 #pragma once
 
-#include "acpi_gas.hpp"
 #include "acpi_table.hpp"
 
-#pragma pack(1)
-
-class Acpi_table_hpet : public Acpi_table
+/*
+ * TCG Hardware Interface Description Table for TPM 2.0 (TPM2)
+ */
+class Acpi_table_tpm2 final
 {
-    public:
-        uint32      cap;
-        Acpi_gas    hpet;
-        uint8       id;
-        uint16      tick;
+    private:
+        Acpi_table          table;                  //  0
+        uint16_t            platform;               // 36
+        uint16_t            reserved;               // 38
+        uint64_t            tpm_base;               // 40
+        uint32_t            start_method;           // 48
+        uint32_t            start_params;           // 52
 
+    public:
         void parse() const;
 };
 
-#pragma pack()
+static_assert (__is_standard_layout (Acpi_table_tpm2) && sizeof (Acpi_table_tpm2) == 56);

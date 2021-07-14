@@ -20,6 +20,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "bits.hpp"
 #include "cache.hpp"
 #include "cmdline.hpp"
@@ -30,7 +31,6 @@
 #include "lapic.hpp"
 #include "mca.hpp"
 #include "pd.hpp"
-#include "signature.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
@@ -271,10 +271,15 @@ void Cpu::setup_msr()
 
 void Cpu::init()
 {
-    for (auto func { CTORS_L }; func != CTORS_C; (*func++)()) ;
+    if (Acpi::resume)
+        hazard = 0;
 
-    Gdt::build();
-    Tss::build();
+    else {
+        for (auto func { CTORS_L }; func != CTORS_C; (*func++)()) ;
+
+        Gdt::build();
+        Tss::build();
+    }
 
     // Initialize exception handling
     Gdt::load();
@@ -287,10 +292,12 @@ void Cpu::init()
 
     Lapic::init (clk, rat);
 
-    Hpt::OAddr phys; unsigned o; Memattr ma;
-    Pd::kern.Space_hst::loc[id] = Hptp::current();
-    Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
-    Hptp::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
+    if (!Acpi::resume) {
+        Hpt::OAddr phys; unsigned o; Memattr ma;
+        Pd::kern.Space_hst::loc[id] = Hptp::current();
+        Pd::kern.Space_hst::loc[id].lookup (MMAP_CPU_DATA, phys, o, ma);
+        Hptp::master_map (MMAP_GLB_CPUS + id * PAGE_SIZE (0), phys, 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), ma);
+    }
 
     setup_msr();
 
@@ -312,6 +319,9 @@ void Cpu::init()
 
 void Cpu::fini()
 {
+    auto const s { Acpi::get_transition() };
+
+    Acpi::fini (s);
 }
 
 void Cpu::halt()

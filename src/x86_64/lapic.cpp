@@ -22,13 +22,11 @@
 
 #include "acpi.hpp"
 #include "barrier.hpp"
-#include "extern.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
 #include "ptab_hpt.hpp"
 #include "stc.hpp"
 #include "stdio.hpp"
-#include "string.hpp"
 #include "timeout.hpp"
 #include "vectors.hpp"
 
@@ -36,15 +34,18 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 {
     auto const apic_base { Msr::read (Msr::Reg64::IA32_APIC_BASE) };
 
-#if 0   // FIXME
-    Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK (0));
-#endif
+    if (!Acpi::resume) {
 
-    // Map MMIO region
-    Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
+    #if 0   // FIXME
+        Pd::kern.Space_mem::delreg (apic_base & ~OFFS_MASK (0));
+    #endif
 
-    // Determine CPU number from the APIC ID of the currently enabled interface
-    Cpu::id = lookup (apic_base & BIT (10) ? read_x2apic (Reg32::IDR) : read_legacy (Reg32::IDR) >> 24);
+        // Map MMIO region
+        Hptp::current().update (MMAP_CPU_APIC, apic_base & ~OFFS_MASK (0), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::dev());
+
+        // Determine CPU number from the APIC ID of the currently enabled interface
+        Cpu::id = lookup (apic_base & BIT (10) ? read_x2apic (Reg32::IDR) : read_legacy (Reg32::IDR) >> 24);
+    }
 
     // HW enable
     Msr::write (Msr::Reg64::IA32_APIC_BASE, apic_base | BIT (11) | BIT (10) * x2apic);
@@ -79,17 +80,13 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
     if ((Cpu::bsp = apic_base & BIT (8))) {
 
-        extern char __init_aps, __init_aps__;
-
-        memcpy (Hptp::map (MMAP_GLB_MAP0, 0x1000, Paging::W), reinterpret_cast<void *>(Kmem::sym_to_virt (&__init_aps)), &__init_aps__ - &__init_aps);
-
         send_exc (0, Delivery::DLV_INIT);
 
         write (Reg32::TMR_ICR, ~0U);
 
         auto const c1 { read (Reg32::TMR_CCR) };
         auto const t1 { time() };
-        Acpi::delay (10);
+        Acpi_fixed::delay (10);
         auto const c2 { read (Reg32::TMR_CCR) };
         auto const t2 { time() };
 
@@ -103,9 +100,9 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
         trace (TRACE_INTR, "FREQ: %lu Hz (%s) Ratio:%u", Stc::freq, f ? "enumerated" : "measured", ratio);
 
-        send_exc (1, Delivery::DLV_SIPI);
-        Acpi::delay (1);
-        send_exc (1, Delivery::DLV_SIPI);
+        send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
+        Acpi_fixed::delay (1);
+        send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
     }
 
     write (Reg32::TMR_ICR, 0);
