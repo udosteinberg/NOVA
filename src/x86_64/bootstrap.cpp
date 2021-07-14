@@ -19,21 +19,28 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "ec.hpp"
-#include "smmu.hpp"
 
 extern "C" [[noreturn]] void bootstrap()
 {
     Cpu::init();
 
-    // Create idle EC
-    Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
-    Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current);
+    // Idle EC must exist before scheduler invocation
+    if (Acpi::resume)
+        Space_hst::current = nullptr;
+    else {
+        Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
+        Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current);
+    }
 
     if (Cpu::bsp) [[unlikely]] {
 
         // Barrier: wait for all non-BSP CPUs to arrive here
         for (; Cpu::online != Cpu::count - 1; pause()) ;
+
+        // Waking vector must be restored before CPUs pass barrier into userland
+        Acpi::wake_restore();
 
         // SMMU must be active before CPUs pass barrier into userland
         if (!Smmu::initialize()) [[unlikely]]
@@ -43,8 +50,10 @@ extern "C" [[noreturn]] void bootstrap()
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
-    // Create root task
-    if (Cpu::bsp) {
+    if (Acpi::resume)
+        Timer::set_time (Acpi::resume);
+
+    else if (Cpu::bsp) {
         Hip::hip->add_check();
         Ec *root_ec = new Ec (&Pd::root, NUM_EXC + 1, &Pd::root, Ec::root_invoke, Cpu::id, 0, USER_ADDR - 2 * PAGE_SIZE (0), 0);
         Sc *root_sc = new Sc (&Pd::root, NUM_EXC + 2, root_ec, Cpu::id, Sc::default_prio, Sc::default_quantum);

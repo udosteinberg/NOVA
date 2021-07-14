@@ -4,6 +4,7 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -18,37 +19,17 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_table_xsdt.hpp"
 
-#include "acpi_table.hpp"
-
-#pragma pack(1)
-
-/*
- * Root System Description Table (5.2.7 and 5.2.8)
- */
-class Acpi_table_rsdt : public Acpi_table
+bool Acpi_table_xsdt::parse() const
 {
-    private:
-        static struct table_map
-        {
-            uint32  const sig;
-            Paddr * const ptr;
-        } map[];
+    auto const l { table.header.signature == Signature::u32 ("XSDT") ? sizeof (uint64_t) : sizeof (uint32_t) };
 
-        unsigned long entries (size_t size) const
-        {
-            return (length - sizeof (Acpi_table)) / size;
-        }
+    auto       ptr { reinterpret_cast<uintptr_t>(this + 1) };
+    auto const end { reinterpret_cast<uintptr_t>(this) + table.header.length };
 
-    public:
-        union
-        {
-            uint32  rsdt[1];
-            uint64  xsdt[1];
-        };
+    for (; ptr + l <= end; ptr += l)
+        Acpi_table::consume (l == sizeof (uint64_t) ? *reinterpret_cast<Unaligned_le<uint64_t> const *>(ptr) : *reinterpret_cast<Unaligned_le<uint32_t> const *>(ptr));
 
-        void parse (Paddr, size_t) const;
-};
-
-#pragma pack()
+    return end == ptr;
+}
