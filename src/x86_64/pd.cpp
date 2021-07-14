@@ -33,8 +33,6 @@ ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
 
 Pd::Pd (Pd *) : Kobject (Kobject::Type::PD), Space_pio (nullptr), Space_msr (nullptr)
 {
-    hptp = Hptp::master;
-
 #if 0   // FIXME
     Space_mem::insert_root (0, LOAD_ADDR);
     Space_mem::insert_root (Multiboot::ea, USER_ADDR);
