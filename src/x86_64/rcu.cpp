@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,7 +22,7 @@
 #include "barrier.hpp"
 #include "counter.hpp"
 #include "cpu.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "initprio.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
@@ -64,7 +65,7 @@ void Rcu::start_batch (State s)
 
 void Rcu::quiet()
 {
-    Cpu::hazard &= ~HZD_RCU;
+    Cpu::hazard &= ~Hazard::RCU;
 
     if (__atomic_sub_fetch (&count, 1, __ATOMIC_SEQ_CST) == 0)
         start_batch (RCU_CMP);
@@ -74,7 +75,7 @@ void Rcu::update()
 {
     if (l_batch != batch()) {
         l_batch = batch();
-        Cpu::hazard |= HZD_RCU;
+        Cpu::hazard |= Hazard::RCU;
     }
 
     if (curr.head && complete (c_batch))

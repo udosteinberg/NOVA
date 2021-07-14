@@ -2,7 +2,7 @@
  * Budget Timeout
  *
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,7 +17,7 @@
  */
 
 #include "cpu.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "initprio.hpp"
 #include "timeout_budget.hpp"
 
@@ -26,5 +26,5 @@ Timeout_budget Timeout_budget::timeout;
 
 void Timeout_budget::trigger()
 {
-    Cpu::hazard |= HZD_SCHED;
+    Cpu::hazard |= Hazard::SCHED;
 }
