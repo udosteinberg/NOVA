@@ -151,6 +151,8 @@ class Cpu final
         static void fini();
         static void halt();
 
+        static void allocate (apic_t);
+
         // Return physical address of CPULOCAL variable
         template<typename T> NONNULL static constexpr auto loc_to_phys (T *p)
         {
