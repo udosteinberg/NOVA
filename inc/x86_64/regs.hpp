@@ -22,7 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "svm.hpp"
 #include "types.hpp"
 #include "vmx.hpp"
@@ -230,6 +230,7 @@ class Cpu_regs : public Exc_regs
     public:
         uint64  tsc_offset;
         mword   mtd;
+        Hazard  hazard { 0 };
 };
 
 template <> inline uint64 Exc_regs::get_g_efer<Vmcb>()         const { return vmcb->efer; }
