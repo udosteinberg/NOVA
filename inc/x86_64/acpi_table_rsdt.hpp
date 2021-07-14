@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,33 +23,19 @@
 
 #include "acpi_table.hpp"
 
-#pragma pack(1)
-
 /*
- * Root System Description Table (5.2.7 and 5.2.8)
+ * 5.2.7: Root System Description Table (RSDT)
+ * 5.2.8: Extended System Description Table (XSDT)
  */
-class Acpi_table_rsdt : public Acpi_table
+class Acpi_table_rsdt : private Acpi_table
 {
     private:
-        static struct table_map
-        {
-            uint32  const sig;
-            Paddr * const ptr;
-        } map[];
+        uint32  rsdt[1];
 
-        unsigned long entries (size_t size) const
-        {
-            return (length - sizeof (Acpi_table)) / size;
-        }
+        auto count (size_t size) const { return (length - sizeof (Acpi_table)) / size; }
+
+        auto entry (unsigned i) const { return __atomic_load_n (rsdt + i, __ATOMIC_RELAXED); }
 
     public:
-        union
-        {
-            uint32  rsdt[1];
-            uint64  xsdt[1];
-        };
-
-        void parse (Paddr, size_t) const;
+        void parse (uint64, size_t) const;
 };
-
-#pragma pack()

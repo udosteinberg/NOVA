@@ -54,27 +54,31 @@ Hpt::OAddr kern_ptab_setup()
 extern "C"
 void init (uintptr_t offset)
 {
-    Kmem::init (offset);
+    if (!Acpi::resume) {
 
-    Buddy::init();
+        Kmem::init (offset);
 
-    // Setup 0-page and 1-page
-    memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
-    memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
+        Buddy::init();
 
-    for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
+        // Setup 0-page and 1-page
+        memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
+        memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
 
-    auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
-    if (addr)
-        Cmdline::parse (static_cast<char const *>(Hptp::map (addr)));
+        for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
-    for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
+        auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
+        if (addr)
+            Cmdline::parse (static_cast<char const *>(Hptp::map (addr)));
 
-    // Now we're ready to talk to the world
-    Console::print ("\fNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+        for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
 
-    Interrupt::setup();
-    Acpi::setup();
+        // Now we're ready to talk to the world
+        Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+
+        Interrupt::setup();
+    }
+
+    Acpi::init();
 
     Pic::init();
 
