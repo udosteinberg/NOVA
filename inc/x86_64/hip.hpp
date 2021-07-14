@@ -32,8 +32,7 @@ class Hip_cpu
         uint8   thread;
         uint8   core;
         uint8   package;
-        uint8   acpi_id;
-        uint8   reserved[3];
+        uint8   reserved[4];
 };
 
 class Hip_mem
