@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -60,7 +61,7 @@ void Sc::ready_enqueue (uint64 t)
     list[prio].enqueue (this, left);
 
     if (prio > current->prio || (this != current && prio == current->prio && left))
-        Cpu::hazard |= HZD_SCHED;
+        Cpu::hazard |= Hazard::SCHED;
 
     if (!left)
         left = budget;
@@ -99,7 +100,7 @@ void Sc::schedule (bool blocked)
     current->time += t - current->tsc;
     current->left = d > t ? d - t : 0;
 
-    Cpu::hazard &= ~HZD_SCHED;
+    Cpu::hazard &= ~Hazard::SCHED;
 
     if (EXPECT_TRUE (!blocked))
         current->ready_enqueue (t);

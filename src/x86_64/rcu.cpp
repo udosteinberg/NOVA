@@ -22,7 +22,7 @@
 #include "assert.hpp"
 #include "counter.hpp"
 #include "cpu.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "initprio.hpp"
 #include "rcu.hpp"
 #include "stdio.hpp"
@@ -71,9 +71,9 @@ void Rcu::set_state (State s)
  */
 void Rcu::quiet()
 {
-    assert (Cpu::hazard & HZD_RCU);
+    assert (Cpu::hazard & Hazard::RCU);
 
-    Cpu::hazard &= ~HZD_RCU;
+    Cpu::hazard &= ~Hazard::RCU;
 
     if (EXPECT_FALSE (!--count))
         set_state (State::COMPLETED);
@@ -88,7 +88,7 @@ void Rcu::check()
 
     if (epoch_l != g) {
         epoch_l = g;
-        Cpu::hazard |= HZD_RCU;
+        Cpu::hazard |= Hazard::RCU;
     }
 
     if (curr.head && complete (e, epoch_c))

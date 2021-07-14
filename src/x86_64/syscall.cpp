@@ -6,7 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -357,9 +357,9 @@ void Ec::sys_ec_ctrl()
 
     auto ec = static_cast<Ec *>(cap.obj());
 
-    if (!(ec->hazard & HZD_RECALL)) {
+    if (!(ec->regs.hazard & Hazard::RECALL)) {
 
-        ec->set_hazard (HZD_RECALL);
+        ec->regs.hazard.set (Hazard::RECALL);
 
         if (Cpu::id != ec->cpu && Ec::remote_current (ec->cpu) == ec)
             Interrupt::send_cpu (Interrupt::Request::RKE, ec->cpu);
