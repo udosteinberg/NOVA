@@ -21,7 +21,6 @@
 
 #include "counter.hpp"
 #include "dmar.hpp"
-#include "hazards.hpp"
 #include "idt.hpp"
 #include "interrupt.hpp"
 #include "ioapic.hpp"
@@ -52,7 +51,7 @@ void Interrupt::set_mask (unsigned gsi, bool msk)
 void Interrupt::rke_handler()
 {
     if (Pd::current->Space_mem::htlb.tst (Cpu::id))
-        Cpu::hazard |= HZD_SCHED;
+        Cpu::hazard |= Hazard::SCHED;
 }
 
 void Interrupt::handle_ipi (unsigned ipi)
