@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -26,32 +27,52 @@
 #pragma pack(1)
 
 /*
- * Generic Address Structure (5.2.3.1)
+ * 5.2.3.2: Generic Address Structure (GAS)
  */
-class Acpi_gas
+class Acpi_gas final
 {
     public:
-        uint8   asid;       // ASID
-        uint8   bits;       // Register Size (bits)
-        uint8   offset;     // Register Offset
-        uint8   access;     // Access Size
-        uint64  addr;       // Register Address
-
-        enum Asid
+        enum class Asid : uint8
         {
-            MEMORY      = 0x0,
-            IO          = 0x1,
-            PCI_CONFIG  = 0x2,
-            EC          = 0x3,
-            SMBUS       = 0x4,
-            FIXED       = 0x7f
+            MMIO        = 0x0,      // System Memory Space
+            PIO         = 0x1,      // System I/O Space
+            PCI_CFG     = 0x2,      // PCI Configuration Space
+            EC          = 0x3,      // Embedded Controller
+            SMBUS       = 0x4,      // SMBus
+            CMOS        = 0x5,      // System CMOS
+            PCI_BAR     = 0x6,      // PCI BAR
+            IPMI        = 0x7,      // IPMI
+            GPIO        = 0x8,      // General Purpose I/O
+            SERIAL      = 0x9,      // Generic Serial Bus
+            PCC         = 0xa,      // Platform Communication Channel
+            PRM         = 0xb,      // Platform Runtime Mechanism
+            FFH         = 0x7f,     // Functional Fixed Hardware
         };
 
-        void init (Asid reg_asid, unsigned reg_bytes, uint64 reg_addr)
+        Asid   asid     { 0 };      // Address space where the data structure or register exists
+        uint8  bits     { 0 };      // Number of bits in the given register (0=non-existent)
+        uint8  offs     { 0 };      // Bit offset of the given register at the given address
+        uint8  size     { 0 };      // Access size (0=undefined, 1=8bit, 2=16bit, 3=32bit, 4=64bit)
+        uint64 addr     { 0 };      // Address of the data structure or register in the given address space
+
+        inline bool valid() const { return bits; }
+
+        Acpi_gas() = default;
+
+        Acpi_gas (Acpi_gas x, uint64 a, uint8 l, unsigned c, unsigned i) : offs (0), size (0)
         {
-            asid = reg_asid;
-            bits = static_cast<uint8>(reg_bytes * 8);
-            addr = reg_addr;
+            if (x.bits) {           // Use extended block
+                asid = x.asid;
+                addr = x.addr;
+            } else if (a) {         // Use legacy block
+                asid = Asid::PIO;
+                addr = a;
+            } else                  // Non-existent
+                return;
+
+            // Note: x.bits can only encode values up to 255, but l * 8 may be larger (for GPEs)
+            bits = static_cast<uint8>((l * 8 > x.bits ? l * 8 : x.bits) / c);
+            addr += bits / 8 * i;
         }
 };
 

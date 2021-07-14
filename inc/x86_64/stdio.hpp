@@ -44,7 +44,6 @@ enum {
     TRACE_INTR      = BIT  (3),
     TRACE_VIRT      = BIT  (6),
     TRACE_FIRM      = BIT  (7),
-    TRACE_ACPI      = BIT  (8),
     TRACE_ROOT      = BIT (11),
     TRACE_PTE       = BIT (12),
     TRACE_MEMORY    = BIT (13),
@@ -73,7 +72,6 @@ constexpr auto trace_mask   { TRACE_CPU     |
                               TRACE_INTR    |
                               TRACE_VIRT    |
                               TRACE_FIRM    |
-                              TRACE_ACPI    |
                               TRACE_ROOT    |
                               TRACE_PERF    |
                               TRACE_KILL    |

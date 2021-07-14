@@ -1,7 +1,7 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,11 +15,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_hpet.hpp"
-#include "hpet.hpp"
+#include "acpi_table_spcr.hpp"
+#include "stdio.hpp"
 
-void Acpi_table_hpet::parse() const
+void Acpi_table_spcr::parse() const
 {
-    if (hpet.asid == Acpi_gas::MEMORY)
-        new Hpet (static_cast<Paddr>(hpet.addr), id);
+    Console::bind (&regs, uart_type);
+
+    trace (TRACE_FIRM, "SPCR: Console %#x at %u:%#llx:%u", std::to_underlying (uart_type), std::to_underlying (regs.asid), regs.addr, regs.bits);
 }
