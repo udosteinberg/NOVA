@@ -22,8 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
-#include "hazards.hpp"
-#include "macros.hpp"
+#include "hazard.hpp"
 #include "selectors.hpp"
 #include "svm.hpp"
 #include "types.hpp"
@@ -114,6 +113,7 @@ class alignas (16) Cpu_regs final
         };
         uintptr_t               mtd;
         uint64_t                tsc_offset;
+        Hazard                  hazard  { 0 };
 
         void fpu_ctrl (bool);
         void svm_set_cpu_pri (uint32_t) const;

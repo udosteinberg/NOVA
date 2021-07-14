@@ -24,7 +24,7 @@
 #include "arch.hpp"
 #include "cpu.hpp"
 #include "cr.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "slab.hpp"
 
 class Fpu
@@ -45,10 +45,10 @@ class Fpu
         static inline void init() { asm volatile ("fninit"); }
 
         ALWAYS_INLINE
-        static inline void enable() { asm volatile ("clts"); Cpu::hazard |= HZD_FPU; }
+        static inline void enable() { asm volatile ("clts"); Cpu::hazard |= Hazard::FPU; }
 
         ALWAYS_INLINE
-        static inline void disable() { Cr::set_cr0 (Cr::get_cr0() | CR0_TS); Cpu::hazard &= ~HZD_FPU; }
+        static inline void disable() { Cr::set_cr0 (Cr::get_cr0() | CR0_TS); Cpu::hazard &= ~Hazard::FPU; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }

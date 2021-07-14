@@ -69,7 +69,7 @@ void Ec::handle_vmx()
 {
     current->regs.cr2 = Cr::get_cr2();
 
-    Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
+    Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
     uint32 reason = Vmcs::read<uint32> (Vmcs::EXI_REASON) & 0xff;
 

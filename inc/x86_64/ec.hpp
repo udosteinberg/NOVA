@@ -57,7 +57,6 @@ class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element,
             uint32  xcpu;
         };
         unsigned const evt;
-        Atomic<unsigned> hazard;
         Spinlock    lock;
 
         static Slab_cache cache;
@@ -109,15 +108,6 @@ class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element,
         }
 
         ALWAYS_INLINE
-        inline bool tas_hazard (unsigned h) { return hazard.fetch_or (h) & h; }
-
-        ALWAYS_INLINE
-        inline void set_hazard (unsigned h) { hazard |= h; }
-
-        ALWAYS_INLINE
-        inline void clr_hazard (unsigned h) { hazard &= ~h; }
-
-        ALWAYS_INLINE
         inline void redirect_to_iret()
         {
             exc_regs().rsp = exc_regs().sp();
@@ -140,7 +130,7 @@ class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element,
         inline void add_tsc_offset (uint64 tsc)
         {
             regs.tsc_offset += tsc;
-            set_hazard (HZD_TSC);
+            regs.hazard.set (Hazard::TSC);
         }
 
         ALWAYS_INLINE

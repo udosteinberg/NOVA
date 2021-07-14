@@ -20,7 +20,6 @@
  */
 
 #include "counter.hpp"
-#include "hazards.hpp"
 #include "idt.hpp"
 #include "interrupt.hpp"
 #include "ioapic.hpp"
@@ -38,7 +37,7 @@ void Interrupt::setup()
 void Interrupt::rke_handler()
 {
     if (Pd::current->Space_mem::htlb.tst (Cpu::id))
-        Cpu::hazard |= HZD_SCHED;
+        Cpu::hazard |= Hazard::SCHED;
 }
 
 void Interrupt::handle_lvt (unsigned n)

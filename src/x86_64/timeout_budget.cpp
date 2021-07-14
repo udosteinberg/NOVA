@@ -17,7 +17,7 @@
  */
 
 #include "cpu.hpp"
-#include "hazards.hpp"
+#include "hazard.hpp"
 #include "initprio.hpp"
 #include "rcu.hpp"
 #include "timeout_budget.hpp"
@@ -26,7 +26,7 @@ INIT_PRIORITY (PRIO_LOCAL) Timeout_budget Timeout_budget::timeout;
 
 void Timeout_budget::trigger()
 {
-    Cpu::hazard |= HZD_SCHED;
+    Cpu::hazard |= Hazard::SCHED;
 
     Rcu::check();
 }
