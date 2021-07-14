@@ -55,22 +55,26 @@ Hpt::OAddr kern_ptab_setup()
 extern "C"
 void init (uintptr_t offset)
 {
-    Kmem::init (offset);
+    if (!Acpi::resume) {
 
-    Patch::init();
-    Buddy::init();
+        Kmem::init (offset);
 
-    for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
+        Patch::init();
+        Buddy::init();
 
-    Cmdline::init();
+        for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
-    for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
+        Cmdline::init();
 
-    // Now we're ready to talk to the world
-    Console::print ("\fNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+        for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
 
-    Interrupt::setup();
-    Acpi::setup();
+        // Now we're ready to talk to the world
+        Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+
+        Interrupt::setup();
+    }
+
+    Acpi::init();
 
     Pic::init();
 
