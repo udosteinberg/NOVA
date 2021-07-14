@@ -1,7 +1,8 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -15,11 +16,18 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_hpet.hpp"
+#include "acpi_table_hpet.hpp"
 #include "hpet.hpp"
+#include "stdio.hpp"
 
 void Acpi_table_hpet::parse() const
 {
-    if (hpet.asid == Acpi_gas::MEMORY)
-        new Hpet (id);
+    if (regs.asid != Acpi_gas::Asid::MEM) [[unlikely]]
+        return;
+
+    auto const hpet { new Hpet { uid } };
+    if (!hpet) [[unlikely]]
+        panic ("HPET allocation failed");
+
+    trace (TRACE_FIRM, "HPET: %#010lx", uint64_t { regs.addr });
 }

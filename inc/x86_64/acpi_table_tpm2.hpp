@@ -1,9 +1,6 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
- *
  * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -22,33 +19,21 @@
 
 #include "acpi_table.hpp"
 
-#pragma pack(1)
-
 /*
- * Root System Description Table (5.2.7 and 5.2.8)
+ * TCG Hardware Interface Description Table for TPM 2.0 (TPM2)
  */
-class Acpi_table_rsdt : public Acpi_table
+class Acpi_table_tpm2 final
 {
     private:
-        static struct table_map
-        {
-            uint32  const sig;
-            Paddr * const ptr;
-        } map[];
-
-        unsigned long entries (size_t size) const
-        {
-            return (length - sizeof (Acpi_table)) / size;
-        }
+        Acpi_table                  table;                      // 0
+        Unaligned_le<uint16_t>      platform;                   // 36
+        Unaligned_le<uint16_t>      reserved;                   // 38
+        Unaligned_le<uint64_t>      tpm_base;                   // 40
+        Unaligned_le<uint32_t>      start_method;               // 48
+        Unaligned_le<uint32_t>      start_params;               // 52
 
     public:
-        union
-        {
-            uint32  rsdt[1];
-            uint64  xsdt[1];
-        };
-
-        void parse (Paddr, size_t) const;
+        void parse() const;
 };
 
-#pragma pack()
+static_assert (__is_standard_layout (Acpi_table_tpm2) && alignof (Acpi_table_tpm2) == 1 && sizeof (Acpi_table_tpm2) == 56);

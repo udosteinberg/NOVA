@@ -147,6 +147,8 @@ class Cpu final
         static void fini();
         static void halt();
 
+        static void allocate (apic_t);
+
         static bool feature (Feature f)
         {
             return features[std::to_underlying (f) / 32] & BIT (std::to_underlying (f) % 32);
