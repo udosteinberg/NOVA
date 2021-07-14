@@ -1,8 +1,8 @@
 /*
  * Advanced Configuration and Power Interface (ACPI)
  *
- * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
- * Economic rights: Technische Universitaet Dresden (Germany)
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,29 +16,14 @@
  * GNU General Public License version 2 for more details.
  */
 
-#pragma once
+#include "acpi_table_hpet.hpp"
+#include "hpet.hpp"
+#include "stdio.hpp"
 
-#include "acpi_table.hpp"
-
-#pragma pack(1)
-
-class Acpi_mcfg
+void Acpi_table_hpet::parse() const
 {
-    public:
-        uint64      addr;
-        uint16      seg;
-        uint8       bus_s;
-        uint8       bus_e;
-        uint32      reserved;
-};
+    if (hpet.asid == Acpi_gas::Asid::MMIO)
+        new Hpet (acpi_uid);
 
-class Acpi_table_mcfg : public Acpi_table
-{
-    public:
-        uint64      reserved;
-        Acpi_mcfg   mcfg[];
-
-        void parse() const;
-};
-
-#pragma pack()
+    trace (TRACE_FIRM | TRACE_PARSE, "HPET: %#lx ID:%#x", hpet.addr, acpi_uid);
+}
