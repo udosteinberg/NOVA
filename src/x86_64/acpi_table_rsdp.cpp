@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,17 +19,16 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi_mcfg.hpp"
-#include "pci.hpp"
+#include "acpi_table_rsdp.hpp"
+#include "compiler.hpp"
 
-void Acpi_table_mcfg::parse() const
+bool Acpi_table_rsdp::parse (uint64_t &addr, size_t &size) const
 {
-    for (Acpi_mcfg const *x = mcfg; x + 1 <= reinterpret_cast<Acpi_mcfg *>(reinterpret_cast<mword>(this) + length); x++)
-        if (!x->seg) {
-            Pci::bus_base = x->bus_s;
-            Pci::cfg_base = static_cast<Paddr>(x->addr);
-            Pci::cfg_size = ((x->bus_e - x->bus_s + 1) << 8) * PAGE_SIZE;
-        }
+    if (EXPECT_FALSE (!valid()))
+        return false;
 
-    Pci::init();
+    addr = revision > 1 ? static_cast<uint64_t>(xsdt_addr_hi) << 32 | xsdt_addr_lo : rsdt_addr;
+    size = revision > 1 ? sizeof (uint64_t) : sizeof (uint32_t);
+
+    return true;
 }
