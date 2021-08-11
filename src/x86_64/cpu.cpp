@@ -43,8 +43,6 @@ char const * const Cpu::vendor_string[] =
     "AuthenticAMD"
 };
 
-mword       Cpu::boot_lock;
-
 // Order of these matters
 unsigned    Cpu::online;
 uint8       Cpu::acpi_id[NUM_CPU];
@@ -219,5 +217,5 @@ void Cpu::init()
 
     Hip::hip->add_cpu();
 
-    boot_lock++;
+    boot_lock.unlock();
 }

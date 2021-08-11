@@ -23,6 +23,7 @@
 
 #include "compiler.hpp"
 #include "config.hpp"
+#include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -41,6 +42,8 @@ class Cpu
 
         ALWAYS_INLINE
         static inline void setup_pcid();
+
+        static inline Spinlock boot_lock    asm ("__boot_lock");
 
     public:
         enum Vendor
@@ -65,8 +68,6 @@ class Cpu
             FEAT_CMP_LEGACY     = 161,
             FEAT_SVM            = 162,
         };
-
-        static mword    boot_lock           asm ("boot_lock");
 
         static unsigned online;
         static uint8    acpi_id[NUM_CPU];
