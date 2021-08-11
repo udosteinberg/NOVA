@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "macros.hpp"
+
 #define ARCH                "x86_64"
 #define BFD_ARCH            "i386:x86-64"
 #define BFD_FORMAT          "elf64-x86-64"
