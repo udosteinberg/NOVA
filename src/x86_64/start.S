@@ -138,16 +138,19 @@ __start_bsp:            mov     $(__start_bsp - __start_ap), %ecx
 
 __start_all:            INIT_STATE
                         test    %rbx, %rbx
-                        je      2f
+                        je      1f
 
                         mov     %rbx, %rdi
                         call    init
-                        jmp     3f
-
-1:                      pause
-2:                      xchg    %rbx, boot_lock
-                        test    %rbx, %rbx
-                        je      1b
+1:
+                        // Acquire boot lock
+                        mov     $BIT(8), %rcx
+                   lock xadd    %cx, __boot_lock
+2:                      cmp     %ch, %cl
+                        je      3f
+                        pause
+                        mov     __boot_lock, %cl
+                        jmp     2b
 
 3:                      call    kern_ptab_setup
                         jmp     1f
