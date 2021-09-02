@@ -58,10 +58,6 @@ extern "C" void init()
     Patch::init();
     Buddy::init();
 
-    // Setup 0-page and 1-page
-    memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE (0));
-    memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE (0));
-
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
     Cmdline::init();
