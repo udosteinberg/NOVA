@@ -89,8 +89,6 @@ SECTIONS
         . = ALIGN(4K) + 4K;
         PROVIDE_HIDDEN (STACK = . - OFFSET);
 
-        PROVIDE_HIDDEN (PAGE_0 = .); . += 4K;
-        PROVIDE_HIDDEN (PAGE_1 = .); . += 4K;
         PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
 
         PROVIDE_HIDDEN (PTAB_HPAS = . - OFFSET);
