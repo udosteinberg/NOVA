@@ -75,14 +75,14 @@ SECTIONS
 
     .bss : AT (ADDR (.bss) - OFFSET)
     {
+        PROVIDE (ZERO_HPAS = . - OFFSET);
+
         *(.bss .bss.* .gnu.linkonce.b.*)
 
         . = ALIGN(4K);
 
         PROVIDE (KMEM_HVAS = .);
 
-        PROVIDE (PAGE_0 = .); . += 4K;
-        PROVIDE (PAGE_1 = .); . += 4K;
         PROVIDE (PAGE_H = .); . += 4K;
 
         PROVIDE (PTAB_HVAS = .);
@@ -97,6 +97,8 @@ SECTIONS
         . = ALIGN(16M);
 
         PROVIDE (KMEM_HVAE = .);
+
+        PROVIDE (ZERO_HPAE = . - OFFSET);
 
     } : kern
 

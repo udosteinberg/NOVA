@@ -61,10 +61,6 @@ void init (uintptr_t offset)
 
         Buddy::init();
 
-        // Setup 0-page and 1-page
-        memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
-        memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
-
         for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
         auto addr = *reinterpret_cast<uintptr_t *>(Kmem::sym_to_virt (&__boot_cl));
