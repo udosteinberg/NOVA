@@ -58,10 +58,6 @@ void init (uintptr_t offset)
     Patch::init();
     Buddy::init();
 
-    // Setup 0-page and 1-page
-    memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
-    memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
-
     for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
 
     Cmdline::init();
