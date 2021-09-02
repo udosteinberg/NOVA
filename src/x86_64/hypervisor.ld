@@ -84,6 +84,8 @@ SECTIONS
         *(.data .data.* .gnu.linkonce.d.*)
     } : kern
 
+    PROVIDE_HIDDEN (ZERO_HPAS = . - OFFSET);
+
     .bss : AT (ADDR (.bss) - OFFSET)
     {
         *(.bss .bss.* .gnu.linkonce.b.*)
@@ -93,8 +95,6 @@ SECTIONS
 
         PROVIDE_HIDDEN (KMEM_HVAS = .);
 
-        PROVIDE_HIDDEN (PAGE_0 = .); . += 4K;
-        PROVIDE_HIDDEN (PAGE_1 = .); . += 4K;
         PROVIDE_HIDDEN (PAGE_H = .); . += 4K;
 
         PROVIDE_HIDDEN (PTAB_HVAS = .);
