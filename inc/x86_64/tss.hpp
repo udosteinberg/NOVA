@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,7 +22,8 @@
 #pragma once
 
 #include "compiler.hpp"
-#include "selectors.hpp"
+#include "gdt.hpp"
+#include "types.hpp"
 
 class Tss
 {
@@ -45,6 +47,7 @@ class Tss
         ALWAYS_INLINE
         static inline void load()
         {
+            Gdt::unbusy_tss();
             asm volatile ("ltr %w0" : : "rm" (SEL_TSS_RUN));
         }
 };
