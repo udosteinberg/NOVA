@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,31 +22,32 @@
 #pragma once
 
 #include "compiler.hpp"
-#include "selectors.hpp"
-#include "types.hpp"
+#include "gdt.hpp"
 
-class Tss
+#pragma pack(1)
+
+class Tss final
 {
     public:
-        uint32  : 32;                   // 0x0
-
-        uint64  sp0     PACKED;         // 0x4
-        uint64  sp1     PACKED;         // 0xc
-        uint64  sp2     PACKED;         // 0x14
-        uint64  ist[8]  PACKED;         // 0x1c
-        uint64  : 64    PACKED;
-
-        uint16  trap;                   // 0x64
-        uint16  iobm;                   // 0x66
+        uint32_t    res0;               // 0
+        uint64_t    rsp[3];             // 4
+        uint64_t    ist[8];             // 28
+        uint64_t    res1;               // 92
+        uint16_t    trap;               // 100
+        uint16_t    iobm;               // 102
 
         static Tss run asm ("tss_run")  CPULOCAL;
         static Tss dbf asm ("tss_dbf")  CPULOCAL;
 
         static void build();
 
-        ALWAYS_INLINE
-        static inline void load()
+        static void load()
         {
+            Gdt::unbusy_tss();
             asm volatile ("ltr %w0" : : "rm" (SEL_TSS_RUN));
         }
 };
+
+static_assert (__is_standard_layout (Tss) && sizeof (Tss) == 104);
+
+#pragma pack()
