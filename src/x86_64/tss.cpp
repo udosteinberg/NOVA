@@ -27,5 +27,5 @@ ALIGNED(8) Tss Tss::run;
 void Tss::build()
 {
     run.ist[1] = MMAP_CPU_ISTT;
-    run.iobm   = static_cast<uint16>(MMAP_SPC_PIO - reinterpret_cast<uintptr_t>(&run));
+    run.iobm   = static_cast<uint16_t>(MMAP_SPC_PIO - reinterpret_cast<uintptr_t>(&run));
 }
