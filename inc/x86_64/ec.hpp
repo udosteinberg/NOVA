@@ -176,7 +176,7 @@ class Ec : public Kobject, public Queue<Sc>
         {
             current = this;
 
-            Tss::run.sp0 = reinterpret_cast<mword>(exc_regs() + 1);
+            Tss::run.rsp[0] = reinterpret_cast<uintptr_t>(exc_regs() + 1);
 
             pd->make_current();
 
