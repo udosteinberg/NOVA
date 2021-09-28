@@ -22,10 +22,9 @@
 #pragma once
 
 #include "compiler.hpp"
-#include "selectors.hpp"
-#include "types.hpp"
+#include "gdt.hpp"
 
-class Tss
+class Tss final
 {
     public:
         uint32  : 32;                   // 0x0
@@ -47,6 +46,7 @@ class Tss
         ALWAYS_INLINE
         static inline void load()
         {
+            Gdt::unbusy_tss();
             asm volatile ("ltr %w0" : : "rm" (SEL_TSS_RUN));
         }
 };
