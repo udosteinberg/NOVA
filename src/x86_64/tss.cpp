@@ -27,6 +27,5 @@ ALIGNED(8) Tss Tss::dbf;
 
 void Tss::build()
 {
-    run.sp0  = 0;
     run.iobm = static_cast<uint16>(MMAP_SPC_PIO - reinterpret_cast<uintptr_t>(&run));
 }
