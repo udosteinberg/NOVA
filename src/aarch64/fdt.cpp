@@ -16,7 +16,10 @@
  */
 
 #include "assert.hpp"
+#include "cpu.hpp"
+#include "extern.hpp"
 #include "fdt.hpp"
+#include "psci.hpp"
 #include "ptab_hpt.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
@@ -181,6 +184,27 @@ void Fdt::Header::parse_subtree (be_uint32_t const *&w, unsigned pa_cells, unsig
 
 bool Fdt::init()
 {
+    unsigned const cnt { sizeof (Board::cpu) / sizeof (*Board::cpu) };
+
+    if (Board::spin_addr) {
+
+        auto spintable { reinterpret_cast<uint64_t *>(Hptp::map (MMAP_GLB_MAP0, Board::spin_addr, Paging::W)) };
+
+        for (cpu_t c { 0 }; c < cnt; c++) {
+            spintable[c] = Kmem::sym_to_phys (&__init_spin);
+            asm volatile ("dsb ish; dc cvac, %0; sev" : : "r" (spintable + c) : "memory");
+            Cpu::allocate (Cpu::count++, Board::cpu[c].id);
+        }
+
+    } else {
+
+        Psci::init();
+
+        for (cpu_t c { 0 }; c < cnt; c++)
+            if (Psci::boot_cpu (Cpu::count, Board::cpu[c].id))
+                Cpu::allocate (Cpu::count++, Board::cpu[c].id);
+    }
+
     auto const p { Uefi::info.fdtp };
 
     // No FDT or FDT not properly aligned

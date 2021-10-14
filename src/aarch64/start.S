@@ -26,7 +26,7 @@
 #define PTE_ATTR_A      BIT (10)    // Accessed
 #define PTE_ATTR_nG     BIT (11)    // Not Global
 
-.globl                  __init_bsp
+.globl                  __init_bsp, __init_psci, __init_spin
 
 /*
  * Macros
@@ -83,7 +83,16 @@ __init_bsp:
                         sub     x1, x23, x22
                         DCACHE  cvac
 
-                        msr     daifset, #0xf
+                        mov     x19, #-1
+                        b       .Linit_all
+
+__init_psci:            mov     x19, x0
+                        b       .Linit_all
+
+__init_spin:            mrs     x0, mpidr_el1
+                        and     x19, x0, #0xff
+
+.Linit_all:             msr     daifset, #0xf
                         msr     spsel,   #0x1
 
                         // Enable I$, D$, Disable MMU
@@ -94,12 +103,15 @@ __init_bsp:
                         msr     sctlr_el2, x0
                         isb
 
+                        // Skip ahead if not BSP init
+                        tbz     x19, #62, .Lbss_skip
+
                         // Zero BSS
                         adr     x0, ZERO_HPAS
 .Lbss_loop:             str     xzr, [x0], #__SIZEOF_POINTER__
                         cmp     x0, x23
                         blo     .Lbss_loop
-
+.Lbss_skip:
                         // Determine PA range (0-5)
                         mov     x20, #5
                         mrs     x21, id_aa64mmfr0_el1
@@ -159,6 +171,9 @@ __init_bsp:
                         msr     elr_el3, x1
                         eret
 .Lel2:
+                        // Skip ahead if not BSP init
+                        tbz     x19, #62, .Lpte_skip
+
                         // Configure Page Tables: Load Section (2M page)
                         PTE_REL  3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, PTE_ATTR_nL | PTE_ATTR_P
                         PTE_REL  2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, PTE_ATTR_nL | PTE_ATTR_P
@@ -180,7 +195,7 @@ __init_bsp:
                         adr     x0, ZERO_HPAS
                         sub     x1, x23, x0
                         DCACHE  ivac
-
+.Lpte_skip:
                         // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
                         mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
                         orr     x0, x0, #BIT (31)
@@ -219,6 +234,23 @@ __init_bsp:
 .text
 
 .Lhigh:
+                        // Acquire boot lock
+                        adr     x0, __boot_lock
+.Llock_retry_tu:        ldaxr   w1, [x0]
+                        add     w2, w1, #BIT (16)
+                        stxr    w3, w2, [x0]
+                        cbnz    w3, .Llock_retry_tu
+                        eor     w3, w1, w1, ror #16
+                        cbz     w3, .Llock_end
+                        sevl
+.Llock_retry_tw:        wfe
+                        ldaxrh  w2, [x0]
+                        eor     w3, w2, w1, lsr #16
+                        cbnz    w3, .Llock_retry_tw
+.Llock_end:
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, .Lskip_bsp
+
                         // Initialize kmem offset
                         adr     x0, __kmem_offset
                         str     x24, [x0]
@@ -228,8 +260,10 @@ __init_bsp:
 
                         // General initialization
                         bl      init
-
+                        mov     x19, x0
+.Lskip_bsp:
                         // Switch to CPU-local page table
+                        mov     x0, x19
                         bl      kern_ptab_setup
                         msr     ttbr0_el2, x0
                         isb
@@ -243,4 +277,6 @@ __init_bsp:
                         dsb     nsh
                         isb
 
+                        mov     x0, x19
+                        ubfx    x1, x20, #2, #2
                         b       bootstrap

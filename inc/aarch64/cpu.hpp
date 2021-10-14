@@ -20,6 +20,7 @@
 #include "arch.hpp"
 #include "atomic.hpp"
 #include "kmem.hpp"
+#include "spinlock.hpp"
 #include "std.hpp"
 #include "types.hpp"
 
@@ -97,6 +98,8 @@ class Cpu final
         static uint32_t feat_isa32[7]       CPULOCAL;           // ID_ISARx
         static uint32_t feat_mem32[6]       CPULOCAL;           // ID_MMFRx
         static uint32_t feat_mfp32[3]       CPULOCAL;           // MVFRx
+
+        static inline Spinlock boot_lock    asm ("__boot_lock");
 
         static void enumerate_features();
 
@@ -284,6 +287,10 @@ class Cpu final
             E3DSE       = 73,   // FEAT_E3DSE (1)
         };
 
+        static cpu_t            id          CPULOCAL;
+        static unsigned         hazard      CPULOCAL;
+        static bool             bsp         CPULOCAL;
+        static uint64_t         gicr        CPULOCAL;
         static uint64_t         cptr        CPULOCAL;
         static uint64_t         mdcr        CPULOCAL;
 
@@ -317,8 +324,10 @@ class Cpu final
         static inline auto constrain_hcr  (uint64_t v) { return (v | hyp1_hcr)  & ~(res0_hcr  | hyp0_hcr); }
         static inline auto constrain_hcrx (uint64_t v) { return (v | hyp1_hcrx) & ~(res0_hcrx | hyp0_hcrx); }
 
-        static void init();
+        static void init (cpu_t, unsigned);
         static void fini();
 
         static void set_vmm_regs (uintptr_t (&)[31], uint64_t &, uint64_t &, uint64_t &, uint32_t &);
+
+        static bool allocate (cpu_t, uint64_t, uint64_t = 0);
 };
