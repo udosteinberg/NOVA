@@ -26,7 +26,7 @@
 #define PTE_ATTR_A      BIT (10)    // Accessed
 #define PTE_ATTR_nG     BIT (11)    // Not Global
 
-.globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp
+.globl                  __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_bsp, __init_psci, __init_spin
 
 /*
  * Macros
@@ -88,6 +88,15 @@ __init_bsp:             // Store boot parameters
                         sub     x1, x1, x0
                         DCACHE  cvac
 
+                        mov     x19, #-1
+                        b       1f
+
+__init_psci:            mov     x19, x0
+                        b       1f
+
+__init_spin:            mrs     x0, mpidr_el1
+                        and     x19, x0, #0xff
+
 1:                      msr     daifset, #0xf
                         msr     spsel,   #0x1
 
@@ -99,6 +108,9 @@ __init_bsp:             // Store boot parameters
                         msr     sctlr_el2, x0
                         isb
 
+                        // Skip ahead if not BSP init
+                        tbz     x19, #62, 2f
+
                         // Zero BSS
                         adr     x0, ZERO_HPAS
                         adrp    x1, ZERO_HPAE
@@ -106,7 +118,7 @@ __init_bsp:             // Store boot parameters
                         cmp     x0, x1
                         blo     1b
 
-                        // Determine PA range (0-5)
+2:                      // Determine PA range (0-5)
                         mov     x20, #5
                         mrs     x21, id_aa64mmfr0_el1
                         and     x21, x21, #7
@@ -167,6 +179,9 @@ el3:
                         eret
 
 el2:
+                        // Skip ahead if not BSP init
+                        tbz     x19, #62, 2f
+
                         // Configure Page Tables: Load Section (2M page)
                         PTE_REL  3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, PTE_ATTR_nL | PTE_ATTR_P
                         PTE_REL  2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, PTE_ATTR_nL | PTE_ATTR_P
@@ -191,7 +206,7 @@ el2:
                         sub     x1, x1, x0
                         DCACHE  ivac
 
-                        // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
+2:                      // Configure EL2 TCR: 4K pages, 48bit VA, HW-supported PA
                         mov     x0, #(TCR_TG0_4K | TCR_SH0_INNER | TCR_ORGN0_WB_RW | TCR_IRGN0_WB_RW | TCR_T0SZ (48))
                         orr     x0, x0, #BIT (31)
                         orr     x0, x0, #BIT (23)
@@ -239,14 +254,34 @@ __boot_ts:              .quad   0   // combined
 .text
 
 high:
+                        // Acquire boot lock
+                        adr     x0, __boot_lock
+1:                      ldaxr   w1, [x0]
+                        add     w2, w1, #BIT (16)
+                        stxr    w3, w2, [x0]
+                        cbnz    w3, 1b
+                        eor     w3, w1, w1, ror #16
+                        cbz     w3, 2f
+                        sevl
+1:                      wfe
+                        ldaxrh  w2, [x0]
+                        eor     w3, w2, w1, lsr #16
+                        cbnz    w3, 1b
+
+2:
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, 1f
+
                         // Initialize kmem offset
                         adr     x0, __kmem_offset
                         str     x22, [x0]
 
                         // General initialization
                         bl      init
+                        mov     x19, x0
 
-                        // Switch to CPU-local page table
+1:                      // Switch to CPU-local page table
+                        mov     x0, x19
                         bl      kern_ptab_setup
                         msr     ttbr0_el2, x0
                         isb
@@ -260,4 +295,6 @@ high:
                         dsb     nsh
                         isb
 
+                        mov     x0, x19
+                        ubfx    x1, x20, #2, #2
                         b       bootstrap
