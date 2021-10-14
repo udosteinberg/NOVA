@@ -18,7 +18,10 @@
 #pragma once
 
 #include "arch.hpp"
+#include "atomic.hpp"
 #include "compiler.hpp"
+#include "kmem.hpp"
+#include "spinlock.hpp"
 #include "std.hpp"
 #include "types.hpp"
 
@@ -77,6 +80,7 @@ class Cpu final
         static constexpr auto hyp0_hcrx { 0 };
         static constexpr auto hyp1_hcrx { 0 };
 
+        static uint64_t ptab                CPULOCAL;           // EL2 Page Table Root
         static uint64_t midr                CPULOCAL;           // Main ID Register
         static uint64_t mpidr               CPULOCAL;           // Multiprocessor Affinity Register
 
@@ -95,6 +99,8 @@ class Cpu final
         static uint32_t feat_isa32[7]       CPULOCAL;           // ID_ISARx
         static uint32_t feat_mem32[6]       CPULOCAL;           // ID_MMFRx
         static uint32_t feat_mfp32[3]       CPULOCAL;           // MVFRx
+
+        static inline Spinlock boot_lock    asm ("__boot_lock");
 
         static void enumerate_features();
 
@@ -271,11 +277,15 @@ class Cpu final
             EIESB       = 65,   // IESB before (1) / after (15) exception
         };
 
+        static cpu_t            id          CPULOCAL;
+        static unsigned         hazard      CPULOCAL;
+        static bool             bsp         CPULOCAL;
         static uint64_t         cptr        CPULOCAL;
         static uint64_t         mdcr        CPULOCAL;
 
         static inline cpu_t             boot_cpu    { 0 };
         static inline cpu_t             count       { 0 };
+        static inline Atomic<cpu_t>     online      { 0 };
 
         // Returns affinity in Aff3[31:24] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
         ALWAYS_INLINE
@@ -284,6 +294,12 @@ class Cpu final
         // Returns affinity in Aff3[39:32] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
         ALWAYS_INLINE
         static inline auto affinity_bits (uint64_t v) { return v & (BIT64_RANGE (39, 32) | BIT64_RANGE (23, 0)); }
+
+        ALWAYS_INLINE
+        static inline auto remote_mpidr (unsigned cpu) { return *Kmem::loc_to_glob (&mpidr, cpu); }
+
+        ALWAYS_INLINE
+        static inline auto remote_ptab (unsigned cpu) { return *Kmem::loc_to_glob (&ptab, cpu); }
 
         ALWAYS_INLINE
         static inline void preemption_disable() { asm volatile ("msr daifset, #0xf" : : : "memory"); }
@@ -305,7 +321,7 @@ class Cpu final
         static inline auto constrain_hcr  (uint64_t v) { return (v | hyp1_hcr)  & ~(res0_hcr  | hyp0_hcr); }
         static inline auto constrain_hcrx (uint64_t v) { return (v | hyp1_hcrx) & ~(res0_hcrx | hyp0_hcrx); }
 
-        static void init();
+        static void init (cpu_t, unsigned);
         static void fini();
 
         static void set_vmm_regs (uintptr_t (&)[31], uint64_t &, uint64_t &, uint64_t &, uint32_t &);
