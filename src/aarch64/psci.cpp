@@ -17,6 +17,7 @@
 
 #include "extern.hpp"
 #include "kmem.hpp"
+#include "lowlevel.hpp"
 #include "psci.hpp"
 #include "stdio.hpp"
 
@@ -41,6 +42,14 @@ bool Psci::boot_cpu (unsigned id, uint64 mpidr)
 
 void Psci::offline_wait()
 {
+    for (unsigned i { 0 }; i < Cpu::count; i++) {
+
+        if (Cpu::id == i)
+            continue;
+
+        while (!is_cpu_off (Cpu::affinity_bits (Cpu::remote_mpidr (i))))
+            pause();
+    }
 }
 
 void Psci::init()
