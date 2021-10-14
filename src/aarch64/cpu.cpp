@@ -18,12 +18,16 @@
 #include "acpi.hpp"
 #include "cache.hpp"
 #include "cpu.hpp"
+#include "hazards.hpp"
+#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 
+unsigned Cpu::id, Cpu::hazard;
+bool Cpu::bsp;
 uint64 Cpu::res0_hcr, Cpu::res0_sctlr32, Cpu::res1_sctlr32, Cpu::res0_sctlr64, Cpu::res1_sctlr64;
 uint64 Cpu::res0_spsr32, Cpu::res0_spsr64, Cpu::res0_tcr32, Cpu::res0_tcr64;
-uint64 Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
+uint64 Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
 uint64 Cpu::feat_cpu64[2], Cpu::feat_dbg64[2], Cpu::feat_isa64[3], Cpu::feat_mem64[3], Cpu::feat_sve64[1];
 uint32 Cpu::feat_cpu32[3], Cpu::feat_dbg32[2], Cpu::feat_isa32[7], Cpu::feat_mem32[6], Cpu::feat_mfp32[3];
 
@@ -194,10 +198,20 @@ void Cpu::enumerate_features()
                  TCR_A64_RES0;
 }
 
-void Cpu::init()
+void Cpu::init (unsigned cpu, unsigned e)
 {
-    if (!Acpi::resume)
+    if (!Acpi::resume) {
+
+        for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+        hazard = HZD_BOOT_GST | HZD_BOOT_HST;
+
+        id   = cpu;
+        bsp  = cpu == boot_cpu;
+        ptab = Hptp::current().root_addr();
+
         enumerate_features();
+    }
 
     char const *impl = "Unknown", *part = impl;
 
@@ -263,14 +277,21 @@ void Cpu::init()
             break;
     }
 
-    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u XNX:%u GIC:%u",
+    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u XNX:%u GIC:%u (EL%u)",
            affinity() >> 16 & BIT_RANGE (7, 0), affinity() >> 8 & BIT_RANGE (7, 0), affinity() & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0),
-           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC));
+           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
 
     Nptp::init();
+
+    boot_lock.unlock();
 }
 
 void Cpu::fini()
 {
+    hazard &= ~HZD_SLEEP;
+
+    auto s = Acpi::get_transition();
+
+    Acpi::fini (s);
 }
