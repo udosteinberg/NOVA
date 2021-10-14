@@ -15,13 +15,19 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "cache.hpp"
 #include "cpu.hpp"
+#include "hazard.hpp"
+#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 
+bool Cpu::bsp;
+cpu_t Cpu::id;
+unsigned Cpu::hazard;
 uint64_t Cpu::res0_hcr, Cpu::res0_hcrx;
-uint64_t Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
+uint64_t Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::gicr, Cpu::cptr, Cpu::mdcr;
 uint64_t Cpu::feat_cpu64[3], Cpu::feat_dbg64[2], Cpu::feat_isa64[4], Cpu::feat_mem64[5], Cpu::feat_sme64[1], Cpu::feat_sve64[1];
 uint32_t Cpu::feat_cpu32[3], Cpu::feat_dbg32[2], Cpu::feat_isa32[7], Cpu::feat_mem32[6], Cpu::feat_mfp32[3];
 
@@ -136,9 +142,19 @@ void Cpu::enumerate_features()
         Npt::xnx = false;
 }
 
-void Cpu::init()
+void Cpu::init (cpu_t cpu, unsigned e)
 {
-    enumerate_features();
+    if (Acpi::resume)
+        hazard = 0;
+
+    else {
+        for (auto func { CTORS_L }; func != CTORS_C; (*func++)()) ;
+
+        id   = cpu;
+        bsp  = cpu == boot_cpu;
+
+        enumerate_features();
+    }
 
     auto impl { "Unknown" }, part { impl };
 
@@ -239,16 +255,21 @@ void Cpu::init()
             break;
     }
 
-    trace (TRACE_CPU, "CORE: %02lu:%02lu:%02lu:%02lu %s %s r%lup%lu PA:%u XNX:%u GIC:%u",
+    trace (TRACE_CPU, "CORE: %02lu:%02lu:%02lu:%02lu %s %s r%lup%lu PA:%u XNX:%u GIC:%u (EL%u)",
            mpidr >> 32 & BIT_RANGE (7, 0), mpidr >> 16 & BIT_RANGE (7, 0), mpidr >> 8 & BIT_RANGE (7, 0), mpidr & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0),
-           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC));
+           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
 
     Nptp::init();
+
+    boot_lock.unlock();
 }
 
 void Cpu::fini()
 {
+    auto const s { Acpi::get_transition() };
+
+    Acpi::fini (s);
 }
 
 void Cpu::set_vmm_regs (uintptr_t (&x)[31], uint64_t &hcr, uint64_t &vpidr, uint64_t &vmpidr, uint32_t &elrsr)
@@ -276,4 +297,37 @@ void Cpu::set_vmm_regs (uintptr_t (&x)[31], uint64_t &hcr, uint64_t &vpidr, uint
     vpidr  = midr;
     vmpidr = mpidr;
     elrsr  = 0;
+}
+
+bool Cpu::allocate (cpu_t cpu, uint64_t m, uint64_t r)
+{
+    auto const c { Buddy::alloc (0, Buddy::Fill::BITS0) };  // CPU-Local Data
+    auto const d { Buddy::alloc (0, Buddy::Fill::BITS0) };  // Data Stack
+
+    if (EXPECT_TRUE (c && d)) {
+
+        Hptp hptp { 0 };
+
+        // Share kernel code and data
+        hptp.share_from_master (LINK_ADDR);
+
+        // Map cpu-local data and stack
+        hptp.update (MMAP_CPU_DATA, Kmem::ptr_to_phys (c), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+        hptp.update (MMAP_CPU_DSTK, Kmem::ptr_to_phys (d), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+
+        // Add to CPU array
+        Hptp::master_map (MMAP_GLB_CPUS + cpu * PAGE_SIZE (0), Kmem::ptr_to_phys (c), 0, Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
+
+        // Prefill addresses
+        *Kmem::loc_to_glob (cpu, &mpidr) = m;
+        *Kmem::loc_to_glob (cpu, &gicr)  = r;
+        *Kmem::loc_to_glob (cpu, &ptab)  = hptp.root_addr();
+
+        return true;
+    }
+
+    Buddy::free (c);
+    Buddy::free (d);
+
+    return false;
 }

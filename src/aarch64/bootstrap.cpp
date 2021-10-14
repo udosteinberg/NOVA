@@ -17,11 +17,15 @@
 
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 
 extern "C" [[noreturn]]
-void bootstrap()
+void bootstrap (cpu_t c, unsigned e)
 {
-    Cpu::init();
+    Cpu::init (c, e);
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
     for (;;) {}
 }
