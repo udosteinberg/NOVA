@@ -16,10 +16,21 @@
  */
 
 #include "cpu.hpp"
+#include "wait.hpp"
 
-extern "C" [[noreturn]] void bootstrap()
+extern "C" [[noreturn]] void bootstrap (cpu_t c)
 {
-    Cpu::init();
+    Cpu::init (c);
+
+    if (Cpu::bsp) [[unlikely]] {
+
+        // Barrier: wait up to 5s for all non-BSP CPUs to arrive here
+        if (!Wait::until (5000, [] { return Cpu::online == Cpu::count - 1; })) [[unlikely]]
+            panic ("Failed to start all APs");
+    }
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
     for (;;) ;
 }
