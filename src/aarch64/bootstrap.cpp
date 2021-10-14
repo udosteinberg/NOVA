@@ -1,7 +1,7 @@
 /*
  * Bootstrap Code
  *
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -17,11 +17,15 @@
 
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 
 extern "C" NORETURN
-void bootstrap()
+void bootstrap (unsigned i, unsigned e)
 {
-    Cpu::init();
+    Cpu::init (i, e);
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
     for (;;) {}
 }
