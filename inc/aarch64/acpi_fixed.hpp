@@ -22,9 +22,10 @@
 #pragma once
 
 #include "atomic.hpp"
+#include "extern.hpp"
+#include "kmem.hpp"
 #include "lowlevel.hpp"
-#include "macros.hpp"
-#include "types.hpp"
+#include "psci.hpp"
 
 class Acpi_fixed final
 {
@@ -44,11 +45,34 @@ class Acpi_fixed final
                 explicit Transition (uint16_t v) : val (v) {}
         };
 
+        static bool supported (Transition t) { return Psci::states & BIT (t.state()); }
+
+        /*
+         * Offline the calling core
+         */
+        static bool offline_core() { return Psci::cpu_off(); }
+
+        /*
+         * Wait for all APs to be offline
+         */
+        static void offline_wait() { Psci::offline_wait(); }
+
+        /*
+         * Perform platform reset
+         */
+        static bool reset() { return Psci::system_reset(); }
+
         /*
          * Perform platform sleep
          */
-        static bool sleep (Transition)
+        static bool sleep (Transition t)
         {
+            if (t.state() >= 4)
+                return Psci::system_off();
+
+            if (t.state() >= 2)
+                return Psci::system_suspend (Kmem::sym_to_phys (&__init_psci), BIT64 (63));
+
             wak_sts = true;                 // FIXME: Unimplemented
 
             return false;
