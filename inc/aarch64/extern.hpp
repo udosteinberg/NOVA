@@ -20,5 +20,5 @@
 #include "types.hpp"
 
 extern uintptr_t GIT_VER, NOVA_HPAS, NOVA_HPAE, MHIP_HVAS, PTAB_HVAS, DSTK_TOP;
-extern uintptr_t __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts;
+extern uintptr_t __boot_cl, __boot_ra, __boot_p0, __boot_p1, __boot_p2, __boot_ts, __init_psci;
 extern void (*CTORS_S)(), (*CTORS_E)(), (*CTORS_C)(), (*CTORS_L)();
