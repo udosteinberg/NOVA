@@ -26,7 +26,7 @@
 #define PTE_ATTR_A      BIT (10)    // Accessed
 #define PTE_ATTR_nG     BIT (11)    // Not Global
 
-.global                 __init_bsp
+.global                 __init_bsp, __init_psci, __init_spin
 
 /*
  * Macros
@@ -151,6 +151,14 @@ __init_bsp:
                         cbnz    x22, .Lskip_stale
                         DCACHE  ivac, x23, x26, x27, sy
 .Lskip_stale:
+                        mov     x19, #-1
+                        b       .Linit_all
+
+__init_psci:            mov     x19, x0
+                        b       .Linit_all
+
+__init_spin:            mrs     x0, mpidr_el1
+                        and     x19, x0, #0xff
 
 .Linit_all:             msr     daifset, #0xf
                         msr     spsel,   #0x1
@@ -230,6 +238,9 @@ __init_bsp:
                         msr     sctlr_el2, x0
                         isb
 
+                        // Skip ahead if not BSP init
+                        tbz     x19, #62, .Lnot_bsp_init
+
                         // Zero BSS/HEAP using VA
                         add     x3, x27, x29
                         add     x4, x28, x29
@@ -238,7 +249,7 @@ __init_bsp:
                         // Initialize kmem offset
                         adr     x0, __kmem_offset - OFFSET
                         str     x29, [x0]
-
+.Lnot_bsp_init:
                         // Switch to boot stack
                         adr     x0, STACK
                         mov     sp, x0
@@ -250,13 +261,32 @@ __init_bsp:
 .text
 
 .Lhigh:
+                        // Acquire boot lock
+                        adr     x0, __boot_lock
+.Llock_retry_tu:        ldaxr   w1, [x0]
+                        add     w2, w1, #BIT (16)
+                        stxr    w3, w2, [x0]
+                        cbnz    w3, .Llock_retry_tu
+                        eor     w3, w1, w1, ror #16
+                        cbz     w3, .Llock_end
+                        sevl
+.Llock_retry_tw:        wfe
+                        ldaxrh  w2, [x0]
+                        eor     w3, w2, w1, lsr #16
+                        cbnz    w3, .Llock_retry_tw
+.Llock_end:
+                        // Skip ahead if not BSP
+                        tbz     x19, #63, .Lnot_bsp
+
                         // Early initialization
                         bl      preinit
 
                         // General initialization
                         bl      init
-
+                        mov     x19, x0
+.Lnot_bsp:
                         // Switch to CPU-local page table
+                        mov     x0, x19
                         bl      kern_ptab_setup
                         msr     ttbr0_el2, x0
                         isb
@@ -270,4 +300,5 @@ __init_bsp:
                         adrp    x0, DSTK_TOP
                         mov     sp, x0
 
+                        mov     x0, x19
                         b       bootstrap

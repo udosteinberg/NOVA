@@ -29,19 +29,11 @@
 
 static inline auto stackptr() { return reinterpret_cast<uintptr_t>(__builtin_frame_address (0)); }
 
-#if defined(__x86_64__)
 #define trace(T,format,...)                         \
 do {                                                \
     if ((trace_mask & (T)) == (T)) [[unlikely]]     \
         Console::print ("[%3ld] " format, (stackptr() & ~OFFS_MASK (0)) == MMAP_CPU_DSTB ? ACCESS_ONCE (Cpu::id) : ~0UL, ## __VA_ARGS__);   \
 } while (0)
-#else
-#define trace(T,format,...)                         \
-do {                                                \
-    if ((trace_mask & (T)) == (T)) [[unlikely]]     \
-        Console::print ("[%2ld] " format, ~0UL, ## __VA_ARGS__);   \
-} while (0)
-#endif
 
 #define panic(format,...)                           \
 do {                                                \
