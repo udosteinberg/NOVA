@@ -17,10 +17,20 @@
 
 #include "compiler.hpp"
 #include "cpu.hpp"
+#include "lowlevel.hpp"
 
-extern "C" [[noreturn]] void bootstrap()
+extern "C" [[noreturn]] void bootstrap (cpu_t c, unsigned e)
 {
-    Cpu::init();
+    Cpu::init (c, e);
+
+    if (Cpu::bsp) [[unlikely]] {
+
+        // Barrier: wait for all non-BSP CPUs to arrive here
+        for (; Cpu::online != Cpu::count - 1; pause()) ;
+    }
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
     for (;;) ;
 }
