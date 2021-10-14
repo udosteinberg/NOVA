@@ -18,12 +18,16 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "console.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "ptab_hpt.hpp"
 
 extern "C" Hpt::OAddr kern_ptab_setup (unsigned cpu)
 {
+    if (Acpi::resume)
+        return Cpu::remote_ptab (cpu);
+
     Hptp hptp; uintptr_t phys;
 
     // Share kernel code and data
@@ -52,7 +56,13 @@ extern "C" void preinit()
 
 extern "C" unsigned init()
 {
-    if (!Acpi::resume) {
+    if (Acpi::resume) {
+
+        // Restart all cores
+        for (cpu_t c { 0 }; c < Cpu::count; c++)
+            Psci::boot_cpu (c, Cpu::remote_mpidr (c));
+
+    } else {
 
         Buddy::init();
 
@@ -66,5 +76,5 @@ extern "C" unsigned init()
 
     Fdt::init();
 
-    return 0;
+    return Cpu::boot_cpu;
 }
