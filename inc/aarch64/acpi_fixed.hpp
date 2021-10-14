@@ -22,9 +22,10 @@
 #pragma once
 
 #include "atomic.hpp"
+#include "extern.hpp"
+#include "kmem.hpp"
 #include "lowlevel.hpp"
-#include "macros.hpp"
-#include "types.hpp"
+#include "psci.hpp"
 
 class Acpi_fixed
 {
@@ -44,9 +45,9 @@ class Acpi_fixed
                 ALWAYS_INLINE inline explicit Transition (uint16 v) : val (v) {}
         };
 
-        static inline bool supported (Transition)
+        static inline bool supported (Transition t)
         {
-            return false;
+            return Psci::states & BIT (t.state());
         }
 
         /*
@@ -54,7 +55,7 @@ class Acpi_fixed
          */
         static inline bool pwrdn (Transition)
         {
-            return false;
+            return Psci::cpu_off();
         }
 
         /*
@@ -62,14 +63,20 @@ class Acpi_fixed
          */
         static inline bool reset()
         {
-            return false;
+            return Psci::system_reset();
         }
 
         /*
          * Perform platform sleep
          */
-        static inline bool sleep (Transition)
+        static inline bool sleep (Transition t)
         {
+            if (t.state() >= 4)
+                return Psci::system_off();
+
+            if (t.state() >= 2)
+                return Psci::system_suspend (Kmem::sym_to_phys (&__init_psci), BIT64 (63));
+
             wak_sts = true;                 // FIXME: Unimplemented
 
             return false;
