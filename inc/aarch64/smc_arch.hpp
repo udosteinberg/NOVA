@@ -21,6 +21,8 @@
 
 class Smc_arch final : private Smc
 {
+    friend class Smc_psci;
+
     private:
         // ARCH Status Codes
         enum class Status : int
