@@ -18,7 +18,10 @@
 #pragma once
 
 #include "arch.hpp"
+#include "atomic.hpp"
 #include "compiler.hpp"
+#include "kmem.hpp"
+#include "spinlock.hpp"
 #include "types.hpp"
 
 class Cpu
@@ -73,6 +76,7 @@ class Cpu
                                             MDCR_TDE        |   // Trap all of TDRA+TDOSA+TDA
                                             MDCR_TPM        };  // Trap performance monitor access: PMCR, PM*
 
+        static uint64   ptab                CPULOCAL;           // EL2 Page Table Root
         static uint64   midr                CPULOCAL;           // Main ID Register
         static uint64   mpidr               CPULOCAL;           // Multiprocessor Affinity Register
 
@@ -89,6 +93,8 @@ class Cpu
         static uint32   feat_isa32[7]       CPULOCAL;           // ID_ISARx
         static uint32   feat_mem32[6]       CPULOCAL;           // ID_MMFRx
         static uint32   feat_mfp32[3]       CPULOCAL;           // MVFRx
+
+        static inline Spinlock boot_lock    asm ("__boot_lock");
 
         static void enumerate_features();
 
@@ -230,11 +236,15 @@ class Cpu
             E0PD        = 47,   // FEAT_E0PD (1)
         };
 
+        static unsigned         id          CPULOCAL;
+        static unsigned         hazard      CPULOCAL;
+        static bool             bsp         CPULOCAL;
         static uint64           cptr        CPULOCAL;
         static uint64           mdcr        CPULOCAL;
 
         static inline unsigned          boot_cpu    { 0 };
         static inline unsigned          count       { 0 };
+        static inline Atomic<unsigned>  online      { 0 };
 
         // Returns affinity in Aff3[31:24] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
         ALWAYS_INLINE
@@ -243,6 +253,12 @@ class Cpu
         // Returns affinity in Aff3[39:32] Aff2[23:16] Aff1[15:8] Aff0[7:0] format
         ALWAYS_INLINE
         static inline auto affinity_bits (uint64 v) { return v & (BIT64_RANGE (39, 32) | BIT64_RANGE (23, 0)); }
+
+        ALWAYS_INLINE
+        static inline auto remote_mpidr (unsigned cpu) { return *Kmem::loc_to_glob (&mpidr, cpu); }
+
+        ALWAYS_INLINE
+        static inline auto remote_ptab (unsigned cpu) { return *Kmem::loc_to_glob (&ptab, cpu); }
 
         ALWAYS_INLINE
         static inline void preemption_disable() { asm volatile ("msr daifset, #0xf" : : : "memory"); }
@@ -263,7 +279,7 @@ class Cpu
 
         static inline auto constrain_hcr (uint64 v) { return (v | hyp1_hcr) & ~(res0_hcr | hyp0_hcr); }
 
-        static void init();
+        static void init (unsigned, unsigned);
         static void fini();
 
         static void set_vmm_regs (uintptr_t (&)[31], uint64 &, uint64 &, uint64 &, uint32 &);

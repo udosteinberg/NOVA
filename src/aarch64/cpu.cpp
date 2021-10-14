@@ -18,11 +18,15 @@
 #include "acpi.hpp"
 #include "cache.hpp"
 #include "cpu.hpp"
+#include "hazards.hpp"
+#include "ptab_hpt.hpp"
 #include "ptab_npt.hpp"
 #include "stdio.hpp"
 
+unsigned Cpu::id, Cpu::hazard;
+bool Cpu::bsp;
 uint64 Cpu::res0_hcr;
-uint64 Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
+uint64 Cpu::ptab, Cpu::midr, Cpu::mpidr, Cpu::cptr, Cpu::mdcr;
 uint64 Cpu::feat_cpu64[2], Cpu::feat_dbg64[2], Cpu::feat_isa64[3], Cpu::feat_mem64[3], Cpu::feat_sve64[1];
 uint32 Cpu::feat_cpu32[3], Cpu::feat_dbg32[2], Cpu::feat_isa32[7], Cpu::feat_mem32[6], Cpu::feat_mfp32[3];
 
@@ -124,9 +128,22 @@ void Cpu::enumerate_features()
                 (feature (Isa_feature::DPB)  >= 1 ? 0 : HCR_TPCP);
 }
 
-void Cpu::init()
+void Cpu::init (unsigned cpu, unsigned e)
 {
-    enumerate_features();
+    if (Acpi::resume)
+        hazard = 0;
+
+    else {
+        for (void (**func)() = &CTORS_L; func != &CTORS_C; (*func++)()) ;
+
+        hazard = HZD_BOOT_GST | HZD_BOOT_HST;
+
+        id   = cpu;
+        bsp  = cpu == boot_cpu;
+        ptab = Hptp::current().root_addr();
+
+        enumerate_features();
+    }
 
     char const *impl = "Unknown", *part = impl;
 
@@ -192,16 +209,21 @@ void Cpu::init()
             break;
     }
 
-    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u XNX:%u GIC:%u",
+    trace (TRACE_CPU, "CORE: %x:%x:%x %s %s r%llup%llu PA:%u XNX:%u GIC:%u (EL%u)",
            affinity() >> 16 & BIT_RANGE (7, 0), affinity() >> 8 & BIT_RANGE (7, 0), affinity() & BIT_RANGE (7, 0),
            impl, part, midr >> 20 & BIT_RANGE (3, 0), midr & BIT_RANGE (3, 0),
-           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC));
+           feature (Mem_feature::PARANGE), feature (Mem_feature::XNX), feature (Cpu_feature::GIC), e);
 
     Nptp::init();
+
+    boot_lock.unlock();
 }
 
 void Cpu::fini()
 {
+    auto s = Acpi::get_transition();
+
+    Acpi::fini (s);
 }
 
 void Cpu::set_vmm_regs (uintptr_t (&x)[31], uint64 &hcr, uint64 &vpidr, uint64 &vmpidr, uint32 &elrsr)

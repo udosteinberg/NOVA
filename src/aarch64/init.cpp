@@ -18,6 +18,7 @@
 #include "acpi.hpp"
 #include "cmdline.hpp"
 #include "console.hpp"
+#include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "kmem.hpp"
@@ -26,6 +27,9 @@
 extern "C"
 Hpt::OAddr kern_ptab_setup (unsigned cpu)
 {
+    if (Acpi::resume)
+        return Cpu::remote_ptab (cpu);
+
     Hptp hptp; uintptr_t phys;
 
     // Sync kernel code and data
@@ -52,7 +56,13 @@ Hpt::OAddr kern_ptab_setup (unsigned cpu)
 extern "C"
 unsigned init (uintptr_t offset)
 {
-    if (!Acpi::resume) {
+    if (Acpi::resume) {
+
+        // Restart all cores
+        for (unsigned i = 0; i < Cpu::count; i++)
+            Psci::boot_cpu (i, Cpu::remote_mpidr (i));
+
+    } else {
 
         Kmem::init (offset);
 
@@ -70,5 +80,5 @@ unsigned init (uintptr_t offset)
 
     Fdt::init();
 
-    return 0;
+    return Cpu::boot_cpu;
 }
