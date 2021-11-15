@@ -1,6 +1,10 @@
 /*
- * Initialization Code
+ * Advanced Configuration and Power Interface (ACPI)
  *
+ * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
+ * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
@@ -15,23 +19,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "acpi.hpp"
-#include "buddy.hpp"
-#include "console.hpp"
-#include "extern.hpp"
+#pragma once
 
-extern "C"
-void init()
+class Acpi_arch
 {
-    if (!Acpi::resume) {
-
-        Buddy::init();
-
-        for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
-
-        for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
-
-        // Now we're ready to talk to the world
-        Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
-    }
-}
+};
