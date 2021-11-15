@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "buddy.hpp"
 #include "console.hpp"
 #include "extern.hpp"
@@ -22,12 +23,15 @@
 
 extern "C" void init()
 {
-    Buddy::init();
+    if (!Acpi::resume) {
 
-    for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
+        Buddy::init();
 
-    for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
+        for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
 
-    // Now we're ready to talk to the world
-    Console::print ("\nNOVA Microhypervisor #%07lx-%#x (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), Patch::applied, ARCH, __DATE__, __TIME__, COMPILER_STRING);
+        for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
+
+        // Now we're ready to talk to the world
+        Console::print ("\nNOVA Microhypervisor #%07lx-%#x (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), Patch::applied, ARCH, __DATE__, __TIME__, COMPILER_STRING);
+    }
 }
