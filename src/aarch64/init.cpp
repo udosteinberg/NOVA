@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "acpi.hpp"
 #include "arch.hpp"
 #include "buddy.hpp"
 #include "console.hpp"
@@ -24,14 +25,17 @@
 extern "C"
 void init (uintptr_t offset)
 {
-    Kmem::init (offset);
+    if (!Acpi::resume) {
 
-    Buddy::init();
+        Kmem::init (offset);
 
-    for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
+        Buddy::init();
 
-    for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
+        for (void (**func)() = &CTORS_G; func != &CTORS_E; (*func++)()) ;
 
-    // Now we're ready to talk to the world
-    Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+        for (void (**func)() = &CTORS_C; func != &CTORS_G; (*func++)()) ;
+
+        // Now we're ready to talk to the world
+        Console::print ("\nNOVA Microhypervisor #%07lx (%s): %s %s [%s]\n", reinterpret_cast<uintptr_t>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+    }
 }
