@@ -19,6 +19,7 @@
 #include "cache.hpp"
 #include "cpu.hpp"
 #include "fpu.hpp"
+#include "gicc.hpp"
 #include "gicd.hpp"
 #include "gicr.hpp"
 #include "ptab_npt.hpp"
@@ -274,6 +275,7 @@ void Cpu::init (cpu_t cpu)
 
     Gicd::init();
     Gicr::init();
+    Gicc::init();
 
     Timer::init();
 
