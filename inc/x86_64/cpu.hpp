@@ -119,6 +119,7 @@ class Cpu final
             // EAX=0x7 ECX=0x0 (ECX)
             UMIP                    =  4 * 32 +  2,     // User Mode Instruction Prevention
             CET_SS                  =  4 * 32 +  7,     // CET Shadow Stack
+            TME                     =  4 * 32 + 13,     // Total Memory Encryption
             // EAX=0x7 ECX=0x0 (EDX)
             SRBDS_CTRL              =  5 * 32 +  9,     // Special Register Buffer Data Sampling
             MD_CLEAR                =  5 * 32 + 10,     // Microarchitectural Data Clear
