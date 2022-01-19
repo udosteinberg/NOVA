@@ -85,6 +85,10 @@ class Msr
             IA32_HWP_REQUEST            = 0x774,        // FEAT_HWP
             IA32_HWP_PECI_REQUEST_INFO  = 0x775,
             IA32_HWP_STATUS             = 0x777,        // FEAT_HWP
+            IA32_TME_CAPABILITY         = 0x981,        // FEAT_TME
+            IA32_TME_ACTIVATE           = 0x982,        // FEAT_TME
+            IA32_TME_EXCLUDE_MASK       = 0x983,        // FEAT_TME
+            IA32_TME_EXCLUDE_BASE       = 0x984,        // FEAT_TME
 
             IA32_EFER                   = 0xc0000080,
             IA32_STAR                   = 0xc0000081,

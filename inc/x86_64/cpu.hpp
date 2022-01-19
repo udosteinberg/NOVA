@@ -100,6 +100,7 @@ class Cpu
             SMAP            = 3 * 32 + 20,      // Supervisor Mode Access Prevention
             // 0x7.ECX
             UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
+            TME             = 4 * 32 + 13,      // Total Memory Encryption
             // 0x7.EDX
             HYBRID          = 5 * 32 + 15,      // Hybrid Processor
             // 0x80000001.EDX
