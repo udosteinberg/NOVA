@@ -258,6 +258,11 @@ void Cpu::setup_msr()
         Msr::write (Msr::Register::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
     }
 
+    if (EXPECT_TRUE (feature (Feature::TME))) {
+        auto act = Msr::read (Msr::Register::IA32_TME_ACTIVATE);
+        trace (TRACE_CPU, "FEAT: TME %sabled, %s key, algo %llu", act & BIT (1) ? "en" : "dis", act & BIT (2) ? "restore" : "new", act >> 4 & BIT_RANGE (3, 0));
+    }
+
     // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
     if (vendor == Vendor::AMD)
         if (family > 0xf || (family == 0xf && model >= 0x40))
