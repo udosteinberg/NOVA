@@ -21,6 +21,7 @@
 #include "memattr.hpp"
 #include "patch.hpp"
 #include "string.hpp"
+#include "util.hpp"
 
 void Patch::init()
 {
@@ -37,6 +38,13 @@ void Patch::init()
             [[fallthrough]];
         case 0x7 ... 0xc:
             Cpu::cpuid (0x7, 0x0, eax, ebx, ecx, edx);
+            if (ecx & BIT (13)) {
+                auto const act { Msr::read (Msr::Register::IA32_TME_ACTIVATE) };
+                if (act & BIT (1)) {
+                    Memattr::kbits = act >> 32 & BIT_RANGE (3, 0);
+                    Memattr::kimax = min (BIT (Memattr::kbits) - 1, static_cast<unsigned>(Msr::read (Msr::Register::IA32_TME_CAPABILITY) >> 36 & BIT_RANGE (14, 0)));
+                }
+            }
             skipped |= !!(ecx & BIT  (7)) * BIT (PATCH_CET_SS);
             skipped |= !!(edx & BIT (20)) * BIT (PATCH_CET_IBT);
             [[fallthrough]];
