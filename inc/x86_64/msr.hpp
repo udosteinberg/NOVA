@@ -92,6 +92,10 @@ class Msr
             IA32_HWP_REQUEST                = 0x774,        // HWP
             IA32_HWP_PECI_REQUEST_INFO      = 0x775,
             IA32_HWP_STATUS                 = 0x777,        // HWP
+            IA32_TME_CAPABILITY             = 0x981,        // TME
+            IA32_TME_ACTIVATE               = 0x982,        // TME
+            IA32_TME_EXCLUDE_MASK           = 0x983,        // TME
+            IA32_TME_EXCLUDE_BASE           = 0x984,        // TME
 
             IA32_EFER                       = 0xc0000080,   // LM
             IA32_STAR                       = 0xc0000081,   // LM

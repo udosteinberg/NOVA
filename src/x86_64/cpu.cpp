@@ -241,6 +241,11 @@ void Cpu::setup_msr()
         Msr::write (Msr::IA32_KERNEL_GS_BASE, msr.kernel_gs_base);
     }
 
+    if (EXPECT_TRUE (feature (Feature::TME))) {
+        auto act = Msr::read (Msr::IA32_TME_ACTIVATE);
+        trace (TRACE_CPU, "FEAT: TME %sabled, %s key, algo %llu", act & BIT (1) ? "en" : "dis", act & BIT (2) ? "restore" : "new", act >> 4 & BIT_RANGE (3, 0));
+    }
+
     if (EXPECT_TRUE (feature (Feature::RDT_M)))
         trace (TRACE_CPU, "FEAT: QoS monitoring supported");
 
