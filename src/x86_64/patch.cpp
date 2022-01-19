@@ -21,6 +21,7 @@
 #include "patch.hpp"
 #include "ptab_hpt.hpp"
 #include "string.hpp"
+#include "util.hpp"
 
 void Patch::detect()
 {
@@ -36,6 +37,14 @@ void Patch::detect()
             [[fallthrough]];
         case 0x7 ... 0xc:
             Cpu::cpuid (0x7, 0x0, eax, ebx, ecx, edx);
+            if (ecx & BIT (13)) {
+                auto const act { Msr::read (Msr::Reg64::IA32_TME_ACTIVATE) };
+                if (act & BIT (1)) {
+                    Memattr::crypt = act >> 48 & BIT_RANGE (3, 0);                                                                      // MK_TME_CRYPTO_ALGS
+                    Memattr::kbits = act >> 32 & BIT_RANGE (3, 0);                                                                      // MK_TME_KEYID_BITS
+                    Memattr::kimax = Memattr::kbits ? Msr::read (Msr::Reg64::IA32_MKTME_KEYID_PARTITIONING) & BIT_RANGE (31, 0) : 0;    // NUM_MKTME_KEYIDS
+                }
+            }
             applied |= BIT (PATCH_CET_IBT) * !(edx & BIT (20));
             Cpu::cpuid (0x7, 0x1, eax, ebx, ecx, edx);
             applied |= BIT (PATCH_CET_SSS) * !(edx & BIT (18));
