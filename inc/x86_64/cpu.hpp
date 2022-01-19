@@ -103,6 +103,7 @@ class Cpu
             // 0x7.ECX
             UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
             CET_SS          = 4 * 32 +  7,      // CET Shadow Stack
+            TME             = 4 * 32 + 13,      // Total Memory Encryption
             // 0x7.EDX
             HYBRID          = 5 * 32 + 15,      // Hybrid Processor
             CET_IBT         = 5 * 32 + 20,      // CET Indirect Branch Tracking
