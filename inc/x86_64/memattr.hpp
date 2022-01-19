@@ -72,6 +72,7 @@ class Memattr final
         static inline constinit unsigned obits { 36 };
         static inline constinit unsigned kbits {  0 };
         static inline constinit unsigned kimax {  0 };
+        static inline constinit unsigned crypt {  0 };
 
         // Key Identifier, encoded in [17:3]
         using Keyid = uint16_t;
