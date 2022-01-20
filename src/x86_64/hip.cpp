@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -23,9 +24,9 @@
 #include "cpu.hpp"
 #include "hip.hpp"
 #include "hpt.hpp"
-#include "lapic.hpp"
 #include "multiboot.hpp"
 #include "space_obj.hpp"
+#include "stc.hpp"
 
 mword Hip::root_addr;
 mword Hip::root_size;
@@ -128,7 +129,7 @@ void Hip::add_cpu()
 
 void Hip::add_check()
 {
-    freq_tsc = Lapic::freq_tsc;
+    freq_tsc = static_cast<uint32>(Stc::freq);
 
     uint16 c = 0;
     for (uint16 const *ptr = reinterpret_cast<uint16 const *>(this);
