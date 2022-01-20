@@ -433,7 +433,7 @@ void Ec::sys_sc_ctrl()
         sys_finish<Status::BAD_CAP>();
     }
 
-    r->set_time (static_cast<Sc *>(cap.obj())->time * 1000 / Lapic::freq_tsc);
+    r->set_time (static_cast<Sc *>(cap.obj())->time);
 
     sys_finish<Status::SUCCESS>();
 }
