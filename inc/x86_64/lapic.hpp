@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -102,9 +103,10 @@ class Lapic
         ALWAYS_INLINE
         static inline void therm_handler();
 
+        static inline unsigned ratio { 0 };
+
     public:
-        static unsigned freq_tsc;
-        static unsigned freq_bus;
+        static inline auto time()       { return __builtin_ia32_rdtsc(); }
 
         ALWAYS_INLINE
         static inline unsigned id()
@@ -133,10 +135,10 @@ class Lapic
         ALWAYS_INLINE
         static inline void set_timer (uint64 tsc)
         {
-            if (freq_bus) {
-                uint64 now = rdtsc();
+            if (ratio) {
+                uint64 now = time();
                 uint32 icr;
-                write (LAPIC_TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / (freq_tsc / freq_bus)) > 0 ? icr : 1);
+                write (LAPIC_TMR_ICR, tsc > now && (icr = static_cast<uint32>(tsc - now) / ratio) > 0 ? icr : 1);
             } else
                 Msr::write (Msr::IA32_TSC_DEADLINE, tsc);
         }
