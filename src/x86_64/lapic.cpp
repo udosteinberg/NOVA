@@ -25,12 +25,9 @@
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
+#include "stc.hpp"
 #include "stdio.hpp"
-#include "timeout.hpp"
 #include "vectors.hpp"
-
-unsigned    Lapic::freq_tsc;
-unsigned    Lapic::freq_bus;
 
 void Lapic::init()
 {
@@ -78,16 +75,20 @@ void Lapic::init()
 
         write (LAPIC_TMR_ICR, ~0U);
 
-        uint32 v1 = read (LAPIC_TMR_CCR);
-        uint32 t1 = static_cast<uint32>(rdtsc());
+        auto v1 = read (LAPIC_TMR_CCR);
+        auto t1 = time();
         Acpi::delay (10);
-        uint32 v2 = read (LAPIC_TMR_CCR);
-        uint32 t2 = static_cast<uint32>(rdtsc());
+        auto v2 = read (LAPIC_TMR_CCR);
+        auto t2 = time();
 
-        freq_tsc = (t2 - t1) / 10;
-        freq_bus = (v1 - v2) / 10;
+        auto v = v1 - v2;
+        auto t = t2 - t1;
 
-        trace (TRACE_INTR, "TSC:%u kHz BUS:%u kHz", freq_tsc, freq_bus);
+        ratio = dl ? 0 : static_cast<unsigned>((t + v / 2) / v);
+
+        Stc::freq = t * 100;
+
+        trace (TRACE_INTR, "FREQ: TSC:%lu Hz Ratio:%u", Stc::freq, ratio);
 
         send_ipi (0, 1, DLV_SIPI, DSH_EXC_SELF);
         Acpi::delay (1);
@@ -96,7 +97,7 @@ void Lapic::init()
 
     write (LAPIC_TMR_ICR, 0);
 
-    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~OFFS_MASK (0), id(), version(), lvt_max(), freq_bus ? "OS" : "DL");
+    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~OFFS_MASK (0), id(), version(), lvt_max(), ratio ? "OS" : "DL");
 }
 
 void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
@@ -120,7 +121,8 @@ void Lapic::error_handler()
 
 void Lapic::timer_handler()
 {
-    bool expired = (freq_bus ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0;
+    bool const expired { (ratio ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0 };
+
     if (expired)
         Timeout::check();
 }
