@@ -71,7 +71,7 @@ bool Utcb::load_exc (Cpu_regs const &c)
         qual[1] = c.cr2;
     }
 
-    barrier();
+    Barrier::sw();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 
@@ -233,7 +233,7 @@ bool Utcb::load_vmx (Cpu_regs const &c)
     if (m & Mtd::EFER)
         efer = Vmcs::read<uint64> (Vmcs::GUEST_EFER);
 
-    barrier();
+    Barrier::sw();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 
@@ -509,7 +509,7 @@ bool Utcb::load_svm (Cpu_regs const &c)
     if (m & Mtd::EFER)
         efer = v->efer;
 
-    barrier();
+    Barrier::sw();
     mtd = m;
     items = sizeof (Utcb_data) / sizeof (mword);
 

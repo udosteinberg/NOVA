@@ -57,7 +57,7 @@ void Rcu::start_batch (State s)
 
     count = Cpu::online;
 
-    barrier();
+    Barrier::sw();
 
     state++;
 }
