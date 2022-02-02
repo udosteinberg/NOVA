@@ -24,6 +24,17 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
+static inline void pause()
+{
+    __builtin_ia32_pause();
+}
+
+[[noreturn]] static inline void shutdown()
+{
+    for (;;)
+        asm volatile ("cli; hlt");
+}
+
 template <typename T>
 ALWAYS_INLINE
 static inline void flush (T t)
@@ -40,71 +51,50 @@ inline void *flush (void *d, size_t n)
     return d;
 }
 
-[[noreturn]] ALWAYS_INLINE
-inline void shutdown()
+ALWAYS_INLINE
+static inline auto rdtsc()
 {
-    for (;;)
-        asm volatile ("cli; hlt");
+    return __builtin_ia32_rdtsc();
 }
 
 ALWAYS_INLINE
-static inline void wbinvd()
+static inline auto get_cr0()
 {
-    asm volatile ("wbinvd" : : : "memory");
-}
-
-ALWAYS_INLINE
-static inline void pause()
-{
-    asm volatile ("pause" : : : "memory");
-}
-
-ALWAYS_INLINE
-static inline uint64 rdtsc()
-{
-    mword h, l;
-    asm volatile ("rdtsc" : "=a" (l), "=d" (h));
-    return static_cast<uint64>(h) << 32 | l;
-}
-
-ALWAYS_INLINE
-static inline mword get_cr0()
-{
-    mword cr0;
+    uintptr_t cr0;
     asm volatile ("mov %%cr0, %0" : "=r" (cr0));
     return cr0;
 }
 
 ALWAYS_INLINE
-static inline void set_cr0 (mword cr0)
+static inline void set_cr0 (uintptr_t cr0)
 {
     asm volatile ("mov %0, %%cr0" : : "r" (cr0));
 }
 
 ALWAYS_INLINE
-static inline mword get_cr2()
+static inline auto get_cr2()
 {
-    mword cr2;
+    uintptr_t cr2;
     asm volatile ("mov %%cr2, %0" : "=r" (cr2));
     return cr2;
 }
 
 ALWAYS_INLINE
-static inline void set_cr2 (mword cr2)
+static inline void set_cr2 (uintptr_t cr2)
 {
     asm volatile ("mov %0, %%cr2" : : "r" (cr2));
 }
 
 ALWAYS_INLINE
-static inline mword get_cr4()
+static inline auto get_cr4()
 {
-    mword cr4;
+    uintptr_t cr4;
     asm volatile ("mov %%cr4, %0" : "=r" (cr4));
     return cr4;
 }
 
 ALWAYS_INLINE
-static inline void set_cr4 (mword cr4)
+static inline void set_cr4 (uintptr_t cr4)
 {
     asm volatile ("mov %0, %%cr4" : : "r" (cr4));
 }
