@@ -27,6 +27,10 @@ BOARD		?= acpi
 # Permitted values are: gcc
 COMP		?= gcc
 
+# Configure control-flow protection
+# Permitted values are: none, branch, return, full
+CFP		?= none
+
 # Configure build directory
 BLD_DIR		?= build-$(ARCH)
 
