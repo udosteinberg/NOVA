@@ -23,6 +23,7 @@
 #include "memattr.hpp"
 #include "memory.hpp"
 #include "multiboot.hpp"
+#include "patch.hpp"
 #include "selectors.hpp"
 
 #define PTE_ATTR_P      BIT (0)     // Present
@@ -306,4 +307,43 @@ __init_all:             lea     .Lhigh, %rax
                         call    kern_ptab_setup
                         mov     %rax, %cr3
                         lea     DSTK_TOP, %rsp
+#if defined(__CET__)
+                        // Track CET features in EAX
+                        xor     %eax, %eax
+#if (__CET__ & 1)
+                        #define ASM_ENABLE_CET_1 or $(BIT_RANGE (5, 4) | BIT (2)), %al
+                        PATCH  (ASM_ENABLE_CET_1,, PATCH_CET_IBT);
+#endif
+#if (__CET__ & 2)
+                        #define ASM_ENABLE_CET_2 or $BIT (0), %al
+                        PATCH  (ASM_ENABLE_CET_2,, PATCH_CET_SS);
+#endif
+                        // Check if any CET features are being enabled
+                        test    %eax, %eax
+                        jz      .Lcet_end
+
+                        // Enable CET
+                        mov     %cr4, %rdx
+                        or      $CR4_CET, %edx
+                        mov     %rdx, %cr4
+
+                        // Enable CET features in EAX
+                        mov     $0x6a2, %ecx
+                        xor     %edx, %edx
+                        wrmsr
+#if (__CET__ & 2)
+                        // Check if CET_SS is enabled
+                        test    $BIT (0), %al
+                        jz      .Lcet_end
+
+                        // Activate supervisor shadow stack
+                        mov     $0x6a4, %ecx
+                        lea     SSTK_TOP, %rdx
+                        mov     %rdx, %rax
+                        shr     $0x20, %rdx
+                        wrmsr
+                        setssbsy
+#endif
+.Lcet_end:
+#endif
                         jmp     bootstrap
