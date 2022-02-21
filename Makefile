@@ -26,6 +26,7 @@
 ARCH	?= aarch64
 BOARD	?= qemu
 COMP	?= gcc
+CFP	?= none
 
 # Tools
 INSTALL	:= install
@@ -102,6 +103,7 @@ FFLAGS	+= $(call check,-fno-stack-protector)
 FFLAGS	+= $(call check,-freg-struct-return)
 FFLAGS	+= $(call check,-freorder-blocks)
 FFLAGS	+= $(call check,-fvisibility-inlines-hidden)
+FFLAGS	+= $(call check,-fcf-protection=$(CFP))
 
 # Warning options
 WFLAGS	:= -Wall -Wextra -Wcast-align -Wcast-qual -Wconversion -Wdisabled-optimization -Wformat=2 -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wwrite-strings

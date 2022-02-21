@@ -228,6 +228,8 @@ void Ec_arch::ret_user_hypercall (Ec *const self)
     if (EXPECT_FALSE (h))
         self->handle_hazard (h, ret_user_hypercall);
 
+    Cet::ss_deactivate();
+
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR) "mov %%r11, %%rsp; mov %1, %%r11; sysretq" : : "m" (self->exc_regs()), "i" (RFL_IF | RFL_1) : "memory");
 
     UNREACHED;
@@ -238,6 +240,8 @@ void Ec_arch::ret_user_exception (Ec *const self)
     auto h = (Cpu::hazard ^ self->hazard) & (HZD_ILLEGAL | HZD_RECALL | HZD_FPU | HZD_BOOT_HST | HZD_RCU | HZD_SLEEP | HZD_SCHED);
     if (EXPECT_FALSE (h))
         self->handle_hazard (h, ret_user_exception);
+
+    Cet::ss_unwind();
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR IRET) : : "m" (self->exc_regs()) : "memory");
 

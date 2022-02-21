@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "cet.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
 #include "pd.hpp"
@@ -119,6 +120,8 @@ class Ec_arch final : private Ec
             assert (!(Tss::run.sp0 & 0xf));
 
             pd->make_current();
+
+            Cet::ss_unwind();
 
             // Reset stack
             asm volatile ("lea %0, %%rsp" : : "m" (DSTK_TOP) : "memory");
