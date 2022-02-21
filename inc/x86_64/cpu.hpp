@@ -118,10 +118,12 @@ class Cpu final
             SMAP                    =  3 * 32 + 20,     // Supervisor Mode Access Prevention
             // EAX=0x7 ECX=0x0 (ECX)
             UMIP                    =  4 * 32 +  2,     // User Mode Instruction Prevention
+            CET_SS                  =  4 * 32 +  7,     // CET Shadow Stack
             // EAX=0x7 ECX=0x0 (EDX)
             SRBDS_CTRL              =  5 * 32 +  9,     // Special Register Buffer Data Sampling
             MD_CLEAR                =  5 * 32 + 10,     // Microarchitectural Data Clear
             HYBRID                  =  5 * 32 + 15,     // Hybrid Processor
+            CET_IBT                 =  5 * 32 + 20,     // CET Indirect Branch Tracking
             IBRS                    =  5 * 32 + 26,     // Indirect Branch Restricted Speculation
             STIBP                   =  5 * 32 + 27,     // Single Thread Indirect Branch Predictors
             L1D_FLUSH               =  5 * 32 + 28,     // L1 Data Cache Flushing
@@ -132,6 +134,7 @@ class Cpu final
             // EAX=0x7 ECX=0x1 (EBX)
             // EAX=0x7 ECX=0x1 (ECX)
             // EAX=0x7 ECX=0x1 (EDX)
+            CET_SSS                 =  9 * 32 + 18,     // CET Supervisor Shadow Stack
             APX_F                   =  9 * 32 + 21,     // APX Foundation
             // EAX=0x7 ECX=0x2 (EDX)
             PSFD                    = 10 * 32 +  0,

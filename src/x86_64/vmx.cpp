@@ -99,6 +99,14 @@ void Vmcs::init (uintptr_t gsp, uintptr_t hsp, uintptr_t cr3, uint64_t apic, uin
     if (Cpu::feature (Cpu::Feature::LM))
         write (Encoding::HOST_EFER, Msr::read (Msr::Reg64::IA32_EFER));
 
+    if (Cpu::feature (Cpu::Feature::CET_SS) || Cpu::feature (Cpu::Feature::CET_IBT))
+        write (Encoding::HOST_S_CET, Msr::read (Msr::Reg64::IA32_S_CET));
+
+    if (Cpu::feature (Cpu::Feature::CET_SS)) {
+        write (Encoding::HOST_SSP, reinterpret_cast<uintptr_t>(&SSTK_TOP));
+        write (Encoding::HOST_SSP_TABLE_ADDR, Msr::read (Msr::Reg64::IA32_INTERRUPT_SSP_TABLE_ADDR));
+    }
+
     write (Encoding::PIN_CONTROLS, pin);
     write (Encoding::ENT_CONTROLS, ent);
     write (Encoding::EXI_CONTROLS_PRI, exi_pri);
@@ -125,12 +133,12 @@ void Vmcs::init()
         pin = (hyp_pin | static_cast<uint32_t>(vmx_pin)) & static_cast<uint32_t>(vmx_pin >> 32);
 
         // VM-Entry Controls
-        constexpr auto hyp_ent { Ent::ENT_LOAD_EFER | Ent::ENT_LOAD_PAT };
+        constexpr auto hyp_ent { Ent::ENT_LOAD_CET | Ent::ENT_LOAD_EFER | Ent::ENT_LOAD_PAT };
         auto const vmx_ent { Msr::read (ctrl ? Msr::Reg64::IA32_VMX_TRUE_ENT : Msr::Reg64::IA32_VMX_CTRL_ENT) };
         ent = (hyp_ent | static_cast<uint32_t>(vmx_ent)) & static_cast<uint32_t>(vmx_ent >> 32);
 
         // Primary VM-Exit Controls
-        constexpr auto hyp_exi_pri { Exi_pri::EXI_SECONDARY | Exi_pri::EXI_LOAD_EFER | Exi_pri::EXI_SAVE_EFER | Exi_pri::EXI_LOAD_PAT | Exi_pri::EXI_SAVE_PAT | Exi_pri::EXI_INTA | Exi_pri::EXI_HOST_64 };
+        constexpr auto hyp_exi_pri { Exi_pri::EXI_SECONDARY | Exi_pri::EXI_LOAD_CET | Exi_pri::EXI_LOAD_EFER | Exi_pri::EXI_SAVE_EFER | Exi_pri::EXI_LOAD_PAT | Exi_pri::EXI_SAVE_PAT | Exi_pri::EXI_INTA | Exi_pri::EXI_HOST_64 };
         auto const vmx_exi_pri { Msr::read (ctrl ? Msr::Reg64::IA32_VMX_TRUE_EXI : Msr::Reg64::IA32_VMX_CTRL_EXI_PRI) };
         exi_pri = (hyp_exi_pri | static_cast<uint32_t>(vmx_exi_pri)) & static_cast<uint32_t>(vmx_exi_pri >> 32);
 

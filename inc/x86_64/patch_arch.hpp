@@ -21,3 +21,5 @@
 #define NOP_OPC         0x90
 
 #define PATCH_XSAVES    0
+#define PATCH_CET_IBT   1
+#define PATCH_CET_SSS   2

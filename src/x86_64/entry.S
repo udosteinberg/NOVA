@@ -22,6 +22,7 @@
 
 #include "arch.hpp"
 #include "entry.hpp"
+#include "patch.hpp"
 #include "vectors.hpp"
 
 .data
@@ -33,6 +34,9 @@ handlers:
 .macro                  INTRGATE DPL
                         .align  4, 0x90
 1:
+#if defined(__CET__) && (__CET__ & 1)
+                        endbr64
+#endif
                         .data
                         .quad   1b + \DPL
                         .previous
@@ -142,7 +146,14 @@ INTERRUPT               VEC
  */
 .align                  4, 0x90
 .globl                  entry_sys
-entry_sys:              mov     %rsp, %r11
+entry_sys:
+#if defined(__CET__) && (__CET__ & 1)
+                        endbr64
+#endif
+#if defined(__CET__) && (__CET__ & 2)
+                        PATCH   (setssbsy,,PATCH_CET_SSS)
+#endif
+                        mov     %rsp, %r11
                         mov     tss_run + 4, %rsp
                         lea     -(__SIZEOF_POINTER__ * 8)(%rsp), %rsp
                         SAVE_GPR

@@ -25,6 +25,7 @@
 ARCH	?= x86_64
 BOARD	?= acpi
 COMP	?= gcc
+CFP	?= none
 
 # Tools
 INSTALL	:= install
@@ -98,6 +99,7 @@ PFLAGS	:= $(addprefix -D, $(DEFINES)) $(addprefix -I, $(INC_DIR))
 FFLAGS	:= $(or $(call check,-std=gnu++26), $(call check,-std=gnu++23), $(call check,-std=gnu++20), $(call check,-std=gnu++17))
 FFLAGS	+= -ffreestanding -fdata-sections -ffunction-sections -fomit-frame-pointer
 FFLAGS	+= -fno-asynchronous-unwind-tables -fno-exceptions -fno-rtti -fno-use-cxa-atexit
+FFLAGS	+= $(call check,-fcf-protection=$(CFP))
 FFLAGS	+= $(call check,-fdiagnostics-color=auto)
 FFLAGS	+= $(call check,-fno-pic)
 FFLAGS	+= $(call check,-fno-stack-protector)
