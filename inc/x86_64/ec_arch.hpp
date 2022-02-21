@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "cet.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
 #include "space_hst.hpp"
@@ -120,6 +121,8 @@ class Ec_arch final : private Ec
             assert (hst);
 
             hst->make_current();
+
+            Cet::sss_unwind();
 
             // Reset stack
             asm volatile ("lea %0, %%rsp" : : "m" (DSTK_TOP) : "memory");

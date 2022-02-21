@@ -37,7 +37,8 @@
 
 // CPU-Local Area             [--PTE--]---      // ^39 ^30 ^21 ^12
 #define MMAP_CPU_DATA   0xffffffffbffff000      // 511 510 511 511    4K
-#define MMAP_CPU_DSTK   0xffffffffbfffd000      // 511 510 511 509    4K + gap
+#define MMAP_CPU_SSTK   0xffffffffbfffe000      // 511 510 511 510    4K
+#define MMAP_CPU_DSTK   0xffffffffbfffd000      // 511 510 511 509    4K
 #define MMAP_CPU_APIC   0xffffffffbfffb000      // 511 510 511 507    4K + gap
 #define MMAP_CPU        0xffffffffbfe00000      // 511 510 511 000    2M
 
