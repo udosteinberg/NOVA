@@ -68,6 +68,20 @@ and boards with Advanced Configuration and Power Interface (ACPI).
 | :------------------------------------ | :----------------- |
 | Generic x86 ACPI Platform             | `make ARCH=x86_64` |
 
+##### Control-Flow Enforcement Technology (CET)
+
+NOVA can be built with support for control-flow protection. Because
+control-flow protected binaries require a CPU with CET support and because
+of the resulting performance overhead, CFP is disabled by default.
+Protection features can be enabled at build time as follows:
+
+| **Feature Level**                     | **Build Command**             |
+| :------------------------------------ | :---------------------------- |
+| No Control-Flow Protection (Default)  | `make ARCH=x86_64 CFP=none`   |
+| CET Indirect Branch Tracking (IBT)    | `make ARCH=x86_64 CFP=branch` |
+| CET Supervisor Shadow Stacks (SSS)    | `make ARCH=x86_64 CFP=return` |
+| CET IBT and CET SSS                   | `make ARCH=x86_64 CFP=full`   |
+
 ## Booting
 
 See the NOVA interface specification in the `doc` directory for details
