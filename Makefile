@@ -25,6 +25,7 @@
 ARCH	?= x86_64
 BOARD	?= acpi
 COMP	?= gcc
+CFP	?= none
 
 # Tools
 INSTALL	?= install -m 644
@@ -98,6 +99,7 @@ PFLAGS	+= $(addprefix -I, $(INC_DIR))
 # Language options
 FFLAGS	:= $(or $(call check,-std=gnu++26), $(call check,-std=gnu++23))
 FFLAGS	+= -ffreestanding -fdata-sections -ffunction-sections -fdiagnostics-color=auto -fno-asynchronous-unwind-tables -fno-exceptions -fno-pic -fno-rtti -fno-stack-protector -fno-use-cxa-atexit -fomit-frame-pointer
+FFLAGS	+= $(call check,-fcf-protection=$(CFP))
 
 # Warning options
 WFLAGS	:= -Wall -Wextra -Walloca -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wdisabled-optimization -Wduplicated-branches -Wduplicated-cond -Wenum-conversion -Wextra-semi -Wformat=2 -Wlogical-op -Wmismatched-tags -Wmissing-format-attribute -Wmissing-noreturn -Wmultichar -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wpacked -Wpointer-arith -Wredundant-decls -Wredundant-tags -Wregister -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wsuggest-override -Wvirtual-inheritance -Wvolatile -Wvolatile-register-var -Wwrite-strings -Wzero-as-null-pointer-constant
