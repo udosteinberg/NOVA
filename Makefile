@@ -25,6 +25,7 @@
 ARCH	?= x86_64
 BOARD	?= acpi
 COMP	?= gcc
+CFP	?= none
 
 # Tools
 INSTALL	?= install -m 644
@@ -98,6 +99,7 @@ PFLAGS	+= $(addprefix -I, $(INC_DIR))
 # Language options
 FFLAGS	:= $(or $(call check,-std=gnu++26), $(call check,-std=gnu++23))
 FFLAGS	+= -ffreestanding -fdata-sections -ffunction-sections -fdiagnostics-color=auto -fno-asynchronous-unwind-tables -fno-exceptions -fno-pic -fno-rtti -fno-stack-protector -fno-use-cxa-atexit -fomit-frame-pointer
+FFLAGS	+= $(call check,-fcf-protection=$(CFP))
 # Language options added in gcc-12
 FFLAGS	+= $(call check,-ftrivial-auto-var-init=uninitialized)
 

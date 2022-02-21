@@ -262,6 +262,8 @@ void Ec_arch::ret_user_hypercall (Ec *const self)
 
     trace (TRACE_CONT, "EC:%p %s to CS:%#x IP:%#lx", static_cast<void *>(self), __func__, SEL_USER_CODE, r.exc.ip());
 
+    Cet::sss_deactivate();
+
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR) "mov %%r11, %%rsp; mov %1, %%r11; sysretq" : : "m" (r.exc), "i" (RFL_IF | RFL_1) : "memory");
 
     UNREACHED;
@@ -276,6 +278,8 @@ void Ec_arch::ret_user_exception (Ec *const self)
         self->handle_hazard (h, ret_user_exception);
 
     trace (TRACE_CONT, "EC:%p %s to CS:%#lx IP:%#lx", static_cast<void *>(self), __func__, r.exc.cs, r.exc.rip);
+
+    Cet::sss_unwind();
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR IRET) : : "m" (r.exc) : "memory");
 
