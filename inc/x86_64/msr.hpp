@@ -73,6 +73,13 @@ class Msr final
             IA32_VMX_VMFUNC                 = 0x491,        // VMX
             IA32_VMX_CTRL_CPU_TER           = 0x492,        // VMX
             IA32_VMX_CTRL_EXI_SEC           = 0x493,        // VMX
+            IA32_U_CET                      = 0x6a0,        // CET_SS or CET_IBT
+            IA32_S_CET                      = 0x6a2,        // CET_SS or CET_IBT
+            IA32_PL0_SSP                    = 0x6a4,        // CET_SS
+            IA32_PL1_SSP                    = 0x6a5,        // CET_SS
+            IA32_PL2_SSP                    = 0x6a6,        // CET_SS
+            IA32_PL3_SSP                    = 0x6a7,        // CET_SS
+            IA32_INTERRUPT_SSP_TABLE_ADDR   = 0x6a8,        // CET_SS
             IA32_TSC_DEADLINE               = 0x6e0,        // TSC_DEADLINE
             IA32_PM_ENABLE                  = 0x770,        // HWP
             IA32_HWP_CAPABILITIES           = 0x771,        // HWP

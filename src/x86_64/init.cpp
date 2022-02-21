@@ -47,6 +47,16 @@ uintptr_t kern_ptab_setup (apic_t t)
     hptp.update (MMAP_CPU_DATA, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
                  Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
 
+#if defined(__CET__) && (__CET__ & 2)
+    // Allocate and map kernel shadow stack
+    auto const sstk { static_cast<uintptr_t *>(Buddy::alloc (0, Buddy::Fill::BITS0)) };
+    hptp.update (MMAP_CPU_SSTK, Kmem::ptr_to_phys (sstk), 0,
+                 Paging::Permissions (Paging::SS | Paging::G | Paging::R), Memattr::ram());
+
+    // Install supervisor shadow stack token
+    sstk[PAGE_SIZE / sizeof (uintptr_t) - 1] = reinterpret_cast<uintptr_t>(&SSTK_TOP);
+#endif
+
     // Allocate and map kernel data stack
     hptp.update (MMAP_CPU_DSTK, Kmem::ptr_to_phys (Buddy::alloc (0, Buddy::Fill::BITS0)), 0,
                  Paging::Permissions (Paging::G | Paging::W | Paging::R), Memattr::ram());
