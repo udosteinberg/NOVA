@@ -99,8 +99,10 @@ class Cpu final
             SMAP                    = 3 * 32 + 20,      // Supervisor Mode Access Prevention
             // 0x7.ECX
             UMIP                    = 4 * 32 +  2,      // User Mode Instruction Prevention
+            CET_SS                  = 4 * 32 +  7,      // CET Shadow Stack
             // 0x7.EDX
             HYBRID                  = 5 * 32 + 15,      // Hybrid Processor
+            CET_IBT                 = 5 * 32 + 20,      // CET Indirect Branch Tracking
             // 0x80000001.EDX
             GB_PAGES                = 6 * 32 + 26,      // 1GB-Pages Support
             LM                      = 6 * 32 + 29,      // Long Mode Support

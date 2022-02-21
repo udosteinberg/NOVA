@@ -33,7 +33,12 @@ void Patch::detect()
             Cpu::cpuid (0xd, 0x1, eax, ebx, ecx, edx);
             skipped |= (Fpu::compact = !!(eax & BIT (3))) * BIT (PATCH_XSAVES);
             [[fallthrough]];
-        case 0x1 ... 0xc:
+        case 0x7 ... 0xc:
+            Cpu::cpuid (0x7, 0x0, eax, ebx, ecx, edx);
+            skipped |= !!(ecx & BIT  (7)) * BIT (PATCH_CET_SS);
+            skipped |= !!(edx & BIT (20)) * BIT (PATCH_CET_IBT);
+            [[fallthrough]];
+        case 0x1 ... 0x6:
             Cpu::cpuid (0x1, 0x0, eax, ebx, ecx, edx);
             Lapic::x2apic = ecx & BIT (21);
             [[fallthrough]];
