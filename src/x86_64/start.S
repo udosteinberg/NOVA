@@ -23,6 +23,7 @@
 #include "memattr.hpp"
 #include "memory.hpp"
 #include "multiboot.hpp"
+#include "patch.hpp"
 #include "selectors.hpp"
 
 #define PTE_ATTR_P      BIT (0)     // Present
@@ -339,6 +340,66 @@ __init_all:             mov     $.Lhigh, %rax
 .Ltopo_end:
                         call    kern_ptab_setup
                         mov     %rax, %cr3
+#if defined(__CET__)
+                        // Track CET features in EAX
+                        xor     %eax, %eax
+#if (__CET__ & 1)
+                        #define ASM_ENABLE_CET_1 or $(BIT_RANGE (5, 4) | BIT (2)), %al
+                        PATCH  (ASM_ENABLE_CET_1,, PATCH_CET_IBT);
+#endif
+#if (__CET__ & 2)
+                        #define ASM_ENABLE_CET_2 or $BIT (0), %al
+                        PATCH  (ASM_ENABLE_CET_2,, PATCH_CET_SSS);
+#endif
+                        // Check if any CET features are being enabled
+                        test    %eax, %eax
+                        jz      .Lcet_end
+
+                        // Enable CET
+                        mov     %cr4, %rdx
+                        or      $CR4_CET, %edx
+                        mov     %rdx, %cr4
+
+                        // Enable CET features in EAX
+                        mov     $0x6a2, %ecx
+                        xor     %edx, %edx
+                        wrmsr
+#if (__CET__ & 2)
+                        // Check if CET_SSS is enabled
+                        test    $BIT (0), %al
+                        jz      .Lcet_end
+
+.pushsection            .rodata
+
+                        .balign 64
+__interrupt_ssp_table:  .quad   0
+                        .quad   MMAP_CPU_ITKN
+                        .quad   0
+                        .quad   0
+                        .quad   0
+                        .quad   0
+                        .quad   0
+                        .quad   0
+.popsection
+                        // Initialize IA32_INTERRUPT_SSP_TABLE_ADDR
+                        mov     $0x6a8, %ecx
+                        lea     __interrupt_ssp_table, %rdx
+                        mov     %rdx, %rax
+                        shr     $0x20, %rdx
+                        wrmsr
+
+                        // Initialize IA32_PL0_SSP
+                        mov     $0x6a4, %ecx
+                        lea     DSHD_TOP, %rdx
+                        mov     %rdx, %rax
+                        shr     $0x20, %rdx
+                        wrmsr
+
+                        // Activate supervisor shadow stack
+                        setssbsy
+#endif
+.Lcet_end:
+#endif
                         lea     DSTK_TOP - __SIZEOF_POINTER__, %rsp
                         jmp     bootstrap
 

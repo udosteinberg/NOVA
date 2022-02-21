@@ -34,7 +34,13 @@ void Patch::detect()
             Fpu::compact = !!(eax & BIT (3));
             applied |= BIT (PATCH_XSAVES) * !Fpu::compact;
             [[fallthrough]];
-        case 0x1 ... 0xc:
+        case 0x7 ... 0xc:
+            Cpu::cpuid (0x7, 0x0, eax, ebx, ecx, edx);
+            applied |= BIT (PATCH_CET_IBT) * !(edx & BIT (20));
+            Cpu::cpuid (0x7, 0x1, eax, ebx, ecx, edx);
+            applied |= BIT (PATCH_CET_SSS) * !(edx & BIT (18));
+            [[fallthrough]];
+        case 0x1 ... 0x6:
             Cpu::cpuid (0x1, 0x0, eax, ebx, ecx, edx);
             Lapic::x2apic = ecx & BIT (21);
             [[fallthrough]];
