@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "cet.hpp"
 #include "ec.hpp"
 #include "extern.hpp"
 #include "space_hst.hpp"
@@ -127,6 +128,9 @@ class Ec_arch final : private Ec
 
             // Reset interrupt/exception stack
             Tss::run.rsp[0] = reinterpret_cast<uintptr_t>(&exc_regs() + 1);
+
+            // Reset shadow stack
+            Cet::sss_unwind();
 
             // Reset data stack
             asm volatile ("lea %0, %%rsp" : : "m" (DSTK_TOP) : "memory");
