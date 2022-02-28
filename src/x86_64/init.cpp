@@ -27,6 +27,7 @@
 #include "hpt.hpp"
 #include "idt.hpp"
 #include "kmem.hpp"
+#include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
 
@@ -55,6 +56,8 @@ extern "C"
 void init (uintptr_t offset)
 {
     Kmem::init (offset);
+
+    Patch::init();
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
