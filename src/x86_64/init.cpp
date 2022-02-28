@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2021 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,6 +27,7 @@
 #include "hpt.hpp"
 #include "idt.hpp"
 #include "kmem.hpp"
+#include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
 
@@ -55,6 +56,8 @@ extern "C"
 void init (uintptr_t offset)
 {
     Kmem::init (offset);
+
+    Patch::init();
 
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
