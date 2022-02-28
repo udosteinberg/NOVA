@@ -26,6 +26,7 @@
 #include "gsi.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
 
@@ -54,8 +55,15 @@ extern "C" uintptr_t kern_ptab_setup (apic_t)
     return hpt.addr();
 }
 
+extern "C" void preinit()
+{
+    Patch::detect();
+}
+
 extern "C" void init()
 {
+    Patch::init();
+
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE (0));
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE (0));
@@ -67,7 +75,7 @@ extern "C" void init()
     for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
 
     // Now we're ready to talk to the world
-    Console::print ("\fNOVA Microhypervisor v%d-%07lx (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<mword>(&GIT_VER), ARCH, __DATE__, __TIME__, COMPILER_STRING);
+    Console::print ("\fNOVA Microhypervisor v%d-%07lx-%#x (%s): %s %s [%s]\n", CFG_VER, reinterpret_cast<uintptr_t>(&GIT_VER), Patch::applied, ARCH, __DATE__, __TIME__, COMPILER_STRING);
 
     Idt::build();
     Gsi::setup();
