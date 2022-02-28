@@ -296,6 +296,8 @@ __init_all:             mov     $.Lhigh, %rax
                         lea     LINK_ADDR, %rdi
                         sub     %rax, %rdi
                         mov     %rdi, __kmem_offset
+
+                        call    preinit
 .Lskip_preinit:
                         // Acquire boot lock
                         mov     $BIT (16), %eax
