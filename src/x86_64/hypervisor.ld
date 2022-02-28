@@ -50,6 +50,14 @@ SECTIONS
         *(.text .text.* .gnu.linkonce.t.*)
     } : kern
 
+    .patch : AT (ADDR (.patch) - OFFSET)
+    {
+        PROVIDE_HIDDEN (PATCH_S = .);
+        KEEP (*(.patch.data))
+        PROVIDE_HIDDEN (PATCH_E = .);
+        KEEP (*(.patch.code))
+    } : kern
+
     .rodata : AT (ADDR (.rodata) - OFFSET)
     {
         *(.rodata .rodata.* .gnu.linkonce.r.*)
