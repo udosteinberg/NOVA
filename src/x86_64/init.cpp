@@ -26,6 +26,7 @@
 #include "gsi.hpp"
 #include "hpt.hpp"
 #include "idt.hpp"
+#include "patch.hpp"
 #include "pic.hpp"
 #include "string.hpp"
 
@@ -53,6 +54,8 @@ uintptr_t kern_ptab_setup (apic_t)
 extern "C"
 void init()
 {
+    Patch::init();
+
     // Setup 0-page and 1-page
     memset (reinterpret_cast<void *>(&PAGE_0),  0,  PAGE_SIZE);
     memset (reinterpret_cast<void *>(&PAGE_1), ~0u, PAGE_SIZE);
