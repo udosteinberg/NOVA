@@ -84,7 +84,7 @@ VPATH	:= $(SRC_DIR)
 DFLAGS	:= -MP -MMD -pipe
 OFLAGS	:= -Os
 ifeq ($(ARCH),x86_64)
-AFLAGS	:= -m64 -march=core2 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse
+AFLAGS	:= -Wa,--divide -m64 -march=core2 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse
 else
 $(error $(ARCH) is not a valid architecture)
 endif
