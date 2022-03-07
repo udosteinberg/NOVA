@@ -17,6 +17,7 @@
 
 #include "assert.hpp"
 #include "cpu.hpp"
+#include "fpu.hpp"
 #include "memattr.hpp"
 #include "patch.hpp"
 #include "string.hpp"
@@ -31,6 +32,10 @@ void Patch::init()
 
     switch (static_cast<uint8>(eax)) {
         default:
+            Cpu::cpuid (0xd, 0x1, eax, ebx, ecx, edx);
+            skipped |= (Fpu::compact = !!(eax & BIT (3))) * BIT (PATCH_XSAVES);
+            [[fallthrough]];
+        case 0x0 ... 0xc:
             break;
     }
 
