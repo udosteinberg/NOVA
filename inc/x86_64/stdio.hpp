@@ -67,6 +67,7 @@ enum {
  * Enabled trace events
  */
 constexpr auto trace_mask   { TRACE_CPU     |
+                              TRACE_FPU     |
                               TRACE_SMMU    |
                               TRACE_TIMR    |
                               TRACE_INTR    |
