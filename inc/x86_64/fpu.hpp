@@ -1,5 +1,7 @@
 /*
  * Floating Point Unit (FPU)
+ * Streaming SIMD Extensions (SSE)
+ * Advanced Vector Extensions (AVX)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -25,20 +27,112 @@
 #include "cpu.hpp"
 #include "cr.hpp"
 #include "hazards.hpp"
+#include "patch.hpp"
 #include "slab.hpp"
 
 class Fpu
 {
     private:
-        char data[512];
+        // State Components
+        enum Component
+        {
+            XTILEDATA       = BIT (18),         // XCR (enabled)
+            XTILECFG        = BIT (17),         // XCR (enabled)
+            HWP             = BIT (16),         // XSS (managed)
+            LBR             = BIT (15),         // XSS (managed)
+            UINTR           = BIT (14),         // XSS (managed)
+            HDC             = BIT (13),         // XSS (managed)
+            CET_S           = BIT (12),         // XSS (managed)
+            CET_U           = BIT (11),         // XSS (managed)
+            PASID           = BIT (10),         // XSS (managed)
+            PKRU            = BIT (9),          // XCR (managed)
+            PT              = BIT (8),          // XSS (managed)
+            AVX512          = BIT_RANGE (7, 5), // XCR (enabled)
+            MPX             = BIT_RANGE (4, 3), // XCR (enabled)
+            AVX             = BIT (2),          // XCR (enabled)
+            SSE             = BIT (1),          // XCR (managed)
+            X87             = BIT (0),          // XCR (managed)
+        };
+
+        // Legacy Region: x87 State, SSE State
+        struct Legacy
+        {
+            uint16  fcw             { 0x37f };  // x87 FPU Control Word
+            uint16  fsw             { 0 };      // x87 FPU Status Word
+            uint16  ftw             { 0xffff }; // x87 FPU Tag Word
+            uint16  fop             { 0 };      // x87 FPU Opcode
+            uint64  fip             { 0 };      // x87 FPU Instruction Pointer Offset
+            uint64  fdp             { 0 };      // x87 FPU Instruction Data Pointer Offset
+            uint32  mxcsr           { 0x1f80 }; // SIMD Control/Status Register
+            uint32  mxcsr_mask      { 0 };      // SIMD Control/Status Register Mask Bits
+            uint64  mmx[8][2]       {{0}};      //  8  80bit MMX registers
+            uint64  xmm[16][2]      {{0}};      // 16 128bit XMM registers
+            uint64  unused[6][2]    {{0}};      //  6 128bit reserved
+        };
+
+        static_assert (__is_standard_layout (Legacy) && sizeof (Legacy) == 512);
+
+        // XSAVE Header
+        struct Header
+        {
+            uint64  xstate          { 0 };
+            uint64  xcomp           { static_cast<uint64>(compact) << 63 };
+            uint64  unused[6]       { 0 };
+        };
+
+        static_assert (__is_standard_layout (Header) && sizeof (Header) == 64);
+
+        // XSAVE Area
+        Legacy  legacy;
+        Header  header;
 
     public:
-        ALWAYS_INLINE
-        inline void load() const { asm volatile ("fxrstor64 %0" : : "m" (*this)); }
+        static struct State
+        {
+            uint64 xcr              { Component::X87 };
+            uint64 xss              { 0 };
+        } hstate CPULOCAL;
 
-        ALWAYS_INLINE
-        inline void save() { asm volatile ("fxsave64 %0" : "=m" (*this)); }
+        // XSAVE area format: XSAVES/compact (true), XSAVE/standard (false)
+        static inline bool compact { true };
 
+        // XSAVE context size
+        static inline unsigned size { sizeof (Legacy) + sizeof (Header) };
+
+        // XSAVE state components manageable by NOVA
+        static constexpr uint64 desired { Component::AVX512 | Component::AVX | Component::SSE | Component::X87 };
+
+        /*
+         * Load FPU state from memory into registers
+         *
+         * The default method uses XRSTORS and compacted format (if supported)
+         * Patched alternative uses XRSTOR and standard format (see Patch::init)
+         *
+         * @param this  XSAVE area
+         */
+        ALWAYS_INLINE
+        inline void load() const
+        {
+            asm volatile (EXPAND (PATCH (xrstors64 %0, xrstor64 %0, PATCH_XSAVES)) : : "m" (*this), "d" (static_cast<uint32>(desired >> 32)), "a" (static_cast<uint32>(desired)));
+        }
+
+        /*
+         * Save FPU state from registers into memory
+         *
+         * The default method uses XSAVES and compacted format (if supported)
+         * Patched alternative uses XSAVE and standard format (see Patch::init)
+         *
+         * @param this  XSAVE area
+         */
+        ALWAYS_INLINE
+        inline void save()
+        {
+            asm volatile (EXPAND (PATCH (xsaves64 %0, xsave64 %0, PATCH_XSAVES)) : "=m" (*this) : "d" (static_cast<uint32>(desired >> 32)), "a" (static_cast<uint32>(desired)));
+        }
+
+        /*
+         * Disable FPU and clear FPU hazard
+         */
         ALWAYS_INLINE
         static inline void disable()
         {
@@ -47,6 +141,9 @@ class Fpu
             Cpu::hazard &= ~HZD_FPU;
         }
 
+        /*
+         * Enable FPU and set FPU hazard
+         */
         ALWAYS_INLINE
         static inline void enable()
         {
@@ -55,12 +152,24 @@ class Fpu
             Cpu::hazard |= HZD_FPU;
         }
 
+        /*
+         * Allocate XSAVE area
+         *
+         * @param cache FPU slab cache
+         * @return      Pointer to XSAVE area
+         */
         [[nodiscard]] ALWAYS_INLINE
         static inline void *operator new (size_t, Slab_cache &cache) noexcept
         {
             return cache.alloc();
         }
 
+        /*
+         * Deallocate XSAVE area
+         *
+         * @param ptr   Pointer to XSAVE area
+         * @param cache FPU slab cache
+         */
         ALWAYS_INLINE
         static inline void operator delete (void *ptr, Slab_cache &cache)
         {
@@ -71,3 +180,5 @@ class Fpu
         static void init();
         static void fini();
 };
+
+static_assert (__is_standard_layout (Fpu) && sizeof (Fpu) == 576);

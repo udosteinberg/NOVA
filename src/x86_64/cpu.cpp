@@ -163,7 +163,13 @@ void Cpu::enumerate_features (uint32 &clk, uint32 &rat, uint32 (&name)[12], unsi
             cpuid (0x15, eax, ebx, clk, edx);
             rat = eax ? ebx / eax : 0;
             [[fallthrough]];
-        case 0x7 ... 0x14:
+        case 0xd ... 0x14:
+            cpuid (0xd, 0, eax, ebx, ecx, edx);
+            Fpu::hstate.xcr = Fpu::desired & (static_cast<uint64>(edx) << 32 | eax);
+            cpuid (0xd, 1, eax, ebx, ecx, edx);
+            Fpu::hstate.xss = Fpu::desired & (static_cast<uint64>(edx) << 32 | ecx);
+            [[fallthrough]];
+        case 0x7 ... 0xc:
             cpuid (0x7, 0, eax, features[3], features[4], features[5]);
             [[fallthrough]];
         case 0x6:
@@ -326,6 +332,7 @@ void Cpu::init()
 
     Cr::set_cr4 (Cr::get_cr4() | feature (Feature::SMAP)  * CR4_SMAP    |
                                  feature (Feature::SMEP)  * CR4_SMEP    |
+                                 feature (Feature::XSAVE) * CR4_OSXSAVE |
                                  feature (Feature::PCID)  * CR4_PCIDE   |
                                  feature (Feature::UMIP)  * CR4_UMIP    |
                                  feature (Feature::MCE)   * CR4_MCE);

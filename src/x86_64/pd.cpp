@@ -29,7 +29,7 @@ Slab_cache Pd::cache (sizeof (Pd), Kobject::alignment);
 Atomic<Pd *> Pd::current { nullptr };
 
 // FIXME: Bitmap allocation via factory
-Pd::Pd() : Kobject (Kobject::Type::PD), Space_pio (new Bitmap_pio, new Bitmap_pio), Space_msr (new Bitmap_msr), fpu_cache (sizeof (Fpu), 16)
+Pd::Pd() : Kobject (Kobject::Type::PD), Space_pio (new Bitmap_pio, new Bitmap_pio), Space_msr (new Bitmap_msr), fpu_cache (Fpu::size, 64)
 {
     trace (TRACE_CREATE, "PD:%p created", static_cast<void *>(this));
 

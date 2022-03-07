@@ -82,6 +82,7 @@ class Cpu
             EIST            = 1 * 32 +  7,      // Enhanced Intel SpeedStep Technology
             PCID            = 1 * 32 + 17,      // Process Context Identifiers
             TSC_DEADLINE    = 1 * 32 + 24,      // TSC Deadline Support
+            XSAVE           = 1 * 32 + 26,      // XCR0, XSETBV/XGETBV/XSAVE/XRSTOR Instructions
             // 0x6.EAX
             TURBO_BOOST     = 2 * 32 +  1,      // Turbo Boost Technology
             ARAT            = 2 * 32 +  2,      // Always Running APIC Timer
