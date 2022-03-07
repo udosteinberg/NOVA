@@ -51,7 +51,7 @@ Pd::Pd (Refptr<Pd> &ref_pd) : Kobject   { Kobject::Type::PD, Kobject::Subtype::P
                               dma_cache { sizeof (Space_dma), Kobject::alignment },
                               pio_cache { sizeof (Space_pio), Kobject::alignment },
                               msr_cache { sizeof (Space_msr), Kobject::alignment },
-                              fpu_cache { sizeof (Fpu), 16 }
+                              fpu_cache { Fpu::size,          Fpu::alignment }
 {
     // Pd::nova needs refcount > 0 so that other objects can acquire a reference to it
     if (!pd) [[unlikely]]
