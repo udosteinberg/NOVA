@@ -41,7 +41,7 @@ Pd::Pd() : Kobject { Kobject::Type::PD },
            msr_cache { sizeof (Space_msr), Kobject::alignment },
            obj_cache { sizeof (Space_obj), Kobject::alignment },
            pio_cache { sizeof (Space_pio), Kobject::alignment },
-           fpu_cache { sizeof (Fpu), 16 }
+           fpu_cache { Fpu::size, Fpu::alignment }
 {
     trace (TRACE_CREATE, "PD:%p created", static_cast<void *>(this));
 }
