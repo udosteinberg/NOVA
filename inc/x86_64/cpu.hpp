@@ -72,6 +72,7 @@ class Cpu final
             PCID                    =  0 * 32 + 17,     // Process Context Identifiers
             X2APIC                  =  0 * 32 + 21,     // x2APIC Support
             TSC_DEADLINE            =  0 * 32 + 24,     // TSC Deadline Support
+            XSAVE                   =  0 * 32 + 26,     // XCR0, XSETBV/XGETBV/XSAVE/XRSTOR Instructions
             // EAX=0x1 (EDX)
             MCE                     =  1 * 32 +  7,     // Machine Check Exception
             SEP                     =  1 * 32 + 11,     // SYSENTER/SYSEXIT Instructions
