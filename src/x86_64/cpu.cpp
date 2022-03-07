@@ -178,7 +178,13 @@ void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], 
             cpuid (0x15, eax, ebx, clk, edx);
             rat = eax ? ebx / eax : 0;
             [[fallthrough]];
-        case 0xb ... 0x14:
+        case 0xd ... 0x14:
+            cpuid (0xd, 0, eax, ebx, ecx, edx);
+            Fpu::hst_xsv.xcr = Fpu::managed & (static_cast<uint64_t>(edx) << 32 | eax);
+            cpuid (0xd, 1, eax, ebx, ecx, edx);
+            Fpu::hst_xsv.xss = Fpu::managed & (static_cast<uint64_t>(edx) << 32 | ecx);
+            [[fallthrough]];
+        case 0xb ... 0xc:
             if (topology == invalid_topology)
                 enumerate_topology (0xb, topology, lvl);
             [[fallthrough]];
@@ -377,6 +383,7 @@ void Cpu::init()
 
     Cr::set_cr4 (Cr::get_cr4() | feature (Feature::SMAP)  * CR4_SMAP    |
                                  feature (Feature::SMEP)  * CR4_SMEP    |
+                                 feature (Feature::XSAVE) * CR4_OSXSAVE |
                                  feature (Feature::PCID)  * CR4_PCIDE   |
                                  feature (Feature::UMIP)  * CR4_UMIP    |
                                  feature (Feature::MCE)   * CR4_MCE);
