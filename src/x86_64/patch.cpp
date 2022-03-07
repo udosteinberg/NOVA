@@ -16,6 +16,7 @@
  */
 
 #include "assert.hpp"
+#include "fpu.hpp"
 #include "lapic.hpp"
 #include "memattr.hpp"
 #include "patch.hpp"
@@ -32,6 +33,10 @@ void Patch::init()
 
     switch (static_cast<uint8_t>(eax)) {
         default:
+            Cpu::cpuid (0xd, 0x1, eax, ebx, ecx, edx);
+            skipped |= (Fpu::compact = !!(eax & BIT (3))) * BIT (PATCH_XSAVES);
+            [[fallthrough]];
+        case 0x1 ... 0xc:
             Cpu::cpuid (0x1, 0x0, eax, ebx, ecx, edx);
             Lapic::x2apic = ecx & BIT (21);
             [[fallthrough]];
