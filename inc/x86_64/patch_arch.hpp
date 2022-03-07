@@ -19,3 +19,5 @@
 
 #define NOP_LEN         1
 #define NOP_OPC         0x90
+
+#define PATCH_XSAVES    0
