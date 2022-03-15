@@ -23,6 +23,7 @@
 #include "bits.hpp"
 #include "cmdline.hpp"
 #include "counter.hpp"
+#include "cr.hpp"
 #include "gdt.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
@@ -169,7 +170,7 @@ void Cpu::setup_pcid()
     if (EXPECT_FALSE (!feature (FEAT_PCID)))
         return;
 
-    set_cr4 (get_cr4() | CR4_PCIDE);
+    Cr::set_cr4 (Cr::get_cr4() | CR4_PCIDE);
 }
 
 void Cpu::init()
@@ -203,8 +204,9 @@ void Cpu::init()
 
     setup_pcid();
 
-    if (EXPECT_TRUE (feature (FEAT_SMEP)))
-        set_cr4 (get_cr4() | CR4_SMEP);
+    Cr::set_cr4 (Cr::get_cr4() | feature (FEAT_SMAP) * CR4_SMAP  |
+                                 feature (FEAT_SMEP) * CR4_SMEP  |
+                                 feature (FEAT_MCE)  * CR4_MCE);
 
     Vmcs::init();
     Vmcb::init();

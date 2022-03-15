@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,8 +23,8 @@
 
 #include "arch.hpp"
 #include "cpu.hpp"
+#include "cr.hpp"
 #include "hazards.hpp"
-#include "lowlevel.hpp"
 #include "slab.hpp"
 
 class Fpu
@@ -47,7 +48,7 @@ class Fpu
         static inline void enable() { asm volatile ("clts"); Cpu::hazard |= HZD_FPU; }
 
         ALWAYS_INLINE
-        static inline void disable() { set_cr0 (get_cr0() | CR0_TS); Cpu::hazard &= ~HZD_FPU; }
+        static inline void disable() { Cr::set_cr0 (Cr::get_cr0() | CR0_TS); Cpu::hazard &= ~HZD_FPU; }
 
         ALWAYS_INLINE
         static inline void *operator new (size_t) { return cache.alloc(); }
