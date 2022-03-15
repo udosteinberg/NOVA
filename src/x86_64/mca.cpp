@@ -1,7 +1,8 @@
 /*
  * Machine-Check Architecture (MCA)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -27,11 +28,6 @@ unsigned Mca::banks;
 
 void Mca::init()
 {
-    if (!Cpu::feature (Cpu::FEAT_MCE)) [[unlikely]]
-        return;
-
-    set_cr4 (get_cr4() | CR4_MCE);
-
     if (!Cpu::feature (Cpu::FEAT_MCA)) [[unlikely]]
         return;
 
