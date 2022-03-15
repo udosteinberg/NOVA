@@ -171,8 +171,8 @@ void Ec::ret_user_vmresume()
         Pd::current->ept.flush();
     }
 
-    if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
-        set_cr2 (current->regs.cr2);
+    if (EXPECT_FALSE (Cr::get_cr2() != current->regs.cr2))
+        Cr::set_cr2 (current->regs.cr2);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
                   "vmresume;"

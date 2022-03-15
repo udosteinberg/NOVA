@@ -23,11 +23,11 @@
 #include "arch.hpp"
 #include "bits.hpp"
 #include "cmdline.hpp"
+#include "cr.hpp"
 #include "ept.hpp"
 #include "gdt.hpp"
 #include "hip.hpp"
 #include "idt.hpp"
-#include "lowlevel.hpp"
 #include "msr.hpp"
 #include "stdio.hpp"
 #include "tss.hpp"
@@ -83,8 +83,8 @@ Vmcs::Vmcs (mword esp, mword bmp, mword cr3, uint64 eptp) : rev (basic.revision)
     write (ENT_CONTROLS, (ent | ctrl_ent.set) & ctrl_ent.clr);
 
     write (HOST_CR3, cr3);
-    write (HOST_CR0, get_cr0() | CR0_TS);
-    write (HOST_CR4, get_cr4());
+    write (HOST_CR0, Cr::get_cr0() | CR0_TS);
+    write (HOST_CR4, Cr::get_cr4());
 
     write (HOST_BASE_TR,   reinterpret_cast<mword>(&Tss::run));
     write (HOST_BASE_GDTR, reinterpret_cast<mword>(Gdt::gdt));
@@ -135,8 +135,8 @@ void Vmcs::init()
     if (Cmdline::novpid || !ept_vpid.invvpid)
         ctrl_cpu[1].clr &= ~CPU_VPID;
 
-    set_cr0 ((get_cr0() & ~fix_cr0_clr) | fix_cr0_set);
-    set_cr4 ((get_cr4() & ~fix_cr4_clr) | fix_cr4_set);
+    Cr::set_cr0 ((Cr::get_cr0() & ~fix_cr0_clr) | fix_cr0_set);
+    Cr::set_cr4 ((Cr::get_cr4() & ~fix_cr4_clr) | fix_cr4_set);
 
     Vmcs *root = new Vmcs;
 
