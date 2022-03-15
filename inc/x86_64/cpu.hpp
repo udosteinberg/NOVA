@@ -64,6 +64,7 @@ class Cpu
             FEAT_PCID           = 49,
             FEAT_TSC_DEADLINE   = 56,
             FEAT_SMEP           = 103,
+            FEAT_SMAP           = 116,
             FEAT_1GB_PAGES      = 154,
             FEAT_CMP_LEGACY     = 161,
             FEAT_SVM            = 162,

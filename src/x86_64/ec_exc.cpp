@@ -91,7 +91,7 @@ bool Ec::handle_exc_gp (Exc_regs *)
 
 bool Ec::handle_exc_pf (Exc_regs *r)
 {
-    mword addr = current->regs.cr2 = get_cr2();
+    mword addr = current->regs.cr2 = Cr::get_cr2();
 
     if (r->err & Hpt::ERR_U)
         return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].sync_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
