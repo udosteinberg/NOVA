@@ -69,7 +69,7 @@ void Ec::vmx_extint()
 
 void Ec::handle_vmx()
 {
-    current->regs.cr2 = get_cr2();
+    current->regs.cr2 = Cr::get_cr2();
 
     Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 
