@@ -223,6 +223,9 @@ __init_bsp:
                         adr     x0, __kmem_offset
                         str     x24, [x0]
 
+                        // Early initialization
+                        bl      preinit
+
                         // General initialization
                         bl      init
 
