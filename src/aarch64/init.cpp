@@ -17,9 +17,16 @@
 
 #include "acpi.hpp"
 #include "buddy.hpp"
+#include "cmdline.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 #include "patch.hpp"
+
+extern "C" void preinit()
+{
+    if (!Acpi::resume)
+        Cmdline::init();
+}
 
 extern "C" void init()
 {

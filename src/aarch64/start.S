@@ -250,6 +250,9 @@ __init_bsp:
 .text
 
 .Lhigh:
+                        // Early initialization
+                        bl      preinit
+
                         // General initialization
                         bl      init
 
