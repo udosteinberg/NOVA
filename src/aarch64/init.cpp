@@ -17,6 +17,7 @@
 
 #include "acpi.hpp"
 #include "buddy.hpp"
+#include "cmdline.hpp"
 #include "console.hpp"
 #include "extern.hpp"
 #include "kmem.hpp"
@@ -31,6 +32,8 @@ void init (uintptr_t offset)
         Buddy::init();
 
         for (void (**func)() = &CTORS_S; func != &CTORS_E; (*func++)()) ;
+
+        Cmdline::init();
 
         for (void (**func)() = &CTORS_C; func != &CTORS_S; (*func++)()) ;
 
