@@ -48,6 +48,6 @@ class Spinlock
         ALWAYS_INLINE
         inline void unlock()
         {
-            asm volatile ("incb %0" : "=m" (val) : : "memory");
+            asm volatile ("incb %0" : "+m" (val) : : "memory");
         }
 };
