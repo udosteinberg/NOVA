@@ -1,8 +1,10 @@
 /*
- * Generic Spinlock
+ * Ticket Spinlock
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
+ *
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -19,35 +21,40 @@
 #pragma once
 
 #include "compiler.hpp"
+#include "macros.hpp"
 #include "types.hpp"
 
-class Spinlock
+class Spinlock final
 {
     private:
-        uint16 val;
+        uint32_t val { 0 };     // nxt[31:16] cur[15:0]
 
     public:
         ALWAYS_INLINE
-        inline Spinlock() : val (0) {}
-
-        NOINLINE
         void lock()
         {
-            uint16 tmp = 0x100;
+            uint32_t tkt { BIT (16) }, cur;
 
-            asm volatile ("     lock; xadd %0, %1;  "
-                          "1:   cmpb %h0, %b0;      "
-                          "     je 2f;              "
-                          "     pause;              "
-                          "     movb %1, %b0;       "
-                          "     jmp 1b;             "
-                          "2:                       "
-                          : "+Q" (tmp), "+m" (val) : : "memory");
+            asm volatile ("lock xadd    %k1, %0     ;"   // %1 = old = val; val.nxt++
+                          "     movzwl  %w1, %2     ;"   // %2 = old.cur
+                          "     shr     $16, %1     ;"   // %1 = old.nxt (our ticket)
+                          "1:   cmp     %k1, %2     ;"   // Is the current ticket ours?
+                          "     je      2f          ;"   // Enter critical section
+                          "     pause               ;"   // Spin loop hint
+                          "     movzwl  %w0, %2     ;"   // %2 = val.cur
+                          "     jmp     1b          ;"   // Retry
+                          "2:                       ;"   // Critical section
+                          : "+m" (val), "+r" (tkt), "=&r" (cur) : : "memory", "cc");
         }
 
         ALWAYS_INLINE
-        inline void unlock()
+        void unlock()
         {
-            asm volatile ("incb %0" : "=m" (val) : : "memory");
+            asm volatile ("incw %0" : "+m" (val) : : "memory", "cc");
         }
+
+        Spinlock() = default;
+
+        Spinlock            (Spinlock const &) = delete;
+        Spinlock& operator= (Spinlock const &) = delete;
 };
