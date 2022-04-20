@@ -134,7 +134,7 @@ void Ec::handle_exc (Exc_regs *r)
             break;
 
         case EXC_MC:
-            Mca::vector();
+            Mca::handler();
             break;
     }
 
