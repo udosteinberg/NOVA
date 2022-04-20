@@ -143,7 +143,7 @@ void Ec::handle_ist (Exc_regs *r)
             return;
 
         case EXC_MC:
-            return Mca::vector();
+            return Mca::handler();
     }
 
     die ("EXC");

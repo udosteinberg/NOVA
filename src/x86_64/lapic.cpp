@@ -23,6 +23,7 @@
 #include "acpi.hpp"
 #include "barrier.hpp"
 #include "lapic.hpp"
+#include "mca.hpp"
 #include "msr.hpp"
 #include "ptab_hst.hpp"
 #include "stc.hpp"
@@ -172,4 +173,7 @@ void Lapic::handle_perfm() {}
 
 void Lapic::handle_therm() {}
 
-void Lapic::handle_cmchk() {}
+void Lapic::handle_cmchk()
+{
+    Mca::handler();
+}
