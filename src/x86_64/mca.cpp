@@ -2,7 +2,7 @@
  * Machine-Check Architecture (MCA)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -16,41 +16,47 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "arch.hpp"
-#include "compiler.hpp"
 #include "cpu.hpp"
-#include "lowlevel.hpp"
 #include "mca.hpp"
-#include "msr.hpp"
 #include "stdio.hpp"
 
-unsigned Mca::banks;
+uint8_t Mca::banks { 0 };
 
 void Mca::init()
 {
     if (EXPECT_FALSE (!Cpu::feature (Cpu::Feature::MCA)))
         return;
 
-    uint32 cap = static_cast<uint32>(Msr::read (Msr::Reg64::IA32_MCG_CAP));
+    auto cap = Msr::read (Msr::Reg64::IA32_MCG_CAP);
 
-    Msr::write (Msr::Reg64::IA32_MCG_STATUS, 0);
+    if (cap & BIT (8))
+        Msr::write (Msr::Reg64::IA32_MCG_CTL, BIT64_RANGE (63, 0));
 
-    if (cap & 0x100)
-        Msr::write (Msr::Reg64::IA32_MCG_CTL, ~0ULL);
+    banks = cap & BIT_RANGE (7, 0);
 
-    banks = cap & 0xff;
-
+    /*
+     * For P6 family processors and Core family processors before NHM:
+     * The OS must not modify the contents of the IA32_MC0_CTL MSR. This
+     * MSR is internally aliased to EBL_CR_POWERON (0x2a) and controls
+     * platform-specific error handling features. Firmware is responsible
+     * for the appropriate initialization of IA32_MC0_CTL.
+     *
+     * P6 family processors only allow the writing of all 1s or all 0s to
+     * the IA32_MCi_CTL MSRs.
+     */
     for (unsigned i = (Cpu::vendor == Cpu::Vendor::INTEL && Cpu::family == 6 && Cpu::model < 0x1a); i < banks; i++) {
-        Msr::write (Msr::Arr64::IA32_MC_CTL, 4, i, ~0ULL);
+        Msr::write (Msr::Arr64::IA32_MC_CTL, 4, i, BIT64_RANGE (63, 0));
         Msr::write (Msr::Arr64::IA32_MC_STATUS, 4, i, 0);
     }
+
+    Msr::write (Msr::Reg64::IA32_MCG_STATUS, 0);
 }
 
-void Mca::vector()
+void Mca::handler()
 {
-    uint64 sts;
+    uint64_t sts;
 
-    for (unsigned i = 0; i < banks; i++)
-        if ((sts = Msr::read (Msr::Arr64::IA32_MC_STATUS, 4, i)) & 1ULL << 63)
-            trace (TRACE_ERROR, "Machine Check B%u: %#018llx", i, sts);
+    for (unsigned i { 0 }; i < banks; i++)
+        if ((sts = Msr::read (Msr::Arr64::IA32_MC_STATUS, 4, i)) & BIT64 (63))
+            trace (TRACE_CPU, "Machine Check Bank%u: %#018lx", i, sts);
 }

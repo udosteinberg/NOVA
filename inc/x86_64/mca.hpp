@@ -2,7 +2,7 @@
  * Machine-Check Architecture (MCA)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,12 +18,15 @@
 
 #pragma once
 
-class Mca
+#include "compiler.hpp"
+#include "types.hpp"
+
+class Mca final
 {
     private:
-        static unsigned banks   CPULOCAL;
+        static uint8_t banks CPULOCAL;
 
     public:
         static void init();
-        static void vector();
+        static void handler();
 };
