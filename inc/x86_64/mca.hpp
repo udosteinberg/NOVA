@@ -18,12 +18,15 @@
 
 #pragma once
 
-class Mca
+#include "compiler.hpp"
+#include "types.hpp"
+
+class Mca final
 {
     private:
-        static unsigned banks   CPULOCAL;
+        static uint8_t banks CPULOCAL;
 
     public:
         static void init();
-        static void vector();
+        static void handler();
 };
