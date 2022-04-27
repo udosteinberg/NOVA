@@ -24,6 +24,7 @@
 #include "bits.hpp"
 #include "cache.hpp"
 #include "cmdline.hpp"
+#include "cos.hpp"
 #include "counter.hpp"
 #include "fpu.hpp"
 #include "gdt.hpp"
@@ -152,7 +153,7 @@ void Cpu::enumerate_topology (uint32_t leaf, uint32_t &topology, uint32_t (&lvl)
 
 void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], uint32_t (&name)[12])
 {
-    uint32_t eax, ebx, ecx, edx, cpp { 1 };
+    uint32_t eax, ebx, ecx, edx, rti, cpp { 1 };
 
     cpuid (0, eax, ebx, ecx, edx);
 
@@ -178,7 +179,27 @@ void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], 
             cpuid (0x15, eax, ebx, clk, edx);
             rat = eax ? ebx / eax : 0;
             [[fallthrough]];
-        case 0xd ... 0x14:
+        case 0x10 ... 0x14:
+            cpuid (0x10, 0, eax, rti, ecx, edx);
+            if (rti & BIT (1)) {    // CAT/CDP L3
+                cpuid (0x10, 1, eax, ebx, ecx, edx);
+                Cos::hcb_l3 = (eax & BIT_RANGE (4, 0));
+                Cos::cos_l3 = (edx & BIT_RANGE (6, 0)) + 1;         // max 128
+                Cos::supcfg |= static_cast<uint8_t>(!!(ecx & BIT (2)) * Cos::CDP_L3);
+            }
+            if (rti & BIT (2)) {    // CAT/CDP L2
+                cpuid (0x10, 2, eax, ebx, ecx, edx);
+                Cos::hcb_l2 = (eax & BIT_RANGE (4, 0));
+                Cos::cos_l2 = (edx & BIT_RANGE (5, 0)) + 1;         // max 64
+                Cos::supcfg |= static_cast<uint8_t>(!!(ecx & BIT (2)) * Cos::CDP_L2);
+            }
+            if (rti & BIT (3)) {    // MBA
+                cpuid (0x10, 3, eax, ebx, ecx, edx);
+                Cos::del_mb = (eax & BIT_RANGE (11, 0)) + 1;
+                Cos::cos_mb = (edx & BIT_RANGE  (5, 0)) + 1;        // max 64
+            }
+            [[fallthrough]];
+        case 0xd ... 0xf:
             cpuid (0xd, 0, eax, ebx, ecx, edx);
             Fpu::hst_xsv.xcr = Fpu::managed & (static_cast<uint64_t>(edx) << 32 | eax);
             cpuid (0xd, 1, eax, ebx, ecx, edx);
@@ -388,6 +409,7 @@ void Cpu::init()
                                  feature (Feature::UMIP)  * CR4_UMIP    |
                                  feature (Feature::MCE)   * CR4_MCE);
 
+    Cos::init();
     Fpu::init();
     Mca::init();
 
