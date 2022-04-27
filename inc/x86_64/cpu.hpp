@@ -114,6 +114,8 @@ class Cpu final
             // EAX=0x7 ECX=0x0 (EBX)
             SGX                     =  3 * 32 +  2,     // Software Guard Extensions
             SMEP                    =  3 * 32 +  7,     // Supervisor Mode Execution Prevention
+            RDT_M                   =  3 * 32 + 12,     // RDT Monitoring (PQM)
+            RDT_A                   =  3 * 32 + 15,     // RDT Allocation (PQE)
             SMAP                    =  3 * 32 + 20,     // Supervisor Mode Access Prevention
             // EAX=0x7 ECX=0x0 (ECX)
             UMIP                    =  4 * 32 +  2,     // User Mode Instruction Prevention
