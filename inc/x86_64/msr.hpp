@@ -78,6 +78,9 @@ class Msr final
             IA32_HWP_REQUEST                = 0x774,        // HWP
             IA32_HWP_PECI_REQUEST_INFO      = 0x775,
             IA32_HWP_STATUS                 = 0x777,        // HWP
+            IA32_L3_QOS_CFG                 = 0xc81,        // RDT-A and L3 CDP
+            IA32_L2_QOS_CFG                 = 0xc82,        // RDT-A and L2 CDP
+            IA32_PQR_ASSOC                  = 0xc8f,        // RDT-M or RDT-A
             IA32_XSS                        = 0xda0,        // XSAVE
 
             IA32_EFER                       = 0xc0000080,   // LM
@@ -101,6 +104,9 @@ class Msr final
             IA32_MC_STATUS                  = 0x401,        // IA32_MCG_CAP[7:0] > 0
             IA32_MC_ADDR                    = 0x402,        // IA32_MCG_CAP[7:0] > 0
             IA32_MC_MISC                    = 0x403,        // IA32_MCG_CAP[7:0] > 0
+            IA32_L3_MASK                    = 0xc90,        // RDT-A (max 128)
+            IA32_L2_MASK                    = 0xd10,        // RDT-A (max 64)
+            IA32_MB_THRT                    = 0xd50,        // RDT-A (max 64)
         };
 
         ALWAYS_INLINE
