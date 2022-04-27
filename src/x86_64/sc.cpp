@@ -21,6 +21,7 @@
  */
 
 #include "assert.hpp"
+#include "cos.hpp"
 #include "counter.hpp"
 #include "ec.hpp"
 #include "hazards.hpp"
@@ -136,6 +137,8 @@ void Scheduler::schedule (bool blocked)
     for (;;) {
 
         current = ready.dequeue (t);
+
+        Cos::make_current (current->cos);
 
         Timeout_budget::timeout.enqueue (t + current->left);
         current->ec->activate();

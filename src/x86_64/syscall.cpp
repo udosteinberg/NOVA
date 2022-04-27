@@ -21,6 +21,7 @@
  */
 
 #include "acpi.hpp"
+#include "cos.hpp"
 #include "counter.hpp"
 #include "ec_arch.hpp"
 #include "hazards.hpp"
@@ -323,7 +324,7 @@ void Ec::sys_create_sc (Ec *const self)
         sys_finish<Status::BAD_CAP> (self);
     }
 
-    if (EXPECT_FALSE (!r.prio() || !r.budget() || r.cos())) {
+    if (EXPECT_FALSE (!r.prio() || !r.budget() || !Cos::valid_cos (r.cos()))) {
         trace (TRACE_ERROR, "%s: Invalid prio/budget/cos", __func__);
         sys_finish<Status::BAD_PAR> (self);
     }
@@ -631,6 +632,22 @@ void Ec::sys_ctrl_hw (Ec *const self)
 
         default:            // Invalid Operation
             s = Status::BAD_PAR;
+            break;
+
+        case 7:             // MBA L2 Delay
+            s = Cos::cfg_mb_thrt (static_cast<uint16>(r.desc()), static_cast<uint16>(r.desc() >> 16));
+            break;
+
+        case 6:             // CAT L2 Capacity Bitmask
+            s = Cos::cfg_l2_mask (static_cast<uint16>(r.desc()), static_cast<uint32>(r.desc() >> 16));
+            break;
+
+        case 5:             // CAT L3 Capacity Bitmask
+            s = Cos::cfg_l3_mask (static_cast<uint16>(r.desc()), static_cast<uint32>(r.desc() >> 16));
+            break;
+
+        case 4:             // QOS Configuration
+            s = Cos::cfg_qos (static_cast<uint8>(r.desc()));
             break;
 
         case 0:             // S-State Transition

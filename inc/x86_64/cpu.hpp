@@ -97,6 +97,8 @@ class Cpu
             HWP_FAM         = 2 * 32 + 18,      // HWP Fast Access Mode
             // 0x7.EBX
             SMEP            = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
+            RDT_M           = 3 * 32 + 12,      // RDT Monitoring (PQM)
+            RDT_A           = 3 * 32 + 15,      // RDT Allocation (PQE)
             SMAP            = 3 * 32 + 20,      // Supervisor Mode Access Prevention
             // 0x7.ECX
             UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
