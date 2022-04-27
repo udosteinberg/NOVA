@@ -21,6 +21,7 @@
  */
 
 #include "acpi.hpp"
+#include "cos.hpp"
 #include "counter.hpp"
 #include "ec_arch.hpp"
 #include "interrupt.hpp"
@@ -267,7 +268,7 @@ void Ec::sys_create_sc (Ec *const self)
 
     trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx EC:%#lx P:%u B:%u C:%u", static_cast<void *>(self), __func__, r.sel(), r.pd(), r.ec(), r.prio(), r.budget(), r.cos());
 
-    if (!r.prio() || !r.budget()) [[unlikely]]
+    if (!r.prio() || !r.budget() || !Cos::valid_cos (r.cos())) [[unlikely]]
         self->sys_finish_status (Status::BAD_PAR);
 
     auto const obj { self->regs.get_obj() };
@@ -497,6 +498,18 @@ void Ec::sys_ctrl_hw (Ec *const self)
 
         default:            // Invalid Operation
             self->sys_finish_status (Status::BAD_PAR);
+
+        case 7:             // MBA L2 Delay
+            self->sys_finish_status (Cos::cfg_mb_thrt (static_cast<uint16_t>(r.desc()), static_cast<uint16_t>(r.desc() >> 16)));
+
+        case 6:             // CAT L2 Capacity Bitmask
+            self->sys_finish_status (Cos::cfg_l2_mask (static_cast<uint16_t>(r.desc()), static_cast<uint32_t>(r.desc() >> 16)));
+
+        case 5:             // CAT L3 Capacity Bitmask
+            self->sys_finish_status (Cos::cfg_l3_mask (static_cast<uint16_t>(r.desc()), static_cast<uint32_t>(r.desc() >> 16)));
+
+        case 4:             // QOS Configuration
+            self->sys_finish_status (Cos::cfg_qos (static_cast<uint8_t>(r.desc())));
 
         case 0:             // S-State Transition
             Acpi_fixed::Transition t { static_cast<uint16_t>(BIT (15) | r.desc()) };
