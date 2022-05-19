@@ -92,6 +92,61 @@ class Fpu final
         {
             uint64_t    xcr             { Component::X87 };
             uint64_t    xss             { 0 };
+
+            /*
+             * Switch XSAVE state between guest/host
+             *
+             * VMM-provided guest state was sanitized by constrain_* functions below
+             *
+             * @param o     Old live state
+             * @param n     New live state
+             */
+            ALWAYS_INLINE
+            static inline void make_current (State_xsv const &o, State_xsv const &n)
+            {
+                if (EXPECT_FALSE (o.xcr != n.xcr))
+                    Cr::set_xcr (0, n.xcr);
+
+                if (EXPECT_FALSE (o.xss != n.xss))
+                    Msr::write (Msr::Register::IA32_XSS, n.xss);
+            }
+
+            /*
+             * Constrain XCR0 value to ensure XSETBV does not fault
+             *
+             * @param v     XCR0 value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64_t constrain_xcr (uint64_t v)
+            {
+                // Setting any AVX512 bit requires all AVX512 bits and the AVX bit
+                if (v & Component::AVX512)
+                    v |= Component::AVX512 | Component::AVX;
+
+                // Setting the AVX bit requires the SSE bit
+                if (v & Component::AVX)
+                    v |= Component::SSE;
+
+                // The X87 bit is always required
+                v |= Component::X87;
+
+                // Constrain to bits that are manageable
+                return hst_xsv.xcr & v;
+            }
+
+            /*
+             * Constrain XSS value to ensure WRMSR does not fault
+             *
+             * @param v     XSS value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64_t constrain_xss (uint64_t v)
+            {
+                // Constrain to bits that are manageable
+                return hst_xsv.xss & v;
+            }
         };
 
         static State_xsv hst_xsv CPULOCAL;
