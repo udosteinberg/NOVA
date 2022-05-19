@@ -53,6 +53,7 @@ void Ec_arch::handle_svm()
     Ec *const self = current;
 
     Cpu::hst_tsc.make_current (self->regs.gst_tsc);     // Restore TSC host state
+    Fpu::hst_xsv.make_current (self->regs.gst_xsv);     // Restore XSV host state
 
     self->regs.vmcb->tlb_control = 0;
 
