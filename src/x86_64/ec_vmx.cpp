@@ -76,6 +76,7 @@ void Ec_arch::handle_vmx()
     self->regs.cpu.kernel_gs_base = Msr::read (Msr::Register::IA32_KERNEL_GS_BASE);
 
     Cpu::State::make_current (self->regs.cpu, Cpu::hstate);     // Restore CPU host state
+    Fpu::State::make_current (self->regs.fpu, Fpu::hstate);     // Restore FPU host state
 
     Cpu::hazard = (Cpu::hazard | HZD_TR) & ~HZD_FPU;
 

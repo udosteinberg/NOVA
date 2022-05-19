@@ -53,6 +53,8 @@ void Ec_arch::handle_svm()
 {
     Ec *const self = current;
 
+    Fpu::State::make_current (self->regs.fpu, Fpu::hstate);     // Restore FPU host state
+
     self->regs.vmcb->tlb_control = 0;
 
     mword reason = static_cast<mword>(self->regs.vmcb->exitcode);

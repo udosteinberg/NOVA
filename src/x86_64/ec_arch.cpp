@@ -266,6 +266,7 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
         Cr::set_cr2 (self->exc_regs().cr2);
 
     Cpu::State::make_current (Cpu::hstate, self->regs.cpu);     // Restore CPU guest state
+    Fpu::State::make_current (Fpu::hstate, self->regs.fpu);     // Restore FPU guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
@@ -275,6 +276,7 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
                   : : "m" (self->exc_regs()), "m" (DSTK_TOP) : "memory");
 
     Cpu::State::make_current (self->regs.cpu, Cpu::hstate);
+    Fpu::State::make_current (self->regs.fpu, Fpu::hstate);
 
     trace (0, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::Encoding::VMX_INST_ERROR));
 
@@ -292,6 +294,8 @@ void Ec_arch::ret_user_vmexit_svm (Ec *const self)
         pd->gtlb.clr (Cpu::id);
         self->regs.vmcb->tlb_control = 1;
     }
+
+    Fpu::State::make_current (Fpu::hstate, self->regs.fpu);     // Restore FPU guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)

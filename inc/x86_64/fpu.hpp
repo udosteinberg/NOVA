@@ -91,6 +91,62 @@ class Fpu
         {
             uint64 xcr              { Component::X87 };
             uint64 xss              { 0 };
+
+            /*
+             * Switch XSAVE state between guest/host
+             *
+             * VMM-provided guest state was sanitized by constrain_* functions below
+             *
+             * @param o     Old live state
+             * @param n     New live state
+             */
+            ALWAYS_INLINE
+            static inline void make_current (State const &o, State const &n)
+            {
+                if (EXPECT_FALSE (o.xcr != n.xcr))
+                    Cr::set_xcr (0, n.xcr);
+
+                if (EXPECT_FALSE (o.xss != n.xss))
+                    Msr::write (Msr::Register::IA32_XSS, n.xss);
+            }
+
+            /*
+             * Constrain XCR0 value to ensure XSETBV does not fault
+             *
+             * @param v     XCR0 value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64 constrain_xcr (uint64 v)
+            {
+                // Setting any AVX512 bit requires all AVX512 bits and the AVX bit
+                if (v & Component::AVX512)
+                    v |= Component::AVX512 | Component::AVX;
+
+                // Setting the AVX bit requires the SSE bit
+                if (v & Component::AVX)
+                    v |= Component::SSE;
+
+                // The X87 bit is always required
+                v |= Component::X87;
+
+                // Constrain to bits that are manageable
+                return hstate.xcr & v;
+            }
+
+            /*
+             * Constrain XSS value to ensure WRMSR does not fault
+             *
+             * @param v     XSS value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64 constrain_xss (uint64 v)
+            {
+                // Constrain to bits that are manageable
+                return hstate.xss & v;
+            }
+
         } hstate CPULOCAL;
 
         // XSAVE area format: XSAVES/compact (true), XSAVE/standard (false)

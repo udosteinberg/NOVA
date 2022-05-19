@@ -22,7 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
-#include "cpu.hpp"
+#include "fpu.hpp"
 #include "selectors.hpp"
 #include "svm.hpp"
 #include "types.hpp"
@@ -108,6 +108,7 @@ class alignas (16) Cpu_regs
 
         Exc_regs            exc;
         Cpu::State          cpu;
+        Fpu::State          fpu;
 
         inline Cpu_regs()         : vmcb (nullptr) {}
         inline Cpu_regs (Vmcb *v) : vmcb (v) {}
