@@ -74,6 +74,7 @@ void Ec_arch::handle_vmx()
     self->regs.cpu.kernel_gs_base = Msr::read (Msr::Register::IA32_KERNEL_GS_BASE);
 
     Cpu::State::make_current (self->regs.cpu, Cpu::hstate);     // Restore CPU host state
+    Fpu::State::make_current (self->regs.fpu, Fpu::hstate);     // Restore FPU host state
 
     Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
@@ -94,6 +95,7 @@ void Ec_arch::failed_vmx()
     Ec *const self { current };
 
     Cpu::State::make_current (self->regs.cpu, Cpu::hstate);     // Restore CPU host state
+    Fpu::State::make_current (self->regs.fpu, Fpu::hstate);     // Restore FPU host state
 
     trace (TRACE_ERROR, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::Encoding::VMX_INST_ERROR));
 
