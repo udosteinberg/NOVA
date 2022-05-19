@@ -75,6 +75,7 @@ void Ec_arch::handle_vmx()
 
     Cpu::State_sys::make_current (self->regs.gst_sys, Cpu::hst_sys);    // Restore SYS host state
     Cpu::State_tsc::make_current (self->regs.gst_tsc, Cpu::hst_tsc);    // Restore TSC host state
+    Fpu::State_xsv::make_current (self->regs.gst_xsv, Fpu::hst_xsv);    // Restore XSV host state
 
     Cpu::hazard = (Cpu::hazard | Hazard::TR) & ~Hazard::FPU;
 
@@ -96,6 +97,7 @@ void Ec_arch::failed_vmx()
 
     Cpu::State_sys::make_current (self->regs.gst_sys, Cpu::hst_sys);    // Restore SYS host state
     Cpu::State_tsc::make_current (self->regs.gst_tsc, Cpu::hst_tsc);    // Restore TSC host state
+    Fpu::State_xsv::make_current (self->regs.gst_xsv, Fpu::hst_xsv);    // Restore XSV host state
 
     trace (TRACE_ERROR, "VM entry failed with error %#x", Vmcs::read<uint32> (Vmcs::Encoding::VMX_INST_ERROR));
 
