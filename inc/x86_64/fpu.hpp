@@ -92,6 +92,60 @@ class Fpu final
         {
             uint64_t    xcr             { Component::X87 };
             uint64_t    xss             { 0 };
+
+            /*
+             * Switch XSAVE state between guest/host
+             *
+             * VMM-provided guest state was sanitized by constrain_* functions below
+             *
+             * @param this  New live state
+             * @param o     Old live state
+             */
+            void make_current (State_xsv const &o) const
+            {
+                if (o.xcr != xcr) [[unlikely]]
+                    Cr::set_xcr (0, xcr);
+
+                if (o.xss != xss) [[unlikely]]
+                    Msr::write (Msr::Reg64::IA32_XSS, xss);
+            }
+
+            /*
+             * Constrain XCR0 value to ensure XSETBV does not fault
+             *
+             * @param v     XCR0 value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64_t constrain_xcr (uint64_t v)
+            {
+                // Setting any AVX512 bit requires all AVX512 bits and the AVX bit
+                if (v & Component::AVX512)
+                    v |= Component::AVX512 | Component::AVX;
+
+                // Setting the AVX bit requires the SSE bit
+                if (v & Component::AVX)
+                    v |= Component::SSE;
+
+                // The X87 bit is always required
+                v |= Component::X87;
+
+                // Constrain to bits that are manageable
+                return hst_xsv.xcr & v;
+            }
+
+            /*
+             * Constrain XSS value to ensure WRMSR does not fault
+             *
+             * @param v     XSS value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64_t constrain_xss (uint64_t v)
+            {
+                // Constrain to bits that are manageable
+                return hst_xsv.xss & v;
+            }
         };
 
         static State_xsv hst_xsv CPULOCAL;

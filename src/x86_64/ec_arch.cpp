@@ -310,6 +310,7 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
 
     r.gst_sys.make_current (Cpu::hst_sys);              // Restore SYS guest state
     r.gst_tsc.make_current (Cpu::hst_tsc);              // Restore TSC guest state
+    r.gst_xsv.make_current (Fpu::hst_xsv);              // Restore XSV guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
@@ -338,6 +339,7 @@ void Ec_arch::ret_user_vmexit_svm (Ec *const self)
     }
 
     r.gst_tsc.make_current (Cpu::hst_tsc);              // Restore TSC guest state
+    r.gst_xsv.make_current (Fpu::hst_xsv);              // Restore XSV guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
