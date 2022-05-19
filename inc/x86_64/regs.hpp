@@ -22,7 +22,7 @@
 #pragma once
 
 #include "arch.hpp"
-#include "cpu.hpp"
+#include "fpu.hpp"
 #include "hazard.hpp"
 #include "selectors.hpp"
 #include "space_gst.hpp"
@@ -115,6 +115,7 @@ class alignas (16) Cpu_regs final
         Exc_regs                exc;
         Cpu::State_sys          gst_sys;
         Cpu::State_tsc          gst_tsc;
+        Fpu::State_xsv          gst_xsv;
         Refptr<Space_obj> const obj;
         Refptr<Space_hst> const hst;
         Refptr<Space_gst>       gst     { nullptr };
