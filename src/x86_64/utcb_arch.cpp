@@ -179,6 +179,11 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
     if (m & Mtd_arch::Item::DR)
         dr7 = Vmcs::read<uintptr_t> (Vmcs::Encoding::GUEST_DR7);
 
+    if (m & Mtd_arch::Item::XSAVE) {
+        xcr0 = c.gst_xsv.xcr;
+        xss  = c.gst_xsv.xss;
+    }
+
     if (m & Mtd_arch::Item::SYSCALL) {
         star  = c.gst_sys.star;
         lstar = c.gst_sys.lstar;
@@ -350,6 +355,11 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
     if (m & Mtd_arch::Item::DR)
         Vmcs::write (Vmcs::Encoding::GUEST_DR7, dr7);
 
+    if (m & Mtd_arch::Item::XSAVE) {
+        c.gst_xsv.xcr = Fpu::State_xsv::constrain_xcr (xcr0);
+        c.gst_xsv.xss = Fpu::State_xsv::constrain_xss (xss);
+    }
+
     if (m & Mtd_arch::Item::SYSCALL) {
         c.gst_sys.star  = Cpu::State_sys::constrain_star  (star);
         c.gst_sys.lstar = Cpu::State_sys::constrain_canon (lstar);
@@ -501,6 +511,11 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
     if (m & Mtd_arch::Item::DR)
         dr7 = v->dr7;
 
+    if (m & Mtd_arch::Item::XSAVE) {
+        xcr0 = c.gst_xsv.xcr;
+        xss  = c.gst_xsv.xss;
+    }
+
     if (m & Mtd_arch::Item::SYSCALL) {
         star  = v->star;
         lstar = v->lstar;
@@ -617,6 +632,11 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
 
     if (m & Mtd_arch::Item::DR)
         v->dr7 = dr7;
+
+    if (m & Mtd_arch::Item::XSAVE) {
+        c.gst_xsv.xcr = Fpu::State_xsv::constrain_xcr (xcr0);
+        c.gst_xsv.xss = Fpu::State_xsv::constrain_xss (xss);
+    }
 
     if (m & Mtd_arch::Item::SYSCALL) {
         v->star   = Cpu::State_sys::constrain_star  (star);
