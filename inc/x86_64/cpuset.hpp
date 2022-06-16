@@ -1,5 +1,5 @@
 /*
- * CPU Set
+ * Atomic CPU Set
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,36 +21,18 @@
 
 #pragma once
 
-#include "atomic.hpp"
-#include "macros.hpp"
-#include "types.hpp"
+#include "bitmap.hpp"
+#include "config.hpp"
 
-class Cpuset
-{
-    private:
-        Atomic<uintptr_t> msk[1] {};
-
-        static constexpr auto bits { 8 * sizeof (*msk) };
-
-        inline auto &cpu_to_msk (unsigned c)       { return msk[c / bits]; }
-        inline auto &cpu_to_msk (unsigned c) const { return msk[c / bits]; }
-
-        static inline auto cpu_to_bit (unsigned c) { return BITN (c % bits); }
-
-    public:
-        ALWAYS_INLINE
-        inline bool tst (unsigned c) const { return cpu_to_msk (c) & cpu_to_bit (c); }
-
-        ALWAYS_INLINE
-        inline void clr (unsigned c) { cpu_to_msk (c) &= ~cpu_to_bit (c); }
-
-        ALWAYS_INLINE
-        inline bool tas (unsigned c) { return cpu_to_msk (c).test_and_set (cpu_to_bit (c)); }
-
-        ALWAYS_INLINE
-        inline void merge (Cpuset const &x)
-        {
-            for (unsigned i = 0; i < sizeof (msk) / sizeof (*msk); i++)
-                msk[i] |= x.msk[i];
-        }
-};
+/*
+ * CPU A (marking TLB dirty for EC X->HST)      CPU B (switching to EC X)
+ *
+ * (1) ST.SEQ_CST (X->HST->cpuset = dirty)      (3) ST.SEQ_CST (Ec::current = X)
+ * (2) LD.SEQ_CST (Ec::current)                 (4) LD.SEQ_CST (X->HST->cpuset)
+ *
+ * Required Memory Ordering
+ *
+ * (1) happens before (2)                       (3) happens before (4)
+ * (2) synchronizes with (3)                    (4) synchronizes with (1)
+ */
+using Cpuset = Bitmap<NUM_CPU, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST>;
