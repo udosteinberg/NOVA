@@ -25,7 +25,7 @@
 #include "macros.hpp"
 #include "types.hpp"
 
-class Cpuset
+class Cpuset final
 {
     private:
         Atomic<uintptr_t> msk[1] { 0 };
@@ -48,9 +48,9 @@ class Cpuset
         inline bool tas (unsigned c) { return cpu_to_msk (c).test_and_set (cpu_to_bit (c)); }
 
         ALWAYS_INLINE
-        inline void merge (Cpuset const &x)
+        inline void set()
         {
             for (unsigned i = 0; i < sizeof (msk) / sizeof (*msk); i++)
-                msk[i] |= x.msk[i];
+                msk[i] = ~0UL;
         }
 };
