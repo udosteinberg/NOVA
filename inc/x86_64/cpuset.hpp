@@ -5,7 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,36 +21,54 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "atomic.hpp"
+#include "config.hpp"
 #include "macros.hpp"
 #include "types.hpp"
 
-class Cpuset
+class Cpuset final
 {
     private:
-        Atomic<uintptr_t> msk[1] { 0 };
+        static constexpr auto bits { 8 * sizeof (uintptr_t) };
+        static constexpr auto elem { ((NUM_CPU + bits - 1) & ~(bits - 1)) / bits };
 
-        static constexpr auto bits { 8 * sizeof (*msk) };
+        static auto cpu_to_bit (cpu_t c) { return BITN (c % bits); }
 
-        inline auto &cpu_to_msk (unsigned c)       { return msk[c / bits]; }
-        inline auto &cpu_to_msk (unsigned c) const { return msk[c / bits]; }
+        auto &cpu_to_msk (cpu_t c)       { return msk[c / bits]; }
+        auto &cpu_to_msk (cpu_t c) const { return msk[c / bits]; }
 
-        static inline auto cpu_to_bit (unsigned c) { return BITN (c % bits); }
+        Atomic<uintptr_t> msk[elem] { 0 };
 
     public:
         ALWAYS_INLINE
-        inline bool tst (unsigned c) const { return cpu_to_msk (c) & cpu_to_bit (c); }
-
-        ALWAYS_INLINE
-        inline void clr (unsigned c) { cpu_to_msk (c) &= ~cpu_to_bit (c); }
-
-        ALWAYS_INLINE
-        inline bool tas (unsigned c) { return cpu_to_msk (c).test_and_set (cpu_to_bit (c)); }
-
-        ALWAYS_INLINE
-        inline void merge (Cpuset const &x)
+        bool tst (cpu_t c) const
         {
-            for (unsigned i = 0; i < sizeof (msk) / sizeof (*msk); i++)
-                msk[i] |= x.msk[i];
+            assert (c < NUM_CPU);
+
+            return cpu_to_msk (c) & cpu_to_bit (c);
+        }
+
+        ALWAYS_INLINE
+        void clr (cpu_t c)
+        {
+            assert (c < NUM_CPU);
+
+            cpu_to_msk (c) &= ~cpu_to_bit (c);
+        }
+
+        ALWAYS_INLINE
+        bool tas (cpu_t c)
+        {
+            assert (c < NUM_CPU);
+
+            return cpu_to_msk (c).test_and_set (cpu_to_bit (c));
+        }
+
+        ALWAYS_INLINE
+        void set()
+        {
+            for (unsigned i { 0 }; i < elem; i++)
+                msk[i] = ~0UL;
         }
 };
