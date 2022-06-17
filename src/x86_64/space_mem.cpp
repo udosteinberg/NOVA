@@ -30,8 +30,6 @@
 #include "svm.hpp"
 #include "vectors.hpp"
 
-unsigned Space_mem::did_ctr;
-
 void Space_mem::init (cpu_t cpu)
 {
     if (!cpus.tas (cpu)) {
