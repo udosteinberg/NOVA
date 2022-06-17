@@ -27,11 +27,13 @@
 #include "ptab_dpt.hpp"
 #include "ptab_ept.hpp"
 #include "ptab_hpt.hpp"
+#include "sdid.hpp"
 
 class Space_mem
 {
     private:
         Pcid pcid;
+        Sdid sdid;
 
     public:
         Hptp loc[NUM_CPU];
@@ -42,18 +44,14 @@ class Space_mem
             Hptp npt;
         };
 
-        mword did;
-
         Cpuset cpus;
         Cpuset htlb;
         Cpuset gtlb;
 
-        static unsigned did_ctr;
-
-        ALWAYS_INLINE
-        inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
+        inline Space_mem() {}
 
         inline auto get_pcid() const { return pcid; }
+        inline auto get_sdid() const { return sdid; }
 
         Paging::Permissions lookup (uint64 v, uint64 &p, unsigned &o)
         {
