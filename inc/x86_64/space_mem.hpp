@@ -27,11 +27,13 @@
 #include "ept.hpp"
 #include "hpt.hpp"
 #include "pcid.hpp"
+#include "sdid.hpp"
 
 class Space_mem
 {
     private:
         uint16_t const pcid;
+        uint16_t const sdid;
 
     public:
         Hpt loc[NUM_CPU];
@@ -42,19 +44,16 @@ class Space_mem
             Hpt npt;
         };
 
-        mword did;
-
         Cpuset cpus;
         Cpuset htlb;
         Cpuset gtlb;
 
-        static unsigned did_ctr;
+        explicit Space_mem() : pcid { Pcid::allocator.alloc().val() }, sdid { Sdid::allocator.alloc().val() } {}
 
-        explicit Space_mem() : pcid { Pcid::allocator.alloc().val() }, did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
-
-        ~Space_mem() { Pcid::allocator.free (pcid); }
+        ~Space_mem() { Pcid::allocator.free (pcid); Sdid::allocator.free (sdid); }
 
         auto get_pcid() const { return pcid; }
+        auto get_sdid() const { return sdid; }
 
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
