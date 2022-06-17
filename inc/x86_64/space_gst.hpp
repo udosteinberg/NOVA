@@ -24,6 +24,7 @@
 #include "cpuset.hpp"
 #include "ptab_ept.hpp"
 #include "space_mem.hpp"
+#include "tlb.hpp"
 
 class Space_gst : public Space_mem<Space_gst>
 {
@@ -40,7 +41,7 @@ class Space_gst : public Space_mem<Space_gst>
 
         auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma, bool &inv) { return eptp.update (v, p, o, pm, ma, inv); }
 
-        [[nodiscard]] auto sync() { gtlb.set_all(); return true; }
+        [[nodiscard]] auto sync() { gtlb.set_all(); return Tlb::shootdown (this); }
 
         auto invalidate() const { return eptp.invalidate(); }
 

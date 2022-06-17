@@ -26,6 +26,7 @@
 #include "pcid.hpp"
 #include "ptab_hpt.hpp"
 #include "space_mem.hpp"
+#include "tlb.hpp"
 
 class Space_hst : public Space_mem<Space_hst>
 {
@@ -55,7 +56,7 @@ class Space_hst : public Space_mem<Space_hst>
         auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma)            { return hptp.update (v, p, o, pm, ma); }
         auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma, bool &inv) { return hptp.update (v, p, o, pm, ma, inv); }
 
-        [[nodiscard]] auto sync() { htlb.set_all(); return true; }
+        [[nodiscard]] auto sync() { htlb.set_all(); return Tlb::shootdown (this); }
 
         ALWAYS_INLINE
         inline void make_current()
