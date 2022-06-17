@@ -27,11 +27,13 @@
 #include "ept.hpp"
 #include "hpt.hpp"
 #include "pcid.hpp"
+#include "sdid.hpp"
 
 class Space_mem
 {
     private:
         Pcid pcid;
+        Sdid sdid;
 
     public:
         Hpt loc[NUM_CPU];
@@ -42,18 +44,14 @@ class Space_mem
             Hpt npt;
         };
 
-        mword did;
-
         Cpuset cpus;
         Cpuset htlb;
         Cpuset gtlb;
 
-        static unsigned did_ctr;
-
-        ALWAYS_INLINE
-        inline Space_mem() : did (__atomic_add_fetch (&did_ctr, 1, __ATOMIC_SEQ_CST)) {}
+        inline Space_mem() {}
 
         inline auto get_pcid() const { return pcid; }
+        inline auto get_sdid() const { return sdid; }
 
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
