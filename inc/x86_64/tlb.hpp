@@ -1,5 +1,5 @@
 /*
- * Guest Memory Space
+ * Translation Lookaside Buffer (TLB)
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
@@ -21,26 +21,10 @@
 
 #pragma once
 
-#include "cpuset.hpp"
-#include "ptab_ept.hpp"
-#include "space_mem.hpp"
-#include "tlb.hpp"
+class Space;
 
-class Space_gst : public Space_mem<Space_gst>
+class Tlb final
 {
-    private:
-        Eptp    eptp;
-
     public:
-        Cpuset  gtlb;
-
-        static constexpr auto num { BIT64 (Eptp::lev * Eptp::bpl) };
-
-        inline auto update (uint64 v, uint64 p, unsigned o, Paging::Permissions pm, Memattr::Cacheability ca, Memattr::Shareability sh) { return eptp.update (v, p, o, pm, ca, sh); }
-
-        inline void sync() { gtlb.set(); Tlb::shootdown (this); }
-
-        inline void invalidate() { eptp.invalidate(); }
-
-        inline auto get_phys() const { return eptp.root_addr(); }
+        static void shootdown (Space *);
 };
