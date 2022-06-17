@@ -24,6 +24,7 @@
 #include "cpuset.hpp"
 #include "ptab_ept.hpp"
 #include "space_mem.hpp"
+#include "tlb.hpp"
 
 class Space_gst : public Space_mem<Space_gst>
 {
@@ -40,7 +41,7 @@ class Space_gst : public Space_mem<Space_gst>
 
         inline auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma) { return eptp.update (v, p, o, pm, ma); }
 
-        inline void sync() { gtlb.set(); }
+        inline void sync() { gtlb.set(); Tlb::shootdown (this); }
 
         inline void invalidate() { eptp.invalidate(); }
 
