@@ -40,6 +40,8 @@ class Utcb;
 
 class Ec : private Kobject, private Queue<Sc>, public Queue<Ec>::Element
 {
+    friend class Tlb;
+
     private:
         void        (*cont)() ALIGNED (16);
         Cpu_regs    regs;
