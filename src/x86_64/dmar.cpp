@@ -82,7 +82,7 @@ void Dmar::assign (unsigned long rid, Pd *p)
 
     flush_ctx();
 
-    c->set (lev | p->did << 8, p->dpt.root (lev + 1) | 1);
+    c->set (lev | p->get_sdid() << 8, p->dpt.root (lev + 1) | 1);
 }
 
 void Dmar::fault_handler()
