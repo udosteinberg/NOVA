@@ -41,6 +41,8 @@ class Utcb;
 
 class Ec : private Kobject, public Timeout_hypercall, public Queue<Ec>::Element, private Queue<Sc>
 {
+    friend class Tlb;
+
     private:
         void        (*cont)() ALIGNED (16);
         Cpu_regs    regs;

@@ -21,6 +21,8 @@
 
 #pragma once
 
+class Space;
+
 class Tlb final
 {
     public:
@@ -29,4 +31,6 @@ class Tlb final
             SELF,               // This core
             ALL,                // All cores
         };
+
+        [[nodiscard]] __attribute__((nonnull)) static bool shootdown (Space const *);
 };

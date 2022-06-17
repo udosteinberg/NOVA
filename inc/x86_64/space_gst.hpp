@@ -26,6 +26,7 @@
 #include "ptab_gst_amd.hpp"
 #include "ptab_gst_itl.hpp"
 #include "space_mem.hpp"
+#include "tlb.hpp"
 
 class Space_gst : public Space_mem<Space_gst>
 {
@@ -107,7 +108,7 @@ class Space_gst : public Space_mem<Space_gst>
 
                 default:
                     gtlb.set_all();
-                    return true;
+                    return Tlb::shootdown (this);
             }
         }
 

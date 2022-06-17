@@ -23,9 +23,11 @@
 
 #include "cpu.hpp"
 #include "cpuset.hpp"
+#include "hazard.hpp"
 #include "pcid.hpp"
 #include "ptab_hst.hpp"
 #include "space_mem.hpp"
+#include "tlb.hpp"
 
 class Space_hst : public Space_mem<Space_hst>
 {
@@ -61,11 +63,13 @@ class Space_hst : public Space_mem<Space_hst>
 
                 case Tlb::Invalidate::SELF:
                     htlb.set (Cpu::id);
+                    if (current == this)
+                        Cpu::hazard |= Hazard::SCHED;
                     return true;
 
                 default:
                     htlb.set_all();
-                    return true;
+                    return Tlb::shootdown (this);
             }
         }
 
