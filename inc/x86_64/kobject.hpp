@@ -23,6 +23,7 @@
 
 #include "macros.hpp"
 #include "refcnt.hpp"
+#include "slab.hpp"
 
 class Kobject : public Refcnt
 {
@@ -63,4 +64,15 @@ class Kobject : public Refcnt
         Subtype const   subtype;
 
         explicit Kobject (Type t, Subtype s = Subtype::NONE) : type { t }, subtype { s } {}
+
+        [[nodiscard]] static void *operator new (size_t, Slab_cache &cache) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static void operator delete (void *ptr, Slab_cache &cache)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 };
