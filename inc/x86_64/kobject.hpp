@@ -22,6 +22,7 @@
 #pragma once
 
 #include "macros.hpp"
+#include "slab.hpp"
 #include "types.hpp"
 
 class Kobject
@@ -63,4 +64,15 @@ class Kobject
         Subtype const   subtype;
 
         inline explicit Kobject (Type t, Subtype s = Subtype::NONE) : type (t), subtype (s) {}
+
+        [[nodiscard]] static inline void *operator new (size_t, Slab_cache &cache) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static inline void operator delete (void *ptr, Slab_cache &cache)
+        {
+            if (EXPECT_TRUE (ptr))
+                cache.free (ptr);
+        }
 };
