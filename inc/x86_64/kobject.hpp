@@ -24,6 +24,7 @@
 #include "macros.hpp"
 #include "rcu.hpp"
 #include "refcnt.hpp"
+#include "slab.hpp"
 
 class Kobject : public Refcnt, public Rcu::Element
 {
@@ -71,4 +72,14 @@ class Kobject : public Refcnt, public Rcu::Element
 
     protected:
         explicit Kobject (Type t, Subtype s = Subtype::NONE) : type { t }, subtype { s } {}
+
+        [[nodiscard]] static void *operator new (size_t, Slab_cache &cache) noexcept
+        {
+            return cache.alloc();
+        }
+
+        static void operator delete (void *ptr, Slab_cache &cache)
+        {
+            cache.free (ptr);
+        }
 };
