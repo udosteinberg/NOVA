@@ -29,6 +29,7 @@
 #include "hip.hpp"
 #include "interrupt.hpp"
 #include "multiboot.hpp"
+#include "ptab_hpt.hpp"
 #include "sm.hpp"
 #include "space_hst.hpp"
 #include "space_obj.hpp"
