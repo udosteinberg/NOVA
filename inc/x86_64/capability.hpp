@@ -138,4 +138,22 @@ class Capability final
 
         ALWAYS_INLINE
         inline auto validate (Perm_sm p) const { return validate (Kobject::Type::SM, std::to_underlying (p)); }
+
+        ALWAYS_INLINE
+        static inline bool validate_take_grant (Capability const &cst, Capability const &cdt, Kobject::Subtype &st, Kobject::Subtype &dt)
+        {
+            // Check capability permissions: cst requires TAKE, cdt requires GRANT
+            if (!(cst.prm() & std::to_underlying (Perm_sp::TAKE)) || !(cdt.prm() & std::to_underlying (Perm_sp::GRANT)))
+                return false;
+
+            // Non-zero permissions imply both capabilities are not null capabilities
+            auto const s { cst.obj() };
+            auto const d { cdt.obj() };
+
+            st = s->subtype;
+            dt = d->subtype;
+
+            // Check capability types: both capabilities must be PD subtypes
+            return s->type == Kobject::Type::PD && d->type == Kobject::Type::PD;
+        }
 };
