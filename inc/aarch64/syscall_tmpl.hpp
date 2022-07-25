@@ -1,5 +1,5 @@
 /*
- * Space
+ * System-Call Interface
  *
  * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -17,21 +17,5 @@
 
 #pragma once
 
-#include "atomic.hpp"
-#include "kobject.hpp"
-#include "status.hpp"
-
-class Pd;
-class Space_hst;
-
-class Space : public Kobject
-{
-    private:
-        Pd *const pd;
-
-    protected:
-        inline Space (Kobject::Subtype s, Pd *p) : Kobject (Kobject::Type::PD, s), pd (p) {}
-
-    public:
-        inline auto get_pd() const { return pd; }
-};
+template void Ec::send_msg<Ec_arch::ret_user_exception> (Ec *);
+template void Ec::send_msg<Ec_arch::ret_user_vmexit> (Ec *);
