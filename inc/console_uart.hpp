@@ -18,7 +18,7 @@
 #pragma once
 
 #include "cmdline.hpp"
-#include "console.hpp"
+#include "console_mbuf.hpp"
 #include "lowlevel.hpp"
 #include "ptab_hpt.hpp"
 #include "wait.hpp"
@@ -51,6 +51,12 @@ class Console_uart : protected Console
 
         void sync()
         {
+            auto const mbuf { Console_mbuf::singleton.regs };
+
+            if (EXPECT_TRUE (mbuf))
+                for (uint32_t r { mbuf->r_idx }, w { mbuf->w_idx }; r != w; r = (r + 1) % mbuf->entries)
+                    outc (mbuf->buffer[r]);
+
             enable();
         }
 
