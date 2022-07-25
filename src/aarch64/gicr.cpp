@@ -21,7 +21,6 @@
 #include "gicd.hpp"
 #include "gicr.hpp"
 #include "lowlevel.hpp"
-#include "ptab_hpt.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
 
