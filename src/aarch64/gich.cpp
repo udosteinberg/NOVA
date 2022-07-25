@@ -17,7 +17,6 @@
 
 #include "acpi.hpp"
 #include "gich.hpp"
-#include "ptab_hpt.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
 

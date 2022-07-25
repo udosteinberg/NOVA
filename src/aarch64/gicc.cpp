@@ -18,7 +18,6 @@
 #include "acpi.hpp"
 #include "assert.hpp"
 #include "gicc.hpp"
-#include "ptab_hpt.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
 
