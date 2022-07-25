@@ -1,5 +1,5 @@
 /*
- * Floating Point Unit (FPU)
+ * System-Call Interface
  *
  * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
@@ -15,10 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "ec.hpp"
-#include "fpu.hpp"
+#pragma once
 
-void Fpu::fini()
-{
-    Ec::switch_fpu (nullptr);
-}
+template void Ec::send_msg<Ec_arch::ret_user_exception> (Ec *);
+template void Ec::send_msg<Ec_arch::ret_user_vmexit> (Ec *);
