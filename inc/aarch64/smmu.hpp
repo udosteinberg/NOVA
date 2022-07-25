@@ -60,6 +60,9 @@ class Smmu : public List<Smmu>, protected Mmio
                 if (!smmu->init()) [[unlikely]]
                     return false;
 
+            if (list) [[likely]]
+                Hip::set_feature (Hip_arch::Feature::SMMU);
+
             return true;
         }
 
