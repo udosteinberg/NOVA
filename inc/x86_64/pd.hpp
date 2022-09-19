@@ -38,7 +38,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 
         Pd (Pd *);
 
-        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD) {}
+        Pd (Pd *, mword, mword) : Kobject (Kobject::Type::PD), Space_pio (nullptr) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()

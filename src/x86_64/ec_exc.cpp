@@ -97,9 +97,14 @@ bool Ec::handle_exc_pf (Exc_regs *r)
         return addr < USER_ADDR && Pd::current->Space_mem::loc[Cpu::id].share_from (Pd::current->Space_mem::hpt, addr, USER_ADDR);
 
     // Kernel fault in PIO space
-    if (addr >= MMAP_SPC_PIO && addr <= MMAP_SPC_PIO_E) {
-        Space_pio::page_fault (addr, r->err);
+    if (addr >= MMAP_SPC_PIO && addr <= MMAP_SPC_PIO_E && Pd::current->Space_mem::loc[Cpu::id].share_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
         return true;
+
+    // Convert #PF in I/O bitmap to #GP(0)
+    if (r->user() && addr >= MMAP_SPC_PIO && addr <= MMAP_SPC_PIO_E) {
+        r->vec = EXC_GP;
+        r->err = current->regs.cr2 = 0;
+        send_msg<ret_user_iret>();
     }
 
     die ("#PF (kernel)");
