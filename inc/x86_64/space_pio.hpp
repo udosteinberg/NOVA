@@ -1,10 +1,11 @@
 /*
- * Port I/O Space
+ * PIO Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2026 Udo Steinberg, BlueRock Security, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -20,32 +21,42 @@
 
 #pragma once
 
-class Space_mem;
+#include "bitmap_pio.hpp"
+#include "kmem.hpp"
+#include "paging.hpp"
+#include "space.hpp"
+#include "status.hpp"
 
-class Space_pio
+class Space_pio : public Space
 {
+    friend class Pd;
+
     private:
-        Paddr hbmp, gbmp;
+        Bitmap_pio *const bmp;
 
-        ALWAYS_INLINE
-        static inline mword idx_to_virt (mword idx)
-        {
-            return MMAP_SPC_PIO + (idx / 8 / sizeof (mword)) * sizeof (mword);
-        }
+        static Space_pio nova;
 
-        ALWAYS_INLINE
-        static inline mword idx_to_mask (mword idx)
-        {
-            return 1UL << (idx % (8 * sizeof (mword)));
-        }
+        Space_pio();
 
-        ALWAYS_INLINE
-        inline Space_mem *space_mem();
+        Space_pio (Bitmap_pio *b) : bmp { b } {}
 
-        void update (bool, mword, mword);
+        ~Space_pio() { delete bmp; }
+
+        [[nodiscard]] Paging::Permissions lookup (size_t) const;
+
+        void update (size_t, Paging::Permissions);
 
     public:
-        Paddr walk (bool = false, mword = 0);
+        static constexpr uint8_t sbw { bit_scan_msb (Bitmap_pio::bits) };
+        static constexpr uint8_t mco { sbw };
 
-        static void page_fault (mword, mword);
+        [[nodiscard]] Status delegate (Space_pio const *, size_t, size_t, unsigned, unsigned);
+
+        [[nodiscard]] auto get_phys() const { return Kmem::ptr_to_phys (bmp); }
+
+        static void access_ctrl (uint64_t base, size_t size, Paging::Permissions perm)
+        {
+            for (unsigned i { 0 }; i < size; i++)       // FIXME: Optimize
+                nova.update (base + i, perm);
+        }
 };
