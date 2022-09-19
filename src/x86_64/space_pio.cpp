@@ -1,10 +1,11 @@
 /*
- * Port I/O Space
+ * PIO Space
  *
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2022 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,42 +19,65 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "extern.hpp"
-#include "pd.hpp"
+#include "space_obj.hpp"
+#include "space_pio.hpp"
 
-Space_mem *Space_pio::space_mem()
+INIT_PRIORITY (PRIO_SPACE_PIO) ALIGNED (Kobject::alignment) Space_pio Space_pio::nova;
+
+/*
+ * Constructor (NOVA PIO Space)
+ */
+Space_pio::Space_pio() : bmp (new Bitmap_pio)
 {
-    return static_cast<Pd *>(this);
+    // FIXME: Bitmap allocation failure
+    user_access (0, BIT (16), true);
 }
 
-Paddr Space_pio::walk (bool host, mword idx)
+/*
+ * Lookup PIO permissions for the specified selector
+ *
+ * @param s     Selector whose permissions are being looked up
+ * @return      Permissions for the specified selector
+ */
+Paging::Permissions Space_pio::lookup (unsigned long s) const
 {
-    Paddr &bmp = host ? hbmp : gbmp;
+    if (EXPECT_TRUE (bmp->sel_valid (s)))
+        return Paging::Permissions (!bmp->tst (s) * Paging::R);
 
-    if (!bmp) {
-        bmp = Kmem::ptr_to_phys (Buddy::alloc (1, Buddy::Fill::BITS1));
-
-        if (host)
-            space_mem()->update (MMAP_SPC_PIO, bmp, 1, Paging::Permissions (Paging::R | Paging::W), Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
-    }
-
-    return bmp | (idx_to_virt (idx) & (2 * PAGE_SIZE - 1));
+    return Paging::NONE;
 }
 
-void Space_pio::update (bool host, mword idx, mword attr)
+/*
+ * Update PIO permissions for the specified selector
+ *
+ * @param s     Selector whose permissions are being updated
+ * @param p     Permissions for the specified selector
+ */
+void Space_pio::update (unsigned long s, Paging::Permissions p)
 {
-    mword *m = static_cast<mword *>(Kmem::phys_to_ptr (walk (host, idx)));
-
-    if (attr)
-        __atomic_and_fetch (m, ~idx_to_mask (idx), __ATOMIC_SEQ_CST);
-    else
-        __atomic_or_fetch (m, idx_to_mask (idx), __ATOMIC_SEQ_CST);
+    if (EXPECT_TRUE (bmp->sel_valid (s)))
+        p & Paging::R ? bmp->clr (s) : bmp->set (s);
 }
 
-void Space_pio::page_fault (mword addr, mword error)
+/*
+ * Delegate PIO capability range
+ *
+ * @param pio   SRC PIO space
+ * @param ssb   SRC selector base
+ * @param dsb   DST selector base
+ * @param ord   Order (2^ord selectors)
+ * @param pmm   Permission mask
+ * @return      SUCCESS (successful) or BAD_PAR (bad parameter)
+ */
+Status Space_pio::delegate (Space_pio const *pio, unsigned long ssb, unsigned long dsb, unsigned ord, unsigned pmm)
 {
-    assert (!(error & BIT (1)));
+    auto const e { ssb + BITN (ord) };
 
-    if (!Pd::current->Space_mem::loc[Cpu::id].share_from (Pd::current->Space_mem::hpt, addr, MMAP_CPU))
-        Pd::current->Space_mem::update (addr, Kmem::ptr_to_phys (&PAGE_1), 0, Paging::R, Memattr::Cacheability::MEM_WB, Memattr::Shareability::INNER);
+    if (EXPECT_FALSE (ssb != dsb || !Bitmap_pio::sel_valid (e - 1)))
+        return Status::BAD_PAR;
+
+    for (auto s { ssb }; s < e; s++)
+        update (s, Paging::Permissions (pio->lookup (s) & pmm));
+
+    return Status::SUCCESS;
 }
