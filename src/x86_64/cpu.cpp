@@ -45,6 +45,7 @@ unsigned Cpu::hazard, Cpu::platform, Cpu::family, Cpu::model, Cpu::stepping, Cpu
 uint32_t Cpu::cstates, Cpu::topology, Cpu::features[13];
 uint64_t Cpu::csthint;
 Cpu::Vendor Cpu::vendor;
+Cpu::State_tsc Cpu::hst_tsc;
 
 void Cpu::enumerate_clocks (uint32_t &clk, uint32_t &rat, scaleable_bus const *freq, unsigned i)
 {
@@ -295,6 +296,9 @@ void Cpu::setup_msr()
         Msr::write (Msr::Reg64::IA32_FMASK, hst_sys.fmask);
         Msr::write (Msr::Reg64::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
     }
+
+    if (EXPECT_TRUE (feature (Feature::RDPID) || feature (Feature::RDTSCP)))
+        Msr::write (Msr::Reg64::IA32_TSC_AUX, hst_tsc.tsc_aux = Cpu::id);
 
     if (EXPECT_TRUE (feature (Feature::TME)) && bsp) {
 
