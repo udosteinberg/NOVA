@@ -42,6 +42,7 @@ bool Cpu::bsp;
 unsigned Cpu::id, Cpu::hazard, Cpu::platform, Cpu::family, Cpu::model, Cpu::stepping, Cpu::patch;
 uint32 Cpu::features[8], Cpu::topology;
 Cpu::Vendor Cpu::vendor;
+Cpu::State_tsc Cpu::hst_tsc;
 
 void Cpu::enumerate_clocks (uint32 &clk, uint32 &rat, scaleable_bus const *freq, unsigned i)
 {
@@ -257,6 +258,9 @@ void Cpu::setup_msr()
         Msr::write (Msr::Register::IA32_FMASK, hst_sys.fmask);
         Msr::write (Msr::Register::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
     }
+
+    if (EXPECT_TRUE (feature (Feature::RDTSCP)))
+        Msr::write (Msr::Register::IA32_TSC_AUX, hst_tsc.tsc_aux = Cpu::id);
 
     if (EXPECT_TRUE (feature (Feature::TME))) {
         auto act = Msr::read (Msr::Register::IA32_TME_ACTIVATE);
