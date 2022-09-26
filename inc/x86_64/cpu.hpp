@@ -103,12 +103,14 @@ class Cpu final
             UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
             CET_SS          = 4 * 32 +  7,      // CET Shadow Stack
             TME             = 4 * 32 + 13,      // Total Memory Encryption
+            RDPID           = 4 * 32 + 22,      // RDPID Instruction
             // 0x7.EDX
             HYBRID          = 5 * 32 + 15,      // Hybrid Processor
             PCONFIG         = 5 * 32 + 18,      // PCONFIG Instruction
             CET_IBT         = 5 * 32 + 20,      // CET Indirect Branch Tracking
             // 0x80000001.EDX
             GB_PAGES        = 6 * 32 + 26,      // 1GB-Pages Support
+            RDTSCP          = 6 * 32 + 27,      // RDTSCP Instruction
             LM              = 6 * 32 + 29,      // Long Mode Support
             // 0x80000001.ECX
             SVM             = 7 * 32 +  2,
@@ -184,6 +186,38 @@ class Cpu final
             }
         };
 
+        struct State_tsc
+        {
+            uint64_t    tsc_aux         { 0 };
+
+            /*
+             * Switch TSC state between guest/host
+             *
+             * VMM-provided guest state was sanitized by constrain_* functions below
+             *
+             * @param o     Old live state
+             * @param n     New live state
+             */
+            ALWAYS_INLINE
+            static inline void make_current (State_tsc const &o, State_tsc const &n)
+            {
+                if (EXPECT_FALSE (o.tsc_aux != n.tsc_aux))
+                    Msr::write (Msr::Register::IA32_TSC_AUX, n.tsc_aux);
+            }
+
+            /*
+             * Constrain TSC_AUX value to ensure WRMSR does not fault
+             *
+             * @param v     TSC_AUX value provided by VMM
+             * @return      Constrained value
+             */
+            ALWAYS_INLINE
+            static inline uint64_t constrain_tsc_aux (uint64_t v)
+            {
+                return EXPECT_TRUE (feature (Feature::RDPID) || feature (Feature::RDTSCP)) ? v & BIT64_RANGE (31, 0) : 0;
+            }
+        };
+
         static inline State_sys const hst_sys
         {
             .star  = static_cast<uint64_t>(SEL_USER_CODE32) << 48 | static_cast<uint64_t>(SEL_KERN_CODE) << 32,
@@ -203,6 +237,7 @@ class Cpu final
         static unsigned     patch           CPULOCAL;
         static uint32_t     features[8]     CPULOCAL;
         static bool         bsp             CPULOCAL;
+        static State_tsc    hst_tsc         CPULOCAL;
 
         static inline cpu_t                 count  { 0 };
         static inline Atomic<cpu_t>         online { 0 };
