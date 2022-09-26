@@ -115,6 +115,7 @@ class alignas (16) Cpu_regs final
 
         Exc_regs            exc;
         Cpu::State_sys      gst_sys;
+        Cpu::State_tsc      gst_tsc;
         Space_obj *   const obj;
         Space_hst *   const hst;
         Atomic<Space_gst *> gst     { nullptr };
