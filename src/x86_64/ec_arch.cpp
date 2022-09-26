@@ -314,6 +314,7 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
         Cr::set_cr2 (r.cr2);
 
     r.gst_sys.make_current (Cpu::hst_sys);              // Restore SYS guest state
+    r.gst_tsc.make_current (Cpu::hst_tsc);              // Restore TSC guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
@@ -340,6 +341,8 @@ void Ec_arch::ret_user_vmexit_svm (Ec *const self)
         gst->gtlb.clr (Cpu::id);
         r.vmcb->tlb_control = 1;
     }
+
+    r.gst_tsc.make_current (Cpu::hst_tsc);              // Restore TSC guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
