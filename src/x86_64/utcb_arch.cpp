@@ -202,6 +202,9 @@ void Utcb_arch::load_vmx (Mtd_arch const m, Cpu_regs const &c)
 
     if (m & Mtd_arch::Item::KERNEL_GS_BASE)
         kernel_gs_base = c.gst_sys.kernel_gs_base;
+
+    if (m & Mtd_arch::Item::TSC)
+        tsc_aux = c.gst_tsc.tsc_aux;
 }
 
 bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
@@ -397,6 +400,9 @@ bool Utcb_arch::save_vmx (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
     if (m & Mtd_arch::Item::KERNEL_GS_BASE)
         c.gst_sys.kernel_gs_base = Cpu::State_sys::constrain_canon (kernel_gs_base);
 
+    if (m & Mtd_arch::Item::TSC)
+        c.gst_tsc.tsc_aux = Cpu::State_tsc::constrain_tsc_aux (tsc_aux);
+
     if (m & Mtd_arch::Item::TLB)
         if (Vmcs::has_vpid()) [[likely]]
             Invvpid::invalidate (Vmcs::has_invvpid_sgl() ? Invvpid::Type::SGL : Invvpid::Type::ALL, Vmcs::read<Vmcs::Encoding::VPID>());
@@ -530,6 +536,9 @@ void Utcb_arch::load_svm (Mtd_arch const m, Cpu_regs const &c)
 
     if (m & Mtd_arch::Item::KERNEL_GS_BASE)
         kernel_gs_base = v->kernel_gs_base;
+
+    if (m & Mtd_arch::Item::TSC)
+        tsc_aux = c.gst_tsc.tsc_aux;
 }
 
 bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) const
@@ -644,6 +653,9 @@ bool Utcb_arch::save_svm (Mtd_arch const m, Cpu_regs &c, Space_obj const *obj) c
 
     if (m & Mtd_arch::Item::KERNEL_GS_BASE)
         v->kernel_gs_base = Cpu::State_sys::constrain_canon (kernel_gs_base);
+
+    if (m & Mtd_arch::Item::TSC)
+        c.gst_tsc.tsc_aux = Cpu::State_tsc::constrain_tsc_aux (tsc_aux);
 
     if (m & Mtd_arch::Item::TLB)
         if (v->asid)
