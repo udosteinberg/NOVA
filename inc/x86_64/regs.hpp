@@ -112,6 +112,7 @@ class alignas (16) Cpu_regs final
             Vmcs * const        vmcs;
         };
         Cpu::State_sys          gst_sys;
+        Cpu::State_tsc          gst_tsc;
         Refptr<Space_obj> const obj;
         Refptr<Space_hst> const hst;
         Refptr<Space_gst>       gst     { nullptr };
