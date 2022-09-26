@@ -53,6 +53,8 @@ void Ec_arch::handle_svm()
 {
     Ec *const self = current;
 
+    Cpu::State_tsc::make_current (self->regs.gst_tsc, Cpu::hst_tsc);    // Restore TSC host state
+
     self->regs.vmcb->tlb_control = 0;
 
     mword reason = static_cast<mword>(self->regs.vmcb->exitcode);
