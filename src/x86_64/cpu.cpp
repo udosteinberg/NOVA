@@ -31,6 +31,7 @@
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "mca.hpp"
+#include "pconfig.hpp"
 #include "sgx.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
@@ -302,6 +303,20 @@ void Cpu::setup_msr()
         Msr::write (Msr::Reg64::IA32_LSTAR, hst_sys.lstar);
         Msr::write (Msr::Reg64::IA32_FMASK, hst_sys.fmask);
         Msr::write (Msr::Reg64::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
+    }
+
+    if (feature (Feature::TME) && bsp) [[unlikely]] {
+
+        trace (TRACE_CPU, "TMEE: Split:%u/%u Keys:%u Algo:%#x", Memattr::kbits, Memattr::obits, Memattr::kimax, Memattr::crypt);
+
+        // FIXME: Check for valid PCONFIG targets
+        if (feature (Feature::PCONFIG) && Memattr::crypt) [[likely]] {
+
+            Pconfig::Encrypt const e { static_cast<uint8_t>(BIT (bit_scan_msb (Memattr::crypt))) };
+
+            for (uint16_t i { 0 }; i < Memattr::kimax; i++)
+                (Cmdline::nomktme ? Pconfig::key_clr : Pconfig::key_rnd)(i + 1, e);
+        }
     }
 
 #if 0
