@@ -31,6 +31,7 @@
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "mca.hpp"
+#include "pconfig.hpp"
 #include "sgx.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
@@ -311,6 +312,27 @@ void Cpu::setup_msr()
         Msr::write (Msr::Reg64::IA32_LSTAR, hst_sys.lstar);
         Msr::write (Msr::Reg64::IA32_FMASK, hst_sys.fmask);
         Msr::write (Msr::Reg64::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
+    }
+
+    if (feature (Feature::TME) && feature (Feature::PCONFIG)) [[likely]] {
+
+        if (socket >= NUM_CPU) [[unlikely]]
+            panic ("Socket ID above %u", NUM_CPU);
+
+        // PCONFIG is package scope: the key table is programmed once per socket
+        if (!Pconfig::socket_key_prog.tas (socket)) [[unlikely]] {
+
+            trace (TRACE_CPU, "PCFG: Socket:%u Split:%u/%u Keys:%u Algo:%#x", socket, Memattr::kbits, Memattr::obits, Memattr::kimax, Memattr::crypt);
+
+            if (Memattr::crypt) [[likely]] {
+
+                Pconfig::Encrypt const e { static_cast<uint8_t>(BIT (bit_scan_msb (Memattr::crypt))) };
+
+                for (uint16_t k { 1 }; k <= Memattr::kimax; k++)
+                    if ((Cmdline::nomktme ? Pconfig::key_clr : Pconfig::key_rnd)(k, e) != Pconfig::Status::SUCCESS) [[unlikely]]
+                        trace (TRACE_ERROR, "PCFG: Socket:%u Key:%u programming failed", socket, k);
+            }
+        }
     }
 
 #if 0
