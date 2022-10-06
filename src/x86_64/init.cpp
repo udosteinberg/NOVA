@@ -26,6 +26,7 @@
 #include "ioapic.hpp"
 #include "interrupt.hpp"
 #include "patch.hpp"
+#include "pconfig.hpp"
 #include "pic.hpp"
 #include "string.hpp"
 
@@ -88,6 +89,8 @@ extern "C" void init()
 
         Interrupt::setup();
     }
+
+    Pconfig::init();
 
     Acpi::init();
 
