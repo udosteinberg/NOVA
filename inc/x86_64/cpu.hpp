@@ -109,6 +109,7 @@ class Cpu final
             TME             = 4 * 32 + 13,      // Total Memory Encryption
             // 0x7.EDX
             HYBRID          = 5 * 32 + 15,      // Hybrid Processor
+            PCONFIG         = 5 * 32 + 18,      // Platform Configuration
             CET_IBT         = 5 * 32 + 20,      // CET Indirect Branch Tracking
             // 0x80000001.EDX
             GB_PAGES        = 6 * 32 + 26,      // 1GB-Pages Support
