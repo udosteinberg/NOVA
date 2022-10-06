@@ -31,6 +31,7 @@
 #include "idt.hpp"
 #include "lapic.hpp"
 #include "mca.hpp"
+#include "pconfig.hpp"
 #include "space_hst.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
@@ -288,6 +289,18 @@ void Cpu::setup_msr()
         Msr::write (Msr::Register::IA32_LSTAR, hst_sys.lstar);
         Msr::write (Msr::Register::IA32_FMASK, hst_sys.fmask);
         Msr::write (Msr::Register::IA32_KERNEL_GS_BASE, hst_sys.kernel_gs_base);
+    }
+
+    if (EXPECT_TRUE (feature (Feature::TME)) && bsp) {
+
+        trace (TRACE_CPU, "TMEE: Split:%u/%u Keys:%u Algo:%#x", Memattr::kbits, Memattr::obits, Memattr::kimax, Memattr::crypt);
+
+        Pconfig::Encrypt e { static_cast<uint8_t>(BIT (bit_scan_reverse (Memattr::crypt))) };
+
+        // FIXME: Check for valid PCONFIG targets
+        if (EXPECT_TRUE (feature (Feature::PCONFIG)))
+            for (uint16_t i { 0 }; i < Memattr::kimax; i++)
+                (Cmdline::nomktme ? Pconfig::key_clr : Pconfig::key_rnd)(i + 1, e);
     }
 
     // Disable C1E on AMD Rev.F and beyond because it stops LAPIC clock
