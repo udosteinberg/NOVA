@@ -126,6 +126,7 @@ class Cpu final
             SRBDS_CTRL              =  5 * 32 +  9,     // Special Register Buffer Data Sampling
             MD_CLEAR                =  5 * 32 + 10,     // Microarchitectural Data Clear
             HYBRID                  =  5 * 32 + 15,     // Hybrid Processor
+            PCONFIG                 =  5 * 32 + 18,     // PCONFIG Instruction
             CET_IBT                 =  5 * 32 + 20,     // CET Indirect Branch Tracking
             IBRS                    =  5 * 32 + 26,     // Indirect Branch Restricted Speculation
             STIBP                   =  5 * 32 + 27,     // Single Thread Indirect Branch Predictors
