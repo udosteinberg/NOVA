@@ -29,6 +29,7 @@ class Cmdline final
     public:
         static inline bool insecure { false };
         static inline bool nodl     { false };
+        static inline bool nomktme  { false };
         static inline bool nopcid   { false };
         static inline bool nosmmu   { false };
         static inline bool noturbo  { false };
@@ -46,6 +47,7 @@ class Cmdline final
         {
             { "insecure",   insecure    },
             { "nodl",       nodl        },
+            { "nomktme",    nomktme     },
             { "nopcid",     nopcid      },
             { "nosmmu",     nosmmu      },
             { "noturbo",    noturbo     },
