@@ -92,6 +92,7 @@ class Cpu final
             X2APIC                  =  0 * 32 + 21,     // x2APIC Support
             TSC_DEADLINE            =  0 * 32 + 24,     // TSC Deadline Support
             XSAVE                   =  0 * 32 + 26,     // XCR0, XSETBV/XGETBV/XSAVE/XRSTOR Instructions
+            RDRAND                  =  0 * 32 + 30,     // RDRAND Instruction
             // EAX=0x1 (EDX)
             MCE                     =  1 * 32 +  7,     // Machine Check Exception
             SEP                     =  1 * 32 + 11,     // SYSENTER/SYSEXIT Instructions
@@ -115,6 +116,7 @@ class Cpu final
             SMEP                    =  3 * 32 +  7,     // Supervisor Mode Execution Prevention
             RDT_M                   =  3 * 32 + 12,     // RDT Monitoring (PQM)
             RDT_A                   =  3 * 32 + 15,     // RDT Allocation (PQE)
+            RDSEED                  =  3 * 32 + 18,     // RDSEED Instruction
             SMAP                    =  3 * 32 + 20,     // Supervisor Mode Access Prevention
             // EAX=0x7 ECX=0x0 (ECX)
             UMIP                    =  4 * 32 +  2,     // User Mode Instruction Prevention
