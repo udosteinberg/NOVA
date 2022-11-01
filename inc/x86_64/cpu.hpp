@@ -84,6 +84,7 @@ class Cpu final
             PCID            = 1 * 32 + 17,      // Process Context Identifiers
             TSC_DEADLINE    = 1 * 32 + 24,      // TSC Deadline Support
             XSAVE           = 1 * 32 + 26,      // XCR0, XSETBV/XGETBV/XSAVE/XRSTOR Instructions
+            RDRAND          = 1 * 32 + 30,      // RDRAND Instruction
             // 0x6.EAX
             TURBO_BOOST     = 2 * 32 +  1,      // Turbo Boost Technology
             ARAT            = 2 * 32 +  2,      // Always Running APIC Timer
@@ -100,6 +101,7 @@ class Cpu final
             SMEP            = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
             RDT_M           = 3 * 32 + 12,      // RDT Monitoring (PQM)
             RDT_A           = 3 * 32 + 15,      // RDT Allocation (PQE)
+            RDSEED          = 3 * 32 + 18,      // RDSEED Instruction
             SMAP            = 3 * 32 + 20,      // Supervisor Mode Access Prevention
             // 0x7.ECX
             UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
