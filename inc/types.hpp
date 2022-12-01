@@ -20,14 +20,6 @@
 
 #pragma once
 
-using uint8     = unsigned char;
-using uint16    = unsigned short;
-using uint32    = unsigned int;
-using uint64    = unsigned long long;
-
-using mword     = unsigned long;
-using Paddr     = unsigned long;
-
 // Signed Integer Types
 using int32_t   = __INT32_TYPE__;
 using int64_t   = __INT64_TYPE__;
