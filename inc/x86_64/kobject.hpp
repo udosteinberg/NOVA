@@ -29,8 +29,6 @@ class Kobject : public Refcnt, public Mdb
     private:
         uint8 objtype;
 
-        static void free (Rcu_elem *) {}
-
     protected:
         Spinlock lock;
 
@@ -43,7 +41,7 @@ class Kobject : public Refcnt, public Mdb
             SM,
         };
 
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) { ref_inc(); }
+        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, 0, a), objtype (t) { ref_inc(); }
 
     public:
         ALWAYS_INLINE

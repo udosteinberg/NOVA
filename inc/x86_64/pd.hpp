@@ -103,7 +103,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
-        void destroy()
+        void destroy() override final
         {
             this->~Pd();
 
