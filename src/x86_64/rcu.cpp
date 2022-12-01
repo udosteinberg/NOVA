@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -26,11 +27,10 @@
 #include "rcu.hpp"
 #include "stdio.hpp"
 
-mword   Rcu::state = RCU_CMP;
-mword   Rcu::count;
-
-mword   Rcu::l_batch;
-mword   Rcu::c_batch;
+uintptr_t   Rcu::state = RCU_CMP;
+uintptr_t   Rcu::count;
+uintptr_t   Rcu::l_batch;
+uintptr_t   Rcu::c_batch;
 
 INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::next;
 INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::curr;
@@ -48,7 +48,7 @@ void Rcu::invoke_batch()
 
 void Rcu::start_batch (State s)
 {
-    mword v, m = RCU_CMP | RCU_PND;
+    uintptr_t v, m = RCU_CMP | RCU_PND;
 
     do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !__atomic_compare_exchange_n (&state, &v, v | s, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 
