@@ -87,7 +87,7 @@ class Sm : public Kobject, public Queue<Ec>
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
-        void destroy()
+        void destroy() override final
         {
             this->~Sm();
 
