@@ -139,7 +139,7 @@ bool Space_mem::insert_utcb (mword b)
     if (!b)
         return true;
 
-    Mdb *mdb = new Mdb (this, 0, b >> PAGE_BITS, 0);
+    Mdb *mdb = new Mdb (this, 0, b >> PAGE_BITS, 0, 0);
 
     if (tree_insert (mdb))
         return true;
