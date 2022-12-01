@@ -4,7 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -18,7 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "barrier.hpp"
+#include "assert.hpp"
 #include "counter.hpp"
 #include "cpu.hpp"
 #include "hazards.hpp"
@@ -26,17 +27,14 @@
 #include "rcu.hpp"
 #include "stdio.hpp"
 
-mword   Rcu::state = RCU_CMP;
-mword   Rcu::count;
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List Rcu::next;
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List Rcu::curr;
+INIT_PRIORITY (PRIO_LOCAL) Rcu::List Rcu::done;
 
-mword   Rcu::l_batch;
-mword   Rcu::c_batch;
+Rcu::Epoch Rcu::epoch_l { 0 };
+Rcu::Epoch Rcu::epoch_c { 0 };
 
-INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::next;
-INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::curr;
-INIT_PRIORITY (PRIO_LOCAL) Rcu_list Rcu::done;
-
-void Rcu::invoke_batch()
+void Rcu::handle_callbacks()
 {
     for (Rcu_elem *e = done.head, *n; e; e = n) {
         n = e->next;
@@ -46,48 +44,64 @@ void Rcu::invoke_batch()
     done.clear();
 }
 
-void Rcu::start_batch (State s)
+void Rcu::set_state (State s)
 {
-    mword v, m = RCU_CMP | RCU_PND;
+    Epoch e { epoch };
 
-    do if ((v = state) >> 2 != l_batch) return; while (!(v & s) && !__atomic_compare_exchange_n (&state, &v, v | s, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+    do {
 
-    if ((v ^ ~s) & m)
+        if (e >> 2 != epoch_l)
+            return;
+
+        if (e & s)
+            return;
+
+    } while (!epoch.compare_exchange_n (e, e | s));
+
+    if ((e ^ ~s) & State::FULL)
         return;
 
     count = Cpu::online;
 
-    barrier();
-
-    state++;
+    epoch++;
 }
 
+/*
+ * Report a quiescent state for this CPU in the current epoch
+ */
 void Rcu::quiet()
 {
+    assert (Cpu::hazard & HZD_RCU);
+
     Cpu::hazard &= ~HZD_RCU;
 
-    if (__atomic_sub_fetch (&count, 1, __ATOMIC_SEQ_CST) == 0)
-        start_batch (RCU_CMP);
+    if (EXPECT_FALSE (!--count))
+        set_state (State::COMPLETED);
 }
 
-void Rcu::update()
+/*
+ * Check RCU state and manage callback lifecycle
+ */
+void Rcu::check()
 {
-    if (l_batch != batch()) {
-        l_batch = batch();
+    Epoch e { epoch }, g { e >> 2 };
+
+    if (epoch_l != g) {
+        epoch_l = g;
         Cpu::hazard |= HZD_RCU;
     }
 
-    if (curr.head && complete (c_batch))
+    if (curr.head && complete (e, epoch_c))
         done.append (&curr);
 
-    if (!curr.head && next.head) {
+    if (next.head && !curr.head) {
         curr.append (&next);
 
-        c_batch = l_batch + 1;
+        epoch_c = g + 1;
 
-        start_batch (RCU_PND);
+        set_state (State::REQUESTED);
     }
 
     if (done.head)
-        invoke_batch();
+        handle_callbacks();
 }

@@ -25,7 +25,6 @@
 #include "ec.hpp"
 #include "lapic.hpp"
 #include "msr.hpp"
-#include "rcu.hpp"
 #include "stdio.hpp"
 #include "timeout.hpp"
 #include "vectors.hpp"
@@ -124,8 +123,6 @@ void Lapic::timer_handler()
     bool expired = (freq_bus ? read (LAPIC_TMR_CCR) : Msr::read<uint64>(Msr::IA32_TSC_DEADLINE)) == 0;
     if (expired)
         Timeout::check();
-
-    Rcu::update();
 }
 
 void Lapic::lvt_vector (unsigned vector)
