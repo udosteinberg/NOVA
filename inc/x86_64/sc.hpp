@@ -90,7 +90,7 @@ class Sc : public Kobject
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
 
-        void destroy()
+        void destroy() override final
         {
             this->~Sc();
 
