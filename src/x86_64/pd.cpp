@@ -108,7 +108,7 @@ void Pd::revoke (mword const base, mword const ord, mword const attr, bool self)
         for (Mdb *ptr;; node = ptr) {
 
             if (node->remove_node() && static_cast<S *>(node->space)->tree_remove (node))
-                Rcu::call (node);
+                Rcu::submit (node);
 
             ptr = ACCESS_ONCE (node->prev);
 

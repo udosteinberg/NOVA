@@ -4,6 +4,9 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
+ *
  * This file is part of the NOVA microhypervisor.
  *
  * NOVA is free software: you can redistribute it and/or modify it
@@ -18,7 +21,8 @@
 
 #pragma once
 
-#include "compiler.hpp"
+#include "atomic.hpp"
+#include "macros.hpp"
 #include "types.hpp"
 
 class Rcu_elem
@@ -27,71 +31,68 @@ class Rcu_elem
         Rcu_elem *next;
         void (*func)(Rcu_elem *);
 
-        ALWAYS_INLINE
-        explicit Rcu_elem (void (*f)(Rcu_elem *)) : next (nullptr), func (f) {}
-};
-
-class Rcu_list
-{
-    public:
-        Rcu_elem *  head;
-        Rcu_elem ** tail;
-
-        ALWAYS_INLINE
-        explicit Rcu_list() { clear(); }
-
-        ALWAYS_INLINE
-        inline void clear() { head = nullptr; tail = &head; }
-
-        ALWAYS_INLINE
-        inline void append (Rcu_list *l)
-        {
-           *tail = l->head;
-            tail = l->tail;
-            l->clear();
-        }
-
-        ALWAYS_INLINE
-        inline void enqueue (Rcu_elem *e)
-        {
-            e->next = nullptr;
-           *tail = e;
-            tail = &e->next;
-        }
+        Rcu_elem (void (*f)(Rcu_elem *)) : next { nullptr }, func { f } {}
 };
 
 class Rcu
 {
     private:
-        static mword count;
-        static mword state;
+        class List
+        {
+            public:
+                Rcu_elem *  head;
+                Rcu_elem ** tail;
 
-        static mword l_batch    CPULOCAL;
-        static mword c_batch    CPULOCAL;
+                List() { clear(); }
 
-        static Rcu_list next    CPULOCAL;
-        static Rcu_list curr    CPULOCAL;
-        static Rcu_list done    CPULOCAL;
+                void clear() { head = nullptr; tail = &head; }
+
+                void append (List *l)
+                {
+                   *tail = l->head;
+                    tail = l->tail;
+                    l->clear();
+                }
+
+                void enqueue (Rcu_elem *e)
+                {
+                    e->next = nullptr;
+                   *tail = e;
+                    tail = &e->next;
+                }
+        };
+
+        using Epoch = unsigned long;
 
         enum State
         {
-            RCU_CMP = 1UL << 0,
-            RCU_PND = 1UL << 1,
+            COMPLETED = BIT (0),
+            REQUESTED = BIT (1),
+            FULL      = REQUESTED | COMPLETED,
         };
 
-        ALWAYS_INLINE
-        static inline mword batch() { return state >> 2; }
+        // Epoch and state tracking
+        static inline Atomic<Epoch, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST> epoch { State::COMPLETED };
 
-        ALWAYS_INLINE
-        static inline bool complete (mword b) { return static_cast<signed long>((state & ~RCU_PND) - (b << 2)) > 0; }
+        // Number of CPUs that still need to pass through a quiescent state in epoch E
+        static inline Atomic<unsigned, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST> count { 0 };
 
-        static void start_batch (State);
-        static void invoke_batch();
+        static List     next    CPULOCAL;
+        static List     curr    CPULOCAL;
+        static List     done    CPULOCAL;
+
+        static Epoch    epoch_l CPULOCAL;
+        static Epoch    epoch_c CPULOCAL;
+
+        static void set_state (State);
+
+        static bool complete (Epoch e, Epoch c) { return static_cast<signed long>((e & ~State::REQUESTED) - (c << 2)) > 0; }
+
+        static void handle_callbacks();
 
     public:
-        ALWAYS_INLINE
-        static inline void call (Rcu_elem *e) { next.enqueue (e); }
-
         static void quiet();
-        static void update();
+        static void check();
+
+        static void submit (Rcu_elem *e) { next.enqueue (e); }
 };
