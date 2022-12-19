@@ -6,6 +6,7 @@
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
  * Copyright (C) 2014 Udo Steinberg, FireEye, Inc.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -25,51 +26,66 @@
 #include "compiler.hpp"
 #include "config.hpp"
 #include "extern.hpp"
+#include "kmem.hpp"
 #include "msr.hpp"
 #include "selectors.hpp"
 #include "spinlock.hpp"
 #include "types.hpp"
 
-class Cpu
+class Cpu final
 {
     private:
-        static char const * const vendor_string[];
+        static constexpr apic_t invalid_topology { BIT_RANGE (31, 0) };
 
-        ALWAYS_INLINE
-        static inline void check_features();
+        // Must agree with enum class Vendor below
+        static constexpr char const *vendor_string[] { "Unknown", "GenuineIntel", "AuthenticAMD" };
 
-        ALWAYS_INLINE
-        static inline void setup_msr();
+        static constexpr struct scaleable_bus { uint8_t m, d; }
+            freq_atom[BIT (4)] { { 5, 6 }, { 1, 1 }, { 4, 3 }, { 7, 6 }, { 4, 5 }, { 14, 15 }, { 9, 10 }, { 8, 9 }, { 7, 8 } },
+            freq_core[BIT (3)] { { 8, 3 }, { 4, 3 }, { 2, 1 }, { 5, 3 }, { 10, 3 }, { 1, 1 }, { 4, 1 } };
 
-        ALWAYS_INLINE
-        static inline void setup_pcid();
+        static void enumerate_clocks (uint32_t &, uint32_t &, scaleable_bus const *, unsigned);
+        static void enumerate_clocks (uint32_t &, uint32_t &);
+
+        static void enumerate_topology (uint32_t, uint32_t &, uint32_t (&)[4]);
+        static void enumerate_features (uint32_t &, uint32_t &, uint32_t (&)[4], uint32_t (&)[12]);
+
+        static void setup_msr();
 
         static inline Spinlock boot_lock    asm ("__boot_lock");
 
     public:
-        enum Vendor
+        enum class Vendor : unsigned
         {
             UNKNOWN,
             INTEL,
-            AMD
+            AMD,
         };
 
-        enum Feature
+        enum class Feature : unsigned
         {
-            FEAT_MCE            =  7,
-            FEAT_SEP            = 11,
-            FEAT_MCA            = 14,
-            FEAT_ACPI           = 22,
-            FEAT_HTT            = 28,
-            FEAT_VMX            = 37,
-            FEAT_PCID           = 49,
-            FEAT_TSC_DEADLINE   = 56,
-            FEAT_SMEP           = 103,
-            FEAT_SMAP           = 116,
-            FEAT_1GB_PAGES      = 154,
-            FEAT_LM             = 157,
-            FEAT_CMP_LEGACY     = 161,
-            FEAT_SVM            = 162,
+            // 0x1.EDX
+            MCE             = 0 * 32 +  7,      // Machine Check Exception
+            SEP             = 0 * 32 + 11,      // SYSENTER/SYSEXIT Instructions
+            MCA             = 0 * 32 + 14,      // Machine Check Architecture
+            ACPI            = 0 * 32 + 22,      // Thermal Monitor and Software Controlled Clock Facilities
+            HTT             = 0 * 32 + 28,      // Hyper-Threading Technology
+            // 0x1.ECX
+            VMX             = 1 * 32 +  5,      // Virtual Machine Extensions
+            PCID            = 1 * 32 + 17,      // Process Context Identifiers
+            TSC_DEADLINE    = 1 * 32 + 24,      // TSC Deadline Support
+            // 0x7.EBX
+            SMEP            = 3 * 32 +  7,      // Supervisor Mode Execution Prevention
+            SMAP            = 3 * 32 + 20,      // Supervisor Mode Access Prevention
+            // 0x7.ECX
+            UMIP            = 4 * 32 +  2,      // User Mode Instruction Prevention
+            // 0x7.EDX
+            HYBRID          = 5 * 32 + 15,      // Hybrid Processor
+            // 0x80000001.EDX
+            GB_PAGES        = 6 * 32 + 26,      // 1GB-Pages Support
+            LM              = 6 * 32 + 29,      // Long Mode Support
+            // 0x80000001.ECX
+            SVM             = 7 * 32 +  2,
         };
 
         struct State_sys
@@ -88,73 +104,55 @@ class Cpu
             .kernel_gs_base = 0,
         };
 
-        static unsigned online;
-        static uint8    acpi_id[NUM_CPU];
-        static uint8    apic_id[NUM_CPU];
+        static cpu_t        id              CPULOCAL_HOT;
+        static apic_t       topology        CPULOCAL_HOT;
+        static unsigned     hazard          CPULOCAL_HOT;
+        static Vendor       vendor          CPULOCAL;
+        static unsigned     platform        CPULOCAL;
+        static unsigned     family          CPULOCAL;
+        static unsigned     model           CPULOCAL;
+        static unsigned     stepping        CPULOCAL;
+        static unsigned     patch           CPULOCAL;
+        static uint32_t     features[8]     CPULOCAL;
+        static bool         bsp             CPULOCAL;
 
-        static unsigned id                  CPULOCAL_HOT;
-        static unsigned hazard              CPULOCAL_HOT;
-        static unsigned package             CPULOCAL;
-        static unsigned core                CPULOCAL;
-        static unsigned thread              CPULOCAL;
-
-        static Vendor   vendor              CPULOCAL;
-        static unsigned platform            CPULOCAL;
-        static unsigned family              CPULOCAL;
-        static unsigned model               CPULOCAL;
-        static unsigned stepping            CPULOCAL;
-        static unsigned brand               CPULOCAL;
-        static unsigned patch               CPULOCAL;
-
-        static uint32 name[12]              CPULOCAL;
-        static uint32 features[6]           CPULOCAL;
-        static bool bsp                     CPULOCAL;
+        static inline cpu_t                 count  { 0 };
 
         static void init();
 
-        ALWAYS_INLINE
-        static inline bool feature (Feature f)
+        static bool feature (Feature f)
         {
-            return features[f / 32] & 1U << f % 32;
+            return features[std::to_underlying (f) / 32] & BIT (std::to_underlying (f) % 32);
         }
 
-        ALWAYS_INLINE
-        static inline void defeature (Feature f)
+        static void defeature (Feature f)
         {
-            features[f / 32] &= ~(1U << f % 32);
+            features[std::to_underlying (f) / 32] &= ~BIT (std::to_underlying (f) % 32);
         }
 
-        ALWAYS_INLINE
-        static inline void preempt_disable()
-        {
-            asm volatile ("cli" : : : "memory");
-        }
+        static void preemption_disable()    { asm volatile ("cli" : : : "memory"); }
+        static void preemption_enable()     { asm volatile ("sti" : : : "memory"); }
+        static void preemption_point()      { asm volatile ("sti; nop; cli" : : : "memory"); }
+        static void halt()                  { asm volatile ("sti; hlt; cli" : : : "memory"); }
 
-        ALWAYS_INLINE
-        static inline void preempt_enable()
-        {
-            asm volatile ("sti" : : : "memory");
-        }
-
-        ALWAYS_INLINE
-        static inline void cpuid (unsigned leaf, uint32 &eax, uint32 &ebx, uint32 &ecx, uint32 &edx)
+        static void cpuid (unsigned leaf, uint32_t &eax, uint32_t &ebx, uint32_t &ecx, uint32_t &edx)
         {
             asm volatile ("cpuid" : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx) : "a" (leaf));
         }
 
-        ALWAYS_INLINE
-        static inline void cpuid (unsigned leaf, unsigned subleaf, uint32 &eax, uint32 &ebx, uint32 &ecx, uint32 &edx)
+        static void cpuid (unsigned leaf, unsigned subleaf, uint32_t &eax, uint32_t &ebx, uint32_t &ecx, uint32_t &edx)
         {
             asm volatile ("cpuid" : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx) : "a" (leaf), "c" (subleaf));
         }
 
-        ALWAYS_INLINE
-        static unsigned find_by_apic_id (unsigned x)
-        {
-            for (unsigned i = 0; i < NUM_CPU; i++)
-                if (apic_id[i] == x)
-                    return i;
+        static auto remote_topology (cpu_t c) { return *Kmem::loc_to_glob (&topology, c); }
 
-            return ~0U;
+        static auto find_by_topology (uint32_t t)
+        {
+            for (cpu_t c { 0 }; c < count; c++)
+                if (remote_topology (c) == t)
+                    return c;
+
+            return static_cast<cpu_t>(-1);
         }
 };
