@@ -31,7 +31,7 @@
 
 unsigned Space_mem::did_ctr;
 
-void Space_mem::init (unsigned cpu)
+void Space_mem::init (cpu_t cpu)
 {
     if (!cpus.tas (cpu)) {
         loc[cpu].sync_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);

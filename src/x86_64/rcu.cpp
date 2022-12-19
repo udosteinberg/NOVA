@@ -61,7 +61,7 @@ void Rcu::set_state (State s)
     if ((e ^ ~s) & State::FULL)
         return;
 
-    count = Cpu::online;
+    count = Cpu::count;
 
     epoch++;
 }

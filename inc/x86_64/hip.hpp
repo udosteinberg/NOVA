@@ -113,6 +113,5 @@ class Hip
 
         void add_mhv (Hip_mem *&);
 
-        void add_cpu();
         void add_check();
 };
