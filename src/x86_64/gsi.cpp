@@ -51,7 +51,7 @@ void Gsi::setup()
 
 uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
 {
-    uint32 msi_addr = 0, msi_data = 0, aid = Cpu::apic_id[cpu];
+    uint32 msi_addr = 0, msi_data = 0, aid = Lapic::id[cpu];
 
     Ioapic *ioapic = gsi_table[gsi].ioapic;
 

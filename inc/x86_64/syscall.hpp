@@ -59,7 +59,7 @@ class Sys_create_ec : public Sys_regs
         inline unsigned long pd() const { return ARG_2; }
 
         ALWAYS_INLINE
-        inline unsigned cpu() const { return ARG_3 & 0xfff; }
+        inline cpu_t cpu() const { return ARG_3 & 0xfff; }
 
         ALWAYS_INLINE
         inline mword utcb() const { return ARG_3 & ~0xfff; }
