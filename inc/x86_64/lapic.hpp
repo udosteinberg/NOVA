@@ -22,10 +22,8 @@
 
 #pragma once
 
-#include "compiler.hpp"
+#include "cpu.hpp"
 #include "lowlevel.hpp"
-#include "memory.hpp"
-#include "msr.hpp"
 
 class Lapic
 {
@@ -91,6 +89,15 @@ class Lapic
             write (reg, misc | dlv | vector);
         }
 
+        static auto lookup (apic_t i)
+        {
+            for (cpu_t c { 0 }; c < Cpu::count; c++)
+                if (id[c] == i)
+                    return c;
+
+            return static_cast<cpu_t>(-1);
+        }
+
         ALWAYS_INLINE
         static inline void timer_handler();
 
@@ -106,10 +113,12 @@ class Lapic
         static inline unsigned ratio { 0 };
 
     public:
+        static inline apic_t id[NUM_CPU] { 0 };
+
         static inline auto time()       { return __builtin_ia32_rdtsc(); }
 
         ALWAYS_INLINE
-        static inline unsigned id()
+        static inline unsigned idr()
         {
             return read (LAPIC_IDR) >> 24 & 0xff;
         }

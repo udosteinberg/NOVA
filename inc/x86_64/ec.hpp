@@ -138,8 +138,8 @@ class Ec : public Kobject, public Queue<Sc>
         static Ec *current CPULOCAL_HOT;
         static Ec *fpowner CPULOCAL;
 
-        Ec (Pd *, void (*)(), unsigned);
-        Ec (Pd *, mword, Pd *, void (*)(), unsigned, unsigned, mword, mword);
+        Ec (Pd *, void (*)(), cpu_t);
+        Ec (Pd *, mword, Pd *, void (*)(), cpu_t, unsigned, mword, mword);
 
         ALWAYS_INLINE
         inline void add_tsc_offset (uint64 tsc)

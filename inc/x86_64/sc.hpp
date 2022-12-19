@@ -33,7 +33,7 @@ class Sc : public Kobject
 
     public:
         Ec * const ec;
-        unsigned const cpu;
+        cpu_t const cpu;
         unsigned const prio;
         uint64 const budget;
         uint64 time;
@@ -68,7 +68,7 @@ class Sc : public Kobject
         static unsigned const default_quantum = 10000;
 
         Sc (Pd *, mword, Ec *);
-        Sc (Pd *, mword, Ec *, unsigned, unsigned, unsigned);
+        Sc (Pd *, mword, Ec *, cpu_t, unsigned, unsigned);
 
         ALWAYS_INLINE
         static inline Rq *remote (unsigned c)
