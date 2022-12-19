@@ -75,7 +75,7 @@ class Rcu
         static inline constinit Atomic<Epoch, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST> epoch { State::COMPLETED };
 
         // Number of CPUs that still need to pass through a quiescent state in epoch E
-        static inline constinit Atomic<unsigned, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST> count { 0 };
+        static inline constinit Atomic<cpu_t, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST> count { 0 };
 
         static List     next    CPULOCAL;  // Callbacks handled in a future epoch
         static List     curr    CPULOCAL;  // Callbacks handled in epoch_c
