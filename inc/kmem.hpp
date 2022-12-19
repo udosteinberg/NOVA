@@ -40,7 +40,7 @@ class Kmem final
         static auto phys_to_ptr (uintptr_t p) { return reinterpret_cast<void *>(phys_to_virt (p)); }
 
         // Convert CPULOCAL pointer to global alias pointer
-        template<typename T> NONNULL static auto loc_to_glb (unsigned cpu, T *p)
+        template<typename T> NONNULL static auto loc_to_glb (cpu_t cpu, T *p)
         {
             return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(p) - MMAP_CPU_DATA + MMAP_GLB_CPUS + cpu * PAGE_SIZE (0));
         }
