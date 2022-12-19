@@ -58,11 +58,11 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 
             current = this;
 
-            loc[Cpu::id].make_current (Cpu::feature (Cpu::FEAT_PCID) ? p : 0);
+            loc[Cpu::id].make_current (Cpu::feature (Cpu::Feature::PCID) ? p : 0);
         }
 
         ALWAYS_INLINE
-        static inline Pd *remote (unsigned c)
+        static inline Pd *remote (cpu_t c)
         {
             return *Kmem::loc_to_glb (c, &current);
         }

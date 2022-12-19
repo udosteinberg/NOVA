@@ -212,7 +212,7 @@ void Ec::sys_create_ec()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
-    if (!Hip::hip->cpu_online (r->cpu())) [[unlikely]] {
+    if (r->cpu() >= Cpu::count) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Status::BAD_CPU>();
     }
@@ -462,7 +462,7 @@ void Ec::sys_assign_gsi()
 {
     Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(&current->sys_regs());
 
-    if (!Hip::hip->cpu_online (r->cpu())) [[unlikely]] {
+    if (r->cpu() >= Cpu::count) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Status::BAD_CPU>();
     }

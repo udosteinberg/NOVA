@@ -80,5 +80,5 @@ class Space_mem
 
         static void shootdown();
 
-        void init (unsigned);
+        void init (cpu_t);
 };
