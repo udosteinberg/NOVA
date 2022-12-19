@@ -52,7 +52,7 @@ class Kmem final
          * @pre     CPU cpu's instance of T is within its lifetime at its MMAP_GLB_CPUS address
          * @post    Anchors the returned pointer's provenance to that live T
          */
-        template<typename T> __attribute__((nonnull)) static auto loc_to_glb (unsigned cpu, T *t)
+        template<typename T> __attribute__((nonnull)) static auto loc_to_glb (cpu_t cpu, T *t)
         {
             return std::launder (reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(t) - MMAP_CPU_DATA + MMAP_GLB_CPUS + cpu * PAGE_SIZE (0)));
         }
