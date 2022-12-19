@@ -21,7 +21,6 @@
 
 #include "counter.hpp"
 #include "hazards.hpp"
-#include "hip.hpp"
 #include "lapic.hpp"
 #include "mtrr.hpp"
 #include "pd.hpp"
@@ -29,7 +28,7 @@
 #include "svm.hpp"
 #include "vectors.hpp"
 
-void Space_mem::init (unsigned cpu)
+void Space_mem::init (cpu_t cpu)
 {
     if (!cpus.tas (cpu)) {
         loc[cpu].sync_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
@@ -39,10 +38,7 @@ void Space_mem::init (unsigned cpu)
 
 void Space_mem::shootdown()
 {
-    for (cpu_t cpu { 0 }; cpu < NUM_CPU; cpu++) {
-
-        if (!Hip::hip->cpu_online (cpu))
-            continue;
+    for (cpu_t cpu { 0 }; cpu < Cpu::count; cpu++) {
 
         Pd *pd = Pd::remote (cpu);
 
