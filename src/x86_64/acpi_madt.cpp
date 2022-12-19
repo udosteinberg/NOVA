@@ -24,6 +24,7 @@
 #include "cpu.hpp"
 #include "gsi.hpp"
 #include "ioapic.hpp"
+#include "lapic.hpp"
 #include "pic.hpp"
 
 void Acpi_table_madt::parse() const
@@ -47,10 +48,8 @@ void Acpi_table_madt::parse_lapic (Acpi_apic const *ptr)
 {
     Acpi_lapic const *p = static_cast<Acpi_lapic const *>(ptr);
 
-    if (p->flags & 1 && Cpu::online < NUM_CPU) {
-        Cpu::acpi_id[Cpu::online]   = p->acpi_id;
-        Cpu::apic_id[Cpu::online++] = p->apic_id;
-    }
+    if (p->flags & 1 && Cpu::count < NUM_CPU)
+        Lapic::id[Cpu::count++] = p->apic_id;
 }
 
 void Acpi_table_madt::parse_ioapic (Acpi_apic const *ptr)
