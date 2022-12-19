@@ -36,7 +36,7 @@ void bootstrap()
     Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
 
     // Barrier: wait for all ECs to arrive here
-    for (++barrier; barrier != Cpu::online; pause()) ;
+    for (++barrier; barrier != Cpu::count; pause()) ;
 
     // Create root task
     if (Cpu::bsp) {

@@ -55,7 +55,7 @@ void Rcu::start_batch (State s)
     if ((v ^ ~s) & m)
         return;
 
-    count = Cpu::online;
+    count = Cpu::count;
 
     barrier();
 
