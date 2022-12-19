@@ -100,11 +100,6 @@ class Hip
             __atomic_and_fetch (&api_flg, ~static_cast<decltype (api_flg)>(f), __ATOMIC_SEQ_CST);
         }
 
-        bool cpu_online (unsigned long cpu)
-        {
-            return cpu < NUM_CPU && cpu_desc[cpu].flags & 1;
-        }
-
         void build (mword);
 
         void add_mem (Hip_mem *&, mword, size_t);
@@ -113,6 +108,5 @@ class Hip
 
         void add_mhv (Hip_mem *&);
 
-        void add_cpu();
         void add_check();
 };

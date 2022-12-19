@@ -22,19 +22,25 @@
 #include "atomic.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
+#include "wait.hpp"
 
 extern "C" [[noreturn]] void bootstrap()
 {
-    static Atomic<unsigned> barrier { 0 };
-
     Cpu::init();
 
     // Create idle EC
     Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
     Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
 
-    // Barrier: wait for all ECs to arrive here
-    for (++barrier; barrier != Cpu::online; pause()) ;
+    if (Cpu::bsp) [[unlikely]] {
+
+        // Barrier: wait up to 5s for all non-BSP CPUs to arrive here
+        if (!Wait::until (5000, [] { return Cpu::online == Cpu::count - 1; })) [[unlikely]]
+            panic ("Failed to start all APs");
+    }
+
+    // Barrier: wait for all CPUs to arrive here
+    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
 
     // Create root task
     if (Cpu::bsp) {
