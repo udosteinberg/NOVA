@@ -30,7 +30,7 @@
 
 unsigned Space_mem::did_ctr;
 
-void Space_mem::init (unsigned cpu)
+void Space_mem::init (cpu_t cpu)
 {
     if (!cpus.tas (cpu)) {
         loc[cpu].sync_from (Pd::kern.loc[cpu], MMAP_CPU, MMAP_SPC);
@@ -40,7 +40,7 @@ void Space_mem::init (unsigned cpu)
 
 void Space_mem::shootdown()
 {
-    for (unsigned cpu = 0; cpu < NUM_CPU; cpu++) {
+    for (cpu_t cpu { 0 }; cpu < NUM_CPU; cpu++) {
 
         if (!Hip::hip->cpu_online (cpu))
             continue;
