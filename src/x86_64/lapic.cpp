@@ -48,7 +48,7 @@ void Lapic::init()
     if (!(svr & 0x100))
         write (LAPIC_SVR, svr | 0x100);
 
-    bool dl = Cpu::feature (Cpu::FEAT_TSC_DEADLINE) && !Cmdline::nodl;
+    bool dl = Cpu::feature (Cpu::Feature::TSC_DEADLINE) && !Cmdline::nodl;
 
     switch (lvt_max()) {
         default:
@@ -73,7 +73,7 @@ void Lapic::init()
     write (LAPIC_TPR, 0x10);
     write (LAPIC_TMR_DCR, 0xb);
 
-    Cpu::id = Cpu::find_by_apic_id (id());
+    Cpu::id = lookup (idr());
 
     if ((Cpu::bsp = apic_base & 0x100)) {
 
@@ -107,7 +107,7 @@ void Lapic::init()
 
     write (LAPIC_TMR_ICR, 0);
 
-    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~OFFS_MASK (0), id(), version(), lvt_max(), ratio ? "OS" : "DL");
+    trace (TRACE_INTR, "APIC:%#lx ID:%#x VER:%#x LVT:%#x (%s Mode)", apic_base & ~OFFS_MASK (0), idr(), version(), lvt_max(), ratio ? "OS" : "DL");
 }
 
 void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
@@ -115,7 +115,7 @@ void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthan
     while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
         pause();
 
-    write (LAPIC_ICR_HI, Cpu::apic_id[cpu] << 24);
+    write (LAPIC_ICR_HI, id[cpu] << 24);
     write (LAPIC_ICR_LO, dsh | 1U << 14 | dlv | vector);
 }
 
