@@ -65,7 +65,7 @@ void Rcu::set_state (State s)
         return;
 
     // All CPUs must pass through a quiescent state
-    count = Cpu::online;
+    count = Cpu::count;
 
     // Start new epoch with all state bits cleared
     epoch++;
