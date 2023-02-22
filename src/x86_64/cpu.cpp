@@ -36,6 +36,7 @@
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
+#include "txt.hpp"
 #include "vmx.hpp"
 
 bool Cpu::bsp;
@@ -407,6 +408,7 @@ void Cpu::fini()
     if (s.state() > 1) {
         Fpu::fini();
         Vmcs::fini();
+        Txt::fini();
     }
 
     Acpi::fini (s);
