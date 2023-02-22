@@ -94,5 +94,5 @@ class Smx final
         /*
          * MLE Join Structure
          */
-        static inline struct { uint32_t gdt_limit, gdt_base, seg, eip; } mle_join asm ("mle_join") { 0, 0, 0, 0 };
+        static inline struct { uint32_t gdt_limit, gdt_base, sel, eip; } mle_join asm ("mle_join") { 0, 0, 0, 0 };
 };

@@ -34,7 +34,7 @@
 #define PTE_ATTR_S      BIT (7)     // Superpage
 #define PTE_ATTR_G      BIT (8)     // Global
 
-.globl                  __init_bsp, __init_aps, __init_aps__, __wake_vec
+.globl                  __init_bsp, __init_aps, __init_aps__, __wake_vec, __init_ilp
 
 /*
  * Macros
@@ -210,6 +210,19 @@ __init_bsp:             // Check if we launched via Multiboot v2
                         REL_SYM (__relo_pdb - OFFSET)
                         lgdt    (__relo_pdl - OFFSET)(%ebp)
 
+                        // Configure MLE Page Tables (4K pages)
+                        PTE_FIX 2, MLE_L2, 0, MLE_L1, PTE_ATTR_P
+                        PTE_FIX 1, MLE_L1, 0, MLE_L0, PTE_ATTR_P
+
+                        lea     MLE_L0(%ebp), %edx
+                        lea     HASH_HPAS + PTE_ATTR_P(%ebp), %ecx
+                        lea     HASH_HPAE(%ebp), %eax
+.Lmle_loop:             mov     %ecx, (%edx)
+                        add     $__SIZEOF_POINTER__, %edx
+                        add     $PAGE_SIZE (0), %ecx
+                        cmp     %eax, %ecx
+                        jb      .Lmle_loop
+.Lilp:
                         // Configure Page Tables: Load Section (2M page)
                         PTE_REL 3, PT3S_HPAS, NOVA_HPAS, PT2L_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
                         PTE_REL 2, PT2L_HPAS, NOVA_HPAS, PT1L_HPAS, PTE_ATTR_A | PTE_ATTR_U | PTE_ATTR_W | PTE_ATTR_P
@@ -234,9 +247,152 @@ __init_bsp:             // Check if we launched via Multiboot v2
                         lea     __init_all(%ebp), %ebx
                         mov     %ebx,           __relo_jip - OFFSET(%ebp)
                         movw    $SEL_KERN_CODE, __relo_jcs - OFFSET(%ebp)
-
+.Lrlp:
                         INIT_PAGING
                         ljmp   *__relo_jip - OFFSET(%ebp)
+
+/*
+ * ILP Re-Entry
+ */
+__init_ilp:             // Determine load skew
+                        mov     %ebx, %ebp
+                        sub     $__init_ilp, %ebp
+
+                        // Crash if load skew is misaligned
+                        test    $OFFS_MASK (1), %ebp
+                        jnz     .Lcrash
+
+                        // Crash if pseudo descriptor limit is wrong
+                        mov     $.Lboot_gdt - __boot_gdt - 1, %eax
+                        cmp     %ax, %cs:__relo_pdl - OFFSET(%ebp)
+                        jne     .Lcrash
+
+                        // Crash if pseudo descriptor base is wrong
+                        lea     __boot_gdt(%ebp), %ebx
+                        cmp     %ebx, %cs:__relo_pdb - OFFSET(%ebp)
+                        jne     .Lcrash
+
+                        // Load measured boot GDT
+                        lgdt    %cs:__relo_pdl - OFFSET(%ebp)
+
+                        // Establish valid 32-bit segments for SS/DS/ES
+                        mov     $SEL_KERN_DATA + 16, %ecx
+                        mov     %cx, %ss
+                        mov     %cx, %ds
+                        mov     %cx, %es
+
+                        // Initialize MLE join structure
+                        sub     $8, %ecx
+                        lea     __init_rlp(%ebp), %edx
+                        lea     mle_join - OFFSET(%ebp), %edi
+                        mov     %eax,  0(%edi)                      // GDT Limit
+                        mov     %ebx,  4(%edi)                      // GDT Base
+                        mov     %ecx,  8(%edi)                      // SEL
+                        mov     %edx, 12(%edi)                      // EIP
+
+                        // Traverse TXT heap
+                        mov     0xfed30300, %esi                    // Data_bios
+                        add     (%esi), %esi                        // Data_os_mle
+                        add     (%esi), %esi                        // Data_os_sinit
+
+                        // Crash if Data_os_sinit does not point to MLE_L2
+                        lea     MLE_L2(%ebp), %eax
+                        cmp     %eax, 16(%esi)
+                        jne     .Lcrash
+
+                        // Crash if MLE_L2 does not point to MLE_L1 + attributes
+                        lea     MLE_L1 + PTE_ATTR_P(%ebp), %eax
+                        cmp     %eax, MLE_L2(%ebp)
+                        jne     .Lcrash
+
+                        // Crash if MLE_L1 does not point to MLE_L0 + attributes
+                        lea     MLE_L0 + PTE_ATTR_P(%ebp), %eax
+                        cmp     %eax, MLE_L1(%ebp)
+                        jne     .Lcrash
+
+                        // Crash if MLE first page is not virt/phys contiguous with re-entry point
+                        lea     HASH_HPAS + PTE_ATTR_P(%ebp), %eax
+                        cmp     %eax, MLE_L0(%ebp)
+                        jne     .Lcrash
+
+                        // Crash if MLE last page is not virt/phys contiguous with re-entry point
+                        lea     HASH_HPAL + PTE_ATTR_P(%ebp), %eax
+                        cmp     %eax, MLE_L0_LS(%ebp)
+                        jne     .Lcrash
+
+                        // Determine image range
+                        lea     NOVA_HPAS(%ebp), %eax               // NOVA.S
+                        lea     NOVA_HPAE(%ebp), %ecx               // NOVA.E (original)
+                        mov     multiboot_ea - OFFSET(%ebp), %ebx   // NOVA.E (extended)
+
+                        // Crash if NOVA.E is wrong (extended < original)
+                        cmp     %ecx, %ebx
+                        jb      .Lcrash
+
+                        // Crash if NOVA.E is misaligned
+                        test    $OFFS_MASK (1), %ebx
+                        jnz     .Lcrash
+
+                        // Crash if PMR does not cover NOVA.S...NOVA.E
+                        mov     %ebx, %ecx
+                        sub     %eax, %ecx
+                        cmp     %eax, 40(%esi)                      // PMR Lo Base
+                        jne     .Lcrash
+                        cmp     %ecx, 48(%esi)                      // PMR Lo Size
+                        jne     .Lcrash
+
+                        // Traverse TXT heap
+                        add     (%esi), %esi                        // Data_sinit_mle
+
+                        // Crash if Data_sinit_mle version < 5
+                        cmpl    $5, 8(%esi)
+                        jb      .Lcrash
+
+                        // Traverse MDRs
+                        mov     %esi, %edi
+                        mov     136(%esi), %ecx                     // MDR count
+                        add     140(%esi), %edi                     // MDR pointer
+.Lmdr_loop:
+                        // Check if NOVA.S (ESP:EAX) >= MDR.S (ESI:EDX)
+                        mov     0(%edi), %edx
+                        mov     4(%edi), %esi
+                        xor     %esp, %esp
+                        cmp     %edx, %eax
+                        sbb     %esi, %esp
+                        jc      .Lmdr_next                          // NOVA.S < MDR.S
+
+                        // Check if NOVA.E (ESP:EBX) <= MDR.E (ESI:EDX)
+                        add      8(%edi), %edx
+                        adc     12(%edi), %esi
+                        xor     %esp, %esp
+                        cmp     %ebx, %edx
+                        sbb     %esp, %esi
+                        jc      .Lmdr_next                          // NOVA.E > MDR.E
+
+                        // Crash if MDR covering NOVA is != type 0
+                        cmpb    $0, 16(%edi)
+                        jne     .Lcrash
+
+                        // All post-launch checks succeeded
+                        orb     $1, launched - OFFSET(%ebp)
+                        jmp     .Lilp
+.Lmdr_next:
+                        lea     24(%edi), %edi
+                        loop    .Lmdr_loop
+.Lcrash:
+                        ud2
+
+/*
+ * RLP Re-Entry
+ */
+__init_rlp:             // Determine load skew
+                        mov     0xfed30290, %ebp
+                        sub     $mle_join - OFFSET, %ebp
+
+                        // Mark as RLP
+                        xor     %ebx, %ebx
+
+                        jmp     .Lrlp
 
 /*
  * 16-bit Startup Code: Application Processors (APs)
@@ -265,6 +421,8 @@ __init_aps__:
 __boot_gdt:             .quad   0                               // SEL_NULL
                         .quad   0x00a09b0000000000              // SEL_KERN_CODE (64-bit)
                         .quad   0x00a0930000000000              // SEL_KERN_DATA (64-bit)
+                        .quad   0x00cf9b000000ffff              // SEL_KERN_CODE (32-bit)
+                        .quad   0x00cf93000000ffff              // SEL_KERN_DATA (32-bit)
 .Lboot_gdt:
 
 /*
@@ -308,6 +466,9 @@ __init_all:             mov     $.Lhigh, %rax
                         movzwl  __boot_lock, %edx
                         jmp     .Llock_retry
 .Llock_end:
+                        // Restore TXT state
+                        call    txt_restore
+
                         // Init (BSP only)
                         test    %ebx, %ebx
                         jz      .Lskip_init
