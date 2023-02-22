@@ -53,6 +53,8 @@
 
 // Global Area
 #define MMAP_GLB_TPM2   VIRT_ADDR (511, 510, 508, 320)          //   2M (0xfed40000 offset in 2M window)
+#define MMAP_GLB_TXTC   VIRT_ADDR (511, 510, 508, 288)          //   2M (0xfed20000 offset in 2M window)
+#define MMAP_GLB_TXTH   VIRT_ADDR (511, 510, 504,   0)          //   4M + gap
 #define MMAP_GLB_MAP1   VIRT_ADDR (511, 510, 500,   0)          //   4M + gap
 #define MMAP_GLB_MAP0   VIRT_ADDR (511, 510, 496,   0)          //   4M + gap
 #define MMAP_GLB_UART   VIRT_ADDR (511, 510, 488,   0)          //  16M
