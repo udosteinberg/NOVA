@@ -18,9 +18,10 @@
 #include "extern.hpp"
 #include "hip_arch.hpp"
 #include "kmem.hpp"
+#include "txt.hpp"
 
 void Hip_arch::build()
 {
-    elog_p_addr = 0;
-    elog_e_addr = 0;
+    elog_p_addr = Txt::launched ? Kmem::sym_to_phys (&EVTLOG) : 0;
+    elog_e_addr = Txt::launched ? elog_p_addr + PAGE_SIZE (0) : 0;
 }

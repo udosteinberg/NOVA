@@ -28,6 +28,7 @@ ENTRY(__init_bsp)
 
 PHDRS
 {
+    ptab PT_LOAD FLAGS (6);
     init PT_LOAD FLAGS (6);
     kern PT_LOAD FLAGS (6);
 }
@@ -37,6 +38,18 @@ SECTIONS
     . = LOAD_ADDR;
 
     PROVIDE_HIDDEN (NOVA_HPAS = .);
+
+#if defined(__x86_64__)
+    .ptab :
+    {
+        PROVIDE_HIDDEN (EVTLOG = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L2 = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L1 = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L0 = .); . += 4K;
+    } : ptab
+#endif
+
+    PROVIDE_HIDDEN (HASH_HPAS = .);
 
     .init :
     {
@@ -79,6 +92,8 @@ SECTIONS
         PROVIDE_HIDDEN (CTORS_E = .);
     } : kern
 
+    PROVIDE_HIDDEN (HASH_HPAE = . - OFFSET);
+
     .data : AT (ADDR (.data) - OFFSET)
     {
         *(.data .data.* .gnu.linkonce.d.*)
@@ -111,6 +126,12 @@ SECTIONS
 
     PROVIDE_HIDDEN (NOVA_HPAE = . - OFFSET);
 
+    PROVIDE_HIDDEN (HASH_SIZE =  HASH_HPAE - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_HEAD = __head_mle - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_INIT = __init_ilp - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_HPAL = (HASH_HPAE - 1) & ~OFFS_MASK (0));
+    PROVIDE_HIDDEN (MLE_L0_LS = MLE_L0 + __SIZEOF_POINTER__ * ((HASH_SIZE - 1) >> PAGE_BITS));
+
     PROVIDE_HIDDEN (DSTK_TOP = MMAP_CPU_DSTK + PAGE_SIZE (0));
     PROVIDE_HIDDEN (SSTK_TOP = MMAP_CPU_SSTK + PAGE_SIZE (0) - __SIZEOF_POINTER__);
 
@@ -130,4 +151,5 @@ SECTIONS
 
     . = ASSERT ((NOVA_HPAS & OFFS_MASK (1)) == 0, "NOVA_HPAS not 2M aligned");
     . = ASSERT ((NOVA_HPAE & OFFS_MASK (1)) == 0, "NOVA_HPAE not 2M aligned");
+    . = ASSERT ((HASH_HPAS & OFFS_MASK (0)) == 0, "HASH_HPAS not 4K aligned");
 }
