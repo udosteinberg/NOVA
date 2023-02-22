@@ -82,6 +82,16 @@ Protection features can be enabled at build time as follows:
 | CET Supervisor Shadow Stacks (SSS)    | `make ARCH=x86_64 CFP=return` |
 | CET IBT and CET SSS                   | `make ARCH=x86_64 CFP=full`   |
 
+##### Trusted Execution Technology (TXT)
+
+On TXT-enabled platforms, NOVA performs a measured launch to establish a
+Dynamic Root of Trust for Measurement (DRTM) if an SINIT Authenticated Code
+Module (ACM) matching the platform is present in TXT memory.
+
+The SINIT ACM is typically loaded into TXT memory
+- on server platforms: by the firmware
+- on client platforms: by the bootloader
+
 ## Booting
 
 See the NOVA interface specification in the `doc` directory for details

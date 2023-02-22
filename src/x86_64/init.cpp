@@ -29,6 +29,7 @@
 #include "pconfig.hpp"
 #include "pic.hpp"
 #include "string.hpp"
+#include "txt.hpp"
 
 extern "C" uintptr_t kern_ptab_setup (apic_t t)
 {
@@ -68,8 +69,15 @@ extern "C" uintptr_t kern_ptab_setup (apic_t t)
 
 extern "C" void preinit()
 {
-    if (!Acpi::resume)
+    if (!Acpi::resume) {
+
         Patch::detect();
+
+        if (!Txt::launched)
+            Cmdline::init();
+    }
+
+    Txt::launch();
 }
 
 extern "C" void init()
@@ -81,8 +89,6 @@ extern "C" void init()
 
         for (auto func { CTORS_S }; func != CTORS_E; (*func++)()) ;
 
-        Cmdline::init();
-
         for (auto func { CTORS_C }; func != CTORS_S; (*func++)()) ;
 
         // Now we're ready to talk to the world
@@ -92,6 +98,8 @@ extern "C" void init()
     }
 
     Pconfig::init();
+
+    Txt::init();
 
     Acpi::init();
 

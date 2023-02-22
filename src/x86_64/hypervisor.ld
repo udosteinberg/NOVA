@@ -43,8 +43,13 @@ SECTIONS
     .ptab :
     {
         PROVIDE_HIDDEN (MLE_TL = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L2 = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L1 = .); . += 4K;
+        PROVIDE_HIDDEN (MLE_L0 = .); . += 4K;
     } : ptab
 #endif
+
+    PROVIDE_HIDDEN (HASH_HPAS = .);
 
     .init :
     {
@@ -87,6 +92,8 @@ SECTIONS
         PROVIDE_HIDDEN (CTORS_E = .);
     } : kern
 
+    PROVIDE_HIDDEN (HASH_HPAE = . - OFFSET);
+
     .data : AT (ADDR (.data) - OFFSET)
     {
         *(.data .data.* .gnu.linkonce.d.*)
@@ -120,6 +127,12 @@ SECTIONS
 
     PROVIDE_HIDDEN (NOVA_HPAE = . - OFFSET);
 
+    PROVIDE_HIDDEN (HASH_SIZE =  HASH_HPAE - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_HEAD = __head_mle - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_INIT = __init_ilp - HASH_HPAS);
+    PROVIDE_HIDDEN (HASH_HPAL = (HASH_HPAE - 1) & ~OFFS_MASK (0));
+    PROVIDE_HIDDEN (MLE_L0_LS = MLE_L0 + __SIZEOF_POINTER__ * ((HASH_SIZE - 1) >> PAGE_BITS));
+
     PROVIDE_HIDDEN (DSTK_TOP = MMAP_CPU_DSTT);
     PROVIDE_HIDDEN (DSHD_TOP = MMAP_CPU_DTKN);
 
@@ -137,9 +150,11 @@ SECTIONS
 
     // Size Constraints
     . = ASSERT (SIZEOF (.cpulocal) <= PAGE_SIZE (0), "CPULOCAL section too large");
+    . = ASSERT (HASH_SIZE          <= PAGE_SIZE (1), "MEASURED section too large");
 
     // Alignment Constraints
     . = ASSERT ((NOVA_HPAS & ALIGNMENT_OFFS (ALIGNMENT_NOVA)) == 0, "NOVA_HPAS misaligned");
+    . = ASSERT ((HASH_HPAS & OFFS_MASK (0))                   == 0, "HASH_HPAS misaligned");
     . = ASSERT ((PTAB_HPAS & OFFS_MASK (0))                   == 0, "PTAB_HPAS misaligned");
     . = ASSERT ((ZERO_HPAS & OFFS_MASK (0))                   == 0, "ZERO_HPAS misaligned");
     . = ASSERT ((NOVA_HPAE & OFFS_MASK (1))                   == 0, "NOVA_HPAE misaligned");
