@@ -26,6 +26,7 @@
 #include "io.hpp"
 #include "lowlevel.hpp"
 #include "macros.hpp"
+#include "txt.hpp"
 
 class Acpi_fixed final
 {
@@ -162,7 +163,7 @@ class Acpi_fixed final
         /*
          * Wait for all APs to be offline
          */
-        static void offline_wait() {}
+        static void offline_wait() { Txt::fini(); }
 
         /*
          * Perform platform reset
