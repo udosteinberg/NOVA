@@ -29,6 +29,7 @@
 #include "stc.hpp"
 #include "stdio.hpp"
 #include "timeout.hpp"
+#include "txt.hpp"
 #include "vectors.hpp"
 
 void Lapic::init (uint32_t clk, uint32_t rat)
@@ -93,7 +94,8 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
     if ((Cpu::bsp = apic_base & BIT (8))) {
 
-        send_exc (0, Delivery::DLV_INIT);
+        if (!Txt::launched)
+            send_exc (0, Delivery::DLV_INIT);
 
         write (Reg32::TMR_ICR, ~0U);
 
@@ -113,9 +115,11 @@ void Lapic::init (uint32_t clk, uint32_t rat)
 
         trace (TRACE_CPU, "FREQ: %lu Hz (%s) Ratio:%u", Stc::freq, f ? "enumerated" : "measured", ratio);
 
-        send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
-        Acpi_fixed::delay (1);
-        send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
+        if (!Txt::launched) {
+            send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
+            Acpi_fixed::delay (1);
+            send_exc (Acpi::sipi >> PAGE_BITS, Delivery::DLV_SIPI);
+        }
     }
 
     write (Reg32::TMR_ICR, 0);
