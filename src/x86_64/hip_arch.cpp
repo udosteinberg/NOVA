@@ -17,6 +17,7 @@
 
 #include "hip_arch.hpp"
 #include "interrupt.hpp"
+#include "tpm_log.hpp"
 
 void Hip_arch::build()
 {
@@ -24,7 +25,7 @@ void Hip_arch::build()
     num_pin = Interrupt::num_pin;
     num_gsi = Interrupt::num_gsi;
 
-    elog_phys = 0;
-    elog_size = 0;
-    elog_offs = 0;
+    elog_phys = Tpm_log::phys;
+    elog_size = Tpm_log::size;
+    elog_offs = Tpm_log::offs;
 }
