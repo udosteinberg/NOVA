@@ -16,10 +16,11 @@
  */
 
 #include "hip_arch.hpp"
+#include "tpm_log.hpp"
 
 void Hip_arch::build()
 {
-    elog_phys = 0;
-    elog_size = 0;
-    elog_offs = 0;
+    elog_phys = Tpm_log::phys;
+    elog_size = Tpm_log::size;
+    elog_offs = Tpm_log::offs;
 }
