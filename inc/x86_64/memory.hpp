@@ -43,6 +43,9 @@
 #define MMAP_CPU        0xffffffffbfe00000      // 511 510 511 000    2M
 
 // Global Area                [--PTE--]---      // ^39 ^30 ^21 ^12
+#define MMAP_GLB_TXTD   0xffffffffbf940000      // 511 510 508 320    2M (0xfed40000 offset in 2M window)
+#define MMAP_GLB_TXTC   0xffffffffbf920000      // 511 510 508 288    2M (0xfed20000 offset in 2M window)
+#define MMAP_GLB_TXTH   0xffffffffbf000000      // 511 510 504 000    4M + gap
 #define MMAP_GLB_MAP1   0xffffffffbe800000      // 511 510 500 000    4M + gap
 #define MMAP_GLB_MAP0   0xffffffffbe000000      // 511 510 496 000    4M + gap
 #define MMAP_GLB_APIC   0xffffffffbd000000      // 511 510 488 000   16M
