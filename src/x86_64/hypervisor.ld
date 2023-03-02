@@ -28,6 +28,7 @@ ENTRY(__init_bsp)
 
 PHDRS
 {
+    ptab PT_LOAD FLAGS (6);
     init PT_LOAD FLAGS (6);
     kern PT_LOAD FLAGS (6);
 }
@@ -37,6 +38,13 @@ SECTIONS
     . = LOAD_ADDR;
 
     PROVIDE_HIDDEN (NOVA_HPAS = .);
+
+#if defined(__x86_64__)
+    .ptab :
+    {
+        PROVIDE_HIDDEN (MLE_TL = .); . += 4K;
+    } : ptab
+#endif
 
     .init :
     {
