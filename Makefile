@@ -62,6 +62,7 @@ SRC	:= hypervisor.ld $(sort $(notdir $(foreach d,$(SRC_DIR),$(wildcard $(d)/*.S)
 OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(SRC))))
 OBJ_DEP	:= $(OBJ:%.o=%.d)
 
+DIG	:= $(BLD_DIR)/digest
 HYP	:= $(BLD_DIR)/$(ARCH)-nova
 ELF	:= $(HYP).elf
 BIN	:= $(HYP).bin
@@ -163,6 +164,7 @@ Makefile.conf:
 			$(call message,CFG,$@)
 			@cp $@.example $@
 
+$(DIG):			$(MFL) | $(BLD_DIR) tool_hst_cc
 $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 # Zap old-fashioned suffixes
@@ -172,11 +174,18 @@ $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 clean:
 			$(call message,CLN,$@)
-			$(RM) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
+			$(RM) $(DIG) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
 
-install:		$(foreach d,$(INS_DIR),install-to-$(subst :,@,$(d)))
+install:		$(foreach d,$(INS_DIR),install-to-$(subst :,@,$(d))) | $(DIG)
 			@echo "Section Sizes for $(HYP)"
 			@$(TGT_SZ) $(HYP)
+ifeq ($(ARCH),x86_64)
+			@echo "Reference Integrity Measurements for $(HYP)"
+			@echo $(shell $(DIG) $(HYP) | sha1sum)   "SHA1-160"
+			@echo $(shell $(DIG) $(HYP) | sha256sum) "SHA2-256"
+			@echo $(shell $(DIG) $(HYP) | sha384sum) "SHA2-384"
+			@echo $(shell $(DIG) $(HYP) | sha512sum) "SHA2-512"
+endif
 
 run:			$(ELF)
 			$(RUN) $<
