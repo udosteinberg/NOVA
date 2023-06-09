@@ -62,6 +62,7 @@ SRC	:= hypervisor.ld $(sort $(notdir $(foreach dir,$(SRC_DIR),$(wildcard $(dir)/
 OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(SRC))))
 OBJ_DEP	:= $(OBJ:%.o=%.d)
 
+DIG	:= $(BLD_DIR)/digest
 HYP	:= $(BLD_DIR)/$(ARCH)-nova
 ELF	:= $(HYP).elf
 BIN	:= $(HYP).bin
@@ -167,6 +168,7 @@ Makefile.conf:
 			$(call message,CFG,$@)
 			@cp $@.example $@
 
+$(DIG):			$(MFL) | $(BLD_DIR) tool_hst_cc
 $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 # Zap old-fashioned suffixes
@@ -176,12 +178,19 @@ $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 clean:
 			$(call message,CLN,$@)
-			$(RM) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
+			$(RM) $(DIG) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
 
-install:		$(HYP)
+install:		$(HYP) | $(DIG)
 			$(call message,INS,$^ =\> $(INS_DIR))
 			$(INSTALL) -m 644 $^ $(INS_DIR)
 			@$(TGT_SZ) $<
+ifeq ($(ARCH),x86_64)
+			@echo Reference Integrity Measurements for $^
+			@echo $(shell $(DIG) $^ | sha1sum)   "SHA1"
+			@echo $(shell $(DIG) $^ | sha256sum) "SHA256"
+			@echo $(shell $(DIG) $^ | sha384sum) "SHA384"
+			@echo $(shell $(DIG) $^ | sha512sum) "SHA512"
+endif
 
 run:			$(ELF)
 			$(RUN) $<
