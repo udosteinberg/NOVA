@@ -62,6 +62,7 @@ SRC	:= hypervisor.ld $(sort $(notdir $(foreach d,$(SRC_DIR),$(wildcard $(d)/*.S)
 OBJ	:= $(patsubst %.ld,$(PAT_OBJ), $(patsubst %.S,$(PAT_OBJ), $(patsubst %.cpp,$(PAT_OBJ), $(SRC))))
 OBJ_DEP	:= $(OBJ:%.o=%.d)
 
+DIG	:= $(BLD_DIR)/digest
 HYP	:= $(BLD_DIR)/$(ARCH)-nova
 ELF	:= $(HYP).elf
 BIN	:= $(HYP).bin
@@ -79,6 +80,9 @@ check = $(shell if $(TGT_CC) $(patsubst -Wno-%,-W%,$(1)) -Werror -c -xc++ /dev/n
 
 # Version check
 gitrv = $(shell (git rev-parse HEAD 2>/dev/null || echo 0) | cut -c1-7)
+
+# Reference integrity measurement
+cksum = @cksum -a $(2) $(if $(3),-l $(3)) /dev/null >/dev/null 2>&1 && echo "$(1) $$($(DIG) $(HYP) | cksum --untagged -a $(2) $(if $(3),-l $(3)) | cut -d ' ' -f1)" || echo "$(1) not computed"
 
 # Search path
 VPATH	:= $(SRC_DIR)
@@ -174,6 +178,7 @@ Makefile.conf:
 			$(call message,CFG,$@)
 			@cp $@.example $@
 
+$(DIG):			$(MFL) | $(BLD_DIR) tool_hst_cc
 $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 # Zap old-fashioned suffixes
@@ -183,11 +188,21 @@ $(OBJ):			$(MFL) | $(BLD_DIR) tool_tgt_cc
 
 clean:
 			$(call message,CLN,$@)
-			$(RM) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
+			$(RM) $(DIG) $(OBJ) $(HYP) $(ELF) $(BIN) $(OBJ_DEP)
 
-install:		$(foreach d,$(INS_DIR),install-to-$(subst :,@,$(d)))
+install:		$(foreach d,$(INS_DIR),install-to-$(subst :,@,$(d))) | $(DIG)
 			@echo "Section Sizes for $(HYP)"
 			@$(TGT_SZ) $(HYP)
+ifeq ($(ARCH),x86_64)
+			@echo "Reference Integrity Measurements for $(HYP)"
+			$(call cksum,SHA1-160,sha1)
+			$(call cksum,SHA2-256,sha2,256)
+			$(call cksum,SHA2-384,sha2,384)
+			$(call cksum,SHA2-512,sha2,512)
+			$(call cksum,SHA3-256,sha3,256)
+			$(call cksum,SHA3-384,sha3,384)
+			$(call cksum,SHA3-512,sha3,512)
+endif
 
 run:			$(ELF)
 			$(RUN) $<
