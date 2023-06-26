@@ -22,9 +22,9 @@
 #pragma once
 
 #include "mdb.hpp"
-#include "refptr.hpp"
+#include "refcnt.hpp"
 
-class Kobject : public Mdb
+class Kobject : public Refcnt, public Mdb
 {
     private:
         uint8 objtype;
@@ -43,7 +43,7 @@ class Kobject : public Mdb
             SM,
         };
 
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) {}
+        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) { ref_inc(); }
 
     public:
         ALWAYS_INLINE

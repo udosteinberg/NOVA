@@ -36,7 +36,7 @@
 
 class Utcb;
 
-class Ec : public Kobject, public Refcount, public Queue<Sc>
+class Ec : public Kobject, public Queue<Sc>
 {
     friend class Queue<Ec>;
 
@@ -315,4 +315,13 @@ class Ec : public Kobject, public Refcount, public Queue<Sc>
 
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
+
+        void destroy()
+        {
+            this->~Ec();
+
+            operator delete (this);
+        }
+
+        void collect() override final {}
 };
