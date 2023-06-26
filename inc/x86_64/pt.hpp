@@ -46,4 +46,13 @@ class Pt : public Kobject
 
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
+
+        void destroy()
+        {
+            this->~Pt();
+
+            operator delete (this);
+        }
+
+        void collect() override final {}
 };
