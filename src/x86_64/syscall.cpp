@@ -228,7 +228,7 @@ void Ec::sys_create_pd()
     Pd *pd = new Pd (Pd::current, r->sel(), cap.prm());
     if (!Space_obj::insert_root (pd)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete pd;
+        pd->destroy();
         sys_finish<Status::BAD_CAP>();
     }
 
@@ -270,7 +270,7 @@ void Ec::sys_create_ec()
 
     if (!Space_obj::insert_root (ec)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete ec;
+        ec->destroy();
         sys_finish<Status::BAD_CAP>();
     }
 
@@ -309,7 +309,7 @@ void Ec::sys_create_sc()
     Sc *sc = new Sc (Pd::current, r->sel(), ec, ec->cpu, r->qpd().prio(), r->qpd().quantum());
     if (!Space_obj::insert_root (sc)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete sc;
+        sc->destroy();
         sys_finish<Status::BAD_CAP>();
     }
 
@@ -345,7 +345,7 @@ void Ec::sys_create_pt()
     Pt *pt = new Pt (Pd::current, r->sel(), ec, r->mtd(), r->eip());
     if (!Space_obj::insert_root (pt)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete pt;
+        pt->destroy();
         sys_finish<Status::BAD_CAP>();
     }
 
@@ -367,7 +367,7 @@ void Ec::sys_create_sm()
     Sm *sm = new Sm (Pd::current, r->sel(), r->cnt());
     if (!Space_obj::insert_root (sm)) {
         trace (TRACE_ERROR, "%s: Non-NULL CAP (%#lx)", __func__, r->sel());
-        delete sm;
+        sm->destroy();
         sys_finish<Status::BAD_CAP>();
     }
 

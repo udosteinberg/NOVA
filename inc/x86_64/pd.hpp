@@ -26,7 +26,7 @@
 #include "space_obj.hpp"
 #include "space_pio.hpp"
 
-class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, public Space_obj
+class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 {
     private:
         static Slab_cache cache;
@@ -101,4 +101,13 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
 
         ALWAYS_INLINE
         static inline void operator delete (void *ptr) { cache.free (ptr); }
+
+        void destroy()
+        {
+            this->~Pd();
+
+            operator delete (this);
+        }
+
+        void collect() override final {}
 };
