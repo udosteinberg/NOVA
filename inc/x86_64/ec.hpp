@@ -35,7 +35,7 @@
 
 class Utcb;
 
-class Ec : public Kobject, public Refcount, public Queue<Sc>
+class Ec : public Kobject, public Queue<Sc>
 {
     friend class Queue<Ec>;
 
