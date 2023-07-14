@@ -28,6 +28,7 @@
 #include "pci.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
+#include "std.hpp"
 #include "stdio.hpp"
 #include "syscall.hpp"
 #include "utcb.hpp"
@@ -84,7 +85,7 @@ void Ec::send_msg()
     Exc_regs *r = &current->regs;
 
     Kobject *obj = Space_obj::lookup (current->evt + r->dst_portal).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PT))
+    if (EXPECT_FALSE (!obj || !obj->istype (Kobject::Type::PT)))
         die ("PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
@@ -113,7 +114,7 @@ void Ec::sys_call()
     Sys_call *s = static_cast<Sys_call *>(current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (s->pt()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PT))
+    if (EXPECT_FALSE (!obj || !obj->istype (Kobject::Type::PT)))
         sys_finish<Sys_regs::BAD_CAP>();
 
     Pt *pt = static_cast<Pt *>(obj);
@@ -219,7 +220,7 @@ void Ec::sys_create_pd()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PD)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PD) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PD))))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -254,7 +255,7 @@ void Ec::sys_create_ec()
     }
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::EC)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PD) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::EC))))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -283,13 +284,13 @@ void Ec::sys_create_sc()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#x Q:%#x", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SC)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PD) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SC))))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC) || !(cap.prm() & 1UL << Kobject::SC)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::EC) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SC))))) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -324,13 +325,13 @@ void Ec::sys_create_pt()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->sel(), r->ec(), r->eip());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PT)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PD) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PT))))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC) || !(cap.prm() & 1UL << Kobject::PT)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::EC) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PT))))) {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -358,7 +359,7 @@ void Ec::sys_create_sm()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sel(), r->cnt());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SM)) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PD) || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SM))))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -404,7 +405,7 @@ void Ec::sys_ec_ctrl()
     Sys_ec_ctrl *r = static_cast<Sys_ec_ctrl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0))) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::EC) || !(cap.prm() & BIT (0)))) {
         trace (TRACE_ERROR, "%s: Bad EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -427,7 +428,7 @@ void Ec::sys_sc_ctrl()
     Sys_sc_ctrl *r = static_cast<Sys_sc_ctrl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sc());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0))) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::SC) || !(cap.prm() & BIT (0)))) {
         trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r->sc());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -442,7 +443,7 @@ void Ec::sys_pt_ctrl()
     Sys_pt_ctrl *r = static_cast<Sys_pt_ctrl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->pt());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PT || !(cap.prm() & 1UL << 0))) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::PT) || !(cap.prm() & BIT (0)))) {
         trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r->pt());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -459,7 +460,7 @@ void Ec::sys_sm_ctrl()
     Sys_sm_ctrl *r = static_cast<Sys_sm_ctrl *>(current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op()))) {
+    if (EXPECT_FALSE (!cap.obj() || !cap.obj()->istype (Kobject::Type::SM) || !(cap.prm() & BIT (r->op())))) {
         trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -487,7 +488,7 @@ void Ec::sys_assign_pci()
     Sys_assign_pci *r = static_cast<Sys_assign_pci *>(current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PD)) {
+    if (EXPECT_FALSE (!obj || !obj->istype(Kobject::Type::PD))) {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Sys_regs::BAD_CAP>();
     }
@@ -519,7 +520,7 @@ void Ec::sys_assign_gsi()
     }
 
     Kobject *obj = Space_obj::lookup (r->sm()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::SM)) {
+    if (EXPECT_FALSE (!obj || !obj->istype(Kobject::Type::SM))) {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Sys_regs::BAD_CAP>();
     }
