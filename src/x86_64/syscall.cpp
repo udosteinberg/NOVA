@@ -84,7 +84,7 @@ void Ec::send_msg()
     auto r = current->exc_regs();
 
     Kobject *obj = Space_obj::lookup (current->evt + r.ep()).obj();
-    if (!obj || obj->type() != Kobject::PT) [[unlikely]]
+    if (!obj || obj->type != Kobject::Type::PT) [[unlikely]]
         die ("PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
@@ -113,7 +113,7 @@ void Ec::sys_call()
     Sys_call *s = static_cast<Sys_call *>(&current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (s->pt()).obj();
-    if (!obj || obj->type() != Kobject::PT) [[unlikely]]
+    if (!obj || obj->type != Kobject::Type::PT) [[unlikely]]
         sys_finish<Status::BAD_CAP>();
 
     Pt *pt = static_cast<Pt *>(obj);
@@ -219,7 +219,7 @@ void Ec::sys_create_pd()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::PD)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PD || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PD)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -254,7 +254,7 @@ void Ec::sys_create_ec()
     }
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::EC)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PD || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::EC)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -283,13 +283,13 @@ void Ec::sys_create_sc()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#x Q:%#x", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::SC)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PD || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SC)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << Kobject::SC)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::EC || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SC)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
@@ -324,13 +324,13 @@ void Ec::sys_create_pt()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->sel(), r->ec(), r->eip());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::PT)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PD || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PT)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << Kobject::PT)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::EC || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::PT)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
@@ -358,7 +358,7 @@ void Ec::sys_create_sm()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sel(), r->cnt());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::SM)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PD || !(cap.prm() & BIT (std::to_underlying (Kobject::Type::SM)))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -404,7 +404,7 @@ void Ec::sys_ec_ctrl()
     Sys_ec_ctrl *r = static_cast<Sys_ec_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->ec());
-    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::EC || !(cap.prm() & BIT (0))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
@@ -427,7 +427,7 @@ void Ec::sys_sc_ctrl()
     Sys_sc_ctrl *r = static_cast<Sys_sc_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sc());
-    if (!cap.obj() || cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::SC || !(cap.prm() & BIT (0))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r->sc());
         sys_finish<Status::BAD_CAP>();
     }
@@ -442,7 +442,7 @@ void Ec::sys_pt_ctrl()
     Sys_pt_ctrl *r = static_cast<Sys_pt_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->pt());
-    if (!cap.obj() || cap.obj()->type() != Kobject::PT || !(cap.prm() & 1UL << 0)) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::PT || !(cap.prm() & BIT (0))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r->pt());
         sys_finish<Status::BAD_CAP>();
     }
@@ -459,7 +459,7 @@ void Ec::sys_sm_ctrl()
     Sys_sm_ctrl *r = static_cast<Sys_sm_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
-    if (!cap.obj() || cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op())) [[unlikely]] {
+    if (!cap.obj() || cap.obj()->type != Kobject::Type::SM || !(cap.prm() & BIT (r->op()))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP>();
     }
@@ -487,7 +487,7 @@ void Ec::sys_assign_pci()
     Sys_assign_pci *r = static_cast<Sys_assign_pci *>(&current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (r->pd()).obj();
-    if (!obj || obj->type() != Kobject::PD) [[unlikely]] {
+    if (!obj || obj->type != Kobject::Type::PD) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -519,7 +519,7 @@ void Ec::sys_assign_gsi()
     }
 
     Kobject *obj = Space_obj::lookup (r->sm()).obj();
-    if (!obj || obj->type() != Kobject::SM) [[unlikely]] {
+    if (!obj || obj->type != Kobject::Type::SM) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP>();
     }
