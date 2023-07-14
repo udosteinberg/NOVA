@@ -29,7 +29,7 @@ Atomic<Pd *>    Pd::current { nullptr };
 ALIGNED(32) Pd  Pd::kern (&Pd::kern);
 ALIGNED(32) Pd  Pd::root (&Pd::root, NUM_EXC, 0x1f);
 
-Pd::Pd (Pd *own) : Kobject (PD, static_cast<Space_obj *>(own))
+Pd::Pd (Pd *own) : Kobject (Kobject::Type::PD, static_cast<Space_obj *>(own))
 {
     hpt = Hptp (reinterpret_cast<mword>(&PDBR));
 
