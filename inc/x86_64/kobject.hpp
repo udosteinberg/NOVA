@@ -21,32 +21,56 @@
 
 #pragma once
 
+#include "macros.hpp"
 #include "mdb.hpp"
 #include "refcnt.hpp"
 
 class Kobject : public Refcnt, public Mdb
 {
-    private:
-        uint8 objtype;
-
-    protected:
-        Spinlock lock;
-
-        enum Type
-        {
-            PD,
-            EC,
-            SC,
-            PT,
-            SM,
-        };
-
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, 0, a), objtype (t) { ref_inc(); }
+    friend class Capability;
 
     public:
-        ALWAYS_INLINE
-        inline Type type() const
+        static constexpr auto alignment { BIT (6) };
+
+        enum class Type : uint8_t
         {
-            return Type (objtype);
-        }
+            PD,             // Protection Domain
+            EC,             // Execution Context
+            SC,             // Scheduling Context
+            PT,             // Portal
+            SM,             // Semaphore
+            DC,             // Device Context
+        };
+
+        enum class Subtype : uint8_t
+        {
+            NONE            = 0,
+
+            // PD Subtypes
+            PD              = 0,
+            OBJ             = 1,
+            HST             = 2,
+            GST             = 3,
+            DMA             = 4,
+            PIO             = 5,
+            MSR             = 6,
+
+            // EC Subtypes
+            EC_LOCAL        = 0,
+            EC_GLOBAL       = 1,
+            EC_VCPU_REAL    = 2,
+            EC_VCPU_OFFS    = 3,
+
+            // SM Subtypes
+            SM_REG          = 0,
+            SM_INT          = 1,
+        };
+
+        Type    const   type;
+        Subtype const   subtype;
+
+    protected:
+        Spinlock        lock;
+
+        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, 0, a), type { t }, subtype { Subtype::NONE } { ref_inc(); }
 };
