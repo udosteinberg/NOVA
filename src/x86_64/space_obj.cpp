@@ -62,7 +62,7 @@ void Space_obj::update (Mdb *mdb, mword r)
 {
     assert (this == mdb->space && this != &Pd::kern);
     Lock_guard <Spinlock> guard (mdb->node_lock);
-    update (mdb->node_base, Capability (reinterpret_cast<Kobject *>(mdb->node_phys), mdb->node_attr & ~r));
+    update (mdb->node_base, Capability (reinterpret_cast<Kobject *>(mdb->node_phys), static_cast<unsigned>(mdb->node_attr & ~r)));
 }
 
 bool Space_obj::insert_root (Kobject *obj)
@@ -71,7 +71,7 @@ bool Space_obj::insert_root (Kobject *obj)
         return false;
 
     if (obj->space != static_cast<Space_obj *>(&Pd::kern))
-        static_cast<Space_obj *>(obj->space)->update (obj->node_base, Capability (obj, obj->node_attr));
+        static_cast<Space_obj *>(obj->space)->update (obj->node_base, Capability (obj, static_cast<unsigned>(obj->node_attr)));
 
     return true;
 }

@@ -59,8 +59,6 @@ class Kobject : public Refcnt, public Mdb
             MSR             = 6,
         };
 
-        auto istype (Type t) const { return type == t; }
-
     protected:
         Type    const   type;
         Subtype const   subtype;
