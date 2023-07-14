@@ -44,7 +44,7 @@ class Pd : public Kobject, public Space_mem, public Space_pio, public Space_obj
 
         Pd (Pd *);
 
-        Pd (Pd *own, mword sel, mword a) : Kobject (PD, static_cast<Space_obj *>(own), sel, a) {}
+        Pd (Pd *own, mword sel, mword a) : Kobject (Kobject::Type::PD, static_cast<Space_obj *>(own), sel, a) {}
 
         ALWAYS_INLINE HOT
         inline void make_current()

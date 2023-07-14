@@ -4,8 +4,8 @@
  * Copyright (C) 2009-2011 Udo Steinberg <udo@hypervisor.org>
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
- * Copyright (C) 2012 Udo Steinberg, Intel Corporation.
- * Copyright (C) 2019 Udo Steinberg, BedRock Systems, Inc.
+ * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2023 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -21,20 +21,18 @@
 
 #pragma once
 
+#include "macros.hpp"
 #include "mdb.hpp"
 #include "refcnt.hpp"
 
 class Kobject : public Refcnt, public Mdb
 {
-    private:
-        uint8 objtype;
+    friend class Capability;
 
-        static void free (Rcu_elem *) {}
+    public:
+        static constexpr auto alignment { BIT (5) };
 
-    protected:
-        Spinlock lock;
-
-        enum Type
+        enum class Type : uint8_t
         {
             PD,
             EC,
@@ -43,12 +41,33 @@ class Kobject : public Refcnt, public Mdb
             SM,
         };
 
-        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), objtype (t) { ref_inc(); }
-
-    public:
-        ALWAYS_INLINE
-        inline Type type() const
+        enum class Subtype : uint8_t
         {
-            return Type (objtype);
-        }
+            NONE            = 0,
+
+            EC_LOCAL        = 0,
+            EC_GLOBAL       = 1,
+            EC_VCPU_REAL    = 2,
+            EC_VCPU_OFFS    = 3,
+
+            PD              = 0,
+            OBJ             = 1,
+            HST             = 2,
+            GST             = 3,
+            DMA             = 4,
+            PIO             = 5,
+            MSR             = 6,
+        };
+
+        auto istype (Type t) const { return type == t; }
+
+    protected:
+        Type    const   type;
+        Subtype const   subtype;
+        Spinlock        lock;
+
+        explicit Kobject (Type t, Space *s, mword b = 0, mword a = 0) : Mdb (s, reinterpret_cast<mword>(this), b, a, free), type { t }, subtype { Subtype::NONE } { ref_inc(); }
+
+    private:
+        static void free (Rcu_elem *) {}
 };
