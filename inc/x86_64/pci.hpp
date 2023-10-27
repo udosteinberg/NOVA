@@ -5,6 +5,7 @@
  * Economic rights: Technische Universitaet Dresden (Germany)
  *
  * Copyright (C) 2012-2013 Udo Steinberg, Intel Corporation.
+ * Copyright (C) 2019-2024 Udo Steinberg, BedRock Systems, Inc.
  *
  * This file is part of the NOVA microhypervisor.
  *
@@ -22,7 +23,9 @@
 
 #include "io.hpp"
 #include "list.hpp"
+#include "macros.hpp"
 #include "slab.hpp"
+#include "std.hpp"
 
 class Dmar;
 
@@ -76,7 +79,21 @@ class Pci : public List<Pci>
             return nullptr;
         }
 
+        static constexpr auto seg_shft { 16 };
+        static constexpr auto bus_shft {  8 };
+        static constexpr auto dev_shft {  3 };
+
     public:
+        static constexpr auto pci (uint16_t s, uint8_t b, uint8_t d, uint8_t f) { return static_cast<pci_t>(s << seg_shft | b << bus_shft | d << dev_shft | f); }
+        static constexpr auto pci (            uint8_t b, uint8_t d, uint8_t f) { return static_cast<pci_t>(                b << bus_shft | d << dev_shft | f); }
+
+        static constexpr auto seg (pci_t p) { return static_cast<uint16_t>(p >> seg_shft); }
+        static constexpr auto bdf (pci_t p) { return static_cast<uint16_t>(p); }
+        static constexpr auto bus (pci_t p) { return static_cast<uint8_t> (p >> bus_shft); }
+        static constexpr auto ari (pci_t p) { return static_cast<uint8_t> (p); }
+        static constexpr auto dev (pci_t p) { return static_cast<uint8_t> (p >> dev_shft & BIT_RANGE (4, 0)); }
+        static constexpr auto fun (pci_t p) { return static_cast<uint8_t> (p             & BIT_RANGE (2, 0)); }
+
         Pci (unsigned, unsigned);
 
         ALWAYS_INLINE
