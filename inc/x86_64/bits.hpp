@@ -20,8 +20,23 @@
 
 #pragma once
 
+#include "macros.hpp"
 #include "types.hpp"
 #include "util.hpp"
+
+/*
+ * Determine the number of bits for type T
+ */
+template<typename T> static constexpr auto type_bits() { return sizeof (T) * __CHAR_BIT__; }
+
+/*
+ * Determine the most significant bit number for type T
+ */
+template<typename T> static constexpr auto type_msbn() { return type_bits<T>() - 1; }
+
+template<typename T> static constexpr T shr (T x, unsigned n) { return x >> n; }
+template<typename T> static constexpr T rol (T x, unsigned n) { constexpr unsigned m { type_msbn<T>() }; return x << n | x >> (-n & m); }
+template<typename T> static constexpr T ror (T x, unsigned n) { constexpr unsigned m { type_msbn<T>() }; return x >> n | x << (-n & m); }
 
 ALWAYS_INLINE
 inline long int bit_scan_reverse (mword val)
@@ -93,3 +108,8 @@ static inline mword align_up (mword val, mword align)
     val += (align - 1);                 // Expect power-of-2
     return align_dn (val, align);
 }
+
+// Sanity Checks
+static_assert (type_msbn<uint16_t>() == 15);
+static_assert (type_msbn<uint32_t>() == 31);
+static_assert (type_msbn<uint64_t>() == 63);
