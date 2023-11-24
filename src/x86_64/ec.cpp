@@ -27,6 +27,7 @@
 #include "extern.hpp"
 #include "fpu.hpp"
 #include "hip.hpp"
+#include "integrity.hpp"
 #include "interrupt.hpp"
 #include "multiboot.hpp"
 #include "sm.hpp"
@@ -232,7 +233,8 @@ void Ec::create_root()
         return;
     }
 
-    auto const m { false };
+    // Measure integrity before the event log offset is published in the HIP
+    auto const m { Integrity::measure (Multiboot::rs, msize) };
 
     Hip::hip->build (root_s, root_e);
 
