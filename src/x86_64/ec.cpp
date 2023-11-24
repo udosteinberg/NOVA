@@ -27,6 +27,7 @@
 #include "extern.hpp"
 #include "fpu.hpp"
 #include "hip.hpp"
+#include "integrity.hpp"
 #include "interrupt.hpp"
 #include "multiboot.hpp"
 #include "sm.hpp"
@@ -255,7 +256,7 @@ void Ec::create_root()
     ec->exc_regs().sp() = Space_hst::info_addr();
     ec->cont = Ec_arch::ret_user_hypercall;
 
-    auto const m { false };
+    auto const m { Integrity::measure (Multiboot::rs, msize) };
 
     trace (TRACE_ROOT, "ROOT: Invoking entry point %#lx %s measuring %#lx bytes", entry, m ? "after" : "without", msize);
 
