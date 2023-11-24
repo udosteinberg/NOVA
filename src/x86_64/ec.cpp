@@ -27,6 +27,7 @@
 #include "extern.hpp"
 #include "fpu.hpp"
 #include "hip.hpp"
+#include "integrity.hpp"
 #include "interrupt.hpp"
 #include "multiboot.hpp"
 #include "sm.hpp"
@@ -176,6 +177,11 @@ void Ec::create_root()
                                          Paging::XU * !!(p->flags & BIT (0)) |
                                          Paging::U) };
 
+        if (Integrity::root_size == 0 && !(perm & Paging::W)) {
+            Integrity::root_size = p->f_size;
+            Integrity::root_phys = p->f_offs + ra;
+        }
+
         trace (TRACE_ROOT | TRACE_PARSE, "ROOT: P:%#lx => V:%#lx S:%#10lx (%#x)", p->f_offs + ra, p->v_addr, p->f_size, perm);
 
         auto phys { aligned_dn (PAGE_SIZE (0), p->f_offs + ra) };
@@ -188,6 +194,8 @@ void Ec::create_root()
         for (unsigned o; size; size -= BITN (o), phys += BITN (o), virt += BITN (o))
             hst->delegate (&Space_hst::nova, phys >> PAGE_BITS, virt >> PAGE_BITS, (o = aligned_order (size, phys, virt)) - PAGE_BITS, perm, Memattr::ram());
     }
+
+    Integrity::measure();
 
     Hip::hip->build (root_s, root_e);
 
