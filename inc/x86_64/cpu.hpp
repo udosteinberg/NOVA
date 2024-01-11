@@ -41,6 +41,23 @@ class Cpu final
         // Must agree with enum class Vendor below
         static constexpr char const *vendor_string[] { "Unknown", "GenuineIntel", "AuthenticAMD" };
 
+        enum class Cstate : unsigned
+        {
+            C0  =  0,
+            C1  =  8,
+            C3  = 16,
+            C6  = 24,
+            C7  = 32,
+            C8  = 40,
+            C9  = 48,
+            C10 = 56,
+        };
+
+        static uint32_t cstates CPULOCAL;
+        static uint64_t csthint CPULOCAL;
+
+        static auto supports (Cstate c) { return cstates >> std::to_underlying (c) / 2 & BIT_RANGE (3, 0); }
+
         static constexpr struct scaleable_bus { uint8_t m, d; }
             freq_atom[BIT (4)] { { 5, 6 }, { 1, 1 }, { 4, 3 }, { 7, 6 }, { 4, 5 }, { 14, 15 }, { 9, 10 }, { 8, 9 }, { 7, 8 } },
             freq_core[BIT (3)] { { 8, 3 }, { 4, 3 }, { 2, 1 }, { 5, 3 }, { 10, 3 }, { 1, 1 }, { 4, 1 } };
@@ -52,6 +69,7 @@ class Cpu final
         static void enumerate_features (uint32_t &, uint32_t &, uint32_t (&)[4], uint32_t (&)[12]);
 
         static void setup_msr();
+        static void setup_cst();
 
         static inline Spinlock boot_lock    asm ("__boot_lock");
 
@@ -66,6 +84,7 @@ class Cpu final
         enum class Feature : unsigned
         {
             // EAX=0x1 (ECX)
+            MONITOR                 =  0 * 32 +  3,     // MONITOR/MWAIT Support
             VMX                     =  0 * 32 +  5,     // Virtual Machine Extensions
             PCID                    =  0 * 32 + 17,     // Process Context Identifiers
             X2APIC                  =  0 * 32 + 21,     // x2APIC Support

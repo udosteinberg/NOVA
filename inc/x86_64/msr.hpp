@@ -44,6 +44,7 @@ class Msr final
             FSB_FREQ                        = 0xcd,
             PLATFORM_INFO                   = 0xce,
             IA32_CORE_CAPABILITIES          = 0xcf,         // CORE_CAPABILITIES
+            CST_CONFIG                      = 0xe2,
             IA32_MPERF                      = 0xe7,
             IA32_APERF                      = 0xe8,
             IA32_MTRR_CAP                   = 0xfe,         // MTRR
@@ -64,6 +65,7 @@ class Msr final
             IA32_THERM_STATUS               = 0x19c,
             IA32_PACKAGE_THERM_STATUS       = 0x1b1,
             IA32_DEBUGCTL                   = 0x1d9,
+            POWER_CTL                       = 0x1fc,
             IA32_PAT                        = 0x277,        // PAT
             IA32_MTRR_DEF_TYPE              = 0x2ff,        // MTRR
             IA32_VMX_BASIC                  = 0x480,        // VMX
