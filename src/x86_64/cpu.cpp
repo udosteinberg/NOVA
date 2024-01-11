@@ -34,12 +34,14 @@
 #include "space_hst.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
+#include "timeout.hpp"
 #include "tss.hpp"
 #include "vmx.hpp"
 
 cpu_t Cpu::id;
 unsigned Cpu::hazard;
-uint32_t Cpu::topology, Cpu::features[13], Cpu::upatch;
+uint64_t Cpu::csthint;
+uint32_t Cpu::cstates, Cpu::topology, Cpu::features[13], Cpu::upatch;
 uint8_t Cpu::family, Cpu::model, Cpu::stepping, Cpu::platform, Cpu::type;
 Cpu::Vendor Cpu::vendor;
 bool Cpu::bsp;
@@ -197,7 +199,10 @@ void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], 
         case 0x6:
             cpuid (0x6, features[2], ebx, ecx, edx);
             [[fallthrough]];
-        case 0x4 ... 0x5:
+        case 0x5:
+            cpuid (0x5, eax, ebx, ecx, cstates);
+            [[fallthrough]];
+        case 0x4:
             cpuid (0x4, 0x0, eax, ebx, ecx, edx);
             cpp = (eax >> 26 & BIT_RANGE (5, 0)) + 1;
             [[fallthrough]];
@@ -280,6 +285,33 @@ void Cpu::setup_msr()
 #endif
 }
 
+void Cpu::setup_cst()
+{
+    if (Cmdline::noccst || vendor != Vendor::INTEL)
+        return;
+
+    if (!feature (Feature::MONITOR) || !feature (Feature::ARAT))
+        return;
+
+    // Unsupported states are demoted to the next lower supported state
+    csthint = 0xf0;
+    for (unsigned i { 0 }; i < 7; i++) {
+        auto const s { supports (Cstate { 8 * (i + 1) }) };
+        csthint |= (s ? i << 4 | (s - 1) : csthint >> 8 * i & BIT_RANGE (7, 0)) << 8 * (i + 1);
+    }
+
+    auto const ctl { Msr::read (Msr::Reg64::POWER_CTL) };
+    auto const cfg { Msr::read (Msr::Reg64::CST_CONFIG) & ~(BIT (31) | BIT (16)) };
+
+    // Disable timed MWAIT and ACC
+    Msr::write (Msr::Reg64::CST_CONFIG, cfg);
+
+    trace (TRACE_CPU, "CCST:%s%s%s%s%s%s%s (%#lx:%#lx)",
+           supports (Cstate::C10) ? " C10" : "", supports (Cstate::C9) ? " C9"  : "", supports (Cstate::C8) ? " C8"  : "",
+           supports (Cstate::C7)  ? " C7"  : "", supports (Cstate::C6) ? " C6"  : "", supports (Cstate::C3) ? " C3"  : "",
+           supports (Cstate::C1)  ? " C1"  : "", ctl, cfg);
+}
+
 void Cpu::init()
 {
     if (Acpi::resume)
@@ -311,6 +343,7 @@ void Cpu::init()
     }
 
     setup_msr();
+    setup_cst();
 
     Cr::set_cr4 (Cr::get_cr4() | feature (Feature::SMAP)  * CR4_SMAP    |
                                  feature (Feature::SMEP)  * CR4_SMEP    |
@@ -346,7 +379,18 @@ void Cpu::fini()
 
 void Cpu::halt()
 {
-    asm volatile ("sti; hlt; cli" : : : "memory");
+    if (!csthint) [[unlikely]] {
+        asm volatile ("sti; hlt; cli");
+        return;
+    }
+
+    // Pick a C-state based on predicted idle residency and exit latency
+    auto const i { Timeout::idle() };
+    auto const c { i < 1 ? Cstate::C0 : i < 80 ? Cstate::C1 : i < 120 ? Cstate::C3 : i < 151 ? Cstate::C6 : i < 256 ? Cstate::C7 : i < 339 ? Cstate::C8 : i < 1034 ? Cstate::C9 : Cstate::C10 };
+    auto const h { csthint >> std::to_underlying (c) & BIT_RANGE (7, 0) };
+
+    asm volatile ("monitor" : : "a" (MMAP_CPU_DSTB), "c" (0), "d" (0));
+    asm volatile ("sti; mwait; cli" : : "a" (h), "c" (0));
 }
 
 void Cpu::allocate (apic_t i)
