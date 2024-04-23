@@ -23,6 +23,7 @@
 #include "extern.hpp"
 #include "gdt.hpp"
 #include "mca.hpp"
+#include "nmi.hpp"
 #include "stdio.hpp"
 
 void Ec::load_fpu()
@@ -140,7 +141,7 @@ void Ec::handle_ist (Exc_regs *r)
     switch (r->vec) {
 
         case EXC_NMI:
-            return;
+            return Nmi::handler();
 
         case EXC_MC:
             return Mca::handler();
