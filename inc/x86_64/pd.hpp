@@ -49,12 +49,12 @@ class Pd : public Kobject, public Refcount, public Space_mem, public Space_pio, 
         {
             mword pcid = did;
 
-            if (EXPECT_FALSE (htlb.chk (Cpu::id)))
+            if (htlb.chk (Cpu::id)) [[unlikely]]
                 htlb.clr (Cpu::id);
 
             else {
 
-                if (EXPECT_TRUE (current == this))
+                if (current == this) [[likely]]
                     return;
 
                 pcid |= static_cast<mword>(1ULL << 63);

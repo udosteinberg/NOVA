@@ -69,7 +69,7 @@ void Console::print_num (uint64 val, unsigned base, unsigned width, unsigned fla
 
 void Console::print_str (char const *s, unsigned width, unsigned precs)
 {
-    if (EXPECT_FALSE (!s))
+    if (!s) [[unlikely]]
         return;
 
     unsigned n;
@@ -85,7 +85,7 @@ void Console::vprintf (char const *format, va_list args)
 {
     while (*format) {
 
-        if (EXPECT_TRUE (*format != '%')) {
+        if (*format != '%') [[likely]] {
             putc (*format++);
             continue;
         }
