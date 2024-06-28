@@ -371,7 +371,7 @@ class Vmcs
         ALWAYS_INLINE
         inline void clear()
         {
-            if (EXPECT_TRUE (current == this))
+            if (current == this) [[likely]]
                 current = nullptr;
 
             uint64 phys = Buddy::ptr_to_phys (this);
@@ -384,7 +384,7 @@ class Vmcs
         ALWAYS_INLINE
         inline void make_current()
         {
-            if (EXPECT_TRUE (current == this))
+            if (current == this) [[likely]]
                 return;
 
             uint64 phys = Buddy::ptr_to_phys (current = this);
