@@ -51,7 +51,7 @@ void Ec::activate()
     for (Sc::ctr_link = 0; ec->partner; ec = ec->partner)
         Sc::ctr_link++;
 
-    if (EXPECT_FALSE (ec->blocked()))
+    if (ec->blocked()) [[unlikely]]
         ec->block_sc();
 
     ec->make_current();
@@ -84,16 +84,16 @@ void Ec::send_msg()
     auto r = current->exc_regs();
 
     Kobject *obj = Space_obj::lookup (current->evt + r.ep()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PT))
+    if (!obj || obj->type() != Kobject::PT) [[unlikely]]
         die ("PT not found");
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
-    if (EXPECT_FALSE (current->cpu != ec->xcpu))
+    if (current->cpu != ec->xcpu) [[unlikely]]
         die ("PT wrong CPU");
 
-    if (EXPECT_TRUE (!ec->cont)) {
+    if (!ec->cont) [[likely]] {
         current->cont = C;
         current->set_partner (ec);
         current->regs.mtd = pt->mtd.val;
@@ -113,16 +113,16 @@ void Ec::sys_call()
     Sys_call *s = static_cast<Sys_call *>(&current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (s->pt()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PT))
+    if (!obj || obj->type() != Kobject::PT) [[unlikely]]
         sys_finish<Status::BAD_CAP>();
 
     Pt *pt = static_cast<Pt *>(obj);
     Ec *ec = pt->ec;
 
-    if (EXPECT_FALSE (current->cpu != ec->xcpu))
+    if (current->cpu != ec->xcpu) [[unlikely]]
         sys_finish<Status::BAD_CPU>();
 
-    if (EXPECT_TRUE (!ec->cont)) {
+    if (!ec->cont) [[likely]] {
         current->cont = ret_user_sysexit;
         current->set_partner (ec);
         ec->cont = recv_user;
@@ -131,7 +131,7 @@ void Ec::sys_call()
         ec->make_current();
     }
 
-    if (EXPECT_TRUE (!(s->flags() & Sys_call::DISABLE_BLOCKING)))
+    if (!(s->flags() & Sys_call::DISABLE_BLOCKING)) [[likely]]
         ec->help (sys_call);
 
     sys_finish<Status::TIMEOUT>();
@@ -150,7 +150,7 @@ void Ec::recv_kern()
     else if (ec->cont == ret_user_vmrun)
         fpu = current->utcb->load_svm (ec->cpu_regs());
 
-    if (EXPECT_FALSE (fpu))
+    if (fpu) [[unlikely]]
         ec->transfer_fpu (current);
 
     ret_user_sysexit();
@@ -162,7 +162,7 @@ void Ec::recv_user()
 
     ec->utcb->save (current->utcb);
 
-    if (EXPECT_FALSE (ec->utcb->tcnt()))
+    if (ec->utcb->tcnt()) [[unlikely]]
         delegate<true>();
 
     ret_user_sysexit();
@@ -172,12 +172,12 @@ void Ec::reply (void (*c)())
 {
     current->cont = c;
 
-    if (EXPECT_FALSE (current->glb))
+    if (current->glb) [[unlikely]]
         Sc::schedule (true);
 
     Ec *ec = current->rcap;
 
-    if (EXPECT_FALSE (!ec || !ec->clr_partner()))
+    if (!ec || !ec->clr_partner()) [[unlikely]]
         Sc::current->ec->activate();
 
     ec->make_current();
@@ -187,13 +187,13 @@ void Ec::sys_reply()
 {
     Ec *ec = current->rcap;
 
-    if (EXPECT_TRUE (ec)) {
+    if (ec) [[likely]] {
 
         Utcb *src = current->utcb;
 
         bool fpu = false;
 
-        if (EXPECT_TRUE (ec->cont == ret_user_sysexit))
+        if (ec->cont == ret_user_sysexit) [[likely]]
             src->save (ec->utcb);
         else if (ec->cont == ret_user_iret)
             fpu = src->save_exc (ec->cpu_regs());
@@ -202,10 +202,10 @@ void Ec::sys_reply()
         else if (ec->cont == ret_user_vmrun)
             fpu = src->save_svm (ec->cpu_regs());
 
-        if (EXPECT_FALSE (fpu))
+        if (fpu) [[unlikely]]
             current->transfer_fpu (ec);
 
-        if (EXPECT_FALSE (src->tcnt()))
+        if (src->tcnt()) [[unlikely]]
             delegate<false>();
     }
 
@@ -219,7 +219,7 @@ void Ec::sys_create_pd()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PD:%#lx", current, r->sel());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PD)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::PD)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -243,24 +243,24 @@ void Ec::sys_create_ec()
 
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE EC:%#lx CPU:%#x UTCB:%#lx ESP:%#lx EVT:%#x", current, r->sel(), r->cpu(), r->utcb(), r->esp(), r->evt());
 
-    if (EXPECT_FALSE (!Hip::hip->cpu_online (r->cpu()))) {
+    if (!Hip::hip->cpu_online (r->cpu())) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Status::BAD_CPU>();
     }
 
-    if (EXPECT_FALSE (!r->utcb() && !(Hip::hip->feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM)))) {
+    if (!r->utcb() && !(Hip::hip->feature() & (Hip::FEAT_VMX | Hip::FEAT_SVM))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: VCPUs not supported", __func__);
         sys_finish<Status::BAD_FTR>();
     }
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::EC)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::EC)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
     Pd *pd = static_cast<Pd *>(cap.obj());
 
-    if (EXPECT_FALSE (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb()))) {
+    if (r->utcb() >= USER_ADDR || r->utcb() & PAGE_MASK || !pd->insert_utcb (r->utcb())) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid UTCB address (%#lx)", __func__, r->utcb());
         sys_finish<Status::BAD_PAR>();
     }
@@ -283,24 +283,24 @@ void Ec::sys_create_sc()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SC:%#lx EC:%#lx P:%#x Q:%#x", current, r->sel(), r->ec(), r->qpd().prio(), r->qpd().quantum());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SC)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::SC)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC) || !(cap.prm() & 1UL << Kobject::SC)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << Kobject::SC)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
     Ec *ec = static_cast<Ec *>(cap.obj());
 
-    if (EXPECT_FALSE (!ec->glb)) {
+    if (!ec->glb) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Cannot bind SC", __func__);
         sys_finish<Status::BAD_CAP>();
     }
 
-    if (EXPECT_FALSE (!r->qpd().prio() || !r->qpd().quantum())) {
+    if (!r->qpd().prio() || !r->qpd().quantum()) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid QPD", __func__);
         sys_finish<Status::BAD_PAR>();
     }
@@ -324,19 +324,19 @@ void Ec::sys_create_pt()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE PT:%#lx EC:%#lx EIP:%#lx", current, r->sel(), r->ec(), r->eip());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::PT)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::PT)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
 
     cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC) || !(cap.prm() & 1UL << Kobject::PT)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << Kobject::PT)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
     Ec *ec = static_cast<Ec *>(cap.obj());
 
-    if (EXPECT_FALSE (ec->glb)) {
+    if (ec->glb) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Cannot bind PT", __func__);
         sys_finish<Status::BAD_CAP>();
     }
@@ -358,7 +358,7 @@ void Ec::sys_create_sm()
     trace (TRACE_SYSCALL, "EC:%p SYS_CREATE SM:%#lx CNT:%lu", current, r->sel(), r->cnt());
 
     Capability cap = Space_obj::lookup (r->pd());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PD) || !(cap.prm() & 1UL << Kobject::SM)) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PD || !(cap.prm() & 1UL << Kobject::SM)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
@@ -404,7 +404,7 @@ void Ec::sys_ec_ctrl()
     Sys_ec_ctrl *r = static_cast<Sys_ec_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->ec());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0))) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::EC || !(cap.prm() & 1UL << 0)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad EC CAP (%#lx)", __func__, r->ec());
         sys_finish<Status::BAD_CAP>();
     }
@@ -427,7 +427,7 @@ void Ec::sys_sc_ctrl()
     Sys_sc_ctrl *r = static_cast<Sys_sc_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sc());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0))) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::SC || !(cap.prm() & 1UL << 0)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad SC CAP (%#lx)", __func__, r->sc());
         sys_finish<Status::BAD_CAP>();
     }
@@ -442,7 +442,7 @@ void Ec::sys_pt_ctrl()
     Sys_pt_ctrl *r = static_cast<Sys_pt_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->pt());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::PT || !(cap.prm() & 1UL << 0))) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::PT || !(cap.prm() & 1UL << 0)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad PT CAP (%#lx)", __func__, r->pt());
         sys_finish<Status::BAD_CAP>();
     }
@@ -459,7 +459,7 @@ void Ec::sys_sm_ctrl()
     Sys_sm_ctrl *r = static_cast<Sys_sm_ctrl *>(&current->sys_regs());
 
     Capability cap = Space_obj::lookup (r->sm());
-    if (EXPECT_FALSE (!cap.obj() || cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op()))) {
+    if (!cap.obj() || cap.obj()->type() != Kobject::SM || !(cap.prm() & 1UL << r->op())) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Bad SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP>();
     }
@@ -487,19 +487,19 @@ void Ec::sys_assign_pci()
     Sys_assign_pci *r = static_cast<Sys_assign_pci *>(&current->sys_regs());
 
     Kobject *obj = Space_obj::lookup (r->pd()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::PD)) {
+    if (!obj || obj->type() != Kobject::PD) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
         sys_finish<Status::BAD_CAP>();
     }
 
     Paddr phys; unsigned rid;
-    if (EXPECT_FALSE (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
+    if (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Status::BAD_DEV>();
     }
 
     Dmar *dmar = Pci::find_dmar (r->hnt());
-    if (EXPECT_FALSE (!dmar)) {
+    if (!dmar) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid Hint (%#lx)", __func__, r->hnt());
         sys_finish<Status::BAD_DEV>();
     }
@@ -513,26 +513,26 @@ void Ec::sys_assign_gsi()
 {
     Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(&current->sys_regs());
 
-    if (EXPECT_FALSE (!Hip::hip->cpu_online (r->cpu()))) {
+    if (!Hip::hip->cpu_online (r->cpu())) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
         sys_finish<Status::BAD_CPU>();
     }
 
     Kobject *obj = Space_obj::lookup (r->sm()).obj();
-    if (EXPECT_FALSE (!obj || obj->type() != Kobject::SM)) {
+    if (!obj || obj->type() != Kobject::SM) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-SM CAP (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP>();
     }
 
     Sm *sm = static_cast<Sm *>(obj);
 
-    if (EXPECT_FALSE (sm->space != static_cast<Space_obj *>(&Pd::kern))) {
+    if (sm->space != static_cast<Space_obj *>(&Pd::kern)) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-GSI SM (%#lx)", __func__, r->sm());
         sys_finish<Status::BAD_CAP>();
     }
 
     Paddr phys; unsigned rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || ((rid = Pci::phys_to_rid (phys)) == ~0U)))) {
+    if (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || ((rid = Pci::phys_to_rid (phys)) == ~0U))) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Status::BAD_DEV>();
     }

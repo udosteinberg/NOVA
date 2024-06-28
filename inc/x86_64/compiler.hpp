@@ -57,8 +57,6 @@
         #define SEC_HASH                __attribute__((section (".text"), used))
         #define SEC_INIT                __attribute__((section (".init")))
 
-        #define EXPECT_FALSE(X)         __builtin_expect(!!(X), 0)
-        #define EXPECT_TRUE(X)          __builtin_expect(!!(X), 1)
         #define UNREACHED               __builtin_unreachable()
 
         #define ACCESS_ONCE(x)          (*static_cast<volatile decltype(x) *>(&(x)))

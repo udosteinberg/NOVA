@@ -102,7 +102,7 @@ void Lapic::init()
 
 void Lapic::send_ipi (unsigned cpu, unsigned vector, Delivery_mode dlv, Shorthand dsh)
 {
-    while (EXPECT_FALSE (read (LAPIC_ICR_LO) & 1U << 12))
+    while (read (LAPIC_ICR_LO) & 1U << 12) [[unlikely]]
         pause();
 
     write (LAPIC_ICR_HI, Cpu::apic_id[cpu] << 24);

@@ -29,7 +29,7 @@ void Ec::load_fpu()
     if (!utcb)
         regs.fpu_ctrl (true);
 
-    if (EXPECT_FALSE (!fpu))
+    if (!fpu) [[unlikely]]
         Fpu::init();
     else
         fpu->load();
@@ -40,7 +40,7 @@ void Ec::save_fpu()
     if (!utcb)
         regs.fpu_ctrl (false);
 
-    if (EXPECT_FALSE (!fpu))
+    if (!fpu) [[unlikely]]
         fpu = new Fpu;
 
     fpu->save();

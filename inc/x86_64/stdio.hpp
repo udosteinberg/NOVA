@@ -27,7 +27,7 @@
 #define trace(T,format,...)                                         \
 do {                                                                \
     register mword __esp asm ("esp");                               \
-    if (EXPECT_FALSE ((trace_mask & (T)) == (T)))                   \
+    if ((trace_mask & (T)) == (T)) [[unlikely]]                     \
         Console::print ("[%2ld] " format,                           \
                 static_cast<long>(((__esp - 1) & ~PAGE_MASK) ==     \
                 CPU_LOCAL_STCK ? Cpu::id : ~0UL), ## __VA_ARGS__);  \
