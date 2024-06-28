@@ -165,10 +165,10 @@ void Cpu::setup_sysenter()
 
 void Cpu::setup_pcid()
 {
-    if (EXPECT_FALSE (Cmdline::nopcid))
+    if (Cmdline::nopcid) [[unlikely]]
         defeature (FEAT_PCID);
 
-    if (EXPECT_FALSE (!feature (FEAT_PCID)))
+    if (!feature (FEAT_PCID)) [[unlikely]]
         return;
 
     set_cr4 (get_cr4() | Cpu::CR4_PCIDE);
@@ -197,15 +197,15 @@ void Cpu::init()
     Pd::kern.Space_mem::insert (HV_GLOBAL_CPUS + id * PAGE_SIZE, 0, Hpt::HPT_NX | Hpt::HPT_G | Hpt::HPT_W | Hpt::HPT_P, phys);
     Hpt::ord = min (Hpt::ord, feature (FEAT_1GB_PAGES) ? 26UL : 17UL);
 
-    if (EXPECT_TRUE (feature (FEAT_ACPI)))
+    if (feature (FEAT_ACPI)) [[likely]]
         setup_thermal();
 
-    if (EXPECT_TRUE (feature (FEAT_SEP)))
+    if (feature (FEAT_SEP)) [[likely]]
         setup_sysenter();
 
     setup_pcid();
 
-    if (EXPECT_TRUE (feature (FEAT_SMEP)))
+    if (feature (FEAT_SMEP)) [[likely]]
         set_cr4 (get_cr4() | Cpu::CR4_SMEP);
 
     Vmcs::init();
