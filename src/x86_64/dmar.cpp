@@ -107,7 +107,7 @@ void Dmar::vector (unsigned vector)
 {
     unsigned msi = vector - VEC_MSI;
 
-    if (EXPECT_TRUE (msi == 0))
+    if (msi == 0) [[likely]]
         for (Dmar *dmar = list; dmar; dmar = dmar->next)
             dmar->fault_handler();
 

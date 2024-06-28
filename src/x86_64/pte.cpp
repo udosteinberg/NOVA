@@ -55,10 +55,10 @@ size_t Pte<P,E,L,B,F>::lookup (E v, Paddr &p, mword &a)
 
     for (P *e = static_cast<P *>(this);; e = static_cast<P *>(Buddy::phys_to_ptr (e->addr())) + (v >> (--l * B + PAGE_BITS) & ((1UL << B) - 1))) {
 
-        if (EXPECT_FALSE (!e->val))
+        if (!e->val) [[unlikely]]
             return 0;
 
-        if (EXPECT_FALSE (l && !e->super()))
+        if (l && !e->super()) [[unlikely]]
             continue;
 
         size_t s = 1UL << (l * B + e->order());
