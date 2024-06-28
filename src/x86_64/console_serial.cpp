@@ -51,7 +51,7 @@ void Console_serial::putc (int c)
     if (c == '\n')
         putc ('\r');
 
-    while (EXPECT_FALSE (!(in (LSR) & 0x20)))
+    while (!(in (LSR) & 0x20)) [[unlikely]]
         pause();
 
     out (THR, c);
