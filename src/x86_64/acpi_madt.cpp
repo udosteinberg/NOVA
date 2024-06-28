@@ -80,7 +80,7 @@ void Acpi_table_madt::parse_intr (Acpi_apic const *ptr)
     unsigned irq = p->irq;
     unsigned gsi = p->gsi;
 
-    if (EXPECT_FALSE (gsi >= NUM_GSI || irq >= NUM_IRQ || p->bus))
+    if (gsi >= NUM_GSI || irq >= NUM_IRQ || p->bus) [[unlikely]]
         return;
 
     Gsi::irq_table[irq] = gsi;

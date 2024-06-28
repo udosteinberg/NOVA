@@ -24,9 +24,9 @@
 #include "console.hpp"
 
 #ifdef DEBUG
-#define assert(X)   do {                                                                                    \
-                        if (EXPECT_FALSE (!(X)))                                                            \
-                            Console::panic ("Assertion \"%s\" failed at %s:%d:%s", #X, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
+#define assert(X)   do {                                                                                                            \
+                        if (!(X)) [[unlikely]]                                                                                      \
+                            Console::panic ("Assertion \"%s\" failed at %s:%d:%s", #X, __FILE__, __LINE__, __PRETTY_FUNCTION__);    \
                     } while (0)
 #else
 #define assert(X)   do { (void) sizeof (X); } while (0)
