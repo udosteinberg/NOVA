@@ -26,7 +26,7 @@
 ALWAYS_INLINE
 inline long int bit_scan_reverse (mword val)
 {
-    if (EXPECT_FALSE (!val))
+    if (!val) [[unlikely]]
         return -1;
 
     asm volatile ("bsr %1, %0" : "=r" (val) : "rm" (val));
@@ -37,7 +37,7 @@ inline long int bit_scan_reverse (mword val)
 ALWAYS_INLINE
 inline long int bit_scan_forward (mword val)
 {
-    if (EXPECT_FALSE (!val))
+    if (!val) [[unlikely]]
         return -1;
 
     asm volatile ("bsf %1, %0" : "=r" (val) : "rm" (val));
