@@ -142,7 +142,7 @@ mword Pd::clamp (mword &snd_base, mword &rcv_base, mword snd_ord, mword rcv_ord,
     snd_base &= ~s;
     rcv_base &= ~r;
 
-    if (EXPECT_TRUE (s < r)) {
+    if (s < r) [[likely]] {
         rcv_base |= h & r & ~s;
         return snd_ord;
     } else {
@@ -187,7 +187,7 @@ void Pd::del_crd (Pd *pd, Crd del, Crd &crd, mword sub, mword hot)
 
     mword a = crd.attr() & del.attr(), sb = crd.base(), so = crd.order(), rb = del.base(), ro = del.order(), o = 0;
 
-    if (EXPECT_FALSE (st != rt || !a)) {
+    if (st != rt || !a) [[unlikely]] {
         crd = Crd (0);
         return;
     }

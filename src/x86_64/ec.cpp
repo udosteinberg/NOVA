@@ -133,7 +133,7 @@ void Ec::handle_hazard (mword hzd, void (*func)())
 void Ec::ret_user_sysexit()
 {
     mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
-    if (EXPECT_FALSE (hzd))
+    if (hzd) [[unlikely]]
         handle_hazard (hzd, ret_user_sysexit);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR) "mov %%r11, %%rsp; mov $0x202, %%r11; sysretq" : : "m" (current->regs) : "memory");
@@ -144,7 +144,7 @@ void Ec::ret_user_sysexit()
 void Ec::ret_user_iret()
 {
     mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_RCU | HZD_FPU | HZD_SCHED);
-    if (EXPECT_FALSE (hzd))
+    if (hzd) [[unlikely]]
         handle_hazard (hzd, ret_user_iret);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR IRET) : : "m" (current->regs) : "memory");
@@ -155,17 +155,17 @@ void Ec::ret_user_iret()
 void Ec::ret_user_vmresume()
 {
     mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
-    if (EXPECT_FALSE (hzd))
+    if (hzd) [[unlikely]]
         handle_hazard (hzd, ret_user_vmresume);
 
     current->regs.vmcs->make_current();
 
-    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+    if (Pd::current->gtlb.chk (Cpu::id)) [[unlikely]] {
         Pd::current->gtlb.clr (Cpu::id);
         Pd::current->ept.flush();
     }
 
-    if (EXPECT_FALSE (get_cr2() != current->regs.cr2))
+    if (get_cr2() != current->regs.cr2) [[unlikely]]
         set_cr2 (current->regs.cr2);
 
     asm volatile ("lea %0, %%rsp;" EXPAND (LOAD_GPR)
@@ -182,10 +182,10 @@ void Ec::ret_user_vmresume()
 void Ec::ret_user_vmrun()
 {
     mword hzd = (Cpu::hazard | current->regs.hazard()) & (HZD_RECALL | HZD_TSC | HZD_RCU | HZD_SCHED);
-    if (EXPECT_FALSE (hzd))
+    if (hzd) [[unlikely]]
         handle_hazard (hzd, ret_user_vmrun);
 
-    if (EXPECT_FALSE (Pd::current->gtlb.chk (Cpu::id))) {
+    if (Pd::current->gtlb.chk (Cpu::id)) [[unlikely]] {
         Pd::current->gtlb.clr (Cpu::id);
         current->regs.vmcb->tlb_control = 1;
     }
@@ -213,7 +213,7 @@ void Ec::idle()
     for (;;) {
 
         mword hzd = Cpu::hazard & (HZD_RCU | HZD_SCHED);
-        if (EXPECT_FALSE (hzd))
+        if (hzd) [[unlikely]]
             handle_hazard (hzd, idle);
 
         uint64 t1 = rdtsc();
