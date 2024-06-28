@@ -85,7 +85,7 @@ void *Slab_cache::alloc()
 {
     Lock_guard <Spinlock> guard (lock);
 
-    if (EXPECT_FALSE (!curr))
+    if (!curr) [[unlikely]]
         grow();
 
     assert (!curr->full());
@@ -94,7 +94,7 @@ void *Slab_cache::alloc()
     // Allocate from slab
     void *ret = curr->alloc();
 
-    if (EXPECT_FALSE (curr->full()))
+    if (curr->full()) [[unlikely]]
         curr = curr->prev;
 
     return ret;
@@ -110,7 +110,7 @@ void Slab_cache::free (void *ptr)
 
     slab->free (ptr);       // Deallocate from slab
 
-    if (EXPECT_FALSE (was_full)) {
+    if (was_full) [[unlikely]] {
 
         // There are full slabs in front of us and we're partial; requeue
         if (slab->prev && slab->prev->full()) {
@@ -137,7 +137,7 @@ void Slab_cache::free (void *ptr)
 
         curr = slab;
 
-    } else if (EXPECT_FALSE (slab->empty())) {
+    } else if (slab->empty()) [[unlikely]] {
 
         // There are partial slabs in front of us and we're empty; requeue
         if (slab->prev && !slab->prev->empty()) {
