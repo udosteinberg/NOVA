@@ -26,12 +26,12 @@ unsigned Mca::banks;
 
 void Mca::init()
 {
-    if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCE)))
+    if (!Cpu::feature (Cpu::FEAT_MCE)) [[unlikely]]
         return;
 
     set_cr4 (get_cr4() | Cpu::CR4_MCE);
 
-    if (EXPECT_FALSE (!Cpu::feature (Cpu::FEAT_MCA)))
+    if (!Cpu::feature (Cpu::FEAT_MCA)) [[unlikely]]
         return;
 
     uint32 cap = Msr::read<uint32>(Msr::IA32_MCG_CAP);
