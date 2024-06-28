@@ -116,7 +116,7 @@ void Sc::schedule (bool suspend)
 
     Cpu::hazard &= ~HZD_SCHED;
 
-    if (EXPECT_TRUE (!suspend))
+    if (!suspend) [[likely]]
         current->ready_enqueue (t);
 
     Sc *sc = list[prio_top];
