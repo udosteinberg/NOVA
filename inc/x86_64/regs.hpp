@@ -25,6 +25,7 @@
 #include "fpu.hpp"
 #include "hazard.hpp"
 #include "selectors.hpp"
+#include "sgx.hpp"
 #include "space_gst.hpp"
 #include "space_hst.hpp"
 #include "space_msr.hpp"
@@ -114,6 +115,7 @@ class alignas (16) Cpu_regs final
         Cpu::State_sys          gst_sys;
         Cpu::State_tsc          gst_tsc;
         Fpu::State_xsv          gst_xsv;
+        Sgx::State              gst_sgx;
         Refptr<Space_obj> const obj;
         Refptr<Space_hst> const hst;
         Refptr<Space_gst>       gst     { nullptr };
