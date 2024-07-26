@@ -80,10 +80,12 @@ class Cpu final
             // EAX=0x6 (EAX)
             ARAT                    =  2 * 32 +  2,     // Always Running APIC Timer
             // EAX=0x7 ECX=0x0 (EBX)
+            SGX                     =  3 * 32 +  2,     // Software Guard Extensions
             SMEP                    =  3 * 32 +  7,     // Supervisor Mode Execution Prevention
             SMAP                    =  3 * 32 + 20,     // Supervisor Mode Access Prevention
             // EAX=0x7 ECX=0x0 (ECX)
             UMIP                    =  4 * 32 +  2,     // User Mode Instruction Prevention
+            SGX_LC                  =  4 * 32 + 30,     // SGX Launch Configuration
             // EAX=0x7 ECX=0x0 (EDX)
             SRBDS_CTRL              =  5 * 32 +  9,     // Special Register Buffer Data Sampling
             MD_CLEAR                =  5 * 32 + 10,     // Microarchitectural Data Clear

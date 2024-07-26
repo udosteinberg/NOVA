@@ -31,6 +31,7 @@
 #include "lapic.hpp"
 #include "mca.hpp"
 #include "pd.hpp"
+#include "sgx.hpp"
 #include "stdio.hpp"
 #include "svm.hpp"
 #include "tss.hpp"
@@ -181,7 +182,10 @@ void Cpu::enumerate_features (uint32_t &clk, uint32_t &rat, uint32_t (&lvl)[4], 
             cpuid (0x15, eax, ebx, clk, edx);
             rat = eax ? ebx / eax : 0;
             [[fallthrough]];
-        case 0xb ... 0x14:
+        case 0x12 ... 0x14:
+            cpuid (0x12, 0, Sgx::features, ebx, ecx, edx);
+            [[fallthrough]];
+        case 0xb ... 0x11:
             if (topology == invalid_topology)
                 enumerate_topology (0xb, topology, lvl);
             [[fallthrough]];
@@ -316,6 +320,7 @@ void Cpu::init()
 
     Fpu::init();
     Mca::init();
+    Sgx::init();
 
     Vmcb::init();
     Vmcs::init();
