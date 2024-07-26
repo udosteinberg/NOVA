@@ -311,6 +311,7 @@ void Ec_arch::ret_user_vmexit_vmx (Ec *const self)
     r.gst_sys.make_current (Cpu::hst_sys);              // Restore SYS guest state
     r.gst_tsc.make_current (Cpu::hst_tsc);              // Restore TSC guest state
     r.gst_xsv.make_current (Fpu::hst_xsv);              // Restore XSV guest state
+    r.gst_sgx.make_current();                           // Restore SGX guest state
 
     asm volatile ("lea %0, %%rsp;"
                   EXPAND (LOAD_GPR)
@@ -365,7 +366,11 @@ void Ec_arch::set_vmm_regs_vmx (Ec *const self)
     assert (self->is_vcpu());
     assert (self->cpu == Cpu::id);
 
-    auto &s { self->sys_regs() };
+    auto &c { self->cpu_regs() };
+
+    c.gst_sgx = Sgx::initial;
+
+    auto &s { c.exc.sys };
 
     s.rax = Vmcs::cpu_pri_clr;
     s.rcx = Vmcs::cpu_sec_clr;
