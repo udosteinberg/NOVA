@@ -22,7 +22,6 @@
 
 #include "acpi_dmar.hpp"
 #include "cmdline.hpp"
-#include "dmar.hpp"
 #include "dpt.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
@@ -30,19 +29,20 @@
 #include "lapic.hpp"
 #include "pci.hpp"
 #include "pd.hpp"
+#include "smmu.hpp"
 
 void Acpi_dmar::parse() const
 {
-    Dmar *dmar = new Dmar (static_cast<Paddr>(phys));
+    auto const smmu { Smmu::setup (phys, segment) };
 
     if (flags & 1)
-        Pci::claim_all (dmar);
+        Pci::claim_all (smmu);
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 
         switch (s->type) {
             case 1 ... 2:
-                Pci::claim_dev (dmar, s->rid());
+                Pci::claim_dev (smmu, s->rid());
                 break;
             case 3:
                 Ioapic::claim_dev (s->rid(), s->id);
@@ -61,16 +61,16 @@ void Acpi_rmrr::parse() const
 
     for (Acpi_scope const *s = scope; s < reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(this) + length); s = reinterpret_cast<Acpi_scope *>(reinterpret_cast<mword>(s) + s->length)) {
 
-        Dmar *dmar = nullptr;
+        Smmu *smmu = nullptr;
 
         switch (s->type) {
             case 1:
-                dmar = Pci::find_dmar (s->rid());
+                smmu = Pci::find_smmu (s->rid());
                 break;
         }
 
-        if (dmar)
-            dmar->assign (s->rid(), &Pd::kern);
+        if (smmu && !smmu->configured (s->rid()))
+            smmu->assign_dev (&Pd::kern, s->rid(), false);
     }
 }
 
@@ -80,8 +80,12 @@ void Acpi_table_dmar::parse() const
     if ((flags & BIT_RANGE (1, 0)) == BIT_RANGE (1, 0))
         Lapic::x2apic = false;
 
+    // Disable SMMU due to command line
     if (Cmdline::nosmmu) [[unlikely]]
         return;
+
+    // Enable IR if supported by firmware and SMMU is enabled
+    Smmu::ir = flags & BIT (0);
 
     for (Acpi_remap const *r = remap; r < reinterpret_cast<Acpi_remap *>(reinterpret_cast<mword>(this) + length); r = reinterpret_cast<Acpi_remap *>(reinterpret_cast<mword>(r) + r->length)) {
         switch (r->type) {
@@ -93,8 +97,6 @@ void Acpi_table_dmar::parse() const
                 break;
         }
     }
-
-    Dmar::enable (flags);
 
     Hip::hip->set_feature (Hip::FEAT_IOMMU);
 }
