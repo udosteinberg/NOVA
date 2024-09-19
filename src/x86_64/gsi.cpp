@@ -20,23 +20,23 @@
  */
 
 #include "acpi.hpp"
-#include "dmar.hpp"
 #include "gsi.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "vectors.hpp"
 
-Gsi         Gsi::gsi_table[NUM_GSI];
-unsigned    Gsi::irq_table[NUM_IRQ];
+Gsi     Gsi::gsi_table[NUM_GSI];
+gsi_t   Gsi::irq_table[NUM_IRQ];
 
 void Gsi::setup()
 {
-    for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
+    for (gsi_t gsi { 0 }; gsi < NUM_GSI; gsi++) {
 
         Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, NUM_CPU + gsi));
 
-        gsi_table[gsi].vec = static_cast<uint8>(VEC_GSI + gsi);
+        gsi_table[gsi].vec = gsi_to_vec (gsi);
 
         if (gsi < NUM_IRQ) {
             irq_table[gsi] = gsi;
@@ -49,22 +49,15 @@ void Gsi::setup()
     }
 }
 
-uint64 Gsi::set (unsigned gsi, unsigned cpu, unsigned rid)
+uint64 Gsi::set (gsi_t gsi, cpu_t cpu, unsigned rid)
 {
-    uint32 msi_addr = 0, msi_data = 0, aid = Lapic::id[cpu];
+    uintptr_t msi_addr, msi_data;
 
-    Ioapic *ioapic = gsi_table[gsi].ioapic;
+    uint8_t cfg = gsi_table[gsi].trg * BIT (1) | gsi_table[gsi].pol * BIT (2);
 
-    if (ioapic) {
-        ioapic->set_dst (gsi, Dmar::ire() ? gsi << 17 | BIT (16) : aid << 24);
-        ioapic->set_cfg (gsi, gsi_to_vec (gsi), false, gsi_table[gsi].trg, gsi_table[gsi].pol);
-        rid = ioapic->src();
-    } else {
-        msi_addr = 0xfee00000 | (Dmar::ire() ? 3U << 3 : aid << 12);
-        msi_data = Dmar::ire() ? gsi : gsi_table[gsi].vec;
-    }
+    auto const irt { Smmu::Grp::lookup_irt (gsi) };
 
-    Dmar::set_irt (gsi, rid, aid, VEC_GSI + gsi, gsi_table[gsi].trg);
+    (void) Smmu::assign_int (irt, gsi, cpu, gsi_to_vec (gsi), rid, cfg, msi_addr, msi_data);
 
     return static_cast<uint64>(msi_addr) << 32 | msi_data;
 }
