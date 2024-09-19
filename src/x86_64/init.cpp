@@ -29,6 +29,7 @@
 #include "ioapic.hpp"
 #include "patch.hpp"
 #include "pic.hpp"
+#include "smmu.hpp"
 #include "string.hpp"
 
 extern "C" uintptr_t kern_ptab_setup (apic_t)
@@ -85,4 +86,6 @@ extern "C" void init()
     Pic::init();
 
     Ioapic::init_all();
+
+    Smmu::init_all();
 }
