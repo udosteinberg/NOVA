@@ -50,8 +50,8 @@ class Space_mem
 
         inline Space_mem() {}
 
-        inline auto get_pcid() const { return pcid; }
-        inline auto get_sdid() const { return sdid; }
+        auto get_pcid() const { return pcid; }
+        uint16_t get_sdid() const { return sdid; }
 
         ALWAYS_INLINE
         inline size_t lookup (mword virt, Paddr &phys)
