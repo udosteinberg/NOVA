@@ -20,18 +20,18 @@
  */
 
 #include "acpi.hpp"
-#include "dmar.hpp"
 #include "gsi.hpp"
 #include "ioapic.hpp"
 #include "lapic.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 
-Gsi         Gsi::gsi_table[NUM_GSI];
-unsigned    Gsi::irq_table[NUM_IRQ];
+Gsi      Gsi::gsi_table[NUM_GSI];
+unsigned Gsi::irq_table[NUM_IRQ];
 
 void Gsi::setup()
 {
-    for (unsigned gsi = 0; gsi < NUM_GSI; gsi++) {
+    for (unsigned gsi { 0 }; gsi < NUM_GSI; gsi++) {
 
         Space_obj::insert_root (Gsi::gsi_table[gsi].sm = new Sm (&Pd::kern, NUM_CPU + gsi));
 
@@ -122,7 +122,7 @@ void Gsi::handle_gsi (unsigned n)
 void Gsi::handler (unsigned v)
 {
     if (v >= VEC_FLT)
-        Dmar::interrupt();
+        Smmu::all_interrupt();
 
     else if (v >= VEC_IPI)
         handle_ipi (v - VEC_IPI);

@@ -24,6 +24,7 @@
 #include "mtd.hpp"
 
 class Ec;
+class Pd;
 
 class Pt : public Kobject
 {

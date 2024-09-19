@@ -19,10 +19,9 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.hpp"
 #include "ec.hpp"
 #include "hip.hpp"
-#include "wait.hpp"
+#include "smmu.hpp"
 
 extern "C" [[noreturn]] void bootstrap()
 {
@@ -37,6 +36,10 @@ extern "C" [[noreturn]] void bootstrap()
         // Barrier: wait up to 5s for all non-BSP CPUs to arrive here
         if (!Wait::until (5000, [] { return Cpu::online == Cpu::count - 1; })) [[unlikely]]
             panic ("Failed to start all APs");
+
+        // SMMU must be active before CPUs pass barrier into userland
+        if (!Smmu::initialize()) [[unlikely]]
+            panic ("SMMU initialization failed");
     }
 
     // Barrier: wait for all CPUs to arrive here

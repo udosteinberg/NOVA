@@ -58,8 +58,8 @@ class Acpi_dmar : public Acpi_remap
 {
     public:
         uint8       flags;
-        uint8       reserved;
-        uint16      segment;
+        uint8       ord;
+        uint16      seg;
         uint64      phys;
         Acpi_scope  scope[];
 
