@@ -47,7 +47,7 @@ class Gsi
 
         static void setup();
 
-        static uint64 set (unsigned, unsigned = 0, unsigned = 0);
+        static uint64 set (unsigned, cpu_t = 0, unsigned = 0);
 
         static void mask (unsigned);
         static void unmask (unsigned);
