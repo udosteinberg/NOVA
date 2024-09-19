@@ -37,7 +37,7 @@ Paddr       Acpi::dmar, Acpi::fadt, Acpi::hpet, Acpi::madt, Acpi::mcfg, Acpi::rs
 Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;
 uint32      Acpi::tmr_ovf, Acpi::feature;
 uint8       Acpi::reset_val;
-unsigned    Acpi::irq, Acpi::gsi;
+gsi_t       Acpi::irq, Acpi::gsi;
 bool        Acpi_table_madt::sci_overridden = false;
 
 void Acpi::delay (unsigned ms)

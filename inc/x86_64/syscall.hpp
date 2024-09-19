@@ -166,35 +166,30 @@ class Sys_sm_ctrl : public Sys_regs
         inline uint64 time() const { return static_cast<uint64>(ARG_2) << 32 | ARG_3; }
 };
 
-class Sys_assign_pci : public Sys_regs
+class Sys_assign_int final : public Sys_regs
 {
     public:
-        ALWAYS_INLINE
-        inline unsigned long pd() const { return ARG_1 >> 8; }
+        unsigned long sm() const { return ARG_1 >> 8; }
 
-        ALWAYS_INLINE
-        inline mword dev() const { return ARG_2; }
+        auto cfg() const { return flags(); }
 
-        ALWAYS_INLINE
-        inline mword hnt() const { return ARG_3; }
+        auto cpu() const { return static_cast<cpu_t>(ARG_2); }
+
+        auto idx() const { return static_cast<gsi_t>(ARG_2 >> 16); }
+
+        auto src() const { return static_cast<pci_t>(ARG_2 >> 32); }
+
+        auto &msi_addr() const { return ARG_2; }
+
+        auto &msi_data() const { return ARG_3; }
 };
 
-class Sys_assign_gsi : public Sys_regs
+class Sys_assign_dev final : public Sys_regs
 {
     public:
-        ALWAYS_INLINE
-        inline unsigned long sm() const { return ARG_1 >> 8; }
+        unsigned long pd() const { return ARG_1 >> 8; }
 
-        ALWAYS_INLINE
-        inline mword dev() const { return ARG_2; }
+        auto smmu() const { return ARG_2 & ~OFFS_MASK (0); }
 
-        ALWAYS_INLINE
-        inline unsigned cpu() const { return static_cast<unsigned>(ARG_3); }
-
-        ALWAYS_INLINE
-        inline void set_msi (uint64 val)
-        {
-            ARG_2 = static_cast<mword>(val >> 32);
-            ARG_3 = static_cast<mword>(val);
-        }
+        auto dad() const { return ARG_3; }
 };

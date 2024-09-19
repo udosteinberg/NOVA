@@ -43,17 +43,17 @@ class Gsi
         };
 
         static Gsi      gsi_table[NUM_GSI];
-        static unsigned irq_table[NUM_IRQ];
+        static gsi_t    irq_table[NUM_IRQ];
 
         static void setup();
 
-        static uint64 set (unsigned, unsigned = 0, unsigned = 0);
+        static uint64 set (gsi_t, cpu_t = 0, unsigned = 0);
 
         static void mask (unsigned);
         static void unmask (unsigned);
 
         ALWAYS_INLINE
-        static inline unsigned irq_to_gsi (unsigned irq)
+        static inline gsi_t irq_to_gsi (unsigned irq)
         {
             assert (irq < NUM_IRQ);
             return irq_table[irq];
