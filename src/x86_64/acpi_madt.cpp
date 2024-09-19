@@ -69,8 +69,8 @@ void Acpi_table_madt::parse_intr (Acpi_apic const *ptr)
 {
     Acpi_intr const *p = static_cast<Acpi_intr const *>(ptr);
 
-    unsigned irq = p->irq;
-    unsigned gsi = p->gsi;
+    auto irq = p->irq;
+    auto gsi = p->gsi;
 
     if (gsi >= NUM_GSI || irq >= NUM_IRQ || p->bus) [[unlikely]]
         return;
