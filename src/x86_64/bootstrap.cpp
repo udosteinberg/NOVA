@@ -19,9 +19,8 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "atomic.hpp"
 #include "ec.hpp"
-#include "hip.hpp"
+#include "smmu.hpp"
 
 extern "C" [[noreturn]] void bootstrap()
 {
@@ -30,6 +29,16 @@ extern "C" [[noreturn]] void bootstrap()
     // Create idle EC
     Ec::current = new Ec (Pd::current = &Pd::kern, Ec::idle, Cpu::id);
     Space_obj::insert_root (Sc::current = new Sc (&Pd::kern, Cpu::id, Ec::current));
+
+    if (Cpu::bsp) [[unlikely]] {
+
+        // Barrier: wait for all non-BSP CPUs to arrive here
+        for (; Cpu::online != Cpu::count - 1; pause()) ;
+
+        // SMMU must be active before CPUs pass barrier into userland
+        if (!Smmu::initialize()) [[unlikely]]
+            panic ("SMMU initialization failed");
+    }
 
     // Barrier: wait for all CPUs to arrive here
     for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;

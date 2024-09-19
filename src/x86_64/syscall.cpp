@@ -20,13 +20,12 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "dmar.hpp"
 #include "gsi.hpp"
 #include "hip.hpp"
 #include "lapic.hpp"
-#include "pci.hpp"
 #include "pt.hpp"
 #include "sm.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "syscall.hpp"
 #include "utcb.hpp"
@@ -429,38 +428,53 @@ void Ec::sys_sm_ctrl()
     sys_finish<Status::SUCCESS>();
 }
 
-void Ec::sys_assign_pci()
+void Ec::sys_assign_dev()
 {
-    Sys_assign_pci *r = static_cast<Sys_assign_pci *>(&current->sys_regs());
+    auto const r { static_cast<Sys_assign_dev *>(&current->sys_regs()) };
 
-    auto cap = Space_obj::lookup (r->pd());
-    if (!cap.validate (Capability::Perm_pd::PD)) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Non-PD CAP (%#lx)", __func__, r->pd());
+    trace (TRACE_SYSCALL, "EC:%p %s SMMU:%#lx DMA:%#lx->%#lx DAD:%#lx", static_cast<void *>(current), __func__, r->smmu(), r->dma_old(), r->dma_new(), r->dad());
+
+    if (current->pd != &Pd::root) [[unlikely]]
+        sys_finish<Status::BAD_HYP>();
+
+    // SMMU must be valid
+    auto const smmu { Smmu::lookup_phys (r->smmu()) };
+    if (!smmu) [[unlikely]]
+        sys_finish<Status::BAD_DEV>();
+
+    // Check DMA-old capability
+    auto const cdo { Space_obj::lookup (r->dma_old()) };
+    if (cdo.obj() && !cdo.validate (Capability::Perm_pd::PD)) [[unlikely]]
         sys_finish<Status::BAD_CAP>();
-    }
 
-    Paddr phys; unsigned rid;
-    if (!Pd::current->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
-        sys_finish<Status::BAD_DEV>();
-    }
+    // Check DMA-new capability
+    auto const cdn { Space_obj::lookup (r->dma_new()) };
+    if (cdn.obj() && !cdn.validate (Capability::Perm_pd::PD)) [[unlikely]]
+        sys_finish<Status::BAD_CAP>();
 
-    Dmar *dmar = Pci::find_dmar (r->hnt());
-    if (!dmar) [[unlikely]] {
-        trace (TRACE_ERROR, "%s: Invalid Hint (%#lx)", __func__, r->hnt());
-        sys_finish<Status::BAD_DEV>();
-    }
+    auto const sdo { static_cast<Pd *>(cdo.obj()) };
+    auto const sdn { static_cast<Pd *>(cdn.obj()) };
 
-    auto pd = static_cast<Pd *>(cap.obj());
+    // Error if both are null capabilities
+    if (!sdo && !sdn) [[unlikely]]
+        sys_finish<Status::BAD_CAP>();
 
-    dmar->assign (rid, pd);
+    if (smmu->assign_dev (r->dad(), sdo, sdn, r->sbw()) != Status::SUCCESS) [[unlikely]]
+        sys_finish<Status::BAD_PAR>();
 
     sys_finish<Status::SUCCESS>();
 }
 
-void Ec::sys_assign_gsi()
+void Ec::sys_assign_int()
 {
-    Sys_assign_gsi *r = static_cast<Sys_assign_gsi *>(&current->sys_regs());
+    auto const r { static_cast<Sys_assign_int *>(&current->sys_regs()) };
+
+    trace (TRACE_SYSCALL, "EC:%p %s SM:%#lx CPU:%u IDX:%#x CFG:%#x", static_cast<void *>(current), __func__, r->sm(), r->cpu(), r->idx(), r->cfg());
+
+    if (current->pd != &Pd::root) [[unlikely]] {
+        trace (TRACE_ERROR, "%s: Not Root PD", __func__);
+        sys_finish<Status::BAD_HYP>();
+    }
 
     if (r->cpu() >= Cpu::count) [[unlikely]] {
         trace (TRACE_ERROR, "%s: Invalid CPU (%#x)", __func__, r->cpu());
@@ -509,8 +523,8 @@ void (*const syscall[16])() =
     &Ec::sys_pt_ctrl,
     &Ec::sys_sm_ctrl,
     &Ec::sys_finish<Status::BAD_HYP>,
-    &Ec::sys_assign_gsi,
-    &Ec::sys_assign_pci,
+    &Ec::sys_assign_dev,
+    &Ec::sys_assign_int,
     &Ec::sys_finish<Status::BAD_HYP>,
 };
 
