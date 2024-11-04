@@ -23,6 +23,7 @@
 #include "ptab_hpt.hpp"
 #include "smc_psci.hpp"
 #include "smmu_v2.hpp"
+#include "smmu_v3.hpp"
 #include "stdio.hpp"
 #include "string.hpp"
 #include "uefi.hpp"
@@ -218,6 +219,12 @@ bool Fdt::init()
         if (Board::smmu_v2[i].mmio) [[likely]]
             if (!Smmu_v2::setup (Board::smmu_v2[i])) [[unlikely]]
                 panic ("SMMUv2 setup failed");
+
+    // Setup SMMUv3
+    for (unsigned i { 0 }; i < sizeof (Board::smmu_v3) / sizeof (*Board::smmu_v3); i++)
+        if (Board::smmu_v3[i].mmio) [[likely]]
+            if (!Smmu_v3::setup (Board::smmu_v3[i].mmio, { Board::smmu_v3[i].evt, Board::smmu_v3[i].pri, Board::smmu_v3[i].glb, Board::smmu_v3[i].cmd })) [[unlikely]]
+                panic ("SMMUv3 setup failed");
 
     auto const p { Uefi::info.fdtp };
 
