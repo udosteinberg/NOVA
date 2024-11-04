@@ -17,6 +17,7 @@
 
 #include "acpi_table_iort.hpp"
 #include "intid.hpp"
+#include "smmu_v3.hpp"
 #include "stdio.hpp"
 
 void Acpi_table_iort::Node_smmu_v2::parse() const
@@ -25,6 +26,15 @@ void Acpi_table_iort::Node_smmu_v2::parse() const
 
 void Acpi_table_iort::Node_smmu_v3::parse() const
 {
+    auto const spi_e { intid_e ? Intid::to_spi (intid_e) : ~0U };   // Event
+    auto const spi_p { intid_p ? Intid::to_spi (intid_p) : ~0U };   // PRI
+    auto const spi_g { intid_g ? Intid::to_spi (intid_g) : ~0U };   // Global Error
+    auto const spi_s { intid_s ? Intid::to_spi (intid_s) : ~0U };   // Sync
+
+    auto const smmu { Smmu_v3::setup (base, spi_e, spi_p, spi_g, spi_s) };
+
+    if (!smmu) [[unlikely]]
+        panic ("SMMU allocation failed");
 }
 
 void Acpi_table_iort::parse() const
