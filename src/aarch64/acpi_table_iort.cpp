@@ -16,7 +16,7 @@
  */
 
 #include "acpi_table_iort.hpp"
-#include "stdio.hpp"
+#include "smmu_v3.hpp"
 
 bool Acpi_table_iort::Node_smmu_v2::parse() const
 {
@@ -32,6 +32,10 @@ bool Acpi_table_iort::Node_smmu_v3::parse() const
     // Abort if length is below minimum
     if (len < sizeof (*this)) [[unlikely]]
         return false;
+
+    auto const smmu { Smmu_v3::create (base, { intid_evt, intid_pri, intid_glb, intid_cmd }) };
+    if (!smmu) [[unlikely]]
+        panic ("SMMU allocation failed");
 
     return true;
 }
