@@ -16,7 +16,7 @@
  */
 
 #include "acpi_table_iort.hpp"
-#include "stdio.hpp"
+#include "smmu_v3.hpp"
 
 void Acpi_table_iort::Node_smmu_v2::parse() const
 {
@@ -24,6 +24,10 @@ void Acpi_table_iort::Node_smmu_v2::parse() const
 
 void Acpi_table_iort::Node_smmu_v3::parse() const
 {
+    auto const smmu { Smmu_v3::setup (base, { intid_evt, intid_pri, intid_glb, intid_cmd }) };
+
+    if (!smmu) [[unlikely]]
+        panic ("SMMU allocation failed");
 }
 
 bool Acpi_table_iort::parse() const
