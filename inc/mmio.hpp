@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "ptab_hst.hpp"
 #include "space_hst.hpp"
 
 class Mmio
