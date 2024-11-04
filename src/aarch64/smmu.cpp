@@ -17,6 +17,7 @@
 
 #include "smmu.hpp"
 #include "smmu_v2.hpp"
+#include "smmu_v3.hpp"
 
 void Smmu::setup()
 {
@@ -28,4 +29,9 @@ void Smmu::setup()
     for (unsigned i { 0 }; i < sizeof (Board::smmu_v2) / sizeof (*Board::smmu_v2); i++)
         if (Board::smmu_v2[i].mmio)
             new Smmu_v2 (Board::smmu_v2[i]);
+
+    // SMMUv3 enumeration based on board
+    for (unsigned i { 0 }; i < sizeof (Board::smmu_v3) / sizeof (*Board::smmu_v3); i++)
+        if (Board::smmu_v3[i].mmio)
+            (void) Smmu_v3::setup (Board::smmu_v3[i].mmio, { Board::smmu_v3[i].evt, Board::smmu_v3[i].pri, Board::smmu_v3[i].glb, Board::smmu_v3[i].cmd });
 }
