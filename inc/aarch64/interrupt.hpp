@@ -20,6 +20,7 @@
 #include "bitmap.hpp"
 #include "event.hpp"
 #include "intid.hpp"
+#include "smmu.hpp"
 #include "status.hpp"
 
 class Dc;
@@ -54,6 +55,10 @@ class Interrupt final : private Intid
 
         static void *get_ptr (arm_intid_t iid)
         {
+            // No interrupt semaphores for SMMU IIDs
+            if (Smmu::using_iid (iid)) [[unlikely]]
+                return nullptr;
+
             switch (Intid::type (iid)) {
 
                 default:
