@@ -1,5 +1,5 @@
 /*
- * Bootstrap Code
+ * System Memory Management Unit
  *
  * Copyright (C) 2019-2025 Udo Steinberg, BlueRock Security, Inc.
  *
@@ -15,23 +15,11 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "compiler.hpp"
-#include "cpu.hpp"
-#include "lowlevel.hpp"
 #include "smmu.hpp"
 
-extern "C" [[noreturn]]
-void bootstrap (cpu_t c, unsigned e)
+void Smmu::setup()
 {
-    Cpu::init (c, e);
-
-    // Before cores leave the barrier into userland, the SMMU must be active
-    if (Cpu::bsp)
-        if (!Smmu::initialize()) [[unlikely]]
-            panic ("SMMU initialization failed");
-
-    // Barrier: wait for all CPUs to arrive here
-    for (Cpu::online++; Cpu::online != Cpu::count; pause()) ;
-
-    for (;;) {}
+    // SMMU already enumerated by firmware
+    if (list) [[likely]]
+        return;
 }
