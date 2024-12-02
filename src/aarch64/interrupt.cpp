@@ -23,6 +23,7 @@
 #include "gicr.hpp"
 #include "hazard.hpp"
 #include "interrupt.hpp"
+#include "smmu.hpp"
 #include "stdio.hpp"
 #include "timeout.hpp"
 #include "timer.hpp"
@@ -81,6 +82,13 @@ Event::Selector Interrupt::handle_spi (uint32_t val, bool)
     assert (spi < NUM_SPI);
 
     Gicc::eoi (val);
+
+    if (Smmu::using_spi (spi)) {
+
+        Smmu::interrupt (spi);
+
+        Gicc::dir (val);
+    }
 
     return Event::Selector::NONE;
 }
@@ -145,6 +153,10 @@ void Interrupt::deactivate (Sm *)
 
 Status Interrupt::assign (Sm *, cpu_t cpu, gsi_t spi, pci_t, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
+    // Abort attempts to reconfigure SMMU interrupts
+    if (Smmu::using_spi (spi))
+        return Status::ABORTED;
+
     // Extract configuration from flags
     bool const msk { !!(cfg & BIT (0)) };
     bool const trg { !!(cfg & BIT (1)) };
