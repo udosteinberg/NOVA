@@ -65,9 +65,16 @@ Event::Selector Interrupt::handle_ppi (unsigned n, auto const &dir, bool vcpu)
     return Event::Selector::NONE;
 }
 
-Event::Selector Interrupt::handle_spi (unsigned n, auto const &)
+Event::Selector Interrupt::handle_spi (unsigned n, auto const &dir)
 {
     assert (n < num_spi);
+
+    if (Smmu::using_iid (Intid::from_spi (n))) {
+
+        Smmu::interrupt (Intid::from_spi (n));
+
+        dir();
+    }
 
     return Event::Selector::NONE;
 }
