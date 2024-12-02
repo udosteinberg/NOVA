@@ -19,6 +19,7 @@
 
 #include "ptab_dpt.hpp"
 #include "sdid.hpp"
+#include "smmu.hpp"
 #include "space_mem.hpp"
 
 class Space_dma final : public Space_mem<Space_dma>
@@ -51,5 +52,5 @@ class Space_dma final : public Space_mem<Space_dma>
 
         auto update (uint64_t v, uint64_t p, unsigned o, Paging::Permissions pm, Memattr ma) { return dptp.update (v, p, o, pm, ma); }
 
-        void sync() {}
+        auto sync() const { return Smmu::all_invalidate_tlb (sdid); }
 };
