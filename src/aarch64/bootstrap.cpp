@@ -18,6 +18,7 @@
 #include "compiler.hpp"
 #include "cpu.hpp"
 #include "gits.hpp"
+#include "smmu.hpp"
 
 extern "C" [[noreturn]] void bootstrap (cpu_t c)
 {
@@ -31,6 +32,10 @@ extern "C" [[noreturn]] void bootstrap (cpu_t c)
         // GITS must be active before CPUs pass barrier into userland
         if (!Gits::initialize()) [[unlikely]]
             panic ("GITS initialization failed");
+
+        // SMMU must be active before CPUs pass barrier into userland
+        if (!Smmu::initialize()) [[unlikely]]
+            panic ("SMMU initialization failed");
     }
 
     // Barrier: wait for all CPUs to arrive here
