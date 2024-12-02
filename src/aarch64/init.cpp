@@ -22,6 +22,7 @@
 #include "extern.hpp"
 #include "fdt.hpp"
 #include "patch.hpp"
+#include "smmu.hpp"
 
 extern "C" uintptr_t kern_ptab_setup (cpu_t cpu)
 {
@@ -55,6 +56,8 @@ extern "C" unsigned init()
     }
 
     Acpi::init() || Fdt::init();
+
+    Smmu::setup();
 
     return Cpu::boot_cpu;
 }
