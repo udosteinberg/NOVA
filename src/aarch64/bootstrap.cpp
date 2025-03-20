@@ -15,8 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
-#include "cpu.hpp"
-#include "lowlevel.hpp"
+#include "gits.hpp"
 
 extern "C" [[noreturn]] void bootstrap (cpu_t c)
 {
@@ -26,6 +25,10 @@ extern "C" [[noreturn]] void bootstrap (cpu_t c)
 
         // Barrier: wait for all non-BSP CPUs to arrive here
         for (; Cpu::online != Cpu::count - 1; pause()) ;
+
+        // GITS must be active before CPUs pass barrier into userland
+        if (!Gits::initialize()) [[unlikely]]
+            panic ("GITS initialization failed");
     }
 
     // Barrier: wait for all CPUs to arrive here
