@@ -19,6 +19,7 @@
 #include "cpu.hpp"
 #include "extern.hpp"
 #include "fdt.hpp"
+#include "gits.hpp"
 #include "ptab_hpt.hpp"
 #include "smc_psci.hpp"
 #include "stdio.hpp"
@@ -204,6 +205,12 @@ bool Fdt::init()
             if (Smc_psci::boot_cpu (Cpu::count, Board::cpu[c].id))
                 Cpu::allocate (Cpu::count++, Board::cpu[c].id);
     }
+
+    // Setup GITS
+    for (unsigned i { 0 }; i < sizeof (Board::its) / sizeof (*Board::its); i++)
+        if (Board::its[i].mmio) [[likely]]
+            if (!Gits::setup (Board::its[i].mmio, i)) [[unlikely]]
+                panic ("GITS setup failed");
 
     auto const p { Uefi::info.tbl.fdtp };
 
