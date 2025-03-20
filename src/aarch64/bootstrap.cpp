@@ -16,7 +16,7 @@
  */
 
 #include "cpu.hpp"
-#include "wait.hpp"
+#include "gits.hpp"
 
 extern "C" [[noreturn]] void bootstrap (cpu_t c)
 {
@@ -27,6 +27,10 @@ extern "C" [[noreturn]] void bootstrap (cpu_t c)
         // Barrier: wait up to 5s for all non-BSP CPUs to arrive here
         if (!Wait::until (5000, [] { return Cpu::online == Cpu::count - 1; })) [[unlikely]]
             panic ("Failed to start all APs");
+
+        // GITS must be active before CPUs pass barrier into userland
+        if (!Gits::initialize()) [[unlikely]]
+            panic ("GITS initialization failed");
     }
 
     // Barrier: wait for all CPUs to arrive here
