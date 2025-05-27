@@ -38,6 +38,11 @@ using uintptr_t     = __UINTPTR_TYPE__;
 // Size Types
 using size_t        = __SIZE_TYPE__;
 
+// Arm Types
+using arm_colid_t   = uint16_t;             // Collection ID
+using arm_devid_t   = uint32_t;             // Device ID
+using arm_evtid_t   = uint32_t;             // Event ID
+
 // NOVA Types
 using apic_t        = uint32_t;
 using pci_t         = uint32_t;
