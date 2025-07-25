@@ -138,6 +138,7 @@ class Cpu final
             CORE_CAPABILITIES       =  5 * 32 + 30,     // Core Capabilities
             SSBD                    =  5 * 32 + 31,     // Speculative Store Bypass Disable
             // EAX=0x7 ECX=0x1 (EAX)
+            LASS                    =  6 * 32 +  6,     // Linear Address Space Separation
             // EAX=0x7 ECX=0x1 (EBX)
             // EAX=0x7 ECX=0x1 (ECX)
             // EAX=0x7 ECX=0x1 (EDX)
