@@ -428,7 +428,8 @@ void Cpu::init()
     setup_cst();
     setup_pst();
 
-    Cr::set_cr4 (Cr::get_cr4() | feature (Feature::SMAP)  * CR4_SMAP    |
+    Cr::set_cr4 (Cr::get_cr4() | feature (Feature::LASS)  * CR4_LASS    |
+                                 feature (Feature::SMAP)  * CR4_SMAP    |
                                  feature (Feature::SMEP)  * CR4_SMEP    |
                                  feature (Feature::XSAVE) * CR4_OSXSAVE |
                                  feature (Feature::PCID)  * CR4_PCIDE   |
