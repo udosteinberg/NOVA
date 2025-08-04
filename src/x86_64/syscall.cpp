@@ -22,6 +22,7 @@
 
 #include "acpi.hpp"
 #include "counter.hpp"
+#include "dc.hpp"
 #include "ec_arch.hpp"
 #include "interrupt.hpp"
 #include "lowlevel.hpp"
@@ -331,6 +332,27 @@ void Ec::sys_create_sm (Ec *const self)
     self->sys_finish_status (s);
 }
 
+void Ec::sys_create_dc (Ec *const self)
+{
+    Sys_create_dc r { self->sys_regs() };
+
+    trace (TRACE_SYSCALL, "EC:%p %s SEL:%#lx PD:%#lx", static_cast<void *>(self), __func__, r.sel(), r.pd());
+
+    auto const obj { self->regs.get_obj() };
+    auto const cpd { obj->lookup (r.pd()) };
+
+    if (!cpd.validate (Capability::Perm_pd::DC)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
+
+    // Determine owner PD
+    auto const pd { static_cast<Pd *>(cpd.obj()) };
+
+    Status s;
+    pd->create_dc (s, obj, r.sel(), r.topo(), r.dmar(), r.intr());
+
+    self->sys_finish_status (s);
+}
+
 void Ec::sys_ctrl_pd (Ec *const self)
 {
     Sys_ctrl_pd r { self->sys_regs() };
@@ -511,16 +533,20 @@ void Ec::sys_assign_dev (Ec *const self)
 {
     Sys_assign_dev r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s SMMU:%#lx DMA:%#lx->%#lx DAD:%#lx", static_cast<void *>(self), __func__, r.smmu(), r.dma_old(), r.dma_new(), r.dad());
-
-    // SMMU must be valid
-    auto const smmu { Smmu::lookup_phys (r.smmu()) };
-    if (!smmu) [[unlikely]]
-        self->sys_finish_status (Status::BAD_DEV);
+    trace (TRACE_SYSCALL, "EC:%p %s DC:%#lx DMA:%#lx->%#lx", static_cast<void *>(self), __func__, r.dc(), r.dma_old(), r.dma_new());
 
     auto const obj { self->regs.get_obj() };
-    if (obj != Pd::root->get_obj()) [[unlikely]]
-        self->sys_finish_status (Status::BAD_HYP);
+
+    // Check DC capability
+    auto const cdc { obj->lookup (r.dc()) };
+    if (!cdc.validate (Capability::Perm_dc::ASSIGN_DEV)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
+
+    auto const dc { static_cast<Dc *>(cdc.obj()) };
+
+    // SMMU must be valid
+    if (!dc->smmu) [[unlikely]]
+        self->sys_finish_status (Status::BAD_DEV);
 
     // Check DMA-old capability
     auto const cdo { obj->lookup (r.dma_old()) };
@@ -539,14 +565,14 @@ void Ec::sys_assign_dev (Ec *const self)
     if (!sdo && !sdn) [[unlikely]]
         self->sys_finish_status (Status::BAD_CAP);
 
-    self->sys_finish_status (smmu->assign_dev (r.dad(), sdo, sdn, r.sbw()));
+    self->sys_finish_status (dc->smmu->assign_dev (dc, sdo, sdn, r.sbw()));
 }
 
 void Ec::sys_assign_int (Ec *const self)
 {
     Sys_assign_int r { self->sys_regs() };
 
-    trace (TRACE_SYSCALL, "EC:%p %s OP:%u SM:%#lx IDX:%#x CPU:%u VEC:%#x CFG:%#x", static_cast<void *>(self), __func__, r.op(), r.sm(), r.idx(), r.cpu(), r.vec(), r.cfg());
+    trace (TRACE_SYSCALL, "EC:%p %s OP:%u SM:%#lx DC:%#lx IDX:%#x CPU:%u VEC:%#x CFG:%#x", static_cast<void *>(self), __func__, r.op(), r.sm(), r.dc(), r.idx(), r.cpu(), r.vec(), r.cfg());
 
     if (r.cpu() >= Cpu::count) [[unlikely]]
         self->sys_finish_status (Status::BAD_CPU);
@@ -561,7 +587,15 @@ void Ec::sys_assign_int (Ec *const self)
     // SM must be non-null
     auto const sm { static_cast<Sm *>(csm.obj()) };
 
-    self->sys_finish_status (Interrupt::assign (r.op(), sm, r.src(), r.idx(), r.cpu(), r.vec(), r.cfg(), r.msi_addr(), r.msi_data()));
+    // Check DC capability
+    auto const cdc { obj->lookup (r.dc()) };
+    if (cdc.obj() && !cdc.validate (Capability::Perm_dc::ASSIGN_INT)) [[unlikely]]
+        self->sys_finish_status (Status::BAD_CAP);
+
+    // DC can be nullptr for pin-based interrupts
+    auto const dc { static_cast<Dc *>(cdc.obj()) };
+
+    self->sys_finish_status (Interrupt::assign (r.op(), sm, dc, r.idx(), r.cpu(), r.vec(), r.cfg(), r.msi_addr(), r.msi_data()));
 }
 
 void Ec::sys_finish_status (Status s)

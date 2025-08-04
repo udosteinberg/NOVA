@@ -122,6 +122,23 @@ struct Sys_create_sm final : private Sys_abi
     uint32_t iid() const { return p2() & BIT_RANGE (31, 0); }
 };
 
+struct Sys_create_dc final : private Sys_abi
+{
+    Sys_create_dc (Sys_regs &r) : Sys_abi { r } {}
+
+    auto flg() const { return flags(); }
+
+    unsigned long sel() const { return p0() >> 8; }
+
+    unsigned long pd() const { return p1(); }
+
+    auto topo() const { return p2(); }
+
+    auto dmar() const { return p3(); }
+
+    auto intr() const { return p4(); }
+};
+
 struct Sys_ctrl_pd final : private Sys_abi
 {
     Sys_ctrl_pd (Sys_regs &r) : Sys_abi { r } {}
@@ -196,13 +213,11 @@ struct Sys_assign_dev final : private Sys_abi
 {
     Sys_assign_dev (Sys_regs &r) : Sys_abi { r } {}
 
-    auto smmu() const { return p0() & ~OFFS_MASK (0); }
+    unsigned long dc() const { return p0() >> 8; }
 
     unsigned long dma_old() const { return p1(); }
 
     unsigned long dma_new() const { return p2(); }
-
-    auto dad() const { return p3(); }
 
     auto &sbw() const { return p1(); }
 };
@@ -215,7 +230,7 @@ struct Sys_assign_int final : private Sys_abi
 
     unsigned long sm() const { return p0() >> 8; }
 
-    auto src() const { return static_cast<pci_t>(p1()); }
+    unsigned long dc() const { return p1(); }
 
     auto cfg() const { return static_cast<uint8_t>(p2()); }
 
