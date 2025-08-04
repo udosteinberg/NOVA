@@ -21,6 +21,7 @@
  */
 
 #include "bits.hpp"
+#include "dc.hpp"
 #include "ioapic.hpp"
 #include "smmu.hpp"
 #include "space_dma.hpp"
@@ -88,10 +89,10 @@ void Smmu::init()
     init_pmr();
 }
 
-Status Smmu::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
+Status Smmu::assign_dev (Dc const *dc, Space_dma *dma, bool invalidate)
 {
     // Determine src device
-    auto const src { static_cast<pci_t>(dad) };
+    auto const src { dc->src() };
 
     // Check that src device and IOMMU are in the same PCI segment group
     if (Pci::seg (src) != grp->seg) [[unlikely]]
@@ -134,8 +135,10 @@ Status Smmu::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
     return Status::SUCCESS;
 }
 
-Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_t src, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, Dc const *dc, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
+    pci_t src;
+
     // Check that cpu is in range
     assert (cpu < Cpu::count);
 
@@ -151,10 +154,21 @@ Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_
 
     if (ioapic) [[unlikely]] {
 
+        // PIN: Source device must not be provided
+        if (dc) [[unlikely]]
+            return Status::BAD_CAP;
+
         // Interrupt source is IOAPIC
         src = ioapic->src();
 
     } else {
+
+        // MSI: Source device must be provided
+        if (!dc) [[unlikely]]
+            return Status::BAD_CAP;
+
+        // Interrupt source is DEVICE
+        src = dc->src();
 
         // Flags must be zero
         if (cfg & BIT_RANGE (3, 0)) [[unlikely]]

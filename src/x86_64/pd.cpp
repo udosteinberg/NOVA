@@ -19,6 +19,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "dc.hpp"
 #include "ec_arch.hpp"
 #include "fpu.hpp"
 #include "pt.hpp"
@@ -221,6 +222,21 @@ Sm *Pd::create_sm (Status &s, Space_obj *obj, unsigned long sel, uintptr_t v, vo
     if (o) [[likely]] {
 
         if ((s = obj->insert (sel, Capability { o, std::to_underlying (o->subtype == Subtype::SM_INT ? Capability::Perm_sm::DEFINED_INT : Capability::Perm_sm::DEFINED) })) == Status::SUCCESS) [[likely]]
+            return o;
+
+        o->destroy();
+    }
+
+    return nullptr;
+}
+
+Dc *Pd::create_dc (Status &s, Space_obj *obj, unsigned long sel, uint64_t t, uint64_t d, uint64_t i)
+{
+    auto const o { Dc::create (s, t, d, i) };
+
+    if (o) [[likely]] {
+
+        if ((s = obj->insert (sel, Capability { o, std::to_underlying (Capability::Perm_dc::DEFINED) })) == Status::SUCCESS) [[likely]]
             return o;
 
         o->destroy();
