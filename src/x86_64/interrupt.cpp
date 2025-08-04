@@ -21,6 +21,7 @@
 
 #include "acpi.hpp"
 #include "counter.hpp"
+#include "dc.hpp"
 #include "idt.hpp"
 #include "interrupt.hpp"
 #include "ioapic.hpp"
@@ -109,7 +110,7 @@ void Interrupt::deactivate (Sm const *sm)
         std::launder (reinterpret_cast<Ioapic const *>(v & ~uintptr_t { BIT_RANGE (7, 0) }))->eoi (static_cast<uint8_t>(v));
 }
 
-Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, uint16_t cpu, uint8_t vec, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Interrupt::assign (bool attach, Sm * const sm, Dc const *dc, uint16_t idx, uint16_t cpu, uint8_t vec, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
     // SM must be valid
     assert (sm);
@@ -129,6 +130,10 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
     // Determine if PIN interrupt
     auto const ioapic { Ioapic::lookup (seg, gsi) };
 
+    // PIN requires no source device, MSI requires source device
+    if (!ioapic == !dc) [[unlikely]]
+        return Status::BAD_CAP;
+
     // Overwrite (PIN) or check (MSI) per-device IRT index (if IR)
     if (!Smmu::noir) {
         if (ioapic) [[unlikely]]
@@ -138,7 +143,7 @@ Status Interrupt::assign (bool attach, Sm * const sm, pci_t sbdf, uint16_t idx, 
     }
 
     // Source is IOAPIC (PIN) or Device (MSI)
-    auto const src { ioapic ? ioapic->src() : sbdf };
+    auto const src { ioapic ? ioapic->src() : dc->sbdf };
 
     // Source and interrupt must be in the same PCI segment group
     if (Pci::seg (src) != seg) [[unlikely]]
