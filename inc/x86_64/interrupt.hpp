@@ -26,6 +26,7 @@
 #include "status.hpp"
 #include "vectors.hpp"
 
+class Dc;
 class Sm;
 
 class Interrupt final
@@ -58,7 +59,7 @@ class Interrupt final
 
         static void handler (unsigned) asm ("int_handler");
 
-        static Status assign (bool, Sm *, pci_t, uint16_t, uint16_t, uint8_t, uint8_t, uintptr_t &, uintptr_t &);
+        static Status assign (bool, Sm *, Dc const *, uint16_t, uint16_t, uint8_t, uint8_t, uintptr_t &, uintptr_t &);
         static void deactivate (Sm const *);
 
         static void send_cpu (Request, cpu_t);

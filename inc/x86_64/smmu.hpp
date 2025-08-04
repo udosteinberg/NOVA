@@ -20,6 +20,7 @@
 #include "barrier.hpp"
 #include "cmdline.hpp"
 #include "coherence.hpp"
+#include "dc_state.hpp"
 #include "hip.hpp"
 #include "intid.hpp"
 #include "lock_guard.hpp"
@@ -53,7 +54,11 @@ class Smmu : public List<Smmu>, protected Mmio
 
         static_assert (__is_standard_layout (Entry) && alignof (Entry) == 16 && sizeof (Entry) == 16);
 
-        [[nodiscard]] virtual Status assign_dev (uintptr_t, Space_dma *, Space_dma *, uintptr_t &) = 0;
+        // Public interface
+        [[nodiscard]] auto assign_dev (Dc_state const *dc, Space_dma *o, Space_dma *n, uintptr_t &s) { return assign_dev (dc->sbdf, o, n, s); }
+
+        // Vendor interface
+        [[nodiscard]] virtual Status assign_dev (pci_t, Space_dma *, Space_dma *, uintptr_t &) = 0;
 
         [[nodiscard]] virtual bool nova_assigned (pci_t) = 0;
 
