@@ -22,6 +22,7 @@
 
 #include "acpi_table_dmar.hpp"
 #include "cmdline.hpp"
+#include "dc.hpp"
 #include "hip.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
@@ -80,8 +81,11 @@ void Acpi_table_dmar::Remapping_rmrr::parse() const
             default: break;
         }
 
-        if (smmu && !smmu->configured (t))
-            smmu->assign_dev (&Space_dma::nova, t, false);
+        if (smmu && !smmu->configured (t)) {
+            Refptr<Pd> ref;
+            Dc const dc { ref, t };
+            smmu->assign_dev (&dc, &Space_dma::nova, false);
+        }
 
         ptr += s->length;
     }

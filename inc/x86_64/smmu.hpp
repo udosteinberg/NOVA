@@ -750,9 +750,9 @@ class Smmu final : public List<Smmu>, private Mmio
             return c->present();
         }
 
-        Status assign_dev (Space_dma *, uintptr_t, bool = true);
+        Status assign_dev (Dc const *, Space_dma *, bool = true);
 
-        [[nodiscard]] static Status assign_int (Entry_irt *, iid_t, cpu_t, uint8_t, pci_t, uint8_t, uintptr_t &, uintptr_t &);
+        [[nodiscard]] static Status assign_int (Entry_irt *, iid_t, cpu_t, uint8_t, Dc const *, uint8_t, uintptr_t &, uintptr_t &);
 
         [[nodiscard]] static Smmu *lookup (uint64_t p)
         {
