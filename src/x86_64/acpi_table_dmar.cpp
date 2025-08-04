@@ -21,6 +21,7 @@
  */
 
 #include "acpi_table_dmar.hpp"
+#include "dc.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
@@ -96,8 +97,11 @@ bool Acpi_table_dmar::Remapping_rmrr::parse() const
             default: break;
         }
 
-        if (smmu/* && !smmu->configured (t)*/)
-            smmu->assign_dev (&Space_dma::nova, t, false);
+        if (smmu/* && !smmu->configured (t)*/) {
+            Refptr<Pd> ref;
+            Dc const dc { ref, t };
+            smmu->assign_dev (&dc, &Space_dma::nova, false);
+        }
     }
 
     return end == ptr;

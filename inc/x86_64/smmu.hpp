@@ -35,7 +35,7 @@ class Smmu : public List<Smmu>, protected Mmio
 
         [[nodiscard]] static auto type() { return hwtype; }
 
-        virtual Status assign_dev (Space_dma *, uintptr_t, bool = true) = 0;
+        virtual Status assign_dev (Dc const *, Space_dma *, bool = true) = 0;
 
         static void all_interrupt()
         {

@@ -115,7 +115,7 @@ void Interrupt::deactivate (Sm *sm)
     }
 }
 
-Status Interrupt::assign (bool attach, Sm * const sm, cpu_t cpu, uint16_t vec, pci_t src, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Interrupt::assign (bool attach, Sm * const sm, Dc const *dc, cpu_t cpu, uint16_t vec, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
     // Semaphore must be valid
     assert (sm);
@@ -162,7 +162,7 @@ Status Interrupt::assign (bool attach, Sm * const sm, cpu_t cpu, uint16_t vec, p
         return Status::SUCCESS;
     }
 
-    return Smmu_itl::assign_int (static_cast<Smmu_itl::Entry_irt *>(sm->get_ptr()), sm->get_iid(), cpu, static_cast<uint8_t>(VEC_GSI + vec), src, cfg, msi_addr, msi_data);
+    return Smmu_itl::assign_int (static_cast<Smmu_itl::Entry_irt *>(sm->get_ptr()), sm->get_iid(), cpu, static_cast<uint8_t>(VEC_GSI + vec), dc, cfg, msi_addr, msi_data);
 }
 
 void Interrupt::send_cpu (Request req, cpu_t cpu)

@@ -118,6 +118,7 @@ class Ec : public Kobject, public Timeout_hypercall, public Queue<Ec>::Element, 
         [[noreturn]] static void sys_create_sc (Ec *);
         [[noreturn]] static void sys_create_pt (Ec *);
         [[noreturn]] static void sys_create_sm (Ec *);
+        [[noreturn]] static void sys_create_dc (Ec *);
 
         [[noreturn]] static void sys_ctrl_pd (Ec *);
         [[noreturn]] static void sys_ctrl_ec (Ec *);
@@ -248,7 +249,7 @@ class Ec : public Kobject, public Timeout_hypercall, public Queue<Ec>::Element, 
             &sys_create_sc,
             &sys_create_pt,
             &sys_create_sm,
-            &sys_finish<Status::BAD_HYP>,
+            &sys_create_dc,
             &sys_ctrl_pd,
             &sys_ctrl_ec,
             &sys_ctrl_sc,
