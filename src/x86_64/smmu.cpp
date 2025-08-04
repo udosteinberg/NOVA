@@ -21,6 +21,7 @@
  */
 
 #include "bits.hpp"
+#include "dc.hpp"
 #include "ioapic.hpp"
 #include "smmu.hpp"
 #include "space_dma.hpp"
@@ -88,10 +89,10 @@ void Smmu::init()
     init_pmr();
 }
 
-Status Smmu::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
+Status Smmu::assign_dev (Dc const *dc, Space_dma *dma, bool invalidate)
 {
     // Determine src device
-    auto const src { static_cast<pci_t>(dad) };
+    auto const src { dc->sbdf };
 
     // Check that src device and IOMMU are in the same PCI segment group
     if (Pci::seg (src) != grp->seg) [[unlikely]]
@@ -134,8 +135,10 @@ Status Smmu::assign_dev (Space_dma *dma, uintptr_t dad, bool invalidate)
     return Status::SUCCESS;
 }
 
-Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_t src, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
+Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, Dc const *dc, uint8_t cfg, uintptr_t &msi_addr, uintptr_t &msi_data)
 {
+    pci_t sbdf;
+
     // Check that cpu is in range
     assert (cpu < Cpu::count);
 
@@ -151,10 +154,21 @@ Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_
 
     if (ioapic) [[unlikely]] {
 
+        // PIN: Source device must not be provided
+        if (dc) [[unlikely]]
+            return Status::BAD_CAP;
+
         // Interrupt source is IOAPIC
-        src = ioapic->src();
+        sbdf = ioapic->src();
 
     } else {
+
+        // MSI: Source device must be provided
+        if (!dc) [[unlikely]]
+            return Status::BAD_CAP;
+
+        // Interrupt source is DEVICE
+        sbdf = dc->sbdf;
 
         // Flags must be zero
         if (cfg & BIT_RANGE (3, 0)) [[unlikely]]
@@ -166,7 +180,7 @@ Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_
     auto const gsi { Intid::to_gsi (iid) };
 
     // Device and interrupt must be in the same PCI segment group
-    if (Pci::seg (src) != seg) [[unlikely]]
+    if (Pci::seg (sbdf) != seg) [[unlikely]]
         return Status::BAD_DEV;
 
     // Extract configuration from flags
@@ -174,10 +188,10 @@ Status Smmu::assign_int (Entry_irt *irt, iid_t iid, cpu_t cpu, uint8_t vec, pci_
     bool const trg { !!(cfg & BIT (1)) };
     bool const pol { !!(cfg & BIT (2)) };
 
-    trace (TRACE_INTR, "INTR: Routing GSI %#06x (%c%c%c) from %04x:%02x:%02x.%x to %#06x:%#04x (%s)", gsi, msk ? 'M' : 'U', trg ? 'L' : 'E', pol ? 'L' : 'H', Pci::seg (src), Pci::bus (src), Pci::dev (src), Pci::fun (src), cpu, vec, ioapic ? "PIN" : "MSI");
+    trace (TRACE_INTR, "INTR: Routing GSI %#06x (%c%c%c) from %04x:%02x:%02x.%x to %#06x:%#04x (%s)", gsi, msk ? 'M' : 'U', trg ? 'L' : 'E', pol ? 'L' : 'H', Pci::seg (sbdf), Pci::bus (sbdf), Pci::dev (sbdf), Pci::fun (sbdf), cpu, vec, ioapic ? "PIN" : "MSI");
 
     // Populate interrupt remapping table even if IR is not in use
-    if (!irt->set (BIT (18) | Pci::bdf (src), static_cast<uint64_t>(dst) << (Lapic::x2apic ? 32 : 40) | vec << 16 | trg << 4 | BIT (0))) [[unlikely]]
+    if (!irt->set (BIT (18) | Pci::bdf (sbdf), static_cast<uint64_t>(dst) << (Lapic::x2apic ? 32 : 40) | vec << 16 | trg << 4 | BIT (0))) [[unlikely]]
         return Status::ABORTED;
 
     // Invalidate stale cached entries for SEG:GSI
