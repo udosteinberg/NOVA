@@ -33,6 +33,7 @@ class Cmdline final
         SEC_HASH static inline constinit bool noccst   { false };
         SEC_HASH static inline constinit bool nocpst   { false };
         SEC_HASH static inline constinit bool nodl     { false };
+        SEC_HASH static inline constinit bool nofbuf   { false };
         SEC_HASH static inline constinit bool nomktme  { false };
         SEC_HASH static inline constinit bool nopcid   { false };
         SEC_HASH static inline constinit bool nosmmu   { false };
@@ -52,6 +53,7 @@ class Cmdline final
             { "noccst",     noccst      },
             { "nocpst",     nocpst      },
             { "nodl",       nodl        },
+            { "nofbuf",     nofbuf      },
             { "nomktme",    nomktme     },
             { "nopcid",     nopcid      },
             { "nosmmu",     nosmmu      },

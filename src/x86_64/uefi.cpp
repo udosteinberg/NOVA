@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "console_fbuf.hpp"
 #include "std.hpp"
 #include "uefi.hpp"
 
@@ -40,6 +41,10 @@ bool Uefi::Graphics_output_protocol::select_mode (Info &info) const
 
         // Skip if unsupported pixel format
         if (mode_info->pix_fmt >= Graphics_output_protocol::Pixel_format::MSK) [[unlikely]]
+            continue;
+
+        // Skip if required framebuffer size exceeds maximum supported size
+        if (size_t { mode_info->pitch } * size_t { mode_info->res_y } > Console_fbuf::max_size / sizeof (uint32_t)) [[unlikely]]
             continue;
 
         // Prefer mode with more rows
