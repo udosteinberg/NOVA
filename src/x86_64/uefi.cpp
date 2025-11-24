@@ -15,6 +15,7 @@
  * GNU General Public License version 2 for more details.
  */
 
+#include "console_fbuf.hpp"
 #include "uefi.hpp"
 #include "util.hpp"
 
@@ -40,8 +41,8 @@ bool Uefi::Graphics_output_protocol::select_mode (Bsv_table const *bsv, Info &i)
 
             auto const mode_info { std::start_lifetime_as<Mode_info const> (info_ptr) };
 
-            // Prefer mode with more rows (or same rows and more cols)
-            if (mode_info->pix_fmt < Graphics_output_protocol::Pixel_format::MSK && (y < mode_info->res_y || (y == mode_info->res_y && p < mode_info->pitch))) [[unlikely]] {
+            // Prefer mode with more rows (or same rows and more cols) if its framebuffer size does not exceed the maximum supported size
+            if (mode_info->pix_fmt < Graphics_output_protocol::Pixel_format::MSK && (y < mode_info->res_y || (y == mode_info->res_y && p < mode_info->pitch)) && size_t { mode_info->pitch } * size_t { mode_info->res_y } <= Console_fbuf::max_size / sizeof (uint32_t)) [[unlikely]] {
                 y = mode_info->res_y;
                 p = mode_info->pitch;
                 m = n;
