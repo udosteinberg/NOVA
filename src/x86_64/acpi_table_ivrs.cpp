@@ -18,9 +18,14 @@
 #include "acpi_table_ivrs.hpp"
 #include "hpet.hpp"
 #include "ioapic.hpp"
+#include "smmu_amd.hpp"
 
 bool Acpi_table_ivrs::Ivhd_11::parse() const
 {
+    auto const smmu { Smmu_amd::create (phys, Pci::pci (seg, bdf), efr1, efr2) };
+    if (!smmu) [[unlikely]]
+        panic ("SMMU allocation failed");
+
     using list_t = Device;
     auto       ptr { reinterpret_cast<uintptr_t>(this + 1) };
     auto const end { reinterpret_cast<uintptr_t>(this) + len };
