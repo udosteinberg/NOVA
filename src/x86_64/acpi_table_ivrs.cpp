@@ -17,13 +17,17 @@
 
 #include "acpi_table_ivrs.hpp"
 #include "ioapic.hpp"
-#include "smmu.hpp"
+#include "smmu_amd.hpp"
 
-bool Acpi_table_ivrs::Ivhd::parse (size_t hdr, uint64_t, uint64_t) const
+bool Acpi_table_ivrs::Ivhd::parse (size_t hdr, uint64_t efr1, uint64_t efr2) const
 {
     // Already enumerated by another IVHD
     if (Smmu::lookup_phys (phys)) [[unlikely]]
         return true;
+
+    auto const smmu { Smmu_amd::create (phys, Pci::pci (seg, bdf), efr1, efr2) };
+    if (!smmu) [[unlikely]]
+        panic ("SMMU allocation failed");
 
     using list_t = Device;
     auto       ptr { reinterpret_cast<uintptr_t>(this) + hdr };
