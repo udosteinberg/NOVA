@@ -22,7 +22,7 @@
 #pragma once
 
 #include "refcnt.hpp"
-#include "smmu.hpp"
+#include "smmu_amd.hpp"
 #include "status.hpp"
 #include "vectors.hpp"
 
@@ -42,7 +42,7 @@ class Interrupt final
 
     public:
         static constexpr uint32_t num_gsi { BIT_RANGE (31, 0) };
-        static constexpr uint16_t num_idx { BIT_RANGE (15, 0) };
+        static constexpr uint16_t num_idx { Smmu_amd::num_idx };
         static constexpr uint8_t  num_vec { sizeof (sm_table) / sizeof (*sm_table) };
 
         static inline constinit uint16_t num_pin { 0 };
