@@ -49,7 +49,7 @@ void Cpu::enumerate_features()
 
     asm volatile ("mrs %x0, id_aa64pfr0_el1"    : "=r" (feat_cpu64[0]));    // 2.23
     asm volatile ("mrs %x0, id_aa64pfr1_el1"    : "=r" (feat_cpu64[1]));    // 2.23
-    asm volatile ("mrs %x0, id_aa64pfr2_el1"    : "=r" (feat_cpu64[2]));    // 2.45
+    asm volatile ("mrs %x0, S3_0_C0_C4_2"       : "=r" (feat_cpu64[2]));    // 2.45
     asm volatile ("mrs %x0, id_aa64dfr0_el1"    : "=r" (feat_dbg64[0]));    // 2.23
     asm volatile ("mrs %x0, id_aa64dfr1_el1"    : "=r" (feat_dbg64[1]));    // 2.23
     asm volatile ("mrs %x0, id_aa64dfr2_el1"    : "=r" (feat_dbg64[2]));    // 2.43
@@ -62,13 +62,13 @@ void Cpu::enumerate_features()
     asm volatile ("mrs %x0, id_aa64mmfr2_el1"   : "=r" (feat_mem64[2]));    // 2.26
     asm volatile ("mrs %x0, id_aa64mmfr3_el1"   : "=r" (feat_mem64[3]));    // 2.42
     asm volatile ("mrs %x0, id_aa64mmfr4_el1"   : "=r" (feat_mem64[4]));    // 2.42
-    asm volatile ("mrs %x0, id_aa64smfr0_el1"   : "=r" (feat_sme64[0]));    // 2.38
-    asm volatile ("mrs %x0, id_aa64zfr0_el1"    : "=r" (feat_sve64[0]));    // 2.28
+    asm volatile ("mrs %x0, S3_0_C0_C4_5"       : "=r" (feat_sme64[0]));    // 2.38
+    asm volatile ("mrs %x0, S3_0_C0_C4_4"       : "=r" (feat_sve64[0]));    // 2.28
 
     if (feature (Cpu_feature::EL1) == 2) {
         asm volatile ("mrs %x0, id_pfr0_el1"    : "=r" (feat_cpu32[0]));    // 2.23
         asm volatile ("mrs %x0, id_pfr1_el1"    : "=r" (feat_cpu32[1]));    // 2.23
-        asm volatile ("mrs %x0, id_pfr2_el1"    : "=r" (feat_cpu32[2]));    // 2.32
+        asm volatile ("mrs %x0, S3_0_C0_C3_4"   : "=r" (feat_cpu32[2]));    // 2.32
         asm volatile ("mrs %x0, id_dfr0_el1"    : "=r" (feat_dbg32[0]));    // 2.23
         asm volatile ("mrs %x0, id_dfr1_el1"    : "=r" (feat_dbg32[1]));    // 2.38
         asm volatile ("mrs %x0, id_isar0_el1"   : "=r" (feat_isa32[0]));    // 2.23
