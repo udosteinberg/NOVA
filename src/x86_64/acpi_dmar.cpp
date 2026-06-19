@@ -25,7 +25,6 @@
 #include "dmar.hpp"
 #include "dpt.hpp"
 #include "hip.hpp"
-#include "hpet.hpp"
 #include "ioapic.hpp"
 #include "pci.hpp"
 #include "pd.hpp"
@@ -45,9 +44,6 @@ void Acpi_dmar::parse() const
                 break;
             case 3:
                 Ioapic::claim_dev (s->rid(), s->id);
-                break;
-            case 4:
-                Hpet::claim_dev (s->rid(), s->id);
                 break;
         }
     }
