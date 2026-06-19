@@ -21,7 +21,6 @@
 #include "acpi.hpp"
 #include "acpi_dmar.hpp"
 #include "acpi_fadt.hpp"
-#include "acpi_hpet.hpp"
 #include "acpi_madt.hpp"
 #include "acpi_mcfg.hpp"
 #include "acpi_rsdp.hpp"
@@ -34,7 +33,7 @@
 #include "stdio.hpp"
 #include "x86.hpp"
 
-Paddr       Acpi::dmar, Acpi::fadt, Acpi::hpet, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
+Paddr       Acpi::dmar, Acpi::fadt, Acpi::madt, Acpi::mcfg, Acpi::rsdt, Acpi::xsdt;
 Acpi_gas    Acpi::pm1a_sts, Acpi::pm1b_sts, Acpi::pm1a_ena, Acpi::pm1b_ena, Acpi::pm1a_cnt, Acpi::pm1b_cnt, Acpi::pm2_cnt, Acpi::pm_tmr, Acpi::reset_reg;
 uint32      Acpi::tmr_ovf, Acpi::feature;
 uint8       Acpi::reset_val;
@@ -73,8 +72,6 @@ void Acpi::setup()
 
     if (fadt)
         static_cast<Acpi_table_fadt *>(Hpt::remap (fadt))->parse();
-    if (hpet)
-        static_cast<Acpi_table_hpet *>(Hpt::remap (hpet))->parse();
     if (madt)
         static_cast<Acpi_table_madt *>(Hpt::remap (madt))->parse();
     if (mcfg)
