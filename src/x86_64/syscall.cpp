@@ -23,7 +23,6 @@
 #include "dmar.hpp"
 #include "gsi.hpp"
 #include "hip.hpp"
-#include "hpet.hpp"
 #include "lapic.hpp"
 #include "pci.hpp"
 #include "pt.hpp"
@@ -533,7 +532,7 @@ void Ec::sys_assign_gsi()
     }
 
     Paddr phys; unsigned rid = 0, gsi = static_cast<unsigned>(sm->node_base - NUM_CPU);
-    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || ((rid = Pci::phys_to_rid (phys)) == ~0U && (rid = Hpet::phys_to_rid (phys)) == ~0U)))) {
+    if (EXPECT_FALSE (!Gsi::gsi_table[gsi].ioapic && (!Pd::current->Space_mem::lookup (r->dev(), phys) || ((rid = Pci::phys_to_rid (phys)) == ~0U)))) {
         trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
         sys_finish<Sys_regs::BAD_DEV>();
     }
