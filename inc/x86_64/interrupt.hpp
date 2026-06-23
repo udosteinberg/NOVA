@@ -23,6 +23,7 @@
 
 #include "refcnt.hpp"
 #include "smmu_amd.hpp"
+#include "smmu_itl.hpp"
 #include "status.hpp"
 #include "vectors.hpp"
 
@@ -41,7 +42,7 @@ class Interrupt final
         static void handle_gsi (unsigned);
 
     public:
-        static constexpr uint32_t num_gsi { BIT_RANGE (31, 0) };
+        static constexpr uint32_t num_gsi { Smmu_itl::num_gsi };
         static constexpr uint16_t num_idx { Smmu_amd::num_idx };
         static constexpr uint8_t  num_vec { sizeof (sm_table) / sizeof (*sm_table) };
 
