@@ -21,8 +21,10 @@
 
 void Tpm_log::init (uint64_t p, uint32_t s, uint32_t o)
 {
-    // Check for valid parameters
-    if (!p || !s || !o || o > s) [[unlikely]]
+    // Check for valid parameters. s/o must also fit within the single page
+    // mapped below at MMAP_GLB_MAP0, since extend() later maps the same
+    // page and writes at that offset without re-checking against it.
+    if (!p || !s || !o || o > s || s > Hpt::page_size (Hpt::bpl)) [[unlikely]]
         return;
 
     // Map page-aligned header
