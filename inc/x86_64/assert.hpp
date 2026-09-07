@@ -29,6 +29,8 @@
                         if (!(X)) [[unlikely]]                                                                                      \
                             Console::panic ("Assertion \"%s\" failed at %s:%d:%s", #X, __FILE__, __LINE__, __PRETTY_FUNCTION__);    \
                     } while (0)
+#elif __has_cpp_attribute (assume) && !defined(__clang__)
+#define assert(X)   [[assume (X)]]
 #else
-#define assert(X)   do { (void) sizeof (X); } while (0)
+#define assert(X)   do { if (!(X)) __builtin_unreachable(); } while (0)
 #endif
